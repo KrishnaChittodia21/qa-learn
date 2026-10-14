@@ -14,5 +14,6 @@ export const PHASES: Phase[] = [
   { id: 'javascript', number: 4, title: 'JavaScript for Testers', blurb: 'The JavaScript you need for Playwright: types, functions, arrays, objects, modules, errors and async/await.' },
   { id: 'pw-basics', number: 5, title: 'Playwright Fundamentals', blurb: 'Setup, locators, actions, web-first assertions and auto-waiting.' },
   { id: 'pw-framework', number: 6, title: 'Playwright Framework & CI', blurb: 'Hooks, fixtures, POM, auth, debugging flaky tests, API testing, Git and CI/CD.' },
-  { id: 'interview', number: 7, title: 'QA Interview Prep', blurb: '"How would you test…" scenarios, rapid-fire manual and automation questions, and the behavioural round.' },
+  { id: 'ai-testing', number: 7, title: 'AI for Testers', blurb: 'Beginner essentials: how LLMs work and fail, using AI safely in daily QA work, and testing a chatbot feature.' },
+  { id: 'interview', number: 8, title: 'QA Interview Prep', blurb: '"How would you test…" scenarios, rapid-fire manual and automation questions, and the behavioural round.' },
 ];

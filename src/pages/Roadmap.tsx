@@ -50,6 +50,11 @@ export default function RoadmapPage() {
                         {t.title}
                       </Link>
                     ))}
+                    {w.pwLab && (
+                      <Link to="/pw-lab" className="chip">
+                        🧪 Playwright Lab (Judge)
+                      </Link>
+                    )}
                     {w.coding && (
                       <Link to="/coding" className="chip">
                         ⌨️ Coding practice ({Object.keys(p.code).length}/{CODING_PROBLEMS.length})

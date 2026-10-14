@@ -170,16 +170,6 @@ kbd {
   font-size: 1.1rem;
   padding: 6px 10px;
 }
-.side-tools {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px 4px;
-}
-.side-hide {
-  margin-left: auto;
-  color: var(--muted);
-}
 @media (min-width: 901px) {
   .sidebar {
     transition: transform 0.2s ease;
@@ -1975,4 +1965,83 @@ a.chip {
   .roadmap-week {
     animation: none;
   }
+}
+
+/* ---------- JavaScript Playground ---------- */
+.pg-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.pg-examples {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.pg-toolbar {
+  margin-bottom: 8px;
+  align-items: center;
+}
+.pg-name {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.pg-output {
+  margin: 0;
+}
+.pg-console {
+  max-height: 460px;
+  min-height: 120px;
+  white-space: pre-wrap;
+}
+.pg-line + .pg-line {
+  border-top: 1px dashed var(--border);
+  padding-top: 2px;
+  margin-top: 2px;
+}
+.pg-error {
+  color: var(--bad);
+}
+.pg-warn {
+  color: var(--warn);
+}
+.pg-info {
+  color: var(--accent);
+}
+.try-btn {
+  font-size: 0.75rem;
+}
+
+/* ---------- Playwright Lab ---------- */
+.pwlab-refresh {
+  align-items: center;
+  margin-top: 10px;
+}
+.pwlab-score,
+.pwlab-cols {
+  margin-bottom: 20px;
+}
+.pwlab-big {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 4px 0;
+}
+.pwlab-result {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.pwlab-warnings {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-2);
 }

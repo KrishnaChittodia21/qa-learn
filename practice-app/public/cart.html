@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Shop: Cart</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header id="site-header"></header>
+    <main>
+      <h1>Your cart</h1>
+      <p id="cart-error" class="error" role="alert" hidden></p>
+      <p id="cart-empty" hidden>Your cart is empty.</p>
+      <div id="cart-content" hidden>
+        <table aria-label="Cart items">
+          <thead>
+            <tr>
+              <th scope="col">Product</th>
+              <th scope="col">Price</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Line total</th>
+              <th scope="col"><span class="muted">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="cart-rows"></tbody>
+        </table>
+        <div class="totals">
+          <div><span>Items subtotal</span><strong data-testid="cart-subtotal"></strong></div>
+        </div>
+        <div class="row">
+          <button type="button" class="danger" id="empty-cart">Empty cart</button>
+          <a class="button" href="/checkout.html">Checkout</a>
+        </div>
+      </div>
+      <div class="row"><a href="/inventory.html">← Continue shopping</a></div>
+    </main>
+    <script src="/js/bugs.js"></script>
+    <script src="/js/common.js"></script>
+    <script src="/js/cart.js"></script>
+  </body>
+</html>

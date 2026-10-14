@@ -1,0 +1,46 @@
+{
+  "_comment": "SECRET: read only by scripts/judge.mjs. Each mutant is a deliberately seeded bug switched on with BUGS=<id> in practice-app/server.mjs. 'description' is shown only after the learner's tests catch it; 'hint' is the category shown when it is missed. Every mutant must violate a rule stated in src/content/pwlab.ts, and judge/reference/*.spec.ts must catch it.",
+  "mutants": [
+    { "id": "login-locked", "step": "step1", "description": "A locked account could sign in (the lock check was skipped).", "hint": "Negative test: a special kind of account" },
+    { "id": "login-password-case", "step": "step1", "description": "Passwords were compared case-insensitively, so 'secret123!' worked as well as 'Secret123!'.", "hint": "Negative test: almost-correct credentials" },
+    { "id": "login-empty-password", "step": "step1", "description": "A valid username with an empty password signed the user in.", "hint": "Required fields, one at a time" },
+    { "id": "login-logout", "step": "step1", "description": "Log out only changed the page; the server session stayed alive, so protected pages still opened.", "hint": "State after an action: what is still reachable?" },
+
+    { "id": "search-case", "step": "step2", "description": "Search was case-sensitive ('backpack' found nothing).", "hint": "Equivalence classes of the search text" },
+    { "id": "search-trim", "step": "step2", "description": "Search did not ignore leading/trailing spaces, so ' tote ' found nothing.", "hint": "Input formatting the user doesn't see" },
+    { "id": "filter-combined", "step": "step2", "description": "When search text was entered the category filter was ignored.", "hint": "Combinations of inputs" },
+    { "id": "search-empty-state", "step": "step2", "description": "The 'No products match your search.' message never appeared for zero results.", "hint": "Edge case: zero results" },
+
+    { "id": "sort-name-case", "step": "step3", "description": "Name sorting was case-sensitive, so 'iPhone Case' was sorted after every capitalised name.", "hint": "Data that is slightly different from the rest" },
+    { "id": "sort-price-cents", "step": "step3", "description": "Price sorting compared whole dollars only, so $9.99 came before $9.49.", "hint": "Check the whole order, not just the first item" },
+    { "id": "sort-tie-desc", "step": "step3", "description": "Price high-to-low was the low-to-high list reversed, so products with the same price came Z to A.", "hint": "Ties" },
+    { "id": "sort-reset-on-filter", "step": "step3", "description": "Typing a search or changing the category silently went back to Name (A to Z) while the dropdown still showed the chosen sort.", "hint": "State: one feature combined with another" },
+
+    { "id": "cart-qty-upper", "step": "step4", "description": "Quantity 11 was accepted (off-by-one on the maximum).", "hint": "Boundary values" },
+    { "id": "cart-badge-remove", "step": "step4", "description": "The cart badge did not update after removing an item.", "hint": "Every place that shows the same data" },
+    { "id": "cart-reload", "step": "step4", "description": "Reloading the page emptied the cart.", "hint": "State after reload" },
+    { "id": "cart-confirm-cancel", "step": "step4", "description": "Choosing Cancel in the 'Empty cart' confirmation still emptied the cart.", "hint": "Dialogs: both answers" },
+
+    { "id": "checkout-postcode-letters", "step": "step5", "description": "The postcode accepted letters, e.g. '56A001'.", "hint": "Invalid characters in a formatted field" },
+    { "id": "checkout-phone-length", "step": "step5", "description": "An 11-digit phone number was accepted.", "hint": "Boundary values of a length rule" },
+    { "id": "checkout-whitespace-name", "step": "step5", "description": "A first name made only of spaces was accepted.", "hint": "Input that looks filled in but isn't" },
+    { "id": "checkout-lastname-required", "step": "step5", "description": "Last name was not required.", "hint": "Check every required field, not just the first" },
+
+    { "id": "promo-case", "step": "step6", "description": "Promo codes were case-sensitive ('save10' was rejected).", "hint": "Equivalence classes of the code text" },
+    { "id": "promo-expired", "step": "step6", "description": "The expired code WELCOME5 was accepted.", "hint": "Decision table: every kind of code" },
+    { "id": "promo-min-boundary", "step": "step6", "description": "FLAT20 required MORE than $100.00 instead of at least $100.00 (exactly $100.00 was rejected).", "hint": "Boundary values" },
+    { "id": "promo-min-ignored", "step": "step6", "description": "FLAT20 was applied below the minimum order value.", "hint": "Decision table: condition not met" },
+    { "id": "promo-stack", "step": "step6", "description": "A second promo code was accepted and both discounts stacked.", "hint": "Doing the same action twice" },
+
+    { "id": "total-tax-before-discount", "step": "step7", "description": "Tax was calculated on the subtotal before the discount.", "hint": "Calculation order with a promo applied" },
+    { "id": "total-rounding", "step": "step7", "description": "Tax was truncated instead of rounded, so totals were a cent short (e.g. $53.98 instead of $53.99).", "hint": "Exact arithmetic, to the cent" },
+    { "id": "receipt-discount", "step": "step7", "description": "The receipt (new tab) showed a total that ignored the discount.", "hint": "Compare two pages that show the same data" },
+    { "id": "order-cart-not-cleared", "step": "step7", "description": "The cart was not emptied after the order was placed.", "hint": "State after the flow completes" },
+
+    { "id": "api-no-token", "step": "step8", "description": "GET /api/orders without a token returned 200 instead of 401.", "hint": "Authentication: missing credentials" },
+    { "id": "api-delete-other", "step": "step8", "description": "A user could delete another user's order.", "hint": "Authorization: two different users" },
+    { "id": "api-create-status", "step": "step8", "description": "POST /api/orders returned 200 instead of 201 Created.", "hint": "Exact status codes" },
+    { "id": "api-qty-validation", "step": "step8", "description": "POST /api/orders accepted a quantity of 11.", "hint": "Boundary values in the request body" },
+    { "id": "api-product-404", "step": "step8", "description": "GET /api/products/{id} for an unknown id returned 200 instead of 404.", "hint": "Negative test: a resource that doesn't exist" }
+  ]
+}

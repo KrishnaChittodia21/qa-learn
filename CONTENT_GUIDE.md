@@ -195,3 +195,26 @@ The app runs the learner's edited starter in the browser against the tests. Rule
 - The buggy starter must **fail at least one test** (that test is what catches the bug) and the solution must pass all.
 - Tests target the bug the lab is about, plus normal cases and edge cases.
 - `node scripts/validate-content.mjs <id>` enforces both rules.
+
+---
+
+## Playwright Lab: adding a step or a hidden bug (mutant)
+
+Files: `practice-app/server.mjs` + `practice-app/public/` (the QA Shop app), `src/content/pwlab.ts` (public specs),
+`judge/mutants.json` (secret bug list), `judge/reference/*.spec.ts` (hidden reference suite), `scripts/judge.mjs` (judge).
+
+- **A mutant is a small `if (bug('<id>'))` branch** in the server (`bug()` reads the `BUGS` env var) or in a page script
+  (`QS.bug()`, which reads `/js/bugs.js`). With `BUGS` empty the app must behave exactly as the spec says. Keep everything
+  deterministic: no randomness in data, fixed delays of 800 ms or less.
+- **Every mutant must violate a rule that is written in the step's spec** in `pwlab.ts`. If a tester couldn't know the
+  behaviour is wrong from the spec, either add the rule to the spec or drop the mutant. Never describe the bug itself
+  in the spec or in the brainstorming prompts (prompts are questions, not answers).
+- Good mutants are realistic and are **not** caught by the obvious happy-path test (boundaries, negative cases, state
+  after reload/logout, combinations, ties, rounding, authorization).
+- Add the entry to `judge/mutants.json`: `id`, `step`, `description` (shown only once it's caught) and `hint` (a category
+  shown when it's missed, such as "Boundary values"; it must not give the exact answer). Update `hiddenBugs` in `pwlab.ts`
+  (the judge warns on a mismatch).
+- **The reference suite must catch it.** Add or extend a test in `judge/reference/` (tagged `@stepN`), then run
+  `npm run judge -- --reference`: every step must pass on the correct app, show no flakiness, and catch 100% of its
+  mutants. A new step also needs a `PW_LAB_STEPS` entry (id `stepN`, tag `@stepN`) and at least one mutant.
+

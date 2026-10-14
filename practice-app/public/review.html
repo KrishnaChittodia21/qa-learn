@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Shop: Review order</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header id="site-header"></header>
+    <main>
+      <h1>Review your order</h1>
+      <p class="muted" id="ship-to"></p>
+      <table aria-label="Order items">
+        <thead>
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Line total</th>
+          </tr>
+        </thead>
+        <tbody id="review-rows"></tbody>
+      </table>
+
+      <div class="card" style="margin-top: 16px">
+        <form id="promo-form" class="promo" novalidate>
+          <div>
+            <label for="promo">Promo code</label>
+            <input id="promo" name="promo" autocomplete="off" />
+          </div>
+          <button type="submit">Apply</button>
+        </form>
+        <p id="promo-error" class="error" role="alert" hidden></p>
+        <div id="promo-applied" class="row" hidden>
+          <span data-testid="promo-applied"></span>
+          <button type="button" class="secondary" id="remove-promo">Remove promo code</button>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div><span>Items subtotal</span><span data-testid="summary-subtotal"></span></div>
+        <div id="discount-row" hidden><span id="discount-label">Discount</span><span data-testid="summary-discount"></span></div>
+        <div><span>Tax (8%)</span><span data-testid="summary-tax"></span></div>
+        <div class="grand"><span>Total</span><span data-testid="summary-total"></span></div>
+      </div>
+      <div class="row">
+        <a href="/checkout.html" class="button secondary">Edit details</a>
+        <button type="button" id="place-order">Place order</button>
+      </div>
+    </main>
+    <script src="/js/bugs.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+      (async function () {
+        const { api, money, esc, sleep } = QS;
+        await QS.init();
+        const promoError = document.getElementById('promo-error');
+        const applied = document.getElementById('promo-applied');
+
+        function render(s) {
+          const d = s.details || {};
+          document.getElementById('ship-to').textContent = `Shipping to ${d.firstName} ${d.lastName}, postcode ${d.postcode}`;
+          document.getElementById('review-rows').innerHTML = s.items
+            .map((it) => `<tr><th scope="row">${esc(it.name)}</th><td>${it.quantity}</td><td>${money(it.lineTotal)}</td></tr>`)
+            .join('');
+          document.querySelector('[data-testid="summary-subtotal"]').textContent = money(s.subtotal);
+          document.querySelector('[data-testid="summary-tax"]').textContent = money(s.tax);
+          document.querySelector('[data-testid="summary-total"]').textContent = money(s.total);
+          const hasPromo = s.promoCodes.length > 0;
+          document.getElementById('discount-row').hidden = !hasPromo;
+          document.getElementById('discount-label').textContent = `Discount (${s.promoCodes.join(', ')})`;
+          document.querySelector('[data-testid="summary-discount"]').textContent = `-${money(s.discount)}`;
+          applied.hidden = !hasPromo;
+          document.querySelector('[data-testid="promo-applied"]').textContent = `Promo ${s.promoCodes.join(', ')} applied`;
+        }
+
+        const first = await api('/api/checkout/summary');
+        render(first.data);
+
+        document.getElementById('promo-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const input = document.getElementById('promo');
+          const r = await api('/api/checkout/promo', { method: 'POST', body: { code: input.value } });
+          if (!r.ok) {
+            promoError.textContent = (r.data && r.data.error) || 'Could not apply the code';
+            promoError.hidden = false;
+            return;
+          }
+          promoError.hidden = true;
+          input.value = '';
+          render(r.data);
+        });
+
+        document.getElementById('remove-promo').addEventListener('click', async () => {
+          const r = await api('/api/checkout/promo', { method: 'DELETE' });
+          promoError.hidden = true;
+          if (r.ok) render(r.data);
+        });
+
+        document.getElementById('place-order').addEventListener('click', async (e) => {
+          const btn = e.currentTarget;
+          btn.disabled = true;
+          btn.textContent = 'Placing order…';
+          await sleep(500);
+          const r = await api('/api/checkout/place', { method: 'POST' });
+          if (r.ok) {
+            location.href = `/confirmation.html?id=${encodeURIComponent(r.data.orderId)}`;
+            return;
+          }
+          btn.disabled = false;
+          btn.textContent = 'Place order';
+          promoError.textContent = (r.data && r.data.error) || 'Could not place the order';
+          promoError.hidden = false;
+        });
+      })();
+    </script>
+  </body>
+</html>

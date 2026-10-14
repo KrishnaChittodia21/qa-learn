@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "validate": "node --no-warnings scripts/validate-content.mjs && node --no-warnings scripts/validate-coding.mjs"
+    "validate": "node --no-warnings scripts/validate-content.mjs && node --no-warnings scripts/validate-coding.mjs",
+    "practice-app": "node practice-app/server.mjs",
+    "practice:test": "playwright test --config practice/playwright.config.ts",
+    "judge": "node --no-warnings scripts/judge.mjs"
   },
   "dependencies": {
     "prismjs": "^1.30.0",
@@ -20,6 +23,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^24.13.3",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^19.2.18",

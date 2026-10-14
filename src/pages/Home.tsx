@@ -4,6 +4,7 @@ import { useProgress } from '../lib/progress';
 import { topicCompletion, topicStatus } from '../lib/stats';
 import { ProgressBar } from '../components/ui';
 import { weakTopics } from '../lib/weak';
+import { PW_LAB_STEPS } from '../content/pwlab';
 
 export default function Home() {
   const p = useProgress();
@@ -120,7 +121,10 @@ export default function Home() {
           <div>
             <div className="eyebrow">Practice</div>
             <h2>Hands-on practice</h2>
-            <p className="muted">Run real JavaScript in the browser, and follow the 12-week plan with portfolio projects.</p>
+            <p className="muted">
+              Run real JavaScript in the browser, write real Playwright tests against an app with hidden bugs, and follow the
+              12-week plan with portfolio projects.
+            </p>
           </div>
         </div>
         <div className="card-grid">
@@ -136,6 +140,21 @@ export default function Home() {
                 {Object.keys(p.code).length}/{CODING_PROBLEMS.length} solved
               </span>
             </div>
+          </Link>
+          <Link to="/playground" className="topic-card">
+            <h3>▶️ JavaScript Playground</h3>
+            <p className="muted small">
+              Write any JavaScript and run it in the browser. Console output looks like Node&apos;s. Open any lesson snippet here with
+              &ldquo;▶ Try it&rdquo;.
+            </p>
+          </Link>
+          <Link to="/pw-lab" className="topic-card">
+            <h3>🧪 Playwright Lab (Judge)</h3>
+            <p className="muted small">
+              {PW_LAB_STEPS.length} feature specs for a practice shop app with {PW_LAB_STEPS.reduce((a, s) => a + s.hiddenBugs, 0)}{' '}
+              hidden bugs. Write real Playwright tests, run <code className="inline-code">npm run judge</code>, and see which bugs your
+              tests catch.
+            </p>
           </Link>
           <Link to="/roadmap" className="topic-card">
             <h3>🗺️ 12-week roadmap &amp; projects</h3>

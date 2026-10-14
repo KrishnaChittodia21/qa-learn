@@ -9,6 +9,8 @@ export interface RoadmapWeek {
   topics: string[];
   /** also link the JavaScript coding practice page */
   coding?: boolean;
+  /** also link the Playwright Lab (judge) page */
+  pwLab?: boolean;
 }
 
 export interface Resource {
@@ -83,20 +85,24 @@ export const ROADMAP: RoadmapWeek[] = [
       'Hooks, fixtures, the Page Object Model and test data management.',
       'Configuration, environments and authentication with storageState.',
       'Debugging with the trace viewer, fixing flaky tests, reports.',
+      'Playwright Lab: steps 1–7 (login → order confirmation). Brainstorm from each spec, then let the judge tell you which hidden bugs your tests catch.',
     ],
     deliverable: 'An organised Playwright suite: POM, fixtures, config per environment, HTML report.',
     topics: ['pw-hooks-fixtures', 'pw-pom-data', 'pw-auth-config', 'pw-debug-flaky'],
+    pwLab: true,
   },
   {
     weeks: 'Weeks 11–12',
     title: 'Portfolio and interviews',
     focus: [
-      'API tests in Playwright and network mocking.',
+      'API tests in Playwright and network mocking (Playwright Lab step 8: the REST API).',
       'Git, GitHub and a GitHub Actions pipeline that publishes the report.',
       'Revise manual and automation interview questions; practise "how would you test…".',
+      'AI for testers: use AI to draft tests and data, then review its output critically; know how to test a chatbot.',
     ],
     deliverable: 'One presentable QA portfolio project on GitHub with a README, test report and CI badge.',
-    topics: ['pw-api-network', 'pw-git-ci', 'qa-scenarios', 'qa-interview-bank', 'qa-behavioral'],
+    topics: ['pw-api-network', 'pw-git-ci', 'ai-basics', 'ai-daily-qa', 'ai-chatbot-testing', 'qa-scenarios', 'qa-interview-bank', 'qa-behavioral'],
+    pwLab: true,
   },
 ];
 

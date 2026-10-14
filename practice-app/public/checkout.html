@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Shop: Checkout</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header id="site-header"></header>
+    <main>
+      <div class="card" style="max-width: 560px">
+        <h1>Checkout: your details</h1>
+        <p id="form-error" class="error" role="alert" hidden></p>
+        <form id="details-form" novalidate>
+          <label for="firstName">First name</label>
+          <input id="firstName" name="firstName" autocomplete="given-name" aria-describedby="firstName-error" />
+          <p id="firstName-error" class="field-error" hidden></p>
+
+          <label for="lastName">Last name</label>
+          <input id="lastName" name="lastName" autocomplete="family-name" aria-describedby="lastName-error" />
+          <p id="lastName-error" class="field-error" hidden></p>
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" aria-describedby="email-error" />
+          <p id="email-error" class="field-error" hidden></p>
+
+          <label for="phone">Phone number</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" aria-describedby="phone-error" />
+          <p id="phone-error" class="field-error" hidden></p>
+
+          <label for="postcode">Postcode</label>
+          <input id="postcode" name="postcode" autocomplete="postal-code" aria-describedby="postcode-error" />
+          <p id="postcode-error" class="field-error" hidden></p>
+
+          <div class="row">
+            <a href="/cart.html" class="button secondary">Back to cart</a>
+            <button type="submit">Continue to review</button>
+          </div>
+        </form>
+      </div>
+    </main>
+    <script src="/js/bugs.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+      (async function () {
+        const { api, sleep } = QS;
+        await QS.init();
+        const form = document.getElementById('details-form');
+        const formError = document.getElementById('form-error');
+        const fields = ['firstName', 'lastName', 'email', 'phone', 'postcode'];
+        const summary = await api('/api/checkout/summary');
+        if (summary.data && summary.data.details) for (const f of fields) form[f].value = summary.data.details[f];
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const submit = form.querySelector('button[type="submit"]');
+          submit.disabled = true;
+          submit.textContent = 'Saving…';
+          await sleep(300);
+          const body = Object.fromEntries(fields.map((f) => [f, form[f].value]));
+          const r = await api('/api/checkout/details', { method: 'POST', body });
+          submit.disabled = false;
+          submit.textContent = 'Continue to review';
+          const errors = (r.data && r.data.errors) || {};
+          for (const f of fields) {
+            const p = document.getElementById(`${f}-error`);
+            p.textContent = errors[f] || '';
+            p.hidden = !errors[f];
+            form[f].setAttribute('aria-invalid', errors[f] ? 'true' : 'false');
+          }
+          if (r.ok) {
+            location.href = '/review.html';
+            return;
+          }
+          formError.textContent = (r.data && r.data.error) || 'Something went wrong';
+          formError.hidden = false;
+        });
+      })();
+    </script>
+  </body>
+</html>

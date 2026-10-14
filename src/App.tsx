@@ -5,6 +5,8 @@ import TopicPage from './pages/Topic';
 import ExamPage from './pages/Exam';
 import { CodingListPage, CodingProblemPage } from './pages/Coding';
 import RoadmapPage from './pages/Roadmap';
+import { PwLabOverviewPage, PwLabStepPage } from './pages/PwLab';
+import PlaygroundPage from './pages/Playground';
 import SettingsPage from './pages/Settings';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
 import { resumeLocation } from './lib/uiPrefs';
@@ -27,6 +29,9 @@ const router = createHashRouter([
       { path: 'coding', element: <CodingListPage /> },
       { path: 'coding/:pid', element: <CodingProblemPage /> },
       { path: 'roadmap', element: <RoadmapPage /> },
+      { path: 'pw-lab', element: <PwLabOverviewPage /> },
+      { path: 'pw-lab/:step', element: <PwLabStepPage /> },
+      { path: 'playground', element: <PlaygroundPage /> },
       { path: 'weak-areas', element: <WeakAreasPage /> },
       { path: 'practice', element: <PracticePage /> },
       { path: 'settings', element: <SettingsPage /> },

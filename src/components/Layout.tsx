@@ -81,7 +81,6 @@ export default function Layout() {
     if (isMobile()) setNavOpen((o) => !o);
     else setSidebarCollapsed((c) => !c);
   };
-  const setAllPhases = (value: boolean) => setCollapsed(Object.fromEntries(PHASES.map((ph) => [ph.id, value])));
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -138,18 +137,6 @@ export default function Layout() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="side-tools">
-          <button type="button" className="link-btn small" onClick={() => setAllPhases(true)}>
-            Collapse all
-          </button>
-          <span className="muted small">·</span>
-          <button type="button" className="link-btn small" onClick={() => setAllPhases(false)}>
-            Expand all
-          </button>
-          <button type="button" className="link-btn small side-hide" onClick={toggleNav}>
-            Hide sidebar ⟨
-          </button>
-        </div>
         <nav>
           <NavLink to="/" end className="side-link">
             Dashboard
@@ -188,6 +175,14 @@ export default function Layout() {
             <NavLink to="/coding" className="side-link side-topic">
               <span className="lock">⌨️</span>
               JS Coding Practice ({Object.keys(p.code).length}/{CODING_PROBLEMS.length})
+            </NavLink>
+            <NavLink to="/pw-lab" className="side-link side-topic">
+              <span className="lock">🧪</span>
+              Playwright Lab (Judge)
+            </NavLink>
+            <NavLink to="/playground" className="side-link side-topic">
+              <span className="lock">▶️</span>
+              JS Playground
             </NavLink>
             <NavLink to="/roadmap" className="side-link side-topic">
               <span className="lock">🗺️</span>

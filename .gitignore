@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright Lab
+test-results/
+playwright-report/
+blob-report/
+public/judge-results.json

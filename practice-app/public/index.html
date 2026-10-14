@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Shop: Sign in</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <div class="card narrow">
+        <h1>QA Shop</h1>
+        <h2>Sign in</h2>
+        <form id="login-form" novalidate>
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" />
+          <p id="login-error" class="error" role="alert" hidden></p>
+          <div class="row">
+            <button type="submit">Sign in</button>
+          </div>
+        </form>
+        <div class="hint-box">
+          <strong>Practice accounts</strong> (password <code>Secret123!</code>): <code>alice</code>, <code>bob</code>,
+          <code>locked_user</code>
+        </div>
+      </div>
+    </main>
+    <script src="/js/bugs.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+      const form = document.getElementById('login-form');
+      const error = document.getElementById('login-error');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        error.hidden = true;
+        const res = await QS.api('/api/session/login', {
+          method: 'POST',
+          body: { username: form.username.value, password: form.password.value },
+        });
+        if (res.ok) {
+          location.href = '/inventory.html';
+          return;
+        }
+        error.textContent = (res.data && res.data.error) || 'Something went wrong';
+        error.hidden = false;
+      });
+    </script>
+  </body>
+</html>

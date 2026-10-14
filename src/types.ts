@@ -9,6 +9,7 @@ export type PhaseId =
   | 'javascript'
   | 'pw-basics'
   | 'pw-framework'
+  | 'ai-testing'
   | 'interview';
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';

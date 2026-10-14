@@ -8,6 +8,7 @@ import EditorModule from 'react-simple-code-editor';
 const Editor = ((EditorModule as unknown as { default?: typeof EditorModule }).default ?? EditorModule) as typeof EditorModule;
 import type { CodeSnippet, Difficulty, FollowUp } from '../types';
 import { highlight, normalizeLang } from '../lib/highlight';
+import { sendToPlayground } from '../lib/playground';
 
 export function Markdown({ children }: { children: string }) {
   return (
@@ -41,6 +42,12 @@ export function Markdown({ children }: { children: string }) {
   );
 }
 
+/** Plain JS that runs in a browser worker: no modules, Node APIs or Playwright objects. */
+function runnableInPlayground(snippet: CodeSnippet) {
+  if (normalizeLang(snippet.language) !== 'javascript') return false;
+  return !/^\s*(import|export)\s|\brequire\(|\bprocess\.|\bpage\.|\bexpect\(|\btest\(|@playwright|\bdocument\.|\bwindow\.|\bpm\./m.test(snippet.code);
+}
+
 export function CodeBlock({ snippet, compact }: { snippet: CodeSnippet; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
   const lang = normalizeLang(snippet.language);
@@ -58,6 +65,19 @@ export function CodeBlock({ snippet, compact }: { snippet: CodeSnippet; compact?
       <figcaption>
         <span className="code-title">{snippet.title ?? ''}</span>
         <span className="code-lang">{lang}</span>
+        {runnableInPlayground(snippet) && (
+          <button
+            className="btn-ghost btn-xs try-btn"
+            type="button"
+            title="Open this code in the JavaScript Playground"
+            onClick={() => {
+              sendToPlayground(snippet.title || 'From lesson', snippet.code);
+              window.location.hash = '#/playground';
+            }}
+          >
+            ▶ Try it
+          </button>
+        )}
         <button className="btn-ghost btn-xs" onClick={copy} type="button">
           {copied ? 'Copied' : 'Copy'}
         </button>

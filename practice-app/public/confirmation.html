@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Shop: Order confirmed</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header id="site-header"></header>
+    <main>
+      <div class="card" id="confirmation" hidden>
+        <h1>Thank you for your order!</h1>
+        <p>Order number: <strong data-testid="order-id"></strong></p>
+        <p>Total paid: <strong data-testid="order-total"></strong></p>
+        <div class="row">
+          <a id="receipt-link" href="#" target="_blank" rel="noopener">View receipt</a>
+          <a href="/inventory.html">Continue shopping</a>
+        </div>
+      </div>
+      <p id="not-found" class="error" role="alert" hidden>Order not found.</p>
+    </main>
+    <script src="/js/bugs.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+      (async function () {
+        const { api, money } = QS;
+        await QS.init();
+        const id = new URLSearchParams(location.search).get('id') || '';
+        const r = await api(`/api/my-orders/${encodeURIComponent(id)}`);
+        if (!r.ok) {
+          document.getElementById('not-found').hidden = false;
+          return;
+        }
+        document.querySelector('[data-testid="order-id"]').textContent = r.data.id;
+        document.querySelector('[data-testid="order-total"]').textContent = money(r.data.total);
+        document.getElementById('receipt-link').href = `/receipt.html?id=${encodeURIComponent(r.data.id)}`;
+        document.getElementById('confirmation').hidden = false;
+      })();
+    </script>
+  </body>
+</html>

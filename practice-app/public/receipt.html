@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA Shop: Receipt</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <div class="card" id="receipt" hidden>
+        <h1>Receipt</h1>
+        <p>Order number: <strong data-testid="receipt-order-id"></strong></p>
+        <table aria-label="Receipt items">
+          <thead>
+            <tr>
+              <th scope="col">Product</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Unit price</th>
+              <th scope="col">Line total</th>
+            </tr>
+          </thead>
+          <tbody id="receipt-rows"></tbody>
+        </table>
+        <div class="totals">
+          <div><span>Items subtotal</span><span data-testid="receipt-subtotal"></span></div>
+          <div><span>Discount</span><span data-testid="receipt-discount"></span></div>
+          <div><span>Tax (8%)</span><span data-testid="receipt-tax"></span></div>
+          <div class="grand"><span>Total</span><span data-testid="receipt-total"></span></div>
+        </div>
+      </div>
+      <p id="not-found" class="error" role="alert" hidden>Receipt not found.</p>
+    </main>
+    <script src="/js/bugs.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+      (async function () {
+        const { api, bug, money, esc } = QS;
+        const id = new URLSearchParams(location.search).get('id') || '';
+        const r = await api(`/api/my-orders/${encodeURIComponent(id)}`);
+        if (!r.ok) {
+          document.getElementById('not-found').hidden = false;
+          return;
+        }
+        const o = r.data;
+        document.querySelector('[data-testid="receipt-order-id"]').textContent = o.id;
+        document.getElementById('receipt-rows').innerHTML = o.items
+          .map(
+            (it) =>
+              `<tr><th scope="row">${esc(it.name)}</th><td>${it.quantity}</td><td>${money(it.price)}</td><td>${money(it.lineTotal)}</td></tr>`,
+          )
+          .join('');
+        document.querySelector('[data-testid="receipt-subtotal"]').textContent = money(o.subtotal);
+        document.querySelector('[data-testid="receipt-discount"]').textContent = `-${money(o.discount)}`;
+        document.querySelector('[data-testid="receipt-tax"]').textContent = money(o.tax);
+        const total = bug('receipt-discount') ? o.subtotal + o.tax : o.total;
+        document.querySelector('[data-testid="receipt-total"]').textContent = money(total);
+        document.getElementById('receipt').hidden = false;
+      })();
+    </script>
+  </body>
+</html>
