@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 3,
   title: 'Test Levels & Test Types',
   subtitle:
-    'Unit, integration (big-bang, top-down, bottom-up, stubs and drivers), system and acceptance testing; the test pyramid; functional vs non-functional; regression vs retesting; smoke vs sanity; black/white/grey box; cross-browser and mobile; usability, accessibility, performance and security awareness.',
+    'Unit, integration, system and acceptance testing. Stubs and drivers, the test pyramid, functional vs non-functional, regression vs retesting, smoke vs sanity, black/white/grey box, cross-browser, accessibility, performance and security basics.',
   estimatedMinutes: 90,
   sources: [
     'ISTQB CTFL Syllabus v4.0.1 (2024) — 2.2 Test Levels and Test Types, 2.2.3 Confirmation and Regression Testing, 5.1.6 Test Pyramid',
@@ -23,41 +23,47 @@ const topic: Topic = {
   tags: ['test-levels', 'integration', 'stubs', 'drivers', 'uat', 'test-pyramid', 'regression', 'smoke', 'sanity', 'black-box', 'cross-browser', 'accessibility'],
   cheatSheet: [
     'ISTQB levels: component (unit) → component integration → system → system integration → acceptance (UAT, operational, contractual, regulatory, alpha, beta).',
-    'Integration strategies: big-bang (all at once, hard to localise defects), top-down (needs STUBS for lower modules), bottom-up (needs DRIVERS to call lower modules), sandwich = both.',
-    'Stub = fake CALLED module that returns canned answers; driver = fake CALLER that invokes the module under test.',
-    'Alpha = acceptance by users/testers at the developer\'s site; beta = real users in their own environment before general release.',
-    'Test pyramid: many fast isolated unit tests, fewer service/API tests, few slow end-to-end UI tests; the inverted "ice-cream cone" is the anti-pattern.',
-    'Functional = WHAT the system does; non-functional = HOW WELL (performance, usability, security, compatibility, reliability, maintainability, portability, safety).',
-    'Retesting (confirmation) = rerun the failed case to confirm a fix; regression = check that the change broke nothing else; select regression scope via impact analysis + risk.',
-    'Smoke = broad, shallow build verification on every new build ("can we test it?"); sanity = narrow, deeper check around a change or fix ("does this fix make sense?"). ISTQB glossary lists sanity as a smoke synonym; know both views.',
-    'Black-box = from specs, no code knowledge; white-box = from code/structure; grey-box = specs plus partial internal knowledge (DB, APIs, logs).',
-    'Cross-browser/mobile: pick browsers/devices from real traffic analytics; emulators for speed, real devices (BrowserStack/LambdaTest) for final validation.',
-    'Accessibility quick checks: keyboard-only navigation, visible focus, labels, alt text, contrast ≥ 4.5:1 for normal text (WCAG 2.2 AA).',
+    'Integration: big-bang = all at once (bugs hard to trace). Top-down needs STUBS. Bottom-up needs DRIVERS. Sandwich = both.',
+    'Stub = fake CALLED module that returns a fixed answer. Driver = fake CALLER that calls the module under test.',
+    'Alpha = users/testers at the developer\'s site. Beta = real users in their own environment, before release.',
+    'Test pyramid: many fast unit tests, fewer API tests, a few slow E2E UI tests. The "ice-cream cone" is the wrong shape.',
+    'Functional = WHAT it does. Non-functional = HOW WELL (performance, usability, security, compatibility, reliability, maintainability, portability, safety).',
+    'Retesting (confirmation) = rerun the failed test to confirm the fix. Regression = check the change broke nothing else. Choose scope by impact + risk.',
+    'Smoke = broad, shallow check of every new build ("can we test it?"). Sanity = narrow, deeper check of one change or fix. ISTQB glossary lists sanity as a smoke synonym.',
+    'Black-box = from specs, no code. White-box = from code structure. Grey-box = specs plus some inside knowledge (DB, APIs, logs).',
+    'Cross-browser/mobile: pick browsers and devices from analytics. Emulators for speed; real devices (BrowserStack/LambdaTest) for the final check.',
+    'Accessibility quick checks: keyboard only, visible focus, labels, alt text, contrast ≥ 4.5:1 for normal text (WCAG 2.2 AA).',
   ],
   sections: [
     {
       heading: 'Test levels: from a single unit to user acceptance',
-      body: `**Intuition:** building a car. You test each bolt and spark plug (unit), then the engine assembled from them (integration), then the whole car on a track (system), then the car connected to the charging network and the app (system integration), then a customer test-drives it (acceptance).
+      body: `**Test levels** are the stages of testing, from one small piece of code up to the whole product in the user's hands. ISTQB names five levels. Each level has its own goal, its own **test basis** (the documents you test against) and its own owner.
 
-**Test levels** are groups of test activities organised around a stage of the product, each with its own objectives, test basis, typical defects and owners.
+Each level finds a different kind of bug. If you skip a level, those bugs reach a later stage, where they cost more to fix.
 
-| Level | Test object | Test basis | Typical defects | Usually done by |
+| Level | What you test | Tested against | Typical bug | Usually done by |
 |---|---|---|---|---|
-| **Component (unit)** | One function, class or module in isolation | Detailed design, code | Wrong calculation, bad branch logic | Developers (unit frameworks, TDD) |
-| **Component integration** | Interfaces between components | Architecture, interface specs | Wrong data passed, mismatched formats, call order | Developers / SDETs |
-| **System** | The whole application end to end | System requirements, user stories | Wrong end-to-end behaviour, non-functional problems | Independent QA team |
-| **System integration** | The system plus external systems (payment gateway, SMS, ERP) | Interface contracts, APIs | Timeouts, auth failures, contract mismatches | QA with integration environment |
-| **Acceptance** | The system in a realistic context | Business requirements, user needs, contracts, regulations | Does not fit the business process | Users, PO, customer (QA supports) |
+| Component (unit) | One function or class, alone | Detailed design, code | Wrong calculation, wrong if/else | Developers |
+| Component integration | Two modules talking to each other | Architecture, interface specs | Wrong data passed, wrong format | Developers / SDETs |
+| System | The whole app, end to end | Requirements, user stories | A flow breaks, a page is too slow | Independent QA team |
+| System integration | Your app + outside systems (payment gateway, SMS, ERP) | API contracts | Timeouts, auth failures, field mismatch | QA in an integration environment |
+| Acceptance | The app in real business use | Business needs, contracts, laws | The app does not fit how users work | Users, PO, customer (QA helps) |
 
-**Worked example: an ATM**
+**Example: an ATM at each level.**
 
-- Unit: the function that checks "amount is a multiple of 100".
-- Component integration: the withdrawal module correctly calls the balance module.
-- System: card in → PIN → withdraw 2,000 → cash out → receipt, plus a timeout case.
-- System integration: the ATM talks to the core banking system and the SMS gateway.
-- Acceptance: bank operations staff run day-in-the-life scenarios, including cash reconciliation.
+| Level | ATM test | Expected result |
+|---|---|---|
+| Unit | Function isMultipleOf100(2050) | Returns false |
+| Component integration | Withdrawal module asks the balance module for the balance | Gets the correct balance |
+| System | Card → PIN → withdraw 2,000 → cash → receipt; also a timeout case | 2,000 paid out, receipt printed |
+| System integration | ATM sends the debit to core banking and the SMS gateway | Balance drops by 2,000; SMS arrives |
+| Acceptance | Bank staff run a full day, including cash counting at close | Cash and records match |
 
-**Remember:** in sequential models, the exit criteria of one level are often the entry criteria of the next. Test *types* (functional, non-functional, black-box, white-box) can be applied at **every** level.`,
+In step-by-step (sequential) models, the exit criteria of one level are often the entry criteria of the next. Test *types* (functional, non-functional, black-box, white-box) can be used at **every** level.
+
+**In an interview, say:** "ISTQB has five levels: component, component integration, system, system integration and acceptance. A level says *where* we test. A type says *what quality* we test."
+
+**Common mistake:** calling regression or smoke a "level". They are test types, and you can run them at any level.`,
       diagram: `  ACCEPTANCE           user/business: "does it meet our needs?"
        ^
   SYSTEM INTEGRATION   app <-> payment gateway, SMS, ERP
@@ -68,29 +74,36 @@ const topic: Topic = {
        ^
   COMPONENT (UNIT)     one function / class in isolation`,
       keyPoints: [
-        'Five ISTQB levels; each has its own objective, basis and owner.',
-        'Levels describe WHERE in the build-up you test; types describe WHAT quality you test.',
-        'Every test type can appear at every level.',
+        'Five ISTQB levels. Each has its own goal, test basis and owner.',
+        'A level says WHERE you test. A type says WHAT quality you test.',
+        'Every test type can be used at every level.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.1 Test Levels',
     },
     {
       heading: 'Integration testing: big-bang, top-down, bottom-up, stubs and drivers',
-      body: `**Intuition:** if you wire every appliance in a new house at once and the fuse blows, you do not know which one caused it (big-bang). If you plug them in one at a time, you do.
+      body: `**Integration testing** checks that separate parts of the app work correctly together. It tests the "joins": the data and calls passed between modules. The **integration strategy** is the order in which you join the parts.
 
-| Strategy | How it works | Needs | Pros | Cons |
+Joining parts one at a time makes bugs easy to trace. If you join everything at once and it fails, you don't know which join broke.
+
+| Strategy | How it works | Needs | Good | Bad |
 |---|---|---|---|---|
-| **Big-bang** | Integrate all modules at once, then test | Everything finished | Simple to organise | Defects hard to localise; testing starts late |
-| **Top-down** | Start from the top (UI/controller) and add lower modules step by step | **Stubs** for missing lower modules | Early skeleton of the user flow; major design flaws found early | Lower-level logic tested late; many stubs |
-| **Bottom-up** | Start from low-level modules (DB access, calculations) and move up | **Drivers** to call the modules | Core logic tested early; no stubs needed | No visible product until late |
-| **Sandwich / hybrid** | Top-down and bottom-up meet in the middle | Both | Parallel work | More coordination |
+| Big-bang | Join all modules at once, then test | Everything finished | Simple to organise | Bugs hard to trace; testing starts late |
+| Top-down | Start at the top (UI) and add lower modules one by one | Stubs for missing lower modules | You see the user flow early; big design flaws show early | Low-level logic tested late; many stubs |
+| Bottom-up | Start at the bottom (database, calculations) and move up | Drivers to call the modules | Core logic tested early; no stubs needed | Nothing visible until late |
+| Sandwich (hybrid) | Top-down and bottom-up meet in the middle | Both | Teams work in parallel | More coordination |
 
-**Stub vs driver:**
+A **stub** is a fake module that gets *called*. It returns a fixed (canned) answer. A **driver** is a fake *caller*. It calls the module you want to test, because the real caller does not exist yet.
 
-- **Stub:** a fake **called** module. It receives the call and returns a canned answer. Example: the checkout UI is ready but the real payment service is not, so a payment stub always returns "APPROVED, txn 123" (or "DECLINED" for a specific card).
-- **Driver:** a fake **caller**. It invokes the module under test because the real caller does not exist yet. Example: the tax-calculation module is finished but the cart UI is not, so a small script (or Postman collection) calls the tax API with test carts and checks responses.
+**Example (stub):** the checkout UI is ready, but the payment service is not. A payment stub always answers "APPROVED, txn 123". For one test card it answers "DECLINED".
 
-**Modern equivalents you will meet in automation:** mocks and fakes in unit tests, service virtualisation, Postman mock servers, and Playwright's network routing to fake an API response. Same idea: replace the missing or unreliable neighbour so you can test what you have.`,
+**Example (driver):** the tax module is ready, but the cart UI that calls it is not. A small script or Postman collection calls the tax API with test carts. It checks that 29.99 at 8% gives tax 2.40.
+
+Stubs also let you test errors that a real service rarely gives on demand, like a decline or a timeout. In automation you will meet the same idea as mocks, service virtualisation, Postman mock servers and Playwright's page.route.
+
+**In an interview, say:** "Top-down uses stubs for missing lower modules. Bottom-up uses drivers to call modules that have no caller yet."
+
+**Common mistake:** swapping the two. Stub = fake *called* module. Driver = fake *caller*.`,
       diagram: `   TOP-DOWN (stubs)                    BOTTOM-UP (drivers)
 
    [ Checkout UI ]  <- real            [ DRIVER: test script ] <- fake caller
@@ -120,61 +133,78 @@ IT-PAY-04  Contract check
         },
       ],
       keyPoints: [
-        'Top-down needs stubs; bottom-up needs drivers.',
-        'Big-bang delays testing and makes defects hard to localise.',
-        'Stubs let you test error paths (declines, timeouts) that real services rarely produce on demand.',
+        'Top-down needs stubs. Bottom-up needs drivers.',
+        'Big-bang starts testing late and makes bugs hard to trace.',
+        'Stubs let you test error paths (declines, timeouts) that real services rarely give on demand.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.1 (component integration depends on bottom-up/top-down/big-bang), 1.4.3 (stubs, drivers, service virtualisation); Guru99 — Integration testing',
     },
     {
       heading: 'System testing and acceptance testing (UAT, alpha, beta)',
-      body: `**Intuition:** system testing is the chef tasting the full meal against the recipe; acceptance testing is the customer eating it and deciding whether to pay.
+      body: `**System testing** checks the complete app against its requirements. It covers end-to-end flows **and** qualities such as speed, usability and browser support. An independent QA team usually does it, in an environment close to production.
 
-**System testing** checks the complete, integrated product against system requirements: end-to-end functional flows **and** non-functional qualities (performance, usability, compatibility). It is usually done by an independent QA team in an environment close to production.
+**Acceptance testing** checks that the app is fit for real use and ready to release. Its focus is **validation**: "did we build the right thing?" The real users or customers should lead it.
 
-**Acceptance testing** focuses on **validation** and readiness for deployment. Forms named by the ISTQB:
+**Example (food-delivery app):**
 
-| Form | Who | Question | Example |
+- System test: QA places an order, pays by card, and checks the status moves to "Delivered". QA also checks the menu loads in under 2 seconds.
+- Acceptance test: restaurant owners use the new "mark item out of stock" screen during a real lunch rush. They decide if it fits their work.
+
+ISTQB names these forms of acceptance testing:
+
+| Form | Who does it | Question | Example |
 |---|---|---|---|
-| **User acceptance testing (UAT)** | Intended business users | Does it support our real work? | Store managers process a day's returns in the new returns screen |
-| **Operational acceptance testing (OAT)** | Ops / admins | Can we run and support it? | Backups, restore, failover, monitoring alerts, patching |
-| **Contractual acceptance** | Customer per contract | Does it meet agreed criteria? | Vendor delivers a portal; acceptance criteria listed in the contract |
-| **Regulatory acceptance** | Against laws/standards | Is it compliant? | Banking app meets RBI or accessibility regulations |
-| **Alpha testing** | Users or independent testers **at the developer's site** | Early feedback in a controlled setting | Internal staff use the new app version for two weeks |
-| **Beta testing** | Real users **in their own environment** | Does it work in the wild? | TestFlight / Play Console beta to 2,000 customers |
+| User acceptance testing (UAT) | Real business users | Does it support our real work? | Store managers process a day's returns in the new returns screen |
+| Operational acceptance testing (OAT) | Ops / admins | Can we run and support it? | Backup, restore, failover, monitoring alerts, patching |
+| Contractual acceptance | The customer, per the contract | Does it meet the agreed criteria? | A vendor delivers a portal; the contract lists the acceptance criteria |
+| Regulatory acceptance | Checked against laws and standards | Is it compliant? | A banking app meets RBI or accessibility rules |
+| Alpha testing | Users or independent testers at the developer's site | Early feedback in a controlled place | Company staff use the new app version for two weeks |
+| Beta testing | Real users in their own environment | Does it work in the real world? | TestFlight or Play Console beta to 2,000 customers |
 
-**QA's role in UAT:** prepare the environment and data, help write UAT scenarios from business processes, train users, triage their reports (bug vs change request vs training issue), and track sign-off.
+Easy way to remember: **A**lpha = **a**t the developer's site. **B**eta = **b**eyond it, on the user's own device.
 
-**Common mistake:** treating UAT as "QA runs the regression suite again". UAT must be driven by business users and their real scenarios, otherwise it is just more system testing.`,
+QA supports UAT but does not run it alone. QA prepares the environment and test data. QA helps write UAT scenarios from business processes and trains the users. QA sorts user reports into bug, change request or training issue, and tracks sign-off.
+
+**In an interview, say:** "System testing checks the product against the spec. Acceptance testing checks it is fit for real use, and users should drive it."
+
+**Common mistake:** treating UAT as "QA runs the regression suite again". Without real users and real scenarios, it is just more system testing.`,
       keyPoints: [
-        'System testing = verification of the whole product against its spec, functional and non-functional.',
-        'Acceptance = validation of fitness for use; ideally done by the intended users.',
-        'Alpha = at developer site; beta = users\' own environment.',
+        'System testing = check the whole product against its spec, functional and non-functional.',
+        'Acceptance = check it is fit for use (validation), ideally by the real users.',
+        'Alpha = at the developer\'s site. Beta = in the users\' own environment.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.1 System testing and Acceptance testing',
     },
     {
       heading: 'The test pyramid',
-      body: `**Intuition:** a building needs a wide, solid foundation and a small roof. Lots of cheap, fast tests at the bottom; a few expensive, slow ones at the top.
+      body: `The **test pyramid** is a model for how many tests to write at each layer. You want many small, fast tests at the bottom and only a few big, slow tests at the top.
 
-Mike Cohn's original pyramid (2009) had three layers: **unit**, **service**, **UI**. The ISTQB v4.0 describes it as: the higher the layer, the lower the isolation and granularity and the slower the test, so you need many small tests at the bottom and few large end-to-end tests at the top.
+It matters because slow, fragile tests slow down feedback. A suite of 400 UI tests can take an hour and fail at random.
 
-| Layer | Speed | Example on SauceDemo-like shop | Who writes |
-|---|---|---|---|
-| Unit (component) | Milliseconds | "calculateTax(29.99) returns 2.40" | Developers |
-| Service / API / integration | Tens to hundreds of ms | POST /cart adds item; GET /cart total correct | Developers, SDETs, QA with Postman/Playwright request |
-| UI end-to-end | Seconds each | Login → add backpack → checkout → "Thank you for your order!" | QA / SDETs with Playwright |
-| (On top) Manual exploratory | Human time | Charters on new features, usability | QA |
+Mike Cohn's original pyramid (2009) had three layers: unit, service and UI. ISTQB v4.0 puts it this way: the higher the layer, the less isolated the test, the bigger it is, and the slower it runs. Layer names can vary between models.
 
-**The anti-pattern: the "ice-cream cone".** Mostly manual and UI tests, few unit tests. Symptoms: slow, flaky suites, long feedback, bugs found late. Teams moving from manual to automation often start here by automating every manual case through the UI.
+**Example: a SauceDemo-like shop, tested at each layer.**
 
-**What this means for you as a new Playwright engineer:**
+| Layer | How many | Speed | Example test | Who writes it |
+|---|---|---|---|---|
+| Unit (component) | Many | Milliseconds | calculateTax(29.99) returns 2.40 | Developers |
+| Service / API | Some | Tens to hundreds of ms | POST /cart adds an item; GET /cart total is right | Developers, SDETs, QA (Postman, Playwright request) |
+| UI end-to-end | Few | Seconds each | Login → add backpack → checkout → "Thank you for your order!" | QA / SDETs (Playwright) |
+| On top: manual exploratory | Little | Human time | Explore a new feature; check usability | QA |
 
-- Automate the **critical user journeys** end to end (login, checkout), not every validation message.
-- Push rule-heavy checks (coupon maths, tax rounding) **down** to API or unit tests where they are faster and more stable.
-- Use API calls to **set up** data for UI tests instead of clicking through setup screens.
+The wrong shape is called the **ice-cream cone**. It has mostly manual and UI tests and very few unit tests. The suite is slow and flaky, and bugs are found late. Teams often end up here when they automate every manual case through the UI.
 
-The pyramid is a guideline, not a law; some products (UI-heavy, little logic) reasonably look more like a "trophy". The point is cost-effective feedback.`,
+What this means for you as a Playwright tester:
+
+- Automate the critical user journeys end to end, like login and checkout.
+- Push rule checks (coupon maths, tax rounding) down to API or unit tests. They run faster and break less.
+- Create test data with API calls instead of clicking through setup screens.
+
+The pyramid is a guide, not a law. A UI-heavy app with little logic may look more like a "trophy". The goal is fast, cheap, reliable feedback.
+
+**In an interview, say:** "Many unit tests, fewer API tests, a few end-to-end UI tests. I keep UI tests for critical journeys and push business rules down."
+
+**Common mistake:** turning every manual case into UI automation. That builds an ice-cream cone.`,
       diagram: `                 /\\
                 /  \\        few   E2E UI tests (Playwright)   slow, brittle
                /____\\
@@ -185,61 +215,82 @@ The pyramid is a guideline, not a law; some products (UI-heavy, little logic) re
 
    Anti-pattern "ice-cream cone":  big manual + UI top, tiny unit base`,
       keyPoints: [
-        'Many fast unit tests, fewer API tests, few E2E UI tests.',
-        'Avoid automating every manual case through the UI (ice-cream cone).',
-        'Push business-rule checks down the pyramid; keep E2E for critical journeys.',
+        'Many fast unit tests, fewer API tests, a few E2E UI tests.',
+        'Do not automate every manual case through the UI (ice-cream cone).',
+        'Push business-rule checks down the pyramid. Keep E2E for critical journeys.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 5.1.6 Test Pyramid; Mike Cohn — Succeeding with Agile (2009)',
     },
     {
       heading: 'Functional vs non-functional testing',
-      body: `**Intuition:** functional testing asks "does the lift go to floor 5 when I press 5?"; non-functional asks "how fast, how safely, how reliably, and can a wheelchair user reach the button?".
+      body: `**Functional testing** checks *what* the system does. **Non-functional testing** checks *how well* it does it: how fast, how secure, how easy to use.
+
+When an interviewer says "test this login page" (or a pen, or a lift), split your answer into functional and non-functional. It shows clear structure at once.
+
+**Example (SauceDemo):**
+
+| Check | Type | Why |
+|---|---|---|
+| Add a backpack → cart badge shows "1" | Functional | It is about what happens |
+| Empty postal code → "Error: Postal Code is required" | Functional | It is a business rule |
+| Inventory page loads in under 2 s on 4G | Non-functional (performance) | It is about speed |
+| Checkout works the same on Safari | Non-functional (compatibility) | It is about where it runs |
+| Checkout can be done with the keyboard only | Non-functional (usability) | It is about who can use it |
 
 | | Functional | Non-functional |
 |---|---|---|
-| Question | **What** does the system do? | **How well** does it do it? |
-| Basis | Requirements, user stories, business rules | Quality characteristics, SLAs, standards |
-| Example (SauceDemo) | Adding a backpack shows badge "1" | Inventory page loads in under 2 s on 4G; works on Safari; usable by keyboard |
+| Question | What does it do? | How well does it do it? |
+| Tested against | Requirements, user stories, business rules | Quality characteristics, SLAs, standards |
 | Techniques | EP, BVA, decision tables, state transition | Load tools, accessibility checkers, security scanners, usability sessions |
 
-**ISO/IEC 25010 non-functional characteristics** (as listed in CTFL v4.0): performance efficiency, compatibility, usability (interaction capability), reliability, security, maintainability, portability (flexibility), safety.
+ISO/IEC 25010 lists eight non-functional characteristics (as in CTFL v4.0): performance efficiency, compatibility, usability (interaction capability), reliability, security, maintainability, portability (flexibility) and safety.
 
-Key points from the syllabus:
+Three facts from the syllabus:
 
-- Many non-functional tests **reuse functional tests** while checking a constraint (e.g. "checkout completes **within 3 seconds**").
-- **Late discovery** of non-functional defects (e.g. the system cannot handle sale-day traffic) can threaten the whole project, so start early where possible.
-- Some need special environments (performance lab, usability lab, device farm).
+- Many non-functional tests reuse a functional test and add a limit. For example: "checkout completes **within 3 seconds**".
+- Non-functional bugs found late can put the whole project at risk. For example: the site cannot handle sale-day traffic. So start early where you can.
+- Some need special set-ups, such as a performance lab, usability lab or device farm.
 
-**Interview tip:** when asked to test anything (a pen, a lift, a login page), split your answer into functional and non-functional. It instantly shows structure.`,
+**In an interview, say:** "Functional is what the system does. Non-functional is how well it does it, like speed, security and usability."`,
       keyPoints: [
-        'Functional = behaviour; non-functional = quality attributes.',
+        'Functional = behaviour (what). Non-functional = quality (how well).',
         'Know the eight ISO 25010 characteristics by name.',
-        'Non-functional checks often ride on functional flows with an added constraint.',
+        'Many non-functional checks reuse a functional flow and add a limit, like "within 3 seconds".',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.2 Test Types; ISO/IEC 25010',
     },
     {
       heading: 'Regression testing vs retesting (confirmation testing)',
-      body: `**Intuition:** your plumber fixes the kitchen tap. **Retesting:** turn on the kitchen tap; does it still leak? **Regression testing:** check the bathroom shower and the washing machine too, because the plumber touched the shared pipe.
+      body: `**Retesting** (ISTQB: **confirmation testing**) means running the failed test again to check that a specific bug is now fixed. **Regression testing** means re-running old tests to make sure a change did not break something that worked before.
 
-| | Retesting (confirmation testing) | Regression testing |
+Every fix or change can break something nearby. Retesting proves the fix works. Regression proves nothing else broke.
+
+**Example:** BUG-881 says coupon SAVE10 on a 999.99 cart gives the wrong total. The developer fixes discount rounding in the pricing service.
+
+- Retest: run BUG-881's steps again. SAVE10 on 999.99 now gives 899.99.
+- Regression: run all coupon cases, checkout totals, order email totals, the invoice PDF and refunds (they all use pricing). Add the smoke suite.
+- Skip: login, profile and product search. They do not touch pricing.
+
+| | Retesting (confirmation) | Regression testing |
 |---|---|---|
-| Purpose | Confirm a **specific defect** is fixed | Confirm a **change** did not break anything that worked before |
-| Which tests | The failed test(s) that found the defect (plus new tests for the fix) | Previously passing tests around and beyond the change |
-| Planned in advance? | No, triggered by a fix | Yes, a maintained suite selected per change |
-| Automation | Usually manual first | Prime candidate for automation (runs every release) |
-| Order | Retest first, then regression | After the fix is confirmed |
+| Purpose | Confirm a specific bug is fixed | Confirm a change broke nothing that worked before |
+| Which tests | The test(s) that failed, plus new tests for the fix | Old passing tests around and beyond the change |
+| Planned in advance? | No, triggered by a fix | Yes, a maintained suite chosen per change |
+| Automation | Usually manual first | Best candidate for automation (runs every release) |
+| Order | First | After the fix is confirmed |
 
-**Selecting regression scope** (you rarely have time for everything):
+You rarely have time to run everything. Four ways to choose regression scope:
 
-1. **Retest all:** run the full suite. Safest, slowest; fine when automated and cheap.
-2. **Selection by impact analysis:** ask what changed (code, config, shared components, data) and test those areas plus their dependants. The ISTQB recommends impact analysis first.
-3. **Prioritisation by risk:** P1 business-critical flows, high-usage features, historical defect clusters, recently changed areas first.
-4. **Hybrid (most common):** always-run core (smoke + P1 journeys) + impact-selected cases + a slice of rotating lower-priority cases.
+1. **Retest all:** run the full suite. Safest and slowest. Fine when it is automated and cheap.
+2. **Impact analysis:** find what changed (code, config, shared parts, data). Test those areas and everything that uses them. ISTQB recommends impact analysis first.
+3. **Risk:** run business-critical (P1) flows, heavily used features, areas with many past bugs and recently changed areas first.
+4. **Hybrid (most common):** a fixed core (smoke + P1 journeys), plus impact-selected cases, plus a rotating slice of lower-priority cases.
 
-**Worked example: hotfix on coupon rounding.** Change: discount rounding in the pricing service. Retest: BUG-881's case (SAVE10 on 999.99). Regression: all coupon cases, checkout totals, order confirmation email totals, invoice PDF, refunds (they reuse pricing), plus the smoke suite. Skip: login, profile, product search, as they do not touch pricing.
+Regression can be needed even with **no code change**, when the environment changes. Examples: an OS update, a new browser version, a database upgrade.
 
-Regression can also be about the **environment** (OS update, browser version, database upgrade) with no code change at all.`,
+**In an interview, say:** "Retesting checks the fix. Regression checks for side effects. I retest first, then pick regression scope by impact and risk."
+
+**Common mistake:** using the two words as if they mean the same thing.`,
       code: [
         {
           language: 'text',
@@ -260,50 +311,55 @@ Residual risk noted in release ticket: reports module uses its own rounding`,
         },
       ],
       keyPoints: [
-        'Retesting = the fixed defect; regression = everything the change might affect.',
-        'Use impact analysis + risk to select regression scope; keep a fixed core.',
-        'Regression suites grow every release, so they are the first thing to automate.',
+        'Retesting = the fixed bug. Regression = everything the change might affect.',
+        'Choose regression scope by impact analysis + risk. Keep a fixed core.',
+        'Regression suites grow every release, so automate them first.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.3 Confirmation Testing and Regression Testing; regression test selection literature (Rothermel & Harrold: retest-all vs selective)',
     },
     {
       heading: 'Smoke vs sanity testing',
-      body: `**Intuition:** **smoke** is switching on a newly delivered TV and flicking through a few channels to see it is not dead on arrival. **Sanity** is, after the repairman fixed the HDMI port, checking that HDMI and the things around it really work now.
+      body: `**Smoke testing** is a quick, broad check of a new build. It answers: "Is this build stable enough to test at all?" It is also called a **build verification test (BVT)**. **Sanity testing** is a quick, narrow check after a small change or fix. It answers: "Does this change work sensibly, so deeper testing is worth it?"
 
-The term "smoke test" comes from hardware: power it on and see if smoke comes out.
+Both save time. A failed smoke test stops you wasting hours on a broken build.
+
+**Example (SauceDemo):**
+
+- Smoke on a new build (10–15 min by hand, 1–2 min automated). The site loads. standard_user can log in. The inventory shows 6 products. Add to cart updates the badge, and the cart lists the item. Checkout → overview → Finish shows "Thank you for your order!". Logout works.
+- Sanity after a fix to the "Price (low to high)" sort. Check that sort and the other three sort options. Check that adding a sorted item to the cart still works. If anything fails, send the fix back at once. Don't start full regression.
 
 | | Smoke testing | Sanity testing |
 |---|---|---|
-| Question | Is this build stable enough to test at all? | Does this specific change/fix behave sensibly, so deeper testing is worthwhile? |
-| When | Every new build, before any other testing | After a minor change or bug fix on a relatively stable build |
-| Breadth / depth | **Broad and shallow**: touches all critical areas | **Narrow and deeper**: focuses on the changed area |
-| Scripted? | Usually scripted, ideally automated in CI | Often unscripted or a short checklist |
-| Relation | Also called build verification test (BVT) | Often described as a quick subset of regression |
-| Outcome if it fails | **Reject the build**; no further testing | Stop and send the change back before full regression |
+| Question | Is this build stable enough to test? | Does this change make sense, so deeper testing is worth it? |
+| When | Every new build, before any other testing | After a small change or fix, on a fairly stable build |
+| Breadth / depth | Broad and shallow: all critical areas | Narrow and deeper: the changed area |
+| Scripted? | Usually scripted, ideally automated in CI | Often unscripted, or a short checklist |
+| Also known as | Build verification test (BVT) | Often seen as a quick subset of regression |
+| If it fails | Reject the build; no further testing | Send the change back before full regression |
 
-**SauceDemo smoke suite (10–15 min, or 1–2 min automated):** site loads; standard_user can log in; inventory shows 6 products; add to cart updates the badge; cart page lists the item; checkout info → overview → finish shows "Thank you for your order!"; logout works.
+Be careful with the words. Companies use them in different ways, and the **ISTQB glossary lists "sanity test" as a synonym of smoke test**. In an interview, say how your team used each term, then describe what you actually ran.
 
-**Sanity example:** a fix changes the "Price (low to high)" sort. Sanity: check that sort option, the other three sort options, and that adding a sorted item to the cart still works. If any fails, send it back immediately rather than starting a full regression.
+**In an interview, say:** "In my team, smoke meant a broad check of every critical feature on each new build. Sanity meant a focused check after a fix."
 
-**Terminology warning (great interview point):** companies use these words inconsistently, and the **ISTQB glossary actually lists "sanity test" as a synonym of smoke test**. Say: "In my team, smoke meant build acceptance across all critical features and sanity meant a focused check after a fix," and then describe what you actually did. Interviewers reward clarity over dogma.`,
+**Common mistake:** making the smoke test deep, for example checking every error message. Smoke stays broad and shallow.`,
       keyPoints: [
-        'Smoke = broad, shallow, every build, decides whether to accept the build.',
-        'Sanity = narrow, focused on a change, decides whether deeper testing is worthwhile.',
-        'Definitions vary; ISTQB treats them as synonyms. Explain your team\'s usage.',
+        'Smoke = broad, shallow, on every build. It decides whether to accept the build.',
+        'Sanity = narrow, on one change. It decides whether deeper testing is worth it.',
+        'Definitions vary, and ISTQB treats them as synonyms. Explain your team\'s usage.',
       ],
       source: 'ISTQB Glossary — smoke test; Software Testing Help — Smoke vs sanity testing; AmbitionBox / Testleaf 2025 interview question lists',
     },
     {
       heading: 'Positive vs negative testing',
-      body: `**Intuition:** positive testing checks that the door opens with the right key; negative testing checks that it stays locked with the wrong key, a bent key, or a hairpin.
+      body: `**Positive testing** uses valid data and normal user actions. It checks the app does what it should. **Negative testing** uses invalid, unexpected or harmful input. It checks the app handles that input safely.
 
-| | Positive testing | Negative testing |
-|---|---|---|
-| Input | Valid data, expected user behaviour | Invalid, unexpected, malicious or missing data |
-| Goal | The system does what it should | The system handles bad input gracefully: clear error, no crash, no data corruption, no security hole |
-| Proportion | Fewer cases | Often more cases, because there are many ways to be wrong |
+"Safely" means a clear error, no crash, no broken data and no security hole. Negative cases usually outnumber positive ones, because there are many ways to be wrong.
 
-**Worked example: coupon field (valid codes are uppercase letters and digits, 4–12 characters, case-insensitive).**`,
+**Example: a coupon field.** Rule: valid codes are uppercase letters and digits, 4–12 characters long, and case does not matter. The test cases below show both kinds.
+
+**In an interview, say:** "Positive tests prove it works with good input. Negative tests prove it fails safely with bad input."
+
+**Common mistake:** writing "it fails" as the expected result of a negative test. Write exactly how it should fail, like "shows 'Coupon not found'; total unchanged".`,
       code: [
         {
           language: 'text',
@@ -327,69 +383,81 @@ N8  10 wrong codes in a minute           -> rate-limited / captcha (if specified
       ],
       keyPoints: [
         'Negative testing protects users, data and security, not just error messages.',
-        'Expected result of a negative test is graceful handling, never "it fails".',
-        'Combine with EP/BVA (covered in Test Design) to choose values systematically.',
+        'The expected result of a negative test is safe handling, never just "it fails".',
+        'Use EP and BVA (see Test Design) to pick the values.',
       ],
       source: 'Glenford Myers — The Art of Software Testing, Ch 2 (test invalid and unexpected inputs as well as valid ones)',
     },
     {
       heading: 'Black-box, white-box and grey-box testing',
-      body: `**Intuition:** black-box is judging a vending machine only by pressing buttons; white-box is opening the panel and checking every wire; grey-box is pressing buttons while also watching the machine's display log.
+      body: `**Black-box testing** means designing tests from the requirements, without looking at the code. **White-box testing** means designing tests from the code's inside structure, such as its branches. **Grey-box testing** mixes both: you test like a user, but you also use some inside knowledge, such as the database, APIs or logs.
+
+**Example: ATM withdrawal of 2,000.**
+
+| Approach | What you do | What it proves |
+|---|---|---|
+| Black-box | Insert card, enter PIN, withdraw 2,000 | 2,000 paid out, balance down by 2,000, receipt printed |
+| White-box | Make sure tests run both branches of "if (amount > dailyRemaining)", and the path where the cash box is empty | No branch is left untested |
+| Grey-box | After the withdrawal, query the transactions table; check the log; call the balance API | One debit row with the right amount and status; no retry in the log |
 
 | | Black-box | White-box | Grey-box |
 |---|---|---|---|
-| Based on | Specifications, requirements, behaviour | Internal structure: code, branches, architecture, data flows | Specs **plus** partial internal knowledge |
-| Knowledge of code | None needed | Required | Some: DB schema, API contracts, logs, architecture |
-| Typical techniques | EP, BVA, decision tables, state transition, use cases | Statement and branch coverage, code reviews | API + DB checks, log inspection, targeted tests from architecture |
+| Based on | Specs, requirements, behaviour | Code, branches, architecture, data flows | Specs plus some inside knowledge |
+| Code knowledge | None needed | Required | Some: DB schema, API contracts, logs |
+| Techniques | EP, BVA, decision tables, state transition, use cases | Statement and branch coverage, code reviews | API + DB checks, log checks |
 | Typical level | System, acceptance | Unit, component integration | Integration, system, API |
 | Who | Testers, users | Developers, SDETs | QA engineers with technical skills |
 
-**Worked example: ATM withdrawal of 2,000.**
+Most real QA work in product companies is **grey-box**. You test through the UI, then use SQL, API calls and logs to confirm what really happened. The API, SQL and Playwright phases of this course build exactly these skills.
 
-- **Black-box:** insert card, PIN, withdraw 2,000 → 2,000 dispensed, balance reduced by 2,000, receipt printed.
-- **White-box:** ensure tests execute both branches of "if (amount > dailyRemaining)" and the exception path when the cash cassette is empty.
-- **Grey-box:** after the withdrawal, query the transactions table to verify one debit row, correct amount and status; check the log shows no retry; call the balance API directly.
-
-Most real QA work in product companies is **grey-box**: you test through the UI like a user, but you also use SQL, API calls and logs to confirm what really happened. That is exactly the skill set the API, SQL and Playwright phases of this course build.`,
+**In an interview, say:** "Black-box is from the spec. White-box is from the code. Grey-box is user testing plus checks in the database, API or logs."`,
       keyPoints: [
-        'Black-box from specs; white-box from code structure; grey-box mixes both.',
-        'White-box coverage (statement/branch) mostly lives at unit level.',
-        'Checking DB/API/logs behind a UI action is grey-box testing.',
+        'Black-box from specs. White-box from code structure. Grey-box mixes both.',
+        'White-box coverage (statement/branch) is mostly done at unit level.',
+        'Checking the DB, API or logs behind a UI action is grey-box testing.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.2 (black-box and white-box test types), 4.2–4.3',
     },
     {
       heading: 'Cross-browser, mobile and responsive testing',
-      body: `**Intuition:** your website is a play performed in many theatres (Chrome, Safari, Firefox, Android, iPhone). The script is the same, but the stage sizes, lighting and acoustics differ.
+      body: `**Cross-browser testing** checks the app works the same in different browsers (Chrome, Safari, Firefox, Edge). **Mobile testing** checks it on phones and tablets. **Responsive testing** checks the layout adapts to each screen size.
 
-**Choosing what to cover:** you cannot test every browser × OS × device. Use **real traffic analytics** (e.g. Google Analytics) and business priorities. Typically cover the browsers/devices that make up ~90–95% of users, plus anything contractually required.
+You cannot test every browser × OS × device. So choose from **real traffic data** (for example Google Analytics) and business needs. Usually cover the browsers and devices of about 90–95% of users, plus anything the contract requires.
+
+**Example:** analytics show Chrome Android 48%, Safari iOS 27%, Chrome desktop 15%, Safari macOS 4%. These four cover 94% of users, so they become your test matrix.
 
 | Option | What it is | Good for | Limits |
 |---|---|---|---|
-| **Browser dev tools device mode / Playwright device emulation** | Desktop browser pretends to be a phone (viewport, user agent, touch) | Fast responsive layout checks, CI | Not a real mobile browser engine or hardware |
-| **Emulator** (Android) / **Simulator** (iOS) | Virtual device on your machine | Functional app testing, debugging, CI | No real battery, sensors, network quirks, interrupts; performance differs |
-| **Real devices** (own lab) | Physical phones/tablets | Final validation, gestures, camera, performance | Costly to buy and keep updated |
-| **Cloud device farms** (BrowserStack, LambdaTest, Sauce Labs) | Remote real devices and browser/OS combos | Wide coverage without owning hardware; parallel runs | Subscription cost; some latency |
+| Browser device mode / Playwright device emulation | A desktop browser pretends to be a phone (screen size, user agent, touch) | Fast layout checks, CI | Not a real mobile browser or real hardware |
+| Emulator (Android) / Simulator (iOS) | A virtual phone on your computer | Functional app testing, debugging, CI | No real battery, sensors, network quirks or interruptions; speed differs |
+| Real devices (own lab) | Physical phones and tablets | Final checks, gestures, camera, performance | Costly to buy and keep updated |
+| Cloud device farms (BrowserStack, LambdaTest, Sauce Labs) | Remote real devices and browser/OS combos | Wide coverage without owning hardware; parallel runs | Subscription cost; some delay |
 
-**Responsive testing checklist:** common breakpoints (e.g. 360, 768, 1024, 1440 px wide), portrait/landscape, no horizontal scrolling, readable text without zoom, tappable targets, menus collapse into a hamburger and still work, images scale, forms usable with the on-screen keyboard.
+**Responsive checklist:** test common widths (360, 768, 1024, 1440 px) in portrait and landscape. Check there is no sideways scrolling. Text is readable without zoom, and buttons are easy to tap. Menus collapse into a hamburger and still work. Images scale. Forms work with the on-screen keyboard open.
 
-**Typical cross-browser defects:** date pickers behaving differently in Safari, CSS layout breaks, unsupported JavaScript APIs, autofill differences, file upload differences on iOS, fonts and rendering.
+**Typical cross-browser bugs:** date pickers act differently in Safari, CSS layouts break, a JavaScript API is not supported, autofill differs, file upload differs on iOS, fonts render differently.
 
-**Automation note:** Playwright runs the same tests on Chromium, Firefox and WebKit and can emulate devices, which is excellent for regression; still keep a short **real-device** pass for release-critical mobile flows, as BrowserStack and others recommend.`,
+Playwright runs the same tests on Chromium, Firefox and WebKit and can emulate devices. That is great for regression. Still do a short **real-device** pass for release-critical mobile flows, as BrowserStack and others recommend.
+
+**In an interview, say:** "I choose browsers and devices from analytics. I use emulators for speed and real devices for the final check."
+
+**Common mistake:** promising to test "all browsers and devices".`,
       keyPoints: [
-        'Pick the matrix from analytics, not from "all browsers".',
-        'Emulators/simulators for speed; real devices for final validation.',
-        'Responsive testing = breakpoints, orientation, touch, on-screen keyboard.',
+        'Pick the matrix from analytics, not "all browsers".',
+        'Emulators and simulators for speed. Real devices for the final check.',
+        'Responsive testing = screen widths, orientation, touch, on-screen keyboard.',
       ],
       source: 'BrowserStack guides — Emulator vs simulator vs real devices; Playwright docs — Emulation (devices)',
     },
     {
       heading: 'Usability and accessibility basics',
-      body: `**Intuition:** usability is "can people use it easily?"; accessibility is "can **everyone** use it, including people who are blind, deaf, have motor impairments, or use a keyboard only?".
+      body: `**Usability** means people can use the app easily. **Accessibility** means *everyone* can use it, including people who are blind, deaf, have motor problems or use only a keyboard.
 
-**Usability heuristics a manual tester can check quickly** (inspired by Nielsen's heuristics): clear feedback after every action, consistent wording and layout, error messages that say what went wrong and how to fix it, easy undo (remove from cart), no unnecessary fields, sensible defaults.
+**Example:** a login form has a "Username" box with only placeholder text and no label. A screen-reader user hears "edit text" and does not know what to type. That is an accessibility bug (WCAG 3.3.2).
 
-**Accessibility (WCAG 2.2, POUR principles):** content must be **P**erceivable, **O**perable, **U**nderstandable and **R**obust. Many countries and contracts require WCAG 2.x Level AA.
+Quick usability checks (based on Nielsen's heuristics): Does every action give clear feedback? Are wording and layout consistent? Do error messages say what went wrong and how to fix it? Is undo easy, like remove from cart? Are there no extra fields, and sensible defaults?
+
+Accessibility follows **WCAG 2.2** and its four **POUR** principles: content must be **P**erceivable, **O**perable, **U**nderstandable and **R**obust. Many countries and contracts require WCAG 2.x Level AA.
 
 | Quick manual check | How | WCAG reference (AA) |
 |---|---|---|
@@ -402,19 +470,23 @@ Most real QA work in product companies is **grey-box**: you test through the UI 
 | Target size | Click/tap targets at least 24 by 24 CSS px (or enough spacing) | 2.5.8 Target Size (Minimum), new in 2.2 |
 | Zoom | Page usable at 200% zoom | 1.4.4 Resize Text |
 
-**Tools:** browser accessibility tree, Lighthouse, axe DevTools, screen readers (NVDA on Windows, VoiceOver on macOS/iOS, TalkBack on Android). Automation tools like axe catch only a portion of issues; keyboard and screen-reader checks by a human are still essential.
+**Tools:** the browser accessibility tree, Lighthouse, axe DevTools, and screen readers (NVDA on Windows, VoiceOver on macOS/iOS, TalkBack on Android). Tools like axe catch only part of the issues. A human still needs to do keyboard and screen-reader checks.
 
-**Bonus for automation:** Playwright's recommended locators (getByRole, getByLabel) only work well when the page is accessible, so accessible pages are also easier to automate.`,
+Bonus: Playwright's recommended locators (getByRole, getByLabel) work best on accessible pages. So accessible pages are also easier to automate.
+
+**In an interview, say:** "Usability is ease of use. Accessibility is about everyone being able to use it. I start with keyboard-only and contrast checks, which need no tools."
+
+**Common mistake:** trusting an automated scanner alone.`,
       keyPoints: [
-        'Usability = ease of use; accessibility = usable by people with disabilities.',
+        'Usability = easy to use. Accessibility = usable by people with disabilities too.',
         'Keyboard-only and contrast checks need no tools and find many issues.',
-        'WCAG 2.2 AA is the common target; automated scanners find only part of the problems.',
+        'WCAG 2.2 AA is the usual target. Automated scanners find only part of the problems.',
       ],
       source: 'W3C — WCAG 2.2 (success criteria 1.1.1, 1.4.3, 2.1.1, 2.4.7, 2.5.8, 3.3.1); ISTQB CTFL v4.0.1 — 2.2.2 (usability as a non-functional characteristic)',
     },
     {
       heading: 'Performance and security awareness for QA',
-      body: `**Intuition:** a shop that works for one customer may collapse on sale day (performance), and a shop with a perfect checkout may still leave the back door unlocked (security). Manual testers are not expected to be specialists, but they are expected to **notice**, **ask** and **run basic checks**.
+      body: `**Performance testing** checks speed and stability under load. **Security testing** checks that data and features are safe from misuse. A manual tester is not expected to be a specialist. But you are expected to notice problems, ask questions and run basic checks.
 
 **Performance test types:**
 
@@ -427,21 +499,32 @@ Most real QA work in product companies is **grey-box**: you test through the UI 
 | Volume | Large data amounts? | Order history with 50,000 orders per customer |
 | Scalability | Does adding resources help linearly? | 2 servers vs 4 servers throughput |
 
-Tools: JMeter, k6, Gatling, Locust; browser dev tools and Lighthouse for page-level speed. **What a manual QA can do:** note slow pages with timings, check the network tab for huge images or repeated calls, check behaviour with a throttled connection (Slow 4G), and raise performance requirements in refinement ("how fast is fast enough?").
+Tools: JMeter, k6, Gatling, Locust. Use browser dev tools and Lighthouse for page speed.
 
-**Security awareness (inspired by the OWASP Top 10; Broken Access Control ranked #1 in the 2021 edition):**
+What a manual tester can do:
+
+- Note slow pages, with timings.
+- Check the network tab for huge images or repeated calls.
+- Test on a throttled connection (Slow 4G).
+- Ask for numbers in refinement: "How fast is fast enough?"
+
+**Security checks** (based on the OWASP Top 10; Broken Access Control was #1 in the 2021 edition):
 
 - **Access control:** change an order ID in the URL (/orders/1001 → /orders/1002). Can you see someone else's order? Can a normal user open admin pages?
-- **Injection and XSS:** enter characters such as a single quote, or a script tag, into inputs; the app should treat them as text.
-- **Authentication and sessions:** logout then press Back; does the session end? Is there rate-limiting on login? Are passwords masked and never in URLs?
-- **Sensitive data:** no card numbers, tokens or passwords in logs, URLs, error pages or local storage; HTTPS everywhere.
-- **Error handling:** errors do not reveal stack traces or SQL.
+- **Injection and XSS:** type a single quote or a script tag into inputs. The app should treat them as plain text.
+- **Login and sessions:** log out, then press Back. Is the session over? Is there a limit on login attempts? Are passwords masked and never in URLs?
+- **Sensitive data:** no card numbers, tokens or passwords in logs, URLs, error pages or local storage. HTTPS everywhere.
+- **Error handling:** errors do not show stack traces or SQL.
 
-Report suspected security issues privately to the right owner, not in public channels. Deep penetration testing is a specialist activity, but these checks catch real bugs.`,
+**Example bug:** on order history, changing /orders/1001 to /orders/1002 shows another customer's name and address. That is broken access control, so report it as Critical.
+
+Report suspected security issues privately to the right owner, never in public channels. Deep penetration testing is for specialists, but these checks find real bugs.
+
+**In an interview, say:** "Load testing checks the expected peak. Stress testing pushes past it to find the breaking point. For security, I check access control, injection, sessions and data exposure."`,
       keyPoints: [
-        'Know load vs stress vs spike vs soak with an example each.',
-        'Manual QA adds value by measuring, throttling and asking for numeric performance requirements.',
-        'Basic security checks: access control via URL/IDs, injection/XSS input, session handling, data exposure.',
+        'Know load vs stress vs spike vs soak, with an example each.',
+        'Manual QA helps by measuring, throttling and asking for numeric targets.',
+        'Basic security checks: access control via URL/IDs, injection/XSS input, sessions, data exposure.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 2.2.2 (performance efficiency and security as quality characteristics); OWASP Top 10 (2021)',
     },
@@ -577,7 +660,7 @@ testing on this build. Resume when a new build passes all 9 steps.`,
     {
       id: 'mt-test-levels-types-iq-01',
       difficulty: 'easy',
-      question: 'A new build lands on QA at 10 a.m. and a separate fix for the price sort arrives at 3 p.m. Which of these is a smoke test and which is a sanity test, and what exactly would you run for each on SauceDemo?',
+      question: 'A new build reaches QA at 10 a.m. A fix for the price sort arrives at 3 p.m. Which needs a smoke test and which a sanity test? What exactly would you run for each on SauceDemo?',
       context: 'Smoke vs sanity is among the most repeated manual-testing questions in AmbitionBox and Testleaf 2025 lists; this version checks whether you can apply it.',
       whatInterviewerLooksFor: [
         'Smoke = broad and shallow build acceptance; sanity = narrow check around a change',
@@ -612,7 +695,7 @@ If sanity fails, the fix goes back immediately. If it passes, I run regression a
         },
         {
           q: 'Is sanity testing documented?',
-          a: 'Often it is lighter than other testing, a short checklist or unscripted, because it is fast and focused. I still record what I checked and the result in the ticket (for example, "sanity on build 412: 4 sort options OK, cart OK"), so the decision to proceed to regression is traceable.',
+          a: 'Often it is lighter than other testing, a short checklist or unscripted, because it is fast and focused. I still write what I checked and the result in the ticket, for example "sanity on build 412: 4 sort options OK, cart OK". Then the decision to move to regression is traceable.',
         },
       ],
       pitfalls: [
@@ -624,7 +707,7 @@ If sanity fails, the fix goes back immediately. If it passes, I run regression a
     {
       id: 'mt-test-levels-types-iq-02',
       difficulty: 'medium',
-      question: 'Explain retesting versus regression testing, and tell me how you decide the regression scope when a developer fixes a rounding bug in the cart total two days before release.',
+      question: 'What is the difference between retesting and regression testing? A developer fixes a rounding bug in the cart total two days before release. How do you decide the regression scope?',
       whatInterviewerLooksFor: [
         'Retesting = confirm the specific fix; regression = side effects of the change',
         'Order: retest first, then regression',
@@ -647,11 +730,11 @@ If sanity fails, the fix goes back immediately. If it passes, I run regression a
 5. **Skip with reason:** login, search, profile, which do not touch pricing.
 6. **Report residual risk:** e.g. "Reports module has its own rounding, not retested."
 
-With two days left I would also run any automated regression fully in CI (it is cheap) and spend manual time exploring around money calculations, where defects cluster.`,
+With two days left, I would also run all automated regression in CI, because it is cheap. I would spend manual time exploring money calculations, where bugs cluster.`,
       followUps: [
         {
           q: 'What if the developer cannot tell you everything the change affects?',
-          a: 'Combine sources: search the code or ask for a quick dependency check, look at the RTM for requirements touching totals, check defect history for related modules, and widen the regression slice for high-risk money flows. When uncertainty remains, I state it as residual risk in the report rather than pretending the scope is complete.',
+          a: 'Combine sources. Search the code or ask for a quick dependency check. Look at the RTM for requirements that touch totals. Check bug history for related modules. Widen the regression slice for high-risk money flows. When uncertainty remains, I state it as residual risk in the report rather than pretending the scope is complete.',
         },
         {
           q: 'Can regression testing be needed without any code change?',
@@ -667,7 +750,7 @@ With two days left I would also run any automated regression fully in CI (it is 
     {
       id: 'mt-test-levels-types-iq-03',
       difficulty: 'medium',
-      question: 'The checkout UI is ready but the payment service it calls is still being built, and the tax module is ready but nothing calls it yet. How would you integration-test both, and what are stubs and drivers in this situation?',
+      question: 'The checkout UI is ready, but the payment service it calls is still being built. The tax module is ready, but nothing calls it yet. How would you integration-test both? What are stubs and drivers here?',
       whatInterviewerLooksFor: [
         'Stub = fake called module (payment); driver = fake caller (tax)',
         'Links stubs to top-down and drivers to bottom-up',
@@ -677,14 +760,17 @@ With two days left I would also run any automated regression fully in CI (it is 
       modelAnswer: `**Checkout UI → payment service (missing): use a STUB.** A stub replaces the **called** module. It accepts the payment request and returns canned answers, which is typical of **top-down** integration.
 
 - Card ending 0000 → APPROVED; 0002 → DECLINED; 0005 → waits 10 s (timeout).
-- Tests: order becomes PAID on approval; on decline, the user sees "Payment declined" and no stock is reserved; on timeout, the order is PENDING and the user is not charged twice; request body matches the contract (amount as integer, currency code).
+- Approved: the order becomes PAID.
+- Declined: the user sees "Payment declined" and no stock is reserved.
+- Timeout: the order is PENDING and the user is not charged twice.
+- Contract: the request body has amount as an integer and a currency code.
 - Bonus: stubs make it easy to test failure paths that a real payment sandbox rarely produces on demand.
 
-**Tax module (no caller yet): use a DRIVER.** A driver replaces the **caller**: a script, Postman collection or test harness that calls the tax API directly with prepared carts and checks the responses, typical of **bottom-up** integration.
+**Tax module (no caller yet): use a DRIVER.** A driver replaces the **caller**. It is a script, Postman collection or test harness. It calls the tax API directly with prepared carts and checks the responses. This is typical of **bottom-up** integration.
 
 - Inputs: 29.99 → 2.40 at 8%; zero cart; very large cart; item exempt from tax.
 
-**Later:** when the real payment service arrives, I rerun the same cases against it (system integration testing) and keep the stub for fast, deterministic tests in CI.
+**Later:** when the real payment service arrives, I rerun the same cases against it (system integration testing). I keep the stub for fast, repeatable tests in CI.
 
 **Modern names:** mocks/fakes in unit tests, mock servers in Postman, service virtualisation, and Playwright's page.route to fulfil a network request with a fake response.`,
       followUps: [
@@ -694,7 +780,7 @@ With two days left I would also run any automated regression fully in CI (it is 
         },
         {
           q: 'Why is big-bang integration considered risky?',
-          a: 'All modules are combined at once, so testing starts late and, when something fails, the defect could be in any interface, making it slow to localise. Incremental strategies (top-down, bottom-up) add one piece at a time, so a new failure points to the newly added interface.',
+          a: 'All modules are joined at once, so testing starts late. When something fails, the bug could be in any interface, so it is slow to find. Incremental strategies (top-down, bottom-up) add one piece at a time, so a new failure points to the newly added interface.',
         },
       ],
       pitfalls: [
@@ -715,28 +801,28 @@ With two days left I would also run any automated regression fully in CI (it is 
       ],
       modelAnswer: `**Respect the goal, challenge the method.** The goal (fast, reliable regression) is right. Converting all 600 cases into UI tests would create an **ice-cream cone**: a slow, flaky suite that is expensive to maintain.
 
-**What the pyramid suggests:** many fast unit tests at the base, a layer of API/service tests, and a small number of end-to-end UI tests on top.
+**What the pyramid suggests:** many fast unit tests at the base, then API/service tests, then a few end-to-end UI tests on top.
 
 **My proposal:**
 
 1. **Triage the 600 cases** into buckets:
    - Critical user journeys (login, search, add to cart, checkout, payment) → **E2E UI in Playwright** (perhaps 40–60 tests).
-   - Business rules and validation (coupon maths, tax, shipping thresholds, error codes) → **API tests** (Playwright request fixture or Postman), far faster and more stable; some can go to developers as unit tests.
+   - Business rules and validation (coupon maths, tax, shipping thresholds, error codes) → **API tests** (Playwright request fixture or Postman). They are far faster and more stable. Some can go to developers as unit tests.
    - Visual/usability/rare cases → stay **manual** or become exploratory charters.
    - Obsolete or duplicate cases → **retire**.
 2. **Order by value:** smoke suite first (runs on every build), then P1 journeys, then API rule coverage.
 3. **Design for stability:** API calls for setup data, resilient locators, independent tests.
 4. **Measure:** runtime, flakiness rate, defects caught by automation, and manual hours saved per release.
 
-**Outcome for the quarter:** perhaps 50 UI + 200 API tests covering the same risks as the 600 manual cases, running in about 10–15 minutes in CI instead of days, with manual effort shifted to exploration.`,
+**Outcome for the quarter:** perhaps 50 UI + 200 API tests that cover the same risks as the 600 manual cases. They run in about 10–15 minutes in CI instead of days. Manual effort moves to exploration.`,
       followUps: [
         {
           q: 'Why are UI tests slower and flakier than API tests?',
-          a: 'They drive a real browser through rendering, network calls, animations and timing, so there are more moving parts and more chances for timing issues or environment noise. API tests skip rendering entirely and check business logic directly, which typically takes milliseconds per request and has far fewer sources of nondeterminism.',
+          a: 'They drive a real browser through rendering, network calls, animations and timing. More moving parts mean more chances of timing issues and environment noise. API tests skip rendering entirely and check business logic directly, which typically takes milliseconds per request and has far fewer sources of nondeterminism.',
         },
         {
           q: 'Is the pyramid always right?',
-          a: 'It is a guideline. A UI-heavy app with little backend logic may need relatively more component and UI tests (some call it the testing trophy). The principle that survives is: get most feedback from the cheapest, fastest, most reliable tests, and reserve slow end-to-end tests for what only they can prove.',
+          a: 'It is a guideline. A UI-heavy app with little backend logic may need relatively more component and UI tests (some call it the testing trophy). The main idea stays: get most feedback from the cheapest, fastest, most reliable tests. Keep slow end-to-end tests for what only they can prove.',
         },
       ],
       pitfalls: [
@@ -757,20 +843,20 @@ With two days left I would also run any automated regression fully in CI (it is 
       ],
       modelAnswer: `**Alpha testing:** internal users (staff, sometimes independent testers) use the app **at the developer's organisation** in a controlled environment. For a banking app: employees use a pre-release build on test accounts for two weeks. **QA role:** prepare builds and accounts, give a feedback channel, triage reports into defects vs suggestions.
 
-**Beta testing:** a limited group of **real customers in their own environment** (their phones, networks, habits) via TestFlight or the Play Console testing tracks, before general release. **QA role:** define what to watch (crash rates, failed logins, app-store feedback), reproduce reported issues on similar devices, decide with the PO whether beta findings block release.
+**Beta testing:** a limited group of **real customers in their own environment** (their phones, networks, habits). They get the build via TestFlight or Play Console testing tracks, before general release. **QA role:** define what to watch (crash rates, failed logins, app-store feedback). Reproduce reported issues on similar devices. Decide with the PO whether beta findings block release.
 
-**UAT (user acceptance testing):** business users (operations, branch staff, product owners) check the app supports real processes: open a deposit, pay a bill, raise a dispute, against business requirements. **QA role:** prepare a production-like environment and masked data, help write UAT scenarios from business processes, train users, triage feedback (bug vs change request vs training gap), track sign-off.
+**UAT (user acceptance testing):** business users (operations, branch staff, product owners) check the app supports real processes. For example: open a deposit, pay a bill, raise a dispute. **QA role:** prepare a production-like environment and masked data. Help write UAT scenarios from business processes and train users. Sort feedback into bug, change request or training gap. Track sign-off.
 
 **Also relevant in banking:**
 
 - **Operational acceptance:** backup/restore, monitoring, failover, patching.
 - **Regulatory acceptance:** compliance with central bank rules, accessibility and data protection.
 
-**Key point:** acceptance testing is mainly **validation**, so it must be driven by users and business scenarios; it should not be QA rerunning the system test suite.`,
+**Key point:** acceptance testing is mainly **validation**. Users and business scenarios must drive it. It should not be QA rerunning the system test suite.`,
       followUps: [
         {
           q: 'UAT users report 30 issues, most of which are "it should work differently". How do you handle that?',
-          a: 'Triage with the PO: true defects (behaviour differs from agreed requirements) go to the bug backlog with severity; requests for different behaviour become change requests prioritised against the release; misunderstandings become training or documentation updates. Many such reports at UAT suggest validation happened too late, so I would push for earlier demos and prototype reviews next time.',
+          a: 'Sort them with the PO. True defects (behaviour differs from agreed requirements) go to the bug backlog with a severity. Requests for different behaviour become change requests, prioritised against the release. Misunderstandings become training or documentation updates. Many such reports at UAT suggest validation happened too late, so I would push for earlier demos and prototype reviews next time.',
         },
         {
           q: 'How is beta testing different from a canary release?',
@@ -795,14 +881,14 @@ With two days left I would also run any automated regression fully in CI (it is 
       ],
       modelAnswer: `**1. Choose the matrix from data, not guesses.** Pull the last 90 days of analytics: browser, OS and device share. Example result: Chrome Android 48%, Safari iOS 27%, Chrome desktop 15%, Safari macOS 4%, Edge 3%, Firefox 2%. Covering the top four gives ~94% of users.
 
-**2. Choose what to test on each.** Not every case everywhere. Critical journeys (home → search → product → add to cart → checkout → payment) on all chosen combos; full functional coverage only on the top one or two.
+**2. Choose what to test on each.** Not every case everywhere. Run the critical journey (home → search → product → add to cart → checkout → payment) on all chosen combos. Do full functional coverage only on the top one or two.
 
 **3. Pick the tools:**
 
 - **Browser device mode / Playwright device emulation** for fast responsive layout checks at breakpoints (360, 390, 768, 1024, 1440) and orientation. Cheap, good for layout, but it is still a desktop engine.
-- **Cloud real devices** (BrowserStack or LambdaTest trial/subscription) for iPhone Safari and a mid-range Android Chrome: payment pages, on-screen keyboard behaviour, autofill, date pickers, file upload, real touch.
+- **Cloud real devices** (BrowserStack or LambdaTest) for iPhone Safari and a mid-range Android Chrome. Check payment pages, the on-screen keyboard, autofill, date pickers, file upload and real touch.
 
-**4. Where emulators fall short:** real Safari on iOS behaviour (WebKit on desktop is close but not identical), performance on low-end hardware, network switching, memory pressure, payment app hand-offs (UPI intent, 3-D Secure pop-ups), camera, biometrics and interruptions such as calls and notifications.
+**4. Where emulators fall short:** real Safari on iOS (desktop WebKit is close but not identical). Speed on low-end phones, network switching and memory pressure. Payment app hand-offs (UPI intent, 3-D Secure pop-ups). Camera, biometrics, and interruptions such as calls and notifications.
 
 **5. Responsive checklist:** no horizontal scroll, readable text, tappable targets, sticky cart button not covering content, menus usable, forms usable with the keyboard open.
 
@@ -810,11 +896,11 @@ With two days left I would also run any automated regression fully in CI (it is 
       followUps: [
         {
           q: 'Is testing on WebKit in Playwright the same as testing Safari on an iPhone?',
-          a: 'No. Playwright\'s WebKit build is close to Safari\'s engine and catches many WebKit-specific issues, and device emulation sets viewport, user agent and touch. But it is not the actual iOS Safari app on real hardware, so OS-level behaviours such as the keyboard, payment hand-offs and performance still need a real-device check for release-critical flows.',
+          a: 'No. Playwright\'s WebKit build is close to Safari\'s engine and catches many WebKit-specific issues, and device emulation sets viewport, user agent and touch. But it is not the real iOS Safari on real hardware. OS-level behaviour, like the keyboard, payment hand-offs and speed, still needs a real-device check for release-critical flows.',
         },
         {
           q: 'How often should the browser/device matrix be reviewed?',
-          a: 'Regularly, for example every quarter or before major releases, because traffic shifts (new iOS versions, new popular phones) and browsers update every few weeks. Tie the review to analytics so the matrix follows real users, and keep a rule like "cover browsers representing 95% of sessions plus any contractual requirement".',
+          a: 'Regularly, for example every quarter or before major releases, because traffic shifts (new iOS versions, new popular phones) and browsers update every few weeks. Base the review on analytics so the matrix follows real users. Keep a rule like "cover browsers with 95% of sessions, plus anything the contract requires".',
         },
       ],
       pitfalls: [
@@ -875,7 +961,7 @@ With two days left I would also run any automated regression fully in CI (it is 
   envelopeQuestions: [
     {
       id: 'mt-test-levels-types-drill-1',
-      question: 'Classify each test by LEVEL (component, component integration, system, system integration, acceptance) and by TYPE (functional / non-functional; black-box / white-box): (a) developer checks calculateTax(29.99) returns 2.40; (b) order service sends the correct JSON to a payment stub; (c) tester completes SauceDemo checkout on Safari and measures overview load time; (d) shop calls the real courier API to create a shipment; (e) store managers process a day of returns in the new screen; (f) developer ensures both branches of "if (qty > stock)" are executed.',
+      question: 'Give each test a LEVEL (component, component integration, system, system integration, acceptance) and a TYPE (functional / non-functional; black-box / white-box). (a) A developer checks calculateTax(29.99) returns 2.40. (b) The order service sends the correct JSON to a payment stub. (c) A tester completes SauceDemo checkout on Safari and times the overview page. (d) The shop calls the real courier API to create a shipment. (e) Store managers process a day of returns in the new screen. (f) A developer makes sure both branches of "if (qty > stock)" run.',
       assumptions: [
         'Levels per ISTQB v4.0 (five levels).',
         'A test can have more than one type (e.g. functional and black-box).',
@@ -899,7 +985,7 @@ With two days left I would also run any automated regression fully in CI (it is 
     },
     {
       id: 'mt-test-levels-types-drill-2',
-      question: 'A change modifies the shared DiscountService. You have 4 hours of manual testing time. From the inventory below, choose the regression scope and show the time maths: smoke 12 cases × 5 min; coupon 20 × 8 min; checkout totals 15 × 6 min; refunds (call DiscountService) 10 × 9 min; loyalty points (call DiscountService) 8 × 7 min; login/profile/search 90 × 4 min; retest of the original bug 1 × 10 min.',
+      question: 'A change touches the shared DiscountService. You have 4 hours of manual testing. Choose the regression scope and show the time maths. Smoke: 12 cases × 5 min. Coupon: 20 × 8 min. Checkout totals: 15 × 6 min. Refunds (use DiscountService): 10 × 9 min. Loyalty points (use DiscountService): 8 × 7 min. Login/profile/search: 90 × 4 min. Retest of the original bug: 1 × 10 min.',
       assumptions: [
         'Login/profile/search do not depend on DiscountService.',
         'Keep 20 minutes for reporting.',
@@ -913,18 +999,18 @@ With two days left I would also run any automated regression fully in CI (it is 
         { label: 'Pick by risk', calc: 'P1 coupon 10 × 8 = 80; checkout totals P1 6 × 6 = 36; refunds P1 2 × 9 = 18; loyalty P1 2 × 7 = 14 → 148 min' },
         { label: 'Skip', calc: 'Login/profile/search (no dependency, 360 min); P2/P3 cases of impacted areas (~252 min) → residual risk' },
       ],
-      answer: 'Run: retest + smoke (70 min) + P1 slices of coupon (10), checkout totals (6), refunds (2) and loyalty (2) (148 min) = 218 min, plus 20 min reporting ≈ 4 h. Skip login/profile/search entirely (no dependency) and defer P2/P3 impacted cases, listing them as residual risk.',
+      answer: 'Run retest + smoke (70 min). Add P1 slices of coupon (10), checkout totals (6), refunds (2) and loyalty (2): 148 min. Total 218 min, plus 20 min reporting ≈ 4 h. Skip login/profile/search entirely (no dependency) and defer P2/P3 impacted cases, listing them as residual risk.',
       insight: 'Even a precise impact analysis (all 53 impacted cases need 396 min) can exceed the window. Risk-based prioritisation inside the impacted set is what makes the plan fit, and the skipped part must be reported, not hidden.',
       followUps: [
         {
           q: 'How would automation change these numbers?',
-          a: 'If the 53 impacted cases and the smoke suite were automated as API and UI tests, they might run in 10 to 15 minutes in CI, so the full impacted scope fits easily and the 4 manual hours go to exploratory testing around discount edge cases. This is the business case for automating regression first.',
+          a: 'If the 53 impacted cases and the smoke suite were automated as API and UI tests, they might run in 10 to 15 minutes in CI. Then the full impacted scope fits easily. The 4 manual hours go to exploratory testing around discount edge cases. This is the business case for automating regression first.',
         },
       ],
     },
     {
       id: 'mt-test-levels-types-drill-3',
-      question: 'Analytics for the last 90 days: Chrome Android 46%, Safari iOS 29%, Chrome Windows 13%, Safari macOS 5%, Edge Windows 3%, Samsung Internet 2%, Firefox 1.5%, other 0.5%. Build the smallest browser matrix covering at least 90% of sessions, then decide which combos need real devices and which can use emulation.',
+      question: 'Analytics for the last 90 days. Chrome Android 46%, Safari iOS 29%, Chrome Windows 13%, Safari macOS 5%. Edge Windows 3%, Samsung Internet 2%, Firefox 1.5%, other 0.5%. Build the smallest browser matrix that covers at least 90% of sessions. Then decide which combos need real devices and which can use emulation.',
       assumptions: [
         'Each listed share is mutually exclusive.',
         'Checkout includes UPI app hand-off on Android and Apple Pay on iOS.',
@@ -938,12 +1024,12 @@ With two days left I would also run any automated regression fully in CI (it is 
         { label: 'Desktop', calc: 'Chrome Windows, Safari macOS: real desktop browsers (Playwright Chromium/WebKit for regression)' },
         { label: 'Emulation', calc: 'Responsive breakpoints for all layouts via device emulation; Edge (Chromium-based) gets a light smoke' },
       ],
-      answer: 'Four combos cover 93%: Chrome Android and Safari iOS on real devices (payment hand-offs and real mobile browsers), Chrome Windows and Safari macOS as real desktop browsers. Use emulation for breakpoint checks, and run a short smoke on Edge since it is cheap. Report that ~7% (Edge, Samsung Internet, Firefox, other) is lightly or not covered.',
+      answer: 'Four combos cover 93%. Chrome Android and Safari iOS go on real devices (payment hand-offs, real mobile browsers). Chrome Windows and Safari macOS run as real desktop browsers. Use emulation for breakpoint checks, and run a short smoke on Edge since it is cheap. Report that ~7% (Edge, Samsung Internet, Firefox, other) is lightly or not covered.',
       insight: 'A data-driven matrix turns "test on all devices" into a defensible, finite plan, and states exactly which users carry residual risk.',
       followUps: [
         {
           q: 'Samsung Internet is only 2%, but the business says it is their highest-value segment. What changes?',
-          a: 'Coverage decisions are risk-based, not purely share-based. If those users spend the most, the impact of a failure is high, so I would add Samsung Internet on a real Samsung device for the critical journeys even though it pushes the matrix to five combos. Share tells you likelihood; business value tells you impact.',
+          a: 'Coverage is based on risk, not only on share. If those users spend the most, a failure hurts a lot. So I would add Samsung Internet on a real Samsung device for the critical journeys, even though the matrix grows to five combos. Share tells you likelihood; business value tells you impact.',
         },
       ],
     },
@@ -959,7 +1045,7 @@ With two days left I would also run any automated regression fully in CI (it is 
       followUps: [
         {
           q: 'What do you do if the add-to-cart step fails?',
-          a: 'Reject the build: log a Blocker with the failing smoke step, build number and evidence, notify the developers, and stop further testing on that build, because most other tests depend on the cart. Testing resumes on a new build that passes the full smoke suite.',
+          a: 'Reject the build. Log a Blocker with the failing smoke step, build number and evidence, and tell the developers. Stop testing that build, because most other tests depend on the cart. Testing resumes on a new build that passes the full smoke suite.',
         },
       ],
     },
@@ -995,7 +1081,7 @@ Goal: test Checkout UI + Order service together now`,
       followUps: [
         {
           q: 'What regression would you run after this fix?',
-          a: 'Cases around quantity and pricing: quantity boundaries (1, max allowed, max + 1), updating quantity in the cart, totals with coupons, tax and shipping, order confirmation and invoice totals, plus the smoke suite. Unrelated areas like login or profile can be skipped if impact analysis confirms no dependency.',
+          a: 'Cases around quantity and pricing. Quantity boundaries (1, max allowed, max + 1) and updating quantity in the cart. Totals with coupons, tax and shipping. Order confirmation and invoice totals. Plus the smoke suite. Unrelated areas like login or profile can be skipped if impact analysis confirms no dependency.',
         },
       ],
     },
@@ -1010,11 +1096,11 @@ Goal: test Checkout UI + Order service together now`,
         'Bottom-up → no test doubles at all',
       ],
       correct: [1],
-      explanation: `Top-down starts from the upper modules, so missing lower modules are replaced by stubs; bottom-up starts from the lower modules, so drivers call them in place of the missing upper layers. Option A swaps them. Big-bang waits for everything, so it needs few doubles; bottom-up still needs drivers.`,
+      explanation: `Top-down starts from the upper modules, so stubs replace the missing lower modules. Bottom-up starts from the lower modules, so drivers call them in place of the missing upper layers. Option A swaps them. Big-bang waits for everything, so it needs few doubles; bottom-up still needs drivers.`,
       followUps: [
         {
           q: 'Which strategy would you choose if the core calculation engine is the highest risk?',
-          a: 'Bottom-up, or a sandwich approach that starts with the engine, because it lets you test the risky calculation logic first through drivers, with plenty of boundary data, long before the UI exists. Defects in the core would otherwise surface late through the UI, where they are harder to isolate.',
+          a: 'Bottom-up, or a sandwich approach that starts with the engine. Drivers let you test the risky calculation logic first, with plenty of boundary data, long before the UI exists. Defects in the core would otherwise surface late through the UI, where they are harder to isolate.',
         },
       ],
     },
@@ -1034,7 +1120,7 @@ Goal: test Checkout UI + Order service together now`,
       followUps: [
         {
           q: 'How can a functional test be turned into a non-functional one?',
-          a: 'Keep the same flow and add a quality constraint: run the checkout and also measure the time to the overview page, or run it with a screen reader, or on a slow network, or across browsers. The ISTQB notes many non-functional tests are derived from functional ones in exactly this way.',
+          a: 'Keep the same flow and add a quality limit. Run the checkout and also time the overview page. Or run it with a screen reader, on a slow network, or across browsers. The ISTQB notes many non-functional tests are derived from functional ones in exactly this way.',
         },
       ],
     },
@@ -1053,11 +1139,11 @@ Goal: test Checkout UI + Order service together now`,
       },
       options: ['Black-box testing', 'White-box testing', 'Grey-box testing', 'Acceptance testing'],
       correct: [2],
-      explanation: `The tester drives the UI like a user (black-box) but also uses partial internal knowledge (database tables, API endpoints, logs) to verify the outcome, which is grey-box testing. White-box would derive tests from code structure such as branches. Acceptance testing is about users validating business fitness.`,
+      explanation: `The tester uses the UI like a user (black-box). They also use some inside knowledge (database tables, API endpoints, logs) to check the result. That mix is grey-box testing. White-box would derive tests from code structure such as branches. Acceptance testing is about users validating business fitness.`,
       followUps: [
         {
           q: 'What extra defects can step 2 to 4 catch that the UI alone would miss?',
-          a: 'A UI showing "Thank you" while the order is saved with the wrong status or total, duplicate orders or double payment captures, an API returning stale data, or silent retries in the payment integration. The UI can look perfect while the data behind it is wrong.',
+          a: 'The UI shows "Thank you" but the order is saved with the wrong status or total. Duplicate orders or double payment captures. An API returning old data. Silent retries in the payment integration. The UI can look perfect while the data behind it is wrong.',
         },
       ],
     },
@@ -1073,25 +1159,25 @@ Goal: test Checkout UI + Order service together now`,
         'Manual tests form the base of the pyramid',
       ],
       correct: [0, 2, 3],
-      explanation: `The pyramid puts many fast, isolated tests at the base and fewer, slower, less isolated end-to-end tests at the top; layer names vary (Cohn's unit/service/UI, or unit/integration/E2E). Making UI tests the largest group is the ice-cream cone anti-pattern, and manual tests are not the base.`,
+      explanation: `The pyramid puts many fast, isolated tests at the base and fewer, slower, less isolated end-to-end tests at the top. Layer names vary (Cohn's unit/service/UI, or unit/integration/E2E). Making UI tests the largest group is the ice-cream cone anti-pattern, and manual tests are not the base.`,
       followUps: [
         {
           q: 'A team has 400 UI tests and 20 unit tests. What problems do you expect?',
-          a: 'Slow feedback (the suite may take an hour or more), frequent flaky failures, expensive maintenance when the UI changes, and failures that are hard to diagnose because each test covers so much. Business rules are also tested indirectly and expensively. The fix is to push rule checks down to API and unit tests and keep UI tests for critical journeys.',
+          a: 'Slow feedback: the suite may take an hour or more. Frequent flaky failures. Costly upkeep when the UI changes. Failures that are hard to diagnose, because each test covers so much. Business rules are also tested indirectly and expensively. The fix is to push rule checks down to API and unit tests and keep UI tests for critical journeys.',
         },
       ],
     },
     {
       id: 'mt-test-levels-types-mcq-08',
       difficulty: 'medium',
-      question: 'A bank invites 2,000 real customers to install a pre-release version of its app from the Play Store testing track and report issues from their own phones. What is this?',
+      question: 'A bank invites 2,000 real customers to install a pre-release app from the Play Store testing track. They report issues from their own phones. What is this?',
       options: ['Alpha testing', 'Beta testing', 'Operational acceptance testing', 'System integration testing'],
       correct: [1],
       explanation: `Beta testing is done by real users in their own environments before general release. Alpha testing happens at the developer's site with internal or invited users in a controlled setting. Operational acceptance focuses on backup, recovery and supportability; system integration tests interfaces with other systems.`,
       followUps: [
         {
           q: 'What can beta testing reveal that in-house testing rarely does?',
-          a: 'Problems tied to real-world variety: unusual devices and OS versions, poor networks, other installed apps, real usage patterns, battery and memory pressure, regional settings, and accessibility settings. It also surfaces usability confusion from people who did not build or test the product.',
+          a: 'Problems from real-world variety. Unusual devices and OS versions, poor networks and other installed apps. Real usage patterns, battery and memory pressure. Regional and accessibility settings. It also surfaces usability confusion from people who did not build or test the product.',
         },
       ],
     },
@@ -1111,7 +1197,7 @@ Goal: test Checkout UI + Order service together now`,
       followUps: [
         {
           q: 'How do you find out which features use PricingService if there is no documentation?',
-          a: 'Ask the developer to search the code for callers, check architecture or API diagrams, look at the RTM and requirement links for pricing rules, review past defects in pricing, and, if needed, grey-box observation such as watching which API calls a page makes in the browser network tab.',
+          a: 'Ask the developer to search the code for callers. Check architecture or API diagrams. Look at the RTM for pricing rules, and review past pricing bugs. If needed, watch which API calls a page makes in the browser network tab (grey-box).',
         },
       ],
     },
@@ -1126,11 +1212,11 @@ Goal: test Checkout UI + Order service together now`,
         'Responsive testing in browser dev tools is equivalent to testing on an iPhone',
       ],
       correct: [1],
-      explanation: `Emulators and simulators are excellent for fast functional checks and CI, but they do not faithfully reproduce battery drain, sensors, incoming calls, gestures or real network behaviour, so final validation of critical flows uses real devices. Real labs are costly to maintain, and dev-tools device mode is still a desktop engine.`,
+      explanation: `Emulators and simulators are great for fast functional checks and CI. But they do not truly copy battery drain, sensors, incoming calls, gestures or real networks. So the final check of critical flows uses real devices. Real labs are costly to maintain, and dev-tools device mode is still a desktop engine.`,
       followUps: [
         {
           q: 'Give one mobile bug you would expect only on a real device.',
-          a: 'A payment flow that breaks when the app switches to a UPI or banking app and back, losing the session; or the on-screen keyboard covering the Pay button on a small iPhone; or the app crashing when a phone call interrupts the 3-D Secure step. These depend on real OS behaviour that emulation rarely reproduces.',
+          a: 'The session is lost when the app switches to a UPI app and back. Or the on-screen keyboard covers the Pay button on a small iPhone. Or the app crashes when a phone call interrupts the 3-D Secure step. These depend on real OS behaviour that emulation rarely reproduces.',
         },
       ],
     },
@@ -1155,11 +1241,11 @@ SM-06 Checkout overview total         BLOCKED`,
         'Mark the build accepted because 3 of 6 smoke steps passed',
       ],
       correct: [1],
-      explanation: `A smoke failure in a critical path (add to cart, which blocks cart and checkout) means the build is not testable, so it is rejected with a Blocker and evidence. Continuing regression wastes effort on a broken build, sorting is unrelated, and smoke is pass/fail per build, not a percentage.`,
+      explanation: `Add to cart is a critical path, and it blocks cart and checkout. A smoke failure there means the build is not testable, so reject it with a Blocker and evidence. Continuing regression wastes effort on a broken build, sorting is unrelated, and smoke is pass/fail per build, not a percentage.`,
       followUps: [
         {
           q: 'What evidence would you attach to the Blocker?',
-          a: 'Build number and environment, the exact steps and user, expected vs actual (badge not shown, cart empty), a screenshot or short video, browser console errors and failing network requests (e.g. a 500 from the cart API), and the time it happened. That lets developers start debugging immediately.',
+          a: 'Build number and environment. The exact steps and user. Expected vs actual (badge not shown, cart empty). A screenshot or short video. Console errors and failing network requests, like a 500 from the cart API. The time it happened. That lets developers start debugging immediately.',
         },
       ],
     },
@@ -1175,7 +1261,7 @@ SM-06 Checkout overview total         BLOCKED`,
         'Verify the password is visible in the URL after submit',
       ],
       correct: [0, 1, 2],
-      explanation: `Keyboard-only operation, visible focus and errors not conveyed by colour alone are core WCAG checks any tester can do by hand. A load test is a performance activity, and a password in the URL is a security defect to report, not an accessibility check you aim to "verify".`,
+      explanation: `Keyboard-only operation, visible focus and errors not conveyed by colour alone are core WCAG checks any tester can do by hand. A load test is a performance activity. A password in the URL is a security bug to report, not an accessibility check to "verify".`,
       followUps: [
         {
           q: 'Why is a placeholder alone not an adequate label for an input?',
@@ -1198,7 +1284,7 @@ SM-06 Checkout overview total         BLOCKED`,
       followUps: [
         {
           q: 'Describe how you used the two terms in your last team.',
-          a: 'For example: "Smoke meant our 12-case build verification suite run on every deployment, mostly automated; if it failed we rejected the build. Sanity meant a short focused check by the tester after a bug fix or config change, covering the fix and its immediate neighbours, before starting regression."',
+          a: 'For example: "Smoke meant our 12-case build verification suite run on every deployment, mostly automated; if it failed we rejected the build. Sanity meant a short, focused check after a bug fix or config change. It covered the fix and the features right next to it, before regression."',
         },
       ],
     },
@@ -1214,11 +1300,11 @@ SM-06 Checkout overview total         BLOCKED`,
         'Visual check that the coupon banner fits on a 360 px screen',
       ],
       correct: [0, 2, 3],
-      explanation: `Rule combinations, error codes and many rounding boundaries are business logic best checked quickly and reliably through the API (or unit tests). The single end-to-end journey belongs in the UI layer to prove the pieces work together, and the 360 px layout check needs a rendered UI (manual or visual comparison).`,
+      explanation: `Rule combinations, error codes and many rounding boundaries are business logic best checked quickly and reliably through the API (or unit tests). The single end-to-end journey belongs in the UI layer, to prove the pieces work together. The 360 px layout check needs a rendered UI (manual or visual comparison).`,
       followUps: [
         {
           q: 'How many UI tests would you keep for the coupon feature, and which?',
-          a: 'Very few, perhaps two or three: one happy-path journey applying a coupon through checkout, one showing an error message to the user for an invalid code, and maybe removing a coupon. They prove the UI is wired to the API correctly; the dozens of rule combinations are already covered faster below.',
+          a: 'Very few, maybe two or three. One happy-path journey that applies a coupon through checkout. One that shows the error for an invalid code. Maybe one that removes a coupon. They prove the UI is wired to the API correctly; the dozens of rule combinations are already covered faster below.',
         },
       ],
     },
@@ -1237,11 +1323,11 @@ D. Search box trims leading spaces from input`,
       },
       options: ['A', 'B', 'C', 'D'],
       correct: [1],
-      explanation: `B is broken access control (an insecure direct object reference) exposing other customers' personal data, the top category in the OWASP Top 10 2021 and a likely legal breach. A is good practice (no stack trace leaked), C is a performance observation, and D is normal input handling.`,
+      explanation: `B is broken access control (an insecure direct object reference). It exposes other customers' personal data. It is the top category in the OWASP Top 10 2021 and likely a legal breach. A is good practice (no stack trace leaked), C is a performance observation, and D is normal input handling.`,
       followUps: [
         {
           q: 'How should you report finding B?',
-          a: 'Privately and fast: a restricted Jira ticket or direct message to the tech lead or security contact, with minimal reproduction steps and without copying real customer data into the ticket. Mark it Critical, avoid public channels, and stop exploring further personal data beyond what is needed to prove the issue.',
+          a: 'Privately and fast. Use a restricted Jira ticket or a direct message to the tech lead or security contact. Give minimal steps, and do not copy real customer data into the ticket. Mark it Critical, avoid public channels, and stop exploring further personal data beyond what is needed to prove the issue.',
         },
       ],
     },

@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 3,
   title: 'Exploratory Testing & Risk-Based Testing',
   subtitle:
-    'Charters, session-based test management, SFDIPOT and FEW HICCUPPS heuristics, Whittaker tours, and how to rank risks by likelihood × impact so you test the right things first when time runs out.',
+    'Charters, session-based test management, SFDIPOT, FEW HICCUPPS, Whittaker tours, and ranking risks by likelihood × impact so you test the right things first.',
   estimatedMinutes: 90,
   sources: [
     'James Bach & Michael Bolton — Exploratory Testing 3.0 and Testing and Checking Refined (satisfice.com blog)',
@@ -21,38 +21,49 @@ const topic: Topic = {
   ],
   tags: ['exploratory-testing', 'charters', 'sbtm', 'heuristics', 'sfdipot', 'oracles', 'few-hiccupps', 'tours', 'risk-based-testing', 'risk-matrix', 'prioritisation'],
   cheatSheet: [
-    'Exploratory testing = simultaneous learning, test design and test execution, steered by what you just observed. It is structured (charter, timebox, notes, debrief), not random.',
-    'Ad hoc = unplanned and usually undocumented; monkey = random input (dumb or smart); exploratory = purposeful, chartered, time-boxed and reported.',
+    'Exploratory testing = learning, test design and test execution at the same time, steered by what you just saw. It has structure (charter, timebox, notes, debrief); it is not random.',
+    'Ad hoc = unplanned, usually no notes. Monkey = random input (dumb or smart). Exploratory = has a charter, a time box and a report.',
     'Hendrickson charter: Explore <target> with <resources> to discover <information>. One charter ≈ one session (Jon Bach: normal ≈ 90 min, short ≈ 45, long ≈ 2 h).',
     'SBTM session sheet: charter, tester, start + duration, % on charter vs opportunity, TBS split (Test design/execution, Bug investigation, Setup), notes, bugs, issues, data files. Debrief with PROOF: Past, Results, Obstacles, Outlook, Feelings.',
     'SFDIPOT (product factors): Structure, Function, Data, Interfaces, Platform, Operations, Time. Use it to generate test ideas and spot coverage gaps.',
     'Quick idea heuristics: CRUD (create/read/update/delete), Goldilocks (too small / too big / just right), Zero-One-Many, Beginning-Middle-End, interrupt it, undo it, repeat it, do it in parallel.',
     'Oracle = how you recognise a problem. FEW HICCUPPS: Familiarity (with known problems), Explainability, World, History, Image, Comparable products, Claims, User desires, Product (self-consistency), Purpose, Statutes/standards.',
-    'Whittaker tours: Money (what marketing sells), Landmark (hop between key features), Intellectual (hardest inputs), FedEx (follow data end to end), Garbage Collector (visit every screen methodically), Saboteur (break resources), Bad Neighbourhood (bug-dense areas).',
+    'Whittaker tours: Money (what marketing sells), Landmark (hop between key features), Intellectual (hardest inputs), FedEx (follow data end to end). Also Garbage Collector (visit every screen), Saboteur (take away resources), Bad Neighbourhood (buggy areas).',
     'Risk level = likelihood × impact (e.g. 1–5 each → score 1–25). Higher score → test earlier, deeper, with more techniques and more people.',
-    'Product risk = the software may be wrong (double charge, data loss). Project risk = the project may slip (late build, no test env, sick tester). Testing mitigates product risk; managers mitigate project risk.',
-    'Short on time? Rank by risk, test the money paths and recent changes first, do a smoke pass, then explore the top-risk areas, and report what you did NOT test as residual risk.',
+    'Product risk = the software may be wrong (double charge, data loss). Project risk = the project may slip (late build, no test env, sick tester). Testing reduces product risk; managers handle project risk.',
+    'Short on time? Smoke test, then rank by risk. Test money paths and recent changes first, then explore top-risk areas. Report what you did NOT test as residual risk.',
     'Interview line: "Scripted tests check what we already know; exploratory testing finds what we did not think to ask. I use both, and risk decides the mix."',
   ],
   sections: [
     {
       heading: 'What exploratory testing really is',
-      body: `**Intuition:** scripted testing is following a recipe. Exploratory testing is a chef tasting the dish while cooking and changing the next step based on the taste. Both are disciplined; only one adapts as it learns.
+      body: `**Exploratory testing** means you design, run and judge tests at the same time, while you learn the app. What you see now decides your next test.
 
-**Definition.** ISTQB CTFL v4.0 (4.4.2) describes exploratory testing as tests being *simultaneously designed, executed and evaluated while the tester learns about the test object*: what you observe on this step decides your next step. It sits with the experience-based techniques and is most useful when specifications are few or inadequate, when there is significant time pressure, or to complement more formal techniques. ISTQB also notes it can be structured with session-based testing (time box, charter, debrief, session sheets). Bach and Bolton go further in *Exploratory Testing 3.0*: in Rapid Software Testing **all** testing is exploratory, and scripting is a set of controls you apply to it in varying degrees (a "formality continuum"), not a separate kind of testing.
+**Intuition:** scripted testing is following a recipe. Exploratory testing is a chef who tastes while cooking and changes the next step.
+
+**The ISTQB view (CTFL v4.0, 4.4.2):** tests are *designed, executed and evaluated at the same time, while the tester learns about the test object*. It is an experience-based technique. It helps most when:
+- specs are few or weak;
+- time is short;
+- you want to add to formal techniques.
+ISTQB adds that you can structure it with session-based testing (time box, charter, debrief, session sheet).
+
+**Bach and Bolton** (*Exploratory Testing 3.0*) go further. In Rapid Software Testing, **all** testing is exploratory. Scripting is a set of controls you add in different amounts (a "formality continuum"), not a separate kind of testing.
 
 | Aspect | Scripted testing | Exploratory testing | Ad hoc testing |
 |---|---|---|---|
-| Test design | Written before execution | Designed while executing | None, or only in the head |
+| Test design | Written before running | Designed while running | None, or only in the head |
 | Guidance | Step-by-step test case | Charter + heuristics + timebox | Whatever comes to mind |
-| Documentation | Pass/fail per step | Session notes, bugs, questions, coverage | Usually only bugs |
-| Strong at | Regression, compliance, repeatability | New features, unclear specs, finding surprises | Quick sanity poke |
-| Weak at | Finding unexpected problems | Exact repeatability | Accountability and coverage |
-| Automatable? | Yes (good Playwright candidates) | No; but its findings become checks | No |
+| Records | Pass/fail per step | Session notes, bugs, questions, coverage | Usually only bugs |
+| Strong at | Regression, compliance, repeating | New features, unclear specs, surprises | Quick poke |
+| Weak at | Finding the unexpected | Exact repeating | Coverage and accountability |
+| Automatable? | Yes (good Playwright candidates) | No, but its findings become checks | No |
 
-**Worked example.** Feature: "Apply coupon at checkout" on SauceDemo-style shop. A scripted case says: enter SAVE10, click Apply, expect total reduced by 10%. While exploring you notice the discount is recalculated when you change quantity... so you try: apply coupon, remove the only discounted item, re-add it. The total is now discounted twice. No script asked that question; your observation did.
+**Example:** feature "Apply coupon at checkout".
+- The scripted case: enter SAVE10, click Apply, expect total −10%. It passes.
+- While exploring, you notice the discount changes when quantity changes. So you try: apply the coupon, remove the item, add it back.
+- Result: the discount is applied **twice**. No script asked that question. Your observation did.
 
-**In interviews, say this:** "Exploratory testing is not random clicking. I run it as time-boxed sessions with a charter, take notes, log bugs and questions, and debrief. It complements scripted and automated checks; it does not replace them."`,
+**In an interview, say:** "Exploratory testing is not random clicking. I run time-boxed sessions with a charter, take notes, log bugs and debrief. It adds to scripted and automated checks; it does not replace them."`,
       keyPoints: [
         'Learning, design and execution happen together and feed each other.',
         'Structure comes from charter, timebox, heuristics, notes and debrief.',
@@ -62,25 +73,27 @@ const topic: Topic = {
     },
     {
       heading: 'Writing test charters',
-      body: `**Intuition:** a charter is a mission statement for one exploring trip. It tells you where to go and what to look for, without telling you every step.
+      body: `A **test charter** is a one-line mission for one exploring session. It says where to go and what to look for, but not every step.
 
 **Hendrickson template (Explore It!):**
 
-> **Explore** <target: a feature, area, requirement, flow>
-> **with** <resources: tools, data, techniques, personas, configurations>
-> **to discover** <information: what kind of problems or knowledge you want>
+> **Explore** <target: a feature, area or flow>
+> **with** <resources: tools, data, techniques, personas>
+> **to discover** <information: what kind of problems you want to find>
 
-A good charter is **narrow enough to finish in one session** (typically about 90 minutes) and **wide enough to allow surprises**. Too broad ("Explore the app") gives no focus; too narrow ("Click Apply with SAVE10") is a test case, not a charter.
+A good charter is **small enough to finish in one session** (about 90 minutes) and **wide enough to allow surprises**.
+
+**Example:** three charters for a coupon feature.
 
 | Charter quality | Example | Problem |
 |---|---|---|
-| Too broad | Explore checkout | No target risk, no resources, cannot be "done" |
-| Too narrow | Enter SAVE10 and verify 10% off | That is a scripted check |
-| Good | Explore coupon application with expired, stacked and case-varied codes to discover pricing and validation errors | Clear target, resources, information |
+| Too broad | Explore checkout | No target risk, no resources, never "done" |
+| Too narrow | Enter SAVE10 and verify 10% off | That is a test case, not a charter |
+| Good | Explore coupon application with expired, stacked and lowercase codes to discover pricing and validation errors | Clear target, resources and goal |
 
-**Where charters come from:** risk lists, new user stories, recent bug clusters, support tickets, ideas you parked during another session ("opportunity" notes), and the SFDIPOT heuristic in the next sections.
+**Where charters come from:** risk lists, new user stories, recent bug clusters, support tickets, ideas you parked in another session ("opportunity" notes), and SFDIPOT (later section).
 
-**Common mistake:** writing one giant charter for a whole release. Break it into a charter **backlog**, rank it by risk, and pull the top charters first.`,
+**Common mistake:** one giant charter for a whole release. Split it into a charter **backlog**, rank it by risk, and start from the top (see the backlog below).`,
       code: [
         {
           language: 'text',
@@ -117,19 +130,34 @@ A good charter is **narrow enough to finish in one session** (typically about 90
     },
     {
       heading: 'Session-based test management (SBTM)',
-      body: `**Intuition:** managers like numbers; explorers like freedom. SBTM, developed by James and Jonathan Bach and described in Jon Bach's 2000 STQE article, gives both: freedom inside a session, accountability around it.
+      body: `**Session-based test management (SBTM)** runs exploratory testing in fixed, chartered time blocks called **sessions**, each with notes and a short review. James and Jonathan Bach created it; Jon Bach described it in a 2000 STQE article.
 
-**The unit of work is a session:** an uninterrupted, chartered block of testing. In Jon Bach's team a normal session was about ninety minutes, a short one closer to 45 minutes and a long one closer to two hours, and a tester completed about three sessions on a typical day. Each session produces a **session sheet**, and is closed by a short **debrief** with a lead.
+Why it matters: testers keep their freedom inside a session. Managers get numbers around it.
+
+**A session** is one uninterrupted block of testing on one charter. In Jon Bach's team:
+- A **normal** session ≈ **90 minutes**.
+- A **short** session ≈ **45 minutes**.
+- A **long** session ≈ **2 hours** (120 minutes).
+- A tester did about **three sessions** on a typical day.
+Each session ends with a **session sheet** and a short **debrief** with a lead.
 
 **Session sheet fields**
-- Charter, tester, date, start time, duration
-- **Charter vs opportunity** split: how much time was on-mission vs following a valuable side-path
-- **TBS metrics**: % time on **T**est design and execution, **B**ug investigation and reporting, **S**ession setup (env, data, tools)
-- Test notes (what you did, what you covered), bugs (with IDs), issues (questions, blockers, risks), data files used
+- Charter, tester, date, start time, duration.
+- **Charter vs opportunity:** time on the mission vs time on a useful side-path.
+- **TBS metrics:** % of time on **T**est design and execution, **B**ug investigation and reporting, **S**ession setup (env, data, tools).
+- Test notes, bugs (with IDs), issues (questions, blockers, risks), data files used.
 
-**Debrief with PROOF:** **P**ast (what happened), **R**esults (what you found), **O**bstacles (what got in the way), **O**utlook (what still needs doing), **F**eelings (how confident are you?).
+**Debrief with PROOF:**
+- **P**ast: what happened?
+- **R**esults: what did you find?
+- **O**bstacles: what got in the way?
+- **O**utlook: what is left to do?
+- **F**eelings: how confident are you?
 
-**Reading the metrics:** high Setup % means the environment is hurting you (raise it as a project risk). High Bug % means the area is buggy (more sessions here). Low "on charter" % means the charter was wrong or the product surprised you; both are useful signals.`,
+**Example:** a 90-minute session on coupon totals (full sheet below).
+TBS = Test 60%, Bug 30%, Setup 10%. Bug 30% is high, so the area is buggy: plan more sessions there.
+
+**Reading the metrics:** high Setup % = environment trouble (raise a project risk). High Bug % = buggy area. Low "on charter" % = the charter was wrong or the product surprised you. All are useful signals.`,
       diagram: `  charter backlog          session (90 min, one charter)          debrief
  +----------------+      +--------------------------------+     +-----------+
  | #1 coupons HIGH|----->| setup | test & explore | bugs  |---->|  PROOF     |
@@ -175,7 +203,11 @@ ISSUES / QUESTIONS
     },
     {
       heading: 'SFDIPOT: product factors for test ideas',
-      body: `**Intuition:** when you "don't know what to test next", you need a checklist of *places to look*, not a list of test cases. SFDIPOT ("San Francisco Depot") is that list from James Bach's Heuristic Test Strategy Model. Older material says SFDPOT; the current model added **Interfaces**.
+      body: `**SFDIPOT** ("San Francisco Depot") is a checklist of seven *places to look* for test ideas. It comes from James Bach's Heuristic Test Strategy Model. Older material says SFDPOT; the current model added **Interfaces**.
+
+Why it matters: when you "don't know what to test next", it stops you testing only the happy path.
+
+**Example:** SFDIPOT ideas for "apply a coupon at checkout".
 
 | Factor | Ask yourself | Coupon-at-checkout ideas |
 |---|---|---|
@@ -187,9 +219,14 @@ ISSUES / QUESTIONS
 | **O**perations | How will it be used? Users, environments, patterns | Shopper with 50 items, returning user, two tabs open, slow 3G |
 | **T**ime | How does time affect it? Timeouts, dates, concurrency | Coupon expiring at midnight, timezone, session timeout mid-checkout |
 
-**How to use it in a session:** spend 5 minutes writing two or three ideas per factor, circle the risky ones, and turn them into charters. After testing, run through it again as a **coverage check**: "Did we touch Platform at all?"
+**How to use it:**
+1. Spend 5 minutes writing two or three ideas per factor.
+2. Circle the risky ones and turn them into charters.
+3. After testing, go through it again as a **coverage check**: "Did we touch Platform at all?"
 
-**In interviews, say this:** "When I get a feature with weak requirements I use SFDIPOT to make sure my ideas cover structure, functions, data, interfaces, platforms, operations and time, not just the happy path."`,
+**In an interview, say:** "With weak requirements, I use SFDIPOT. It makes my ideas cover structure, function, data, interfaces, platform, operations and time, not just the happy path."
+
+**Common mistake:** forgetting Time and Operations. Coupons that expire at midnight are a classic bug.`,
       keyPoints: [
         'SFDIPOT = Structure, Function, Data, Interfaces, Platform, Operations, Time.',
         'It generates ideas and also exposes coverage gaps afterwards.',
@@ -199,22 +236,29 @@ ISSUES / QUESTIONS
     },
     {
       heading: 'Quick heuristics: CRUD, Goldilocks, Zero-One-Many and friends',
-      body: `**Intuition:** heuristics are rules of thumb: fast, usually helpful, sometimes wrong. Experienced testers carry a pocketful of them. Elisabeth Hendrickson's *Test Heuristics Cheat Sheet* collects many; these are the ones interviewers expect you to name.
+      body: `A **heuristic** is a rule of thumb: fast, usually helpful, sometimes wrong. Elisabeth Hendrickson's *Test Heuristics Cheat Sheet* lists many. These are the ones interviewers expect you to name.
 
-| Heuristic | Idea | Worked example (profile / address book) |
+| Heuristic | Idea | Example (profile / address book / cart) |
 |---|---|---|
-| **CRUD** | For every data entity, Create, Read, Update, Delete it, then check every place it appears | Add address, view it at checkout, edit it, delete it while it is the default |
-| **Goldilocks** | Too small, too big, just right | Name of 0 chars, 1 char, 255 chars, 10,000 chars |
-| **Zero, One, Many** | Collections behave differently at 0, 1 and many | Cart with 0 items (checkout disabled?), 1 item, 100 items (pagination?) |
-| **Beginning, Middle, End** | Position matters | Delete the first, middle and last address in the list |
-| **Some, None, All** | Selection sets | Select none / some / all orders for bulk export |
+| **CRUD** | Create, Read, Update, Delete each item, then check everywhere it appears | Add an address, see it at checkout, edit it, delete it while it is the default |
+| **Goldilocks** | Too small, too big, just right | Name of 0, 1, 255 and 10,000 characters |
+| **Zero, One, Many** | Lists behave differently at 0, 1 and many | Cart with 0 items (checkout disabled?), 1 item, 100 items (paging?) |
+| **Beginning, Middle, End** | Position matters | Delete the first, middle and last address |
+| **Some, None, All** | Selections | Select none / some / all orders for export |
 | **Interruptions** | Stop it half way | Refresh, back button, network off, close tab during payment |
-| **Undo / Repeat** | Reverse or repeat an action | Double-click Pay; remove then re-add an item; browser back after order |
-| **Follow the data** | Trace a value end to end | Address typed in UI → API payload → DB → invoice PDF → email |
+| **Undo / Repeat** | Reverse or repeat an action | Double-click Pay; remove and re-add an item; back after ordering |
+| **Follow the data** | Trace one value end to end | Address typed in UI → API → DB → invoice PDF → email |
 
-**Common mistake:** listing heuristics like trivia. In an interview, always pair the name with a concrete test idea for the feature in front of you: "Zero-One-Many on the cart: what does checkout do with an empty cart?"
+**Example:** Zero-One-Many on SauceDemo's cart.
+- **0 items:** click Checkout. Does it let you pay for nothing? (A real bug in many shops.)
+- **1 item:** normal flow works.
+- **6 items** (all products): does the total add up, does the page scroll?
 
-**Link to automation:** many heuristic ideas become parameterised Playwright tests later (Goldilocks lengths, Zero-One-Many cart sizes). Exploration finds the interesting values; automation keeps checking them.`,
+**In an interview, say:** "Zero-One-Many on the cart: what does checkout do with an empty cart?" Always pair the name with a real test idea.
+
+**Link to automation:** good values found while exploring (Goldilocks lengths, cart sizes) later become parameterised Playwright tests.
+
+**Common mistake:** listing heuristic names like trivia, with no test idea.`,
       keyPoints: [
         'Heuristics are fallible shortcuts for generating ideas, not guarantees.',
         'Always attach a heuristic to a concrete idea for the feature at hand.',
@@ -224,9 +268,11 @@ ISSUES / QUESTIONS
     },
     {
       heading: 'Oracles: how you know it is a bug (FEW HICCUPPS)',
-      body: `**Intuition:** an oracle is how you decide "this looks wrong". With a spec the oracle is the spec; without one you still have plenty of oracles. Bolton stresses that an oracle **suggests** a problem; it does not prove one, so you investigate and explain.
+      body: `An **oracle** is any way you decide "this looks wrong". With a spec, the spec is one oracle. Without a spec, you still have many others. An oracle **suggests** a problem; it does not prove it (Bolton). So you investigate and explain.
 
-Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we suspect a problem when the product is *inconsistent* with most of these, or *consistent* with patterns of familiar problems.
+**FEW HICCUPPS** is Michael Bolton's list of consistency oracles (developsense.com). You suspect a bug when the product is *inconsistent* with one of these, or *consistent* with a familiar problem.
+
+**Example:** there is no spec for coupon codes. In v3.2, 50-character codes worked. In v3.3, codes over 20 characters are rejected. Oracle used: **History**. Your report says: "Inconsistent with History: v3.2 accepted 50-character codes (see TC-118)."
 
 | Letter | Oracle | Example inconsistency you could report |
 |---|---|---|
@@ -242,9 +288,11 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
 | P | **Purpose** | A "quick reorder" button needs 6 clicks |
 | S | **Statutes and standards** | Missing alt text breaks WCAG; card data in logs breaks PCI DSS |
 
-**Writing the bug report:** name the oracle in your report: "Inconsistent with History: v3.2 accepted 50-character codes (see TC-118)." It turns "I think this is wrong" into an argument a developer or PO can evaluate.
+**Name the oracle in your bug report.** It turns "I think this is wrong" into an argument a developer or PO can check.
 
-**In interviews, say this:** "No spec does not mean no oracle. I compare with the product's own behaviour, previous versions, competitors, claims, user expectations and standards, and I state which one I used."`,
+**In an interview, say:** "No spec does not mean no oracle. I compare with the product itself, older versions, competitors, claims, user needs and standards. I say which one I used."
+
+**Common mistake:** closing a bug as "no spec, so not a bug". The spec is only one oracle.`,
       keyPoints: [
         'An oracle is a way to recognise a problem; it is fallible.',
         'Naming the oracle makes your bug report persuasive.',
@@ -254,7 +302,7 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
     },
     {
       heading: "Whittaker's tours",
-      body: `**Intuition:** James Whittaker compares exploring software to being a tourist in a city. Different tours take you through different districts, and each tour tends to find a different class of bugs. Tours are a fun way to vary your sessions so you do not always walk the same streets.
+      body: `**Tours** are themes for an exploring session. James Whittaker compares testing to being a tourist in a city. Each tour visits a different "district" and tends to find a different type of bug. Tours stop you walking the same streets every session.
 
 | Tour (district) | How you explore | Typical bugs found |
 |---|---|---|
@@ -269,9 +317,13 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
 | **Antisocial** (seedy) | Do the opposite of what is expected: cancel, wrong inputs | Unhandled flows |
 | **Couch Potato** (hotel) | Do as little as possible: accept every default, skip optional fields | Bad defaults, empty-field crashes |
 
-**Worked example (food-delivery app):** a **FedEx** tour follows a delivery address from sign-up → saved addresses → checkout → order confirmation email → rider app. A **Saboteur** tour turns on airplane mode right after tapping "Place order" and checks whether the order was created once, twice or not at all.
+**Example (food-delivery app):**
+- **FedEx** tour: follow one delivery address from sign-up → saved addresses → checkout → confirmation email → rider app. Is it the same everywhere?
+- **Saboteur** tour: turn on airplane mode right after tapping "Place order". Was the order created once, twice or not at all?
 
-**Interview tip:** you do not need all 20-plus tours. Know 4–5 well with a bug class each, and connect them to charters: "Explore checkout using the Saboteur tour to discover network-failure handling."`,
+**In an interview, say:** "Explore checkout using the Saboteur tour to discover network-failure handling." A tour fits the "with" part of a charter.
+
+**Tip:** you do not need all 20-plus tours. Know 4–5 well, each with the bug type it finds.`,
       keyPoints: [
         'Tours give each session a different viewpoint.',
         'Money, Landmark, FedEx, Saboteur and Bad Neighbourhood are the most quoted.',
@@ -281,21 +333,27 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
     },
     {
       heading: 'Ad hoc, monkey and gorilla testing compared',
-      body: `**Intuition:** these are the "less structured cousins" of exploratory testing. Interviewers ask about them mainly to see whether you know the difference.
+      body: `These are the less structured cousins of exploratory testing. Interviewers ask about them to see if you know the difference.
 
 | Type | What it is | When it helps | Main limitation |
 |---|---|---|---|
-| **Ad hoc** | Informal testing with no plan or documentation, often from experience | 10-minute check of a hot-fix | No record of coverage; hard to repeat |
-| **Monkey (dumb)** | Random inputs with no knowledge of the app | Crash and robustness hunting | Finds few logic bugs; hard to reproduce |
-| **Monkey (smart)** | Random inputs guided by a model of valid actions | Long-run stability, mobile apps (e.g. Android's UI/Application Exerciser Monkey) | Needs a model and logging to be useful |
-| **Gorilla** | Hammering one module repeatedly, deliberately | Robustness of a single critical function | Narrow by design |
-| **Exploratory** | Chartered, time-boxed, heuristic-driven, documented | New features, unclear specs, finding unknowns | Needs skilled testers and debriefs |
+| **Ad hoc** | Informal testing, no plan, no notes | 10-minute check of a hot-fix | No record of coverage; hard to repeat |
+| **Monkey (dumb)** | Random inputs, no knowledge of the app | Hunting crashes | Few logic bugs; hard to reproduce |
+| **Monkey (smart)** | Random inputs guided by a model of valid actions | Long-run stability, mobile apps (e.g. Android's UI/Application Exerciser Monkey) | Needs a model and logging |
+| **Gorilla** | Hitting one module again and again, on purpose | Toughness of one critical function | Narrow by design |
+| **Exploratory** | Charter, time box, heuristics, notes | New features, unclear specs, unknowns | Needs skilled testers and debriefs |
 
-**Reproducibility tip:** whenever you do anything random, log the seed, the inputs and the time. A crash you cannot reproduce is a rumour.
+**Example:** the login page of a banking app.
+- **Ad hoc:** you try a few wrong passwords for 5 minutes. No notes.
+- **Monkey:** a tool taps random spots and types random text for an hour. It finds a crash on a 5,000-character username.
+- **Gorilla:** you hit Login 200 times with the same wrong password. Does the account lock? Does the server slow down?
+- **Exploratory:** "Explore login with wrong, locked and expired accounts to discover security and message problems." 90 minutes, with a session sheet.
 
-**Error guessing** (anticipating likely mistakes, e.g. divide by zero, empty strings) is a separate experience-based technique covered in the test-design topic; in exploratory sessions it is one of your resources.
+**Tip:** when you test randomly, log the seed, inputs and time. A crash you cannot reproduce is a rumour.
 
-**In interviews, say this:** "Ad hoc testing is unplanned and undocumented. Exploratory testing is planned at the level of a mission, and documented through session notes, so the team knows what was covered."`,
+**Error guessing** (guessing likely mistakes, e.g. divide by zero, empty strings) is a separate experience-based technique. In exploratory sessions it is one of your resources.
+
+**In an interview, say:** "Ad hoc testing is unplanned and has no notes. Exploratory testing has a mission and session notes, so the team knows what was covered."`,
       keyPoints: [
         'Ad hoc ≠ exploratory: the difference is charter, timebox and notes.',
         'Monkey testing is random input; log seeds to reproduce.',
@@ -305,18 +363,25 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
     },
     {
       heading: 'Risk-based testing: likelihood × impact',
-      body: `**Intuition:** you cannot test everything, so test where failure is both *likely* and *painful*. A smoke detector goes in the kitchen before the cupboard.
+      body: `**Risk-based testing** means you test first and deepest where failure is both *likely* and *painful*. You cannot test everything, so risk decides the order.
 
-**ISTQB CTFL v4.0 (5.2) vocabulary**
-- **Risk** (5.2.1): a potential event, hazard, threat or situation whose occurrence causes an adverse effect.
-- **Risk level** = **risk likelihood** (probability it happens) combined with **risk impact** (harm if it happens). The **quantitative** approach multiplies them (here 1–5 × 1–5); the **qualitative** approach reads the level from a risk matrix.
-- **Product risk** (5.2.2): tied to product quality characteristics: missing or wrong functionality, incorrect calculations, runtime errors, slow response, poor user experience, security vulnerabilities.
-- **Project risk** (5.2.2): tied to managing the project: organisational (late deliveries, bad estimates), people (skills, staff shortage), technical (scope creep, poor tools), supplier (third-party failure).
-- **Risk management** = risk analysis (identification + assessment, 5.2.3) and risk control (mitigation + monitoring, 5.2.4). Response options include mitigation by testing, acceptance, transfer or a contingency plan.
+**Intuition:** a smoke detector goes in the kitchen before the cupboard.
 
-**Where likelihood comes from:** new or complex code, many changes, new team or technology, historical bug density, many integrations. **Where impact comes from:** money, legal/compliance, safety, data loss, number of users affected, reputation.
+**ISTQB CTFL v4.0 (5.2) words, in plain English**
+- **Risk** (5.2.1): a potential event, hazard, threat or situation whose occurrence causes an adverse effect. Plain: something bad that *might* happen.
+- **Risk level** = **risk likelihood** (how probable it is) combined with **risk impact** (how much harm it does). The **quantitative** way multiplies them (here 1–5 × 1–5). The **qualitative** way reads the level from a risk matrix.
+- **Product risk** (5.2.2): the *software* may be bad. Missing or wrong functions, wrong calculations, runtime errors, slow response, poor user experience, security holes.
+- **Project risk** (5.2.2): the *project* may go wrong. Organisational (late deliveries, bad estimates), people (skills, too few staff), technical (scope creep, poor tools), supplier (a third party fails).
+- **Risk management** = risk analysis (identify + assess, 5.2.3) and risk control (mitigate + monitor, 5.2.4). Responses: mitigate by testing, accept, transfer, or have a contingency plan.
 
-**How testing responds to risk level (risk → test approach):**
+**Likelihood goes up with:** new or complex code, many changes, a new team or technology, a buggy history, many integrations.
+**Impact goes up with:** money, legal rules, safety, data loss, number of users hit, reputation.
+
+**Example:** two changes in a shop release, scored 1–5.
+- Payment SDK upgrade: likelihood 3, impact 5 → **3 × 5 = 15 → High**. Test first, test deep.
+- Footer link change: likelihood 2, impact 1 → **2 × 1 = 2 → Low**. A quick check is enough.
+
+**How testing responds to the risk level:**
 
 | Risk level | Score (1–25) | Test approach |
 |---|---|---|
@@ -324,7 +389,9 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
 | Medium | 8–14 | Scripted key paths + one exploratory session |
 | Low | 1–7 | Smoke-level check or test only if time allows; accept residual risk |
 
-**Common mistake:** treating risk as a one-time spreadsheet. Risk is monitored: new bugs, new changes and new information move items up or down every sprint.`,
+**In an interview, say:** "Risk level is likelihood times impact. It decides what I test first, how deep, and with which techniques."
+
+**Common mistake:** treating risk as a one-time spreadsheet. New bugs, changes and information move items up or down every sprint.`,
       diagram: `            IMPACT -->
             1 minor   2       3       4       5 critical
  L   5    |   5   |  10   |  15   |  20   |  25   |
@@ -343,14 +410,18 @@ Michael Bolton's **FEW HICCUPPS** consistency heuristics (developsense.com): we 
     },
     {
       heading: 'Worked example: risk register for an e-commerce release',
-      body: `**Scenario.** A release of a SauceDemo-like shop contains: new coupon engine, redesigned product listing, new "save for later", payment provider SDK upgrade, footer link changes, and a new sort-by-price option. The team has 3 testers × 2 days.
+      body: `A **risk register** is a table of risks, each with a likelihood, an impact, a score and a test approach.
 
-**Step 1: identify risks** with the team (dev, PO, tester), using the change list, past bugs and SFDIPOT.
-**Step 2: score** likelihood and impact 1–5 independently, then discuss differences (they reveal hidden knowledge).
-**Step 3: rank and map** to an approach and an effort share.
-**Step 4: report** residual risk: what is untested or lightly tested and why.
+**Example scenario:** a SauceDemo-like shop release has six changes: a new coupon engine, a redesigned product list, "save for later", a payment SDK upgrade, footer link changes, and sort-by-price. The team has 3 testers for 2 days.
 
-Notice the payment SDK upgrade: it is a "small" code change but impact 5 (money, every customer). Change size is not risk.`,
+**Step 1: find risks** with the team (dev, PO, tester). Use the change list, past bugs and SFDIPOT.
+**Step 2: score** likelihood and impact 1–5, each person on their own first. Then discuss differences. They show hidden knowledge.
+**Step 3: rank** and give each risk an approach and a share of effort.
+**Step 4: report residual risk** (the risk left after testing): what was not tested, or tested lightly, and why.
+
+**Look at the payment SDK upgrade.** It is a "small" code change, but impact is 5 (money, every customer). Small change does not mean low risk.
+
+The full register is in the box below.`,
       code: [
         {
           language: 'text',
@@ -382,15 +453,21 @@ Residual risk to report: R6 only link-checked; R5 not run on real iOS devices.`,
     },
     {
       heading: 'Prioritising under time pressure',
-      body: `**Intuition:** when a two-week test plan meets a two-day deadline, you do not test faster, you test *smarter* and you are honest about what was skipped.
+      body: `When a two-week test plan meets a two-day deadline, you do not test faster. You test the riskiest things first, and you say clearly what you skipped.
 
-**A repeatable 6-step answer (works in interviews and in real life):**
+**A 6-step answer (for interviews and real life):**
 1. **Clarify** the release goal, the deadline, and who decides go/no-go.
-2. **Rank by risk**: business-critical flows (login, search, add to cart, pay), recently changed code, historically buggy areas, integrations.
-3. **Smoke first** (30–60 min): is the build even testable? If not, stop and escalate.
-4. **Deep test the top risks** with a mix of scripted checks and exploratory sessions; lean on existing automation for regression.
+2. **Rank by risk:** money flows (login, search, add to cart, pay), recent changes, buggy areas, integrations.
+3. **Smoke test first** (30–60 min): can the build be tested at all? If not, stop and escalate.
+4. **Test the top risks deeply** with scripted checks and exploratory sessions. Use existing automation for regression.
 5. **Time-box the rest** with quick tours (garbage collector, landmark) and checklists.
-6. **Report** coverage and **residual risk** in plain language so the business can make an informed decision.
+6. **Report** what you covered and the **residual risk** (what is left untested), in plain words, so the business can decide.
+
+**Example:** release tomorrow, 1 tester, 1 day, food-delivery app.
+- 9:00 smoke: login, search, add to cart, pay. All OK.
+- 10:00–15:00: deep test the new UPI payment and the changed coupon logic.
+- 15:00–16:30: 15-minute tours of profile, ratings and help pages.
+- 17:00 report: "Payment and coupons tested deeply. Not tested: old Android versions. Suggest a feature flag for coupons."
 
 | Weak response | Strong response |
 |---|---|
@@ -398,7 +475,9 @@ Residual risk to report: R6 only link-checked; R5 not run on real iOS devices.`,
 | "I will skip testing low-priority bugs" | "Low-risk areas get a 15-minute tour; we accept that residual risk" |
 | "Testing will decide whether to release" | "Testing provides information; the PO/release manager decides" |
 
-**Communication template:** "With 2 days we will cover R1–R4 deeply (≈ 80% of business risk), smoke R5–R6. Not covered: older browsers, real iOS devices. Recommend a canary/feature flag for the coupon engine."`,
+**Message template:** "With 2 days we will cover R1–R4 deeply (≈ 80% of business risk) and smoke R5–R6. Not covered: older browsers, real iOS devices. We suggest a canary release or feature flag for the coupon engine."
+
+**Common mistake:** skipping areas silently. Always list what you did not test.`,
       keyPoints: [
         'Smoke first, then top risks, then time-boxed tours.',
         'Make the trade-off visible; never silently skip.',
@@ -465,18 +544,18 @@ DEBRIEF (PROOF) — confidence: medium; pricing logic needs 1 more session.`,
       explanation: `**What changed and why:**
 - **Charter follows Explore / with / to discover**: target (coupon application), resources (specific code types, data file, heuristics), information (pricing errors, validation).
 - **SBTM metadata** (tester, start, duration, build, platforms) makes the session reproducible and auditable.
-- **Charter vs opportunity and TBS percentages** let the lead see that 30% went to bug investigation, a sign the area is buggy, and 15% to setup, a project risk to raise.
+- **Charter vs opportunity and TBS percentages** show the lead that 30% went to bug investigation (a buggy area) and 15% to setup (a project risk to raise).
 - **Covered / Not covered** lists turn "looks ok mostly" into explicit coverage and explicit gaps.
 - **Bugs with IDs and severity**, and **questions** (like case sensitivity) with the oracle hint ("competitors accept lowercase") make the findings actionable.
 - **Debrief confidence** tells the PO whether more testing is needed before approval.`,
       followUps: [
         {
           q: 'Your manager says session sheets are too much paperwork. How do you respond?',
-          a: 'I would agree to keep it lean but not drop it. The sheet takes about five minutes and answers the questions the manager will ask anyway: what was covered, what was not, which bugs, how confident are we. I would offer a template with pre-filled fields and short bullet notes, and show how the TBS numbers helped us spot a broken staging environment last sprint. If needed, we can record notes in the Jira ticket itself rather than a separate document.',
+          a: 'I would agree to keep it lean but not drop it. The sheet takes about five minutes and answers the questions the manager will ask anyway: what was covered, what was not, which bugs, how confident are we. I would offer a template with pre-filled fields and short bullet notes. I would also show how the TBS numbers helped us spot a broken staging environment last sprint. If needed, notes can go in the Jira ticket instead of a separate document.',
         },
         {
           q: 'How would you turn BUG-812 into something the automation suite keeps checking?',
-          a: 'After the fix I would write a Playwright regression test for the exact sequence: log in, add an item, apply the coupon, remove the item, re-add it, and assert the order total with a web-first expect on the total locator. I would add a parameterised case for two or three item counts. The exploratory session found the bug once; the automated check makes sure it never silently returns in later releases.',
+          a: 'After the fix I would write a Playwright regression test for the exact steps. Log in, add an item, apply the coupon, remove the item, add it again. Then assert the order total with a web-first expect. I would add a parameterised case for two or three item counts. The exploratory session found the bug once; the automated check makes sure it never silently returns in later releases.',
         },
       ],
     },
@@ -485,7 +564,7 @@ DEBRIEF (PROOF) — confidence: medium; pricing logic needs 1 more session.`,
       title: 'From "everything is high priority" to a real risk assessment',
       context:
         'The release has five changes and testers have three days. The test plan section on risk was written as below. The release manager says it does not help her decide anything.',
-      task: 'Rewrite the risk section so it ranks the changes, shows how each score was derived, maps each risk to a test approach and effort, separates project risks, and states residual risk.',
+      task: 'Rewrite the risk section. Rank the changes and show how each score was worked out. Give each risk a test approach and effort. Keep project risks separate, and state the residual risk.',
       starter: {
         language: 'text',
         title: 'Weak artifact',
@@ -544,7 +623,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
       followUps: [
         {
           q: 'The PO says dark mode is the headline feature for marketing, so it must be HIGH. How do you handle it?',
-          a: 'That is new impact information, so I would update the score rather than argue. If dark mode is the launch headline, the reputational impact of a broken look rises, maybe to 4, giving 16. I would then rebalance: add a Money-tour session on the marketed screens and cross-browser checks, and take that time from lower-risk areas, telling the PO explicitly what we trade off. Risk scores are a shared judgement, not a tester-only decision.',
+          a: 'That is new impact information, so I would update the score rather than argue. If dark mode is the launch headline, the reputational impact of a broken look rises, maybe to 4, giving 16. I would then rebalance. Add a Money-tour session on the marketed screens and cross-browser checks. Take that time from lower-risk areas, and tell the PO clearly what we trade off. Risk scores are a shared judgement, not a tester-only decision.',
         },
         {
           q: 'Why separate product risks from project risks in the plan?',
@@ -564,7 +643,10 @@ Exit rule: no open High-severity defects on R1-R3.`,
         'Clearly separates it from random or undocumented testing',
         'Gives a real example of a bug found by exploring',
       ],
-      modelAnswer: `**Definition.** Exploratory testing is testing where learning about the product, designing tests and running them happen at the same time; each observation shapes the next test. It is still disciplined: I work from a **charter** ("Explore checkout with expired and stacked coupons to discover pricing errors"), in a **time-boxed session** (about 90 minutes is typical), I keep **notes**, and I **debrief** with my lead.
+      modelAnswer: `**Definition.** In exploratory testing, I learn the product, design tests and run them at the same time. Each result shapes my next test. It is still disciplined:
+- I work from a **charter**: "Explore checkout with expired and stacked coupons to discover pricing errors".
+- I test in a **time-boxed session**, usually about 90 minutes.
+- I keep **notes** and **debrief** with my lead.
 
 **Difference from ad hoc testing:**
 
@@ -581,11 +663,11 @@ Exit rule: no open High-severity defects on R1-R3.`,
       followUps: [
         {
           q: 'Is exploratory testing the same as "testing without test cases"?',
-          a: 'Not really. You do not write step-by-step cases in advance, but you still have a mission (the charter), heuristics for ideas, oracles to judge results, and you document what you did. The test design happens in your head during execution and is captured in session notes. Calling it "no test cases" makes it sound unplanned, which is exactly what interviewers want you to avoid.',
+          a: 'Not really. You do not write step-by-step cases in advance. But you still have a mission (the charter), heuristics for ideas and oracles to judge results. And you write down what you did. The test design happens in your head during execution and is captured in session notes. Calling it "no test cases" makes it sound unplanned, which is exactly what interviewers want you to avoid.',
         },
         {
           q: 'When would you NOT rely on exploratory testing?',
-          a: 'When exact repeatability is required, for example regulatory evidence that a specific set of steps was executed, or a large regression suite that must run every build. Those need scripted, ideally automated, checks. Exploration also struggles if testers are completely new to the domain with no time to learn; then pairing them with a domain expert or giving richer charters helps.',
+          a: 'When exact repeating is required. Examples: proof for a regulator that set steps were run, or a big regression suite that runs every build. Those need scripted, ideally automated, checks. Exploration is also weak when testers are new to the domain with no time to learn. Then pair them with a domain expert or give richer charters.',
         },
       ],
       pitfalls: [
@@ -622,15 +704,15 @@ Exit rule: no open High-severity defects on R1-R3.`,
       followUps: [
         {
           q: 'The PO says "just test it like a user would". Is that enough?',
-          a: 'It is a good start but not enough. Normal user paths find usability and happy-path issues, but the expensive bugs often hide in data extremes, concurrency, permissions and failures. I would cover the typical user journey first, then add sessions for edge data, error handling and security-related checks such as other tenants\' data in the result, and tell the PO which risks I am covering beyond "like a user".',
+          a: 'It is a good start but not enough. Normal user paths find usability and happy-path issues, but the expensive bugs often hide in data extremes, concurrency, permissions and failures. I would cover the normal user journey first. Then I add sessions for edge data, error handling and security checks, such as other tenants\' data showing up. I tell the PO which risks I cover beyond "like a user".',
         },
         {
           q: 'How do you report a bug when there is no requirement to point to?',
-          a: 'I name the oracle. For example: "Inconsistent with the product: the single-user form rejects duplicate emails, but bulk upload creates duplicates" or "Inconsistent with user expectations and comparable products." I add steps, evidence and the impact. That turns opinion into an argument, and if the behaviour turns out to be intended, the outcome is a clarified requirement, which is still valuable.',
+          a: 'I name the oracle. For example: "Inconsistent with the product. The single-user form rejects duplicate emails, but bulk upload creates duplicates." Or: "Inconsistent with user desires and comparable products." I add steps, evidence and the impact. That turns opinion into an argument, and if the behaviour turns out to be intended, the outcome is a clarified requirement, which is still valuable.',
         },
         {
           q: 'How long would you explore before you stop?',
-          a: 'I time-box by risk. For a high-risk admin feature I might plan three or four 90-minute sessions, then stop when the charters are done, new sessions stop finding new kinds of problems, and my lead and I are comfortable with the remaining risk. I report what I did not cover so stopping is a visible decision, not a silent one.',
+          a: 'I time-box by risk. For a high-risk admin feature I might plan three or four 90-minute sessions. I stop when the charters are done, new sessions stop finding new kinds of problems, and my lead and I accept the remaining risk. I report what I did not cover, so stopping is a visible decision.',
         },
       ],
       pitfalls: [
@@ -667,7 +749,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
 - setup % trend (environment health)
 - open questions blocking progress
 
-**How it drives decisions:** if the payment area shows 40% bug investigation, it needs more sessions; if setup is 30% everywhere, staging is a project risk to escalate. That is more informative than "120 of 150 test cases passed", which says nothing about what the cases looked for.`,
+**How it drives decisions:** if payments show 40% bug investigation, the area needs more sessions. If setup is 30% everywhere, staging is a project risk to escalate. That says more than "120 of 150 test cases passed", which hides what the cases looked for.`,
       followUps: [
         {
           q: 'What does a high "opportunity" percentage tell you?',
@@ -689,7 +771,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
       difficulty: 'hard',
       question: 'The release is in 2 days but the planned testing needs 2 weeks. What do you do?',
       context:
-        'A close cousin, "How do you prioritize testing tasks in a fast-paced environment?", is reported in the managerial round of an Infosys Quality Engineering Analyst interview experience on GeeksforGeeks (2025).',
+        'A close version, "How do you prioritize testing tasks in a fast-paced environment?", was asked in the managerial round of an Infosys Quality Engineering Analyst interview (GeeksforGeeks, 2025).',
       whatInterviewerLooksFor: [
         'Stays calm and does not promise to "test everything"',
         'Prioritises by risk with concrete criteria',
@@ -719,7 +801,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
         },
         {
           q: 'How does automation change your answer?',
-          a: 'A healthy Playwright regression suite that runs in about 20 minutes on CI covers the stable, known behaviour, so the human time goes to new and risky changes. If the suite is flaky or slow, I would run only the smoke and critical-path tags, review failures quickly, and not let flaky results consume the two days.',
+          a: 'A healthy Playwright regression suite runs in about 20 minutes on CI and covers the stable, known behaviour. So human time goes to new and risky changes. If the suite is flaky or slow, I run only the smoke and critical-path tags. I review failures quickly and do not let flaky results eat the two days.',
         },
       ],
       pitfalls: [
@@ -764,7 +846,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
         },
         {
           q: 'Two risks both score 12, one is 3×4 and one is 4×3. Which first?',
-          a: 'All else equal I usually take the higher-impact one first, because impact is harder to recover from than likelihood, and severe failures in production cost more. But I would also look at testability and dependencies: if the 4×3 item blocks other testing or a fix is still pending, order may change. The score is a guide for discussion, not a formula that replaces judgement.',
+          a: 'All else equal, I take the higher-impact one first. Severe failures in production are harder to recover from and cost more. But I also look at testability and dependencies. If the 4×3 item blocks other testing, or a fix is still pending, the order may change. The score is a guide for discussion, not a formula that replaces judgement.',
         },
       ],
       pitfalls: [
@@ -803,7 +885,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
       followUps: [
         {
           q: 'What do you do if the developer says "it is working as designed"?',
-          a: 'I ask who designed it and whether the design considered the case I found. If my oracle is a claim, a standard or user impact, I explain that and bring the product owner in, because "as designed" is a product decision, not a technical one. If the PO accepts the behaviour, I close it as "as designed", note it, and maybe suggest updating help text so users are not surprised.',
+          a: 'I ask who designed it and whether the design considered my case. If my oracle is a claim, a standard or user impact, I explain it and bring in the product owner. "As designed" is a product decision, not a technical one. If the PO accepts the behaviour, I close it as "as designed" and note it. I may suggest updating the help text so users are not surprised.',
         },
         {
           q: 'Can an automated test have an oracle problem?',
@@ -826,7 +908,10 @@ Exit rule: no open High-severity defects on R1-R3.`,
         'Gives criteria for what to automate from exploratory findings',
         'Knows tooling can support exploration (traces, API clients, mocks)',
       ],
-      modelAnswer: `**Checking vs testing.** Bach and Bolton ("Testing and Checking Refined") distinguish **checking**, the mechanistic process of verifying propositions about the product (which machines do well), from **testing**, evaluating a product by learning about it through experiencing, exploring and experimenting (which needs human judgement). A Playwright suite is a powerful checking machine; it only finds problems its assertions anticipated.
+      modelAnswer: `**Checking vs testing.** Bach and Bolton ("Testing and Checking Refined") separate two ideas.
+- **Checking** is the mechanistic process of verifying propositions about the product. Machines do this well.
+- **Testing** is evaluating a product by learning about it through experiencing, exploring and experimenting. It needs human judgement.
+A Playwright suite is a strong checking machine. It only finds problems its assertions expected.
 
 **The loop I use:**
 1. **Explore** a new or risky feature with charters.
@@ -841,15 +926,18 @@ Exit rule: no open High-severity defects on R1-R3.`,
 
 **What not to automate:** one-off investigations, rapidly changing UI, things needing human judgement (look-and-feel, confusing copy).
 
-**Tools help exploration too:** Playwright codegen and trace viewer to record what happened, page.route to simulate a failing API (Saboteur tour), Postman for API probing, browser devtools network throttling.`,
+**Tools help exploration too:**
+- Playwright codegen and trace viewer record what happened.
+- page.route fakes a failing API (Saboteur tour).
+- Postman probes the API; DevTools throttling slows the network.`,
       followUps: [
         {
           q: 'How would you use Playwright itself during an exploratory session?',
-          a: 'I can script the boring setup, for example log in through the API, seed a cart with 50 items, then hand over to a headed browser with page.pause() and explore from there. I can mock an API failure with page.route to explore error handling, and turn on tracing so I have a full timeline of what I did when I find a bug. The tool handles setup and evidence; I do the thinking.',
+          a: 'I script the boring setup: log in through the API and fill a cart with 50 items. Then page.pause() hands me a headed browser to explore. I can fake an API failure with page.route to explore error handling. Tracing gives me a full timeline of what I did when I find a bug. The tool handles setup and evidence; I do the thinking.',
         },
         {
           q: 'A manager says "we have 95% automation coverage, we no longer need exploratory testing". Your reply?',
-          a: 'Coverage of what? Automation coverage usually means coverage of known requirements or code lines. It cannot tell us about problems nobody thought of: odd data, new user behaviour, integration surprises. I would point to bugs found in production or in recent exploratory sessions that the suite missed, and propose a small, risk-based exploratory budget per sprint, for example two sessions per new feature.',
+          a: 'Coverage of what? Automation coverage usually means coverage of known requirements or code lines. It cannot tell us about problems nobody thought of: odd data, new user behaviour, integration surprises. I would show bugs from production or recent exploratory sessions that the suite missed. Then I would propose a small, risk-based exploratory budget per sprint, for example two sessions per new feature.',
         },
       ],
       pitfalls: [
@@ -863,7 +951,7 @@ Exit rule: no open High-severity defects on R1-R3.`,
     {
       id: 'mt-exploratory-risk-drill-1',
       question:
-        'Build a risk matrix and allocate effort. You have 2 testers × 1 day (16 hours). Score each item, rank it, and allocate hours: (A) new UPI payment option, (B) wishlist share link, (C) product image zoom, (D) GST invoice calculation change, (E) login page copy change, (F) order history pagination.',
+        'Build a risk matrix and share out effort. You have 2 testers × 1 day (16 hours). Score each item, rank it, and give it hours. Items: (A) new UPI payment option, (B) wishlist share link, (C) product image zoom, (D) GST invoice calculation change, (E) login page text change, (F) order history pagination.',
       assumptions: [
         'A: new integration with a payment provider; likelihood 4, impact 5.',
         'B: small new feature, low usage; likelihood 3, impact 2.',
@@ -899,7 +987,7 @@ Residual risk to report: B and C only lightly tested; no real-device run for C.`
       followUps: [
         {
           q: 'The UPI sandbox is down for the first 3 hours. What changes?',
-          a: 'That is a project risk materialising. I would start on D (GST) and F immediately, escalate the sandbox outage to the dev lead or vendor contact, and prepare UPI test data and charters meanwhile. If the sandbox stays down, I would flag A as untested in the report and recommend shipping UPI behind a feature flag rather than letting the whole release wait silently.',
+          a: 'That is a project risk coming true. I start on D (GST) and F at once. I escalate the sandbox outage to the dev lead or vendor contact, and prepare UPI test data and charters meanwhile. If the sandbox stays down, I flag A as untested in the report. I recommend shipping UPI behind a feature flag, instead of letting the whole release wait silently.',
         },
       ],
     },
@@ -987,7 +1075,7 @@ Residual risk to report: B and C only lightly tested; no real-device run for C.`
       followUps: [
         {
           q: 'What gives exploratory testing its structure?',
-          a: 'A charter that states the mission, a time-boxed session, heuristics for generating ideas, oracles for recognising problems, session notes as evidence, and a debrief with the lead. Together these make it planned at the level of goals while staying flexible in the steps.',
+          a: 'A charter with the mission, a time-boxed session, heuristics for ideas, oracles to spot problems, session notes as evidence, and a debrief with the lead. Together they make the goals planned while the steps stay flexible.',
         },
       ],
     },
@@ -1033,7 +1121,7 @@ Likelihood: 3      Impact: 5`,
       followUps: [
         {
           q: 'What does a HIGH score change about how you test this item?',
-          a: 'It is tested first and deepest: formal techniques such as decision tables and BVA on amounts, at least one exploratory session focused on retries and network drops, an idempotency check on the API, review by a second tester, and inclusion in the automated regression suite.',
+          a: 'It is tested first and deepest. Use formal techniques such as decision tables and BVA on amounts. Run at least one exploratory session on retries and network drops. Check the API is idempotent (a retry does not charge twice). Get a second tester to review, and add it to the automated regression suite.',
         },
       ],
     },
@@ -1054,7 +1142,7 @@ Likelihood: 3      Impact: 5`,
       followUps: [
         {
           q: 'How do you handle the staging-environment risk?',
-          a: 'As a project risk with an owner and mitigation: daily environment health checks, an escalation path after a set downtime, maybe a backup environment or containerised setup, and tracking setup time in session sheets so its effect on coverage is visible in reports.',
+          a: 'As a project risk with an owner and a plan. Run daily environment health checks and escalate after a set downtime. Consider a backup or containerised environment. Track setup time in session sheets, so its effect on coverage shows in reports.',
         },
       ],
     },
@@ -1082,7 +1170,7 @@ ISSUES: payment sandbox returned 502 for ~45 min; test users
       ],
       correct: [0],
       explanation:
-        'With 55% of the time on setup, only about 30 minutes of actual testing happened, so "no bugs" is weak evidence. The sandbox outage is a project risk to escalate. The tester stayed on charter (90%), so rewriting the charter is not the issue, and a low bug-investigation share simply reflects that no bugs were found.',
+        'With 55% of the time on setup, only about 30 minutes of actual testing happened, so "no bugs" is weak evidence. The sandbox outage is a project risk to escalate. The tester stayed on charter (90%), so the charter is not the issue. A low bug-investigation share just reflects that no bugs were found.',
       followUps: [
         {
           q: 'How would you report refunds in the daily status?',
@@ -1094,7 +1182,7 @@ ISSUES: payment sandbox returned 502 for ~45 min; test users
       id: 'mt-exploratory-risk-mcq-06',
       difficulty: 'medium',
       question:
-        'While exploring, you see dates shown as 04/11/2025 on the order list but Nov 4, 2025 on the order details page, and 11/04/2025 in the invoice. Which oracle from FEW HICCUPPS are you mainly using?',
+        'While exploring, you see the same date shown three ways: 04/11/2025 on the order list, Nov 4, 2025 on the order details page, and 11/04/2025 on the invoice. Which FEW HICCUPPS oracle are you mainly using?',
       options: [
         'Product: the product should be consistent with itself',
         'History: the product should match earlier versions',
@@ -1123,7 +1211,7 @@ ISSUES: payment sandbox returned 502 for ~45 min; test users
       followUps: [
         {
           q: 'What bugs is a FedEx tour likely to find?',
-          a: 'Truncated or re-encoded fields (a long street name cut at 30 characters on the courier label), lost Unicode characters, fields mapped to the wrong place in an export, or edits that update one copy of the data but not another, such as a changed address that never reaches an existing order.',
+          a: 'Cut or garbled fields, e.g. a long street name cut at 30 characters on the courier label. Lost Unicode characters. Fields mapped to the wrong place in an export. Or an edit that updates one copy of the data but not another, such as a changed address that never reaches an existing order.',
         },
       ],
     },
@@ -1139,7 +1227,7 @@ ISSUES: payment sandbox returned 502 for ~45 min; test users
       followUps: [
         {
           q: 'Give an Operations idea for the same checkout.',
-          a: 'A returning customer who keeps checkout open in two tabs, changes the cart in one and pays in the other; or a shopper on a slow mobile connection during a sale with heavy traffic. Operations ideas come from realistic usage patterns rather than from the feature list.',
+          a: 'A returning customer opens checkout in two tabs, changes the cart in one and pays in the other. Or a shopper on a slow mobile connection during a busy sale. Operations ideas come from real usage patterns, not from the feature list.',
         },
       ],
     },
@@ -1165,11 +1253,11 @@ Known history: payment callbacks caused 2 P1 incidents last quarter`,
       ],
       correct: [0],
       explanation:
-        'The retry logic change touches money, has a P1 history (high likelihood and impact) and can cause double callbacks, so after a quick smoke it gets the deepest testing. The banner is visible but low impact. A 6-hour suite cannot finish in 3 hours and would not focus on the risky change. Listing order says nothing about risk.',
+        'The retry logic change touches money and has a P1 history (high likelihood and impact). It can cause double callbacks. So after a quick smoke it gets the deepest testing. The banner is visible but low impact. A 6-hour suite cannot finish in 3 hours and would not focus on the risky change. Listing order says nothing about risk.',
       followUps: [
         {
           q: 'How would you test the retry change in 2 hours?',
-          a: 'Check the callback paths: success, a single 504 then success, repeated 504s, a late duplicate callback, and confirm the order is paid exactly once and the customer is charged once. A Saboteur-style session with mocked gateway responses helps, plus a look at logs for duplicate processing. Then a quick check that the button rename did not break the checkout flow or automation locators.',
+          a: 'Check the callback paths: success, one 504 then success, repeated 504s, and a late duplicate callback. Confirm the order is paid exactly once and the customer is charged once. A Saboteur-style session with mocked gateway responses helps, plus a look at logs for duplicate processing. Then a quick check that the button rename did not break the checkout flow or automation locators.',
         },
       ],
     },
@@ -1186,11 +1274,11 @@ Known history: payment callbacks caused 2 P1 incidents last quarter`,
       ],
       correct: [0, 2, 4],
       explanation:
-        'Exploration shines when information is missing or changing (new features), when you need to learn fast (incident investigation) and when time is short and adaptability matters. A regulatory audit that demands identical repeated steps needs scripted, documented tests. A nightly run of 600 stable checks is exactly what automation is for.',
+        'Exploration is strongest when information is missing or changing (new features), when you must learn fast (an incident), and when time is short. A regulatory audit that demands identical repeated steps needs scripted, documented tests. A nightly run of 600 stable checks is exactly what automation is for.',
       followUps: [
         {
           q: 'How would you explore during a production incident?',
-          a: 'Start from the symptoms and logs, form a hypothesis, try to reproduce it in a safe environment with similar data and configuration, vary one factor at a time (user type, browser, timing, data size), and record everything. Each result narrows the search, which is exactly the learn-design-execute loop of exploratory testing.',
+          a: 'Start from the symptoms and logs and form a guess. Try to reproduce it in a safe environment with similar data and settings. Change one factor at a time (user type, browser, timing, data size) and record everything. Each result narrows the search. That is the learn-design-execute loop of exploratory testing.',
         },
       ],
     },
@@ -1198,7 +1286,7 @@ Known history: payment callbacks caused 2 P1 incidents last quarter`,
       id: 'mt-exploratory-risk-mcq-11',
       difficulty: 'hard',
       question:
-        'A team runs a tool that sends thousands of random taps and text inputs to their Android app overnight, with no knowledge of the screens, and logs crashes with the random seed. What is this best called?',
+        'A team runs a tool overnight that sends thousands of random taps and text inputs to their Android app. The tool knows nothing about the screens. It logs crashes with the random seed. What is this best called?',
       options: [
         'Dumb monkey testing',
         'Exploratory testing',
@@ -1211,7 +1299,7 @@ Known history: payment callbacks caused 2 P1 incidents last quarter`,
       followUps: [
         {
           q: 'What would make it a "smart" monkey?',
-          a: 'Giving the tool a model of the app, such as which screens exist and which actions are valid on each, and possibly weighting actions by importance. It then produces realistic sequences and reaches deeper screens instead of tapping randomly on the first page, which finds more meaningful state bugs.',
+          a: 'Give the tool a model of the app: which screens exist and which actions are valid on each. You can also weight actions by importance. It then makes realistic sequences and reaches deeper screens, instead of tapping randomly on the first page. That finds more meaningful state bugs.',
         },
       ],
     },
@@ -1308,11 +1396,11 @@ Automated regression: 412 passed, 3 failed (known flaky, rerun passed)`,
       ],
       correct: [0, 2, 4],
       explanation:
-        'Fixed bugs that would be costly to reintroduce, stable business rules (total calculation for several item counts) and boundary rules (quantity 0 rejected, 1–99 accepted) are repeatable and checkable by assertions, so they are ideal for automation. The tone of an error message needs human judgement. A one-off environment slowness investigation is not a repeatable product check.',
+        'Three findings suit automation, because assertions can check them every time: a fixed bug that would be costly to bring back, a stable business rule (the total for several item counts), and a boundary rule (quantity 0 rejected, 1–99 accepted). The tone of an error message needs human judgement. A one-off environment slowness investigation is not a repeatable product check.',
       followUps: [
         {
           q: 'How would you structure the quantity rule as a Playwright test?',
-          a: 'As a parameterised test: loop over an array of cases such as 0 (expect error), 1 and 99 (expect accepted) and 100 (expect error), create one test per value with a descriptive title, fill the quantity field using getByLabel and assert with web-first expectations on the error message or cart total. Exploration found the interesting values; the data-driven test keeps checking them.',
+          a: 'As a parameterised test. Loop over cases: 0 (expect error), 1 and 99 (expect accepted), 100 (expect error). Create one test per value with a clear title. Fill the quantity field with getByLabel and assert with web-first expectations on the error message or cart total. Exploration found the interesting values; the data-driven test keeps checking them.',
         },
       ],
     },

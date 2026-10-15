@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 4,
   title: 'Agile Testing, Release & Reporting',
   subtitle:
-    'How a QA engineer works inside Scrum and Kanban: quadrants, three amigos, DoR/DoD, Gherkin acceptance criteria, triage, go/no-go, testing in production, and the reports that let a team decide to ship.',
+    'How a tester works in Scrum and Kanban: quadrants, three amigos, DoR/DoD, Gherkin, bug triage, go/no-go, testing in production, and release reports.',
   estimatedMinutes: 85,
   sources: [
     'Agile Manifesto (agilemanifesto.org) — 4 values and 12 principles',
@@ -35,39 +35,48 @@ const topic: Topic = {
     'kanban',
   ],
   cheatSheet: [
-    'Agile Manifesto: individuals & interactions > processes & tools; working software > comprehensive docs; customer collaboration > contract negotiation; responding to change > following a plan (the right side still has value).',
-    'Scrum Guide 2020: 3 accountabilities (Product Owner, Scrum Master, Developers — testers ARE Developers), 5 events (Sprint ≤ 1 month, Planning ≤ 8h, Daily 15 min, Review ≤ 4h, Retro ≤ 3h for a 1-month sprint), 3 artifacts + commitments (Product Backlog → Product Goal, Sprint Backlog → Sprint Goal, Increment → Definition of Done).',
-    'Definition of Ready is a team practice, NOT part of the Scrum Guide; Definition of Done IS (the Increment\'s commitment).',
-    'Quadrants (Marick → Crispin/Gregory): Q1 technology-facing, support team (unit/component); Q2 business-facing, support team (functional, story, examples, prototypes); Q3 business-facing, critique product (exploratory, usability, UAT); Q4 technology-facing, critique product (performance, security, reliability). Quadrants ≠ order.',
-    'Three amigos = business (PO/BA) + development + testing discuss a story BEFORE coding to agree examples; output = acceptance criteria, questions, split stories.',
-    'Good AC are testable, specific, cover happy + negative + edge rules; Gherkin: Feature / Rule / Scenario / Given (context) When (one action) Then (observable outcome) / Scenario Outline + Examples.',
-    'Go/no-go is a team/business decision informed by QA evidence: exit criteria met? open blockers/criticals? residual risk known? rollback/feature flag ready? — QA advises, the product owner/release manager decides.',
-    'Testing in production: smoke after deploy, canary (small % of traffic, watch error rate/latency, then widen or roll back), feature flags (release, experiment, ops, permissioning toggles), synthetic monitoring + alerts.',
-    'Test progress (execution) report = during testing: planned vs executed vs passed/failed/blocked, defects open by severity, blockers, risks. Test completion (summary/closure) report = at the end: scope, results vs exit criteria, deviations, residual risks, recommendation, lessons learned.',
-    'Useful QA metrics trend over time and drive a decision (escaped defects, pass rate per build, blocked tests, cycle time); vanity metrics (test case count, bugs per tester) get gamed.',
-    'Kanban: visualise the flow, limit WIP per column, manage flow; cycle time = start → done, lead time = commitment point → done (Kanban Guide); a "Testing" column piling up means swarm on testing, not pull more dev work.',
+    'Agile Manifesto: individuals & interactions > processes & tools; working software > big documents; customer collaboration > contract negotiation; responding to change > following a plan. The right side still has value.',
+    'Scrum Guide 2020: 3 accountabilities (Product Owner, Scrum Master, Developers; testers ARE Developers). 5 events: Sprint ≤ 1 month, Planning ≤ 8h, Daily 15 min, Review ≤ 4h, Retro ≤ 3h (for a 1-month sprint).',
+    'Scrum artifacts + commitments: Product Backlog → Product Goal, Sprint Backlog → Sprint Goal, Increment → Definition of Done.',
+    'Definition of Ready is a team practice, NOT in the Scrum Guide. Definition of Done IS in it (the Increment\'s commitment).',
+    'Quadrants (Marick → Crispin/Gregory): Q1 tech-facing, supports team (unit, component); Q2 business-facing, supports team (story tests, examples, API); Q3 business-facing, critiques product (exploratory, usability, UAT); Q4 tech-facing, critiques product (performance, security). Numbers are NOT an order.',
+    'Three amigos = business (PO/BA) + development + testing talk about one story BEFORE coding. Output: examples → acceptance criteria, open questions, maybe a split story.',
+    'Good AC: testable, specific values, happy + negative + edge cases. Gherkin: Given (context) / When (one action) / Then (visible result); Scenario Outline + Examples for data.',
+    'Go/no-go: QA recommends with evidence; the PO or release manager decides. Check: exit criteria, open Critical/High bugs, untested risk, rollback or feature flag ready.',
+    'Testing in production: smoke after deploy, canary (5% of traffic first, watch errors and latency, then widen or roll back), feature flags (release, experiment, ops, permissioning), monitoring.',
+    'Progress (execution) report = during testing: planned / executed / passed / failed / blocked, open bugs, blockers. Completion (summary) report = at the end: scope, results vs exit criteria, risks left, recommendation, lessons.',
+    'Good metrics drive a decision and show a trend (escaped defects, pass rate per build, blocked tests, cycle time). Vanity metrics (test case count, bugs per tester) get gamed.',
+    'Kanban: visualise work, limit WIP per column, manage flow. Lead time = commitment point → done (Kanban Guide); cycle time = start → done. A full "Testing" column means the team swarms to help test.',
   ],
   sections: [
     {
       heading: 'Agile in one page: the manifesto and what it means for testers',
-      body: `**Intuition:** waterfall is like building a whole house and then inviting the inspector. Agile invites the inspector into every room as it is built, and lets the owner change their mind about the kitchen before the tiles go in.
+      body: `**Agile** means building software in small pieces, testing each piece while it is built, and changing the plan when you learn something new.
 
-The **Agile Manifesto (2001)** has four value statements. Each one says "we value the left side more", not "we throw away the right side":
+The **Agile Manifesto (2001)** has four values. Each one says "we value the left side **more**". It does not say "throw away the right side".
 
-| We value… | …over | What it means for QA |
+| We value… | …more than | What it means for a tester |
 |---|---|---|
-| Individuals and interactions | Processes and tools | Talk to the developer before filing a 2-page ticket; a 5-minute chat often resolves it. |
-| Working software | Comprehensive documentation | Lightweight test notes, checklists and automated checks instead of 300-page test plans. |
-| Customer collaboration | Contract negotiation | Clarify acceptance criteria with the Product Owner instead of arguing about the spec. |
-| Responding to change | Following a plan | Expect stories to change mid-sprint; keep tests easy to update (small, focused, automated where stable). |
+| Individuals and interactions | Processes and tools | A 5-minute chat with the developer often solves what a 2-page ticket would not. |
+| Working software | Comprehensive documentation | Short test notes, checklists and automated checks, not a 300-page test plan. |
+| Customer collaboration | Contract negotiation | Agree acceptance criteria with the Product Owner; don't argue about the spec. |
+| Responding to change | Following a plan | Stories change mid-sprint, so keep tests small and easy to update. |
 
-A few of the **12 principles** matter most for testers: deliver working software frequently (weeks, not months), welcome changing requirements, business people and developers work together daily, continuous attention to technical excellence, and reflect regularly to improve (retrospectives).
+Five of the **12 principles** matter most for testers:
 
-**The whole-team approach** (Crispin & Gregory; also in ISTQB CTFL v4.0) means quality is everyone's job. The tester is not a gatekeeper at the end; they are a quality coach who helps the team build it right from the first conversation. In practice that means: testers join refinement, pair with developers, review unit tests, write acceptance tests early, and developers also test.
+- Deliver working software often (weeks, not months).
+- Welcome changing requirements.
+- Business people and developers work together daily.
+- Keep attention on technical quality.
+- Reflect and improve regularly (the retrospective).
 
-**Common mistake:** "Agile means no documentation." Wrong: it means *just enough* documentation that is still useful. A tester in Scrum still writes test notes, bug reports, a test strategy and release reports; they are just shorter and living.
+**Whole-team approach** means quality is everyone's job, not only the tester's. ISTQB CTFL v4.0 uses this term too.
 
-**In interviews, say this:** "In Agile, testing is an activity the whole team does continuously, not a phase after development. My job is to shorten the feedback loop: ask the questions early, turn examples into tests, and give the team fast, honest information."`,
+*Example:* the developer writes unit tests for the coupon code. The tester joins refinement, pairs with the developer and reviews those unit tests. Nobody waits for a "QA phase" at the end.
+
+**In an interview, say:** "In Agile the whole team tests all the time, not in a phase after coding. My job is fast feedback: ask questions early, turn examples into tests, and report honestly."
+
+**Common mistake:** "Agile means no documentation." Wrong. It means just enough useful documentation. You still write bug reports, test notes and release reports. They are just short.`,
       keyPoints: [
         'The manifesto says "more than", not "instead of".',
         'Whole-team approach: quality is shared; the tester is a coach and investigator, not a gate.',
@@ -77,32 +86,32 @@ A few of the **12 principles** matter most for testers: deliver working software
     },
     {
       heading: 'Agile Testing Quadrants',
-      body: `**Intuition:** the quadrants are a map of *kinds* of testing so the team does not forget a whole region. Think of a city map split into four districts: you would not plan a tour that only visits one.
+      body: `**Agile Testing Quadrants** are a map of four kinds of testing. The team uses the map so it does not forget a whole kind of testing, such as performance.
 
-Brian Marick drew the original matrix; Lisa Crispin and Janet Gregory adapted it (with his permission) into the quadrants at the heart of *Agile Testing*. Crispin calls it "merely a taxonomy" for planning, with no hard rules about what goes where. Two axes:
+Brian Marick drew the first version. Lisa Crispin and Janet Gregory made it popular in their book *Agile Testing*. The map has two axes:
 
-- **Horizontal:** does the test **support the team** (guide development, written before/while coding) or **critique the product** (evaluate the finished thing)?
-- **Vertical:** is it **business-facing** (in the customer's language) or **technology-facing** (in the developer's language)?
+- **Business-facing vs technology-facing:** is the test written in the customer's words or in the developer's words?
+- **Supports the team vs critiques the product:** does the test guide the coding (written before or during it), or judge the finished product?
 
-| Quadrant | Facing / purpose | Examples | Usually |
+| Quadrant | Axes | Examples | Usually |
 |---|---|---|---|
 | **Q1** | Technology-facing, supports the team | Unit tests, component tests, TDD | Automated |
-| **Q2** | Business-facing, supports the team | Functional/story tests, examples, BDD scenarios, prototypes, API tests | Automated + manual |
+| **Q2** | Business-facing, supports the team | Story tests, examples, BDD scenarios, prototypes, API tests | Automated + manual |
 | **Q3** | Business-facing, critiques the product | Exploratory testing, usability, UAT, demos, alpha/beta | Manual |
 | **Q4** | Technology-facing, critiques the product | Performance, load, security, reliability, compatibility | Tools |
 
-**Worked example: "Apply coupon at checkout" story on SauceDemo-like shop**
+**Example:** the story "Apply coupon at checkout" on a SauceDemo-like shop.
 
-- Q1: developer unit-tests the discount calculation (10% of 59.99 = 6.00 rounded).
-- Q2: three-amigos examples become Gherkin scenarios (valid code, expired code, code below minimum basket) and an API test for POST /cart/coupon.
-- Q3: tester runs a 60-minute exploratory session on coupon + currency + back button; PO reviews it in the sprint review.
-- Q4: perf check that the coupon endpoint holds at 200 requests/second during a sale; security check that codes cannot be brute-forced.
+- **Q1:** the developer unit-tests the maths: 10% of 59.99 = 6.00 (rounded).
+- **Q2:** the agreed examples become Gherkin scenarios: valid code, expired code, basket below the minimum. Plus an API test for POST /cart/coupon.
+- **Q3:** the tester explores for 60 minutes: coupon + currency change + back button. The PO tries it in the sprint review.
+- **Q4:** a load test checks the coupon API at 200 requests per second. A security test checks that codes cannot be guessed by brute force.
 
-**Note:** ISTQB CTFL v4.0 (5.1.7) places smoke tests together with non-functional tests in Q4 and lists API testing in Q2.
+**Note:** ISTQB CTFL v4.0 (5.1.7) puts smoke tests in Q4, together with non-functional tests. It puts API testing in Q2.
 
-**Common mistake:** reading the quadrants as an order (Q1 first, Q4 last). Crispin writes that the numbering "does NOT imply any order"; a team might do Q4 load tests in sprint 1 if performance is the biggest risk.
+**In an interview, say:** "I use the quadrants as a checklist in planning. For each story I ask: which quadrants matter, and who covers each one?"
 
-**In interviews, say this:** "I use the quadrants as a checklist during planning: for this story, which quadrants matter, and who covers each? It stops us from shipping something with great unit tests but no usability or performance thought."`,
+**Common mistake:** reading the numbers as an order (Q1 first, Q4 last). Crispin writes that the numbering "does NOT imply any order". If performance is the biggest risk, do the Q4 load test in sprint 1.`,
       diagram: `                 BUSINESS-FACING
           +--------------------+--------------------+
           | Q2  (auto+manual)  | Q3  (manual)       |
@@ -123,31 +132,38 @@ Brian Marick drew the original matrix; Lisa Crispin and Janet Gregory adapted it
     },
     {
       heading: 'Scrum roles, events and artifacts for QA',
-      body: `**Intuition:** Scrum is a short repeating loop: pick a small goal, build and test it, show it, improve how you work, repeat. Every loop produces something that could be released.
+      body: `**Scrum** is a way of working in short, fixed cycles called **Sprints**. In each Sprint the team picks a goal, builds and tests it, shows it, and improves how it works.
 
-**Scrum Guide 2020 essentials**
+The Scrum Guide 2020 facts (interviewers expect them exact):
 
-| Thing | What it is | Where QA shows up |
+| Thing | What it is | What the tester does |
 |---|---|---|
-| **Product Owner** | Owns the Product Backlog and its order; maximises value | Ask them for priorities, clarify AC, agree severity of business bugs |
-| **Scrum Master** | Coaches Scrum, removes impediments | Raise blockers (no test environment, no test data) |
-| **Developers** | Everyone who builds the Increment, **including testers** | You commit to the Sprint Goal with the team |
-| **Sprint** | Fixed length, one month or less (2 weeks is common) | Testing happens inside it, not after |
-| **Sprint Planning** | Timeboxed to max 8h for a 1-month sprint | Size testing effort into story points, flag test-env needs |
-| **Daily Scrum** | 15 minutes, for Developers | Say what is blocked for testing, which stories are ready for test |
-| **Sprint Review** | Max 4h; inspect the Increment with stakeholders | Demo works on a real environment; capture feedback |
-| **Sprint Retrospective** | Max 3h; improve how the team works | Bring data: escaped bugs, late handovers, flaky tests |
-| **Product Backlog → Product Goal** | Ordered list of work | Refinement: add testability questions |
-| **Sprint Backlog → Sprint Goal** | Why + what + plan for this sprint | Testing tasks live here too |
-| **Increment → Definition of Done** | Usable, Done work | DoD includes the testing that must be finished |
+| **Product Owner** | Owns the Product Backlog and its order; maximises value | Ask for priorities; clarify AC; agree how bad business bugs are |
+| **Scrum Master** | Coaches the team in Scrum; removes blockers | Raise blockers (no test environment, no test data) |
+| **Developers** | Everyone who builds the Increment, **including testers** | Commit to the Sprint Goal with the team |
+| **Sprint** | Fixed length, one month or less (2 weeks is common) | Test inside the Sprint, not after it |
+| **Sprint Planning** | Max 8h for a 1-month sprint | Size the testing work; flag test-environment needs |
+| **Daily Scrum** | 15 minutes, for the Developers | Say what is ready for test and what is blocked |
+| **Sprint Review** | Max 4h for a 1-month sprint; show the Increment to stakeholders | Demo on a real environment; note feedback |
+| **Sprint Retrospective** | Max 3h for a 1-month sprint; improve how the team works | Bring data: escaped bugs, late handovers, flaky tests |
+| **Product Backlog → Product Goal** | Ordered list of all work | In refinement, ask "how will we test this?" |
+| **Sprint Backlog → Sprint Goal** | Why, what and how for this Sprint | Test tasks go here too |
+| **Increment → Definition of Done** | Finished, usable work | The DoD lists the testing that must be finished |
 
-Backlog refinement is an ongoing activity, not a formal Scrum event. **Definition of Ready is not in the Scrum Guide**; many teams use one anyway (see next section).
+Backlog refinement is ongoing work, not a formal Scrum event. **Definition of Ready is not in the Scrum Guide.**
 
-The 2020 guide replaced "Development Team" with **Developers** and stopped talking about roles in favour of **accountabilities**. There is no "QA role" in Scrum, which is exactly why a tester must actively join every event.
+The 2020 guide replaced "Development Team" with **Developers**. It talks about **accountabilities**, not roles. There is no "QA role", so a tester is one of the Developers.
 
-**Common mistake:** "QA tests in the next sprint." That is a mini-waterfall: the Increment is not Done when the sprint ends, defects come back a sprint late, and velocity is fiction. If testing cannot finish, the story is not Done.
+**Example:** one 2-week sprint for a food-delivery app.
 
-**In interviews, say this:** "In Scrum I'm one of the Developers. In planning I size testing, in the daily I surface what's blocking test, in review I help show a working increment, and in retro I bring data about quality."`,
+- Day 1, Sprint Planning: "The OTP story needs a test SIM. Let's ask for it today."
+- Every day, Daily Scrum: "Story 3 is ready for test. Story 4 is blocked: the test server is down."
+- Day 10, Sprint Review: the tester helps demo order tracking on staging.
+- Day 10, Retrospective: "4 bugs escaped to production, all in payments. Let's add an exploratory session for payments."
+
+**In an interview, say:** "In Scrum I am one of the Developers. In planning I size testing. In the Daily Scrum I raise test blockers. In the review I help show working software. In the retro I bring quality data."
+
+**Common mistake:** "QA tests in the next sprint." That is a mini-waterfall. The work is not Done when the sprint ends, and bugs come back a sprint late. If testing is not finished, the story is not Done.`,
       keyPoints: [
         'Scrum Guide 2020: accountabilities = Product Owner, Scrum Master, Developers.',
         'Timeboxes for a one-month sprint: Planning 8h, Daily 15 min, Review 4h, Retro 3h (shorter sprints usually shorter).',
@@ -157,31 +173,31 @@ The 2020 guide replaced "Development Team" with **Developers** and stopped talki
     },
     {
       heading: 'Three amigos, Definition of Ready and Definition of Done',
-      body: `**Intuition:** before a builder starts, the client, builder and inspector stand in the empty room and agree what "finished" will look like. That 20-minute talk prevents a week of rework.
+      body: `**Three amigos** is a short meeting about one story, before coding starts. Three viewpoints join (George Dinwiddie made the name popular):
 
-**Three amigos** (name popularised by George Dinwiddie) is a short meeting per story with three perspectives:
+- **Business** (PO or BA): what problem do we solve? What is the rule?
+- **Development:** how will we build it? What is hard?
+- **Testing:** what can go wrong? How will we know it works?
 
-- **Business** (PO/BA): what problem are we solving, what is the rule?
-- **Development**: how could we build it, what is hard or risky?
-- **Testing**: what could go wrong, what about this edge case, how will we know it works?
+The output is concrete **examples** that become acceptance criteria, a list of open questions, and sometimes a decision to split the story. This is called **specification by example**: examples remove confusion faster than abstract rules.
 
-The output is concrete **examples** that become acceptance criteria, a list of open questions, and sometimes a decision to split the story. This is "specification by example": examples remove ambiguity faster than abstract rules.
+**Example:** story "free delivery above 499". The tester asks: "Is exactly 499.00 free?" The PO says yes. The developer asks: "Is it checked before or after the coupon?" The PO says after. Two bugs are prevented before any code exists.
 
-**Definition of Ready (DoR)** is a team-made checklist for when a story may enter a sprint. **Definition of Done (DoD)** is the quality bar every Increment must meet. Do not confuse them:
+**Definition of Ready (DoR)** is a team checklist: is this story ready to enter a sprint? **Definition of Done (DoD)** is the quality bar every finished piece of work must meet.
 
 | | Definition of Ready | Definition of Done |
 |---|---|---|
-| Answers | Can we start this story? | Can we call this work finished? |
+| Question | Can we start this story? | Can we call this work finished? |
 | In Scrum Guide 2020? | No (optional team practice) | Yes (commitment of the Increment) |
-| Applies to | Each backlog item before planning | Every Increment / every item |
-| QA items | AC written and testable, test data known, dependencies identified, designs attached | AC verified, regression run, no open critical/high bugs, automated checks added, code reviewed, deployed to staging |
-| Risk if abused | Becomes a stage gate ("waterfall in disguise") | Becomes "done-ish" if testing is optional |
+| Applies to | Each backlog item, before planning | Every Increment / every item |
+| Tester's items | AC written and testable, test data known, dependencies known, designs attached | AC checked, regression run, no open Critical/High bugs, automated checks added, code reviewed, deployed to staging |
+| Danger if misused | Becomes a hard gate ("waterfall in disguise") | Becomes "done-ish" if testing is optional |
 
-**Acceptance criteria vs DoD:** AC are specific to one story ("expired coupon shows message X"). DoD is generic and applies to all stories ("all AC verified; no open high bugs; automated tests in pipeline").
+**Acceptance criteria (AC) vs DoD:** AC belong to one story ("an expired coupon shows 'This coupon has expired'"). The DoD applies to every story ("all AC checked; no open High bugs; automated tests in the pipeline").
 
-**Common mistake:** writing the DoD as a wish list nobody checks. A DoD is only real if a story that fails it goes back to In Progress.
+**In an interview, say:** "I make sure testing is written into the DoD. Then a story with unchecked AC or an open High bug is simply not Done, whatever the date."
 
-**In interviews, say this:** "I push for testing to be in the DoD, so a story with unverified AC or an open high-severity bug simply isn't Done, regardless of the date."`,
+**Common mistake:** a DoD that nobody checks. A DoD is real only if a story that fails it goes back to In Progress.`,
       code: [
         {
           language: 'text',
@@ -217,27 +233,34 @@ Definition of Ready (team practice, not Scrum Guide):
     },
     {
       heading: 'Acceptance criteria and BDD with Gherkin',
-      body: `**Intuition:** "users can apply a coupon" is a wish; "a cart of 59.99 with code SAVE10 shows a total of 53.99" is a test. Gherkin is a structured way to write those examples so business people can read them and tools like Cucumber or Playwright-BDD can run them.
+      body: `**Acceptance criteria (AC)** are the conditions a story must meet before the PO accepts it. Good AC give a clear pass or fail.
 
-**Good acceptance criteria are:** testable (an observable outcome), specific (actual values), complete enough (happy path, at least one negative and the main edge rules), independent of UI implementation where possible, and agreed with the PO.
+*Example:* "Users can apply a coupon" is a wish. "A cart of 59.99 with code SAVE10 shows a total of 53.99" is a test.
 
-Two common formats:
+Good AC are:
 
-- **Rule-based / checklist:** "Coupon must be applied before payment; only one coupon per order; expired coupons are rejected with message X."
-- **Scenario-based (Gherkin):** Given / When / Then examples.
+- **Testable:** you can see the result.
+- **Specific:** real values, not "fast" or "works correctly".
+- **Complete enough:** the happy path, at least one negative case, and the main edge rules.
+- **Not tied to the UI** where possible.
+- **Agreed** with the PO.
 
-**Gherkin keywords** (Cucumber reference): Feature, Rule, Background, Scenario (or Example), Given (context), When (the action, ideally one), Then (expected outcome), And/But, Scenario Outline with Examples table for data variations.
+**BDD (Behaviour-Driven Development)** means the team first agrees examples of behaviour, then writes them in **Gherkin**. Gherkin is a plain-English format that business people can read and tools like Cucumber or Playwright-BDD can run.
 
-**Writing rules that interviewers check**
+**Gherkin keywords** (Cucumber reference): Feature, Rule, Background, Scenario (or Example), Given (starting context), When (the action, ideally one), Then (expected result), And/But, and Scenario Outline with an Examples table for different data.
 
-- One behaviour per scenario; one When. The Cucumber reference suggests keeping each example to about 3–5 steps.
-- Declarative, not imperative: "When she applies coupon SAVE10", not "When she clicks the #coupon input and types…".
-- Then must be **observable** by a user or an API client.
-- Use Scenario Outline for the same rule with different data (boundary values!).
+**Rules interviewers check**
 
-**BDD is a collaboration practice first, an automation tool second.** If nobody talks and the tester just writes Gherkin alone after coding, you get the cost of BDD with none of the benefit.
+- One behaviour and one When per scenario. Cucumber suggests about 3–5 steps per example.
+- Declarative, not imperative: "When she applies coupon SAVE10", not "When she clicks #coupon and types…".
+- Then must be something a user or an API client can **see**.
+- Use Scenario Outline for one rule with different data (great for boundary values).
 
-**In interviews, say this:** "BDD starts in the three-amigos conversation; Gherkin is just the record of the examples we agreed. I keep scenarios declarative so they survive UI changes."`,
+**BDD is a collaboration practice first, an automation tool second.**
+
+**In an interview, say:** "BDD starts in the three-amigos talk. Gherkin is just the record of the examples we agreed. I keep steps declarative so they survive UI changes."
+
+**Common mistake:** the tester writes Gherkin alone, after coding. Then the team pays the cost of BDD and gets none of the benefit, because nobody talked.`,
       code: [
         {
           language: 'gherkin',
@@ -280,30 +303,32 @@ Two common formats:
     },
     {
       heading: 'The sprint testing workflow, day by day',
-      body: `**Intuition:** in a good sprint, testing looks like a steady drumbeat, not a cliff on the last two days.
+      body: `**Sprint testing workflow** = what the tester does on each day of a sprint. The goal is steady testing every day, not a pile of testing on the last two days.
 
-**A typical two-week sprint for a QA engineer**
+*Example:* in a 2-week sprint, story S1 (login with OTP) reaches the test server on day 3. The tester tests it on days 3–4, and the developer fixes the bugs on day 5. Story S4 arrives on day 5. By day 9 only regression is left.
 
-| When | QA activities |
+**A typical 2-week sprint for a tester**
+
+| When | What the tester does |
 |---|---|
-| Before the sprint (refinement) | Three amigos, ask testability questions, draft AC, estimate test effort, spot test-data/env needs |
-| Day 1 (planning) | Agree Sprint Goal; add test tasks to the board; plan which stories need automation, exploratory, perf |
-| Days 2–4 | Write test ideas/charters and Gherkin; prepare data; pair with devs; review unit tests; automate API checks against the contract |
-| Days 3–8 | Test each story as soon as it is deployed to the test env (small stories → early handovers); log bugs, retest fixes, re-run affected regression |
-| Days 7–9 | Automate stable happy paths (Playwright); exploratory sessions on integrated features; triage defects with PO |
-| Day 9 | Regression on the release candidate (automated suite + targeted manual) |
-| Day 10 | Sprint review demo; retro with quality data; progress/summary report if the sprint ships |
+| Before the sprint (refinement) | Three amigos; ask "how do we test this?"; draft AC; estimate test effort; list test-data and environment needs |
+| Day 1 (planning) | Agree the Sprint Goal; add test tasks to the board; decide what needs automation, exploratory or performance testing |
+| Days 2–4 | Write test ideas and Gherkin; prepare data; pair with developers; review unit tests; write API checks |
+| Days 3–8 | Test each story as soon as it is deployed; log bugs; retest fixes; re-run the affected regression |
+| Days 7–9 | Automate stable happy paths (Playwright); exploratory sessions on joined-up features; triage bugs with the PO |
+| Day 9 | Regression on the release candidate (automated suite + targeted manual checks) |
+| Day 10 | Sprint review demo; retro with quality data; report if the sprint ships |
 
-**How to avoid the "everything lands on day 9" cliff**
+**How to avoid the "everything lands on day 9" problem**
 
 - Split stories so the first one is testable by day 3.
-- Use WIP limits: devs help test or fix instead of starting new stories.
-- Test on feature branches / preview environments; contract-test APIs before the UI exists.
-- Developers own Q1 tests; testers do not re-test what unit tests already cover.
+- Use **WIP limits** (a maximum number of items in progress). Developers then help test or fix bugs instead of starting new stories.
+- Test on feature branches or preview environments. Test APIs before the UI exists.
+- Developers own the unit tests (Q1). Testers do not re-test what unit tests already cover.
 
-**When a story fails testing near the end:** do not silently carry it over. Raise it in the daily, let the PO decide: fix now, ship behind a feature flag (OFF), or move it back to the backlog. It does not count toward velocity.
+**If a story fails testing near the end,** raise it in the Daily Scrum. The PO decides: fix now, ship behind a feature flag set to OFF, or move it back to the backlog. It does not count toward velocity.
 
-**In interviews, say this:** "I start testing on day one, with questions and examples, and I aim to test each story within a day of it being ready, so the last days are for regression and exploration, not first-time testing."`,
+**In an interview, say:** "I start on day one with questions and examples. I test each story within a day of it being ready. So the last days are for regression and exploring, not first-time testing."`,
       diagram: `  Bad: mini-waterfall inside the sprint
   Dev  ##########################..
   Test ......................######   <- cliff, carry-over
@@ -320,25 +345,27 @@ Two common formats:
     },
     {
       heading: 'Defect triage meetings',
-      body: `**Intuition:** triage is the hospital emergency desk for bugs: decide quickly who needs attention now, who can wait, and who does not need treatment at all.
+      body: `**Defect triage** is a short meeting where the team decides what to do with each new bug. Think of a hospital emergency desk: who needs help now, who can wait, and who needs nothing.
 
-**Who attends:** Product Owner (decides business priority), a developer or tech lead (effort, root area, risk of fix), a tester (evidence, severity, reproduction), sometimes support or the release manager near a release.
+**Who attends:** the Product Owner sets business priority. A developer or tech lead judges effort and risk of the fix. A tester brings evidence, severity and steps. Near a release, support or the release manager may join.
 
-**Cadence:** in Scrum many teams triage new bugs daily for 10–15 minutes right after the daily; release-time triage can be twice a day. Kanban teams triage continuously as bugs enter the board.
+**How often:** many Scrum teams triage new bugs daily, for 10–15 minutes after the Daily Scrum. Near a release, twice a day. Kanban teams triage as bugs arrive.
 
-**For each bug the meeting decides**
+**For each bug, the meeting decides:**
 
-1. Is it valid? (not a duplicate, not "works as designed", reproducible)
-2. Severity (impact, set mainly by QA) and priority (urgency, set mainly by the PO) — see mt-defects for the full model.
-3. Action: fix in this sprint, put in backlog, defer to a named release, accept as known issue (with release note), or close.
+1. Is it valid? (Not a duplicate, not "works as designed", can be reproduced.)
+2. **Severity** (how badly it hurts the app; set mainly by QA) and **priority** (how soon to fix it; set mainly by the PO). See mt-defects for the full model.
+3. Action: fix this sprint, put in the backlog, defer to a named release, accept as a known issue (with a release note), or close.
 4. Owner and target date.
-5. Release impact: is it a **release blocker**?
+5. Is it a **release blocker**?
 
-**Good triage hygiene:** come prepared (bug has steps, evidence, environment, build), timebox each bug (2 minutes; longer discussions go offline), record the decision in the ticket, and review the "deferred" list before each release so it does not rot.
+**Example:** look at the triage log below. BUG-311 (coupon applied twice on double-click) loses money, so it is High, P1 and a release blocker. BUG-318 (footer link gives 404) is Low severity, but it is a 5-minute fix, so it is fixed this sprint anyway.
 
-**Common mistake:** the tester arguing priority for 20 minutes. QA's job is to make impact clear with evidence ("affects all users paying by UPI, 12% of orders"); the PO owns the business call.
+**Good habits:** come prepared (steps, evidence, environment, build). Give each bug about 2 minutes; long talks go offline. Write the decision in the ticket. Review the "deferred" list before each release.
 
-**In interviews, say this:** "In triage I present the impact with facts, propose a severity, and let the Product Owner set priority. If I disagree, I add data (affected users, workaround, frequency), not volume."`,
+**In an interview, say:** "In triage I show the impact with facts, suggest a severity, and let the Product Owner set the priority. If I disagree, I add data (users affected, workaround, how often), not volume."
+
+**Common mistake:** the tester arguing about priority for 20 minutes. Show the impact with facts instead ("affects all UPI payments, 12% of orders"). The PO makes the business call.`,
       code: [
         {
           language: 'text',
@@ -373,31 +400,35 @@ BUG-325 Can't reproduce: cart empties after login
     },
     {
       heading: 'Release validation and the go/no-go decision',
-      body: `**Intuition:** go/no-go is the pilot's pre-flight checklist. Nobody guarantees a perfect flight, but nobody takes off with a known engine fault either.
+      body: `**Release validation** is the testing done on the **release candidate (RC)**, the build you plan to ship. Run it on an environment as close to production as possible:
 
-**Release validation** is the testing done on the release candidate (RC), on an environment as close to production as possible:
+1. **Smoke check:** the build deploys and the main pages open.
+2. **Regression:** the automated suite plus manual checks on changed and risky areas.
+3. **Release-specific checks:** data migrations, config and feature-flag settings, integrations (payment sandbox, email), the mobile app upgrade path.
+4. **Non-functional checks** the release touches: a quick performance baseline, security scan results.
+5. **Fix checks:** retest every bug marked "fixed in this release".
 
-1. **Build verification / smoke** on the RC: the build deploys and the critical paths open.
-2. **Regression**: automated suite plus targeted manual checks for changed and risky areas.
-3. **Release-specific checks**: data migrations, config and feature-flag states, integrations (payment gateway sandbox, email), upgrade path for mobile apps.
-4. **Non-functional checks that the release touches**: a quick performance baseline, security scan results.
-5. **Bug fix verification** for everything marked "fixed in this release".
-
-**Go/no-go meeting inputs**
+**Go/no-go** is the meeting where the team decides to ship or not. It is like a pilot's pre-flight checklist. No flight is perfect, but nobody takes off with a known engine fault.
 
 | Input | Question it answers |
 |---|---|
-| Exit criteria from the test plan | Did we do what we said we would (coverage, pass rate)? |
-| Open defects by severity | Are there blockers or criticals? Are the open highs accepted with workarounds? |
-| Residual risk | What did we NOT test and why? |
-| Rollback / roll-forward plan | If it goes wrong, how fast can we undo it? Is the feature behind a flag? |
-| Operational readiness | Monitoring, alerts, on-call, support briefed, release notes |
+| Exit criteria from the test plan | Did we do what we planned (coverage, pass rate)? |
+| Open bugs by severity | Any blockers or Criticals? Are open Highs accepted with workarounds? |
+| Risk left over | What did we NOT test, and why? |
+| Rollback plan | If it goes wrong, how fast can we undo it? Is the feature behind a flag? |
+| Ready to operate | Monitoring, alerts, on-call, support briefed, release notes |
 
-**Who decides?** The release owner (often the Product Owner or a release manager) makes the call. QA provides a **recommendation backed by evidence**, never a silent "pass" and never a solo veto.
+**Who decides?** The release owner (often the PO or a release manager). QA gives a **recommendation backed by evidence**. QA never gives a silent "pass" and never blocks alone.
 
-**Possible outcomes:** Go; Go with conditions (e.g. feature X stays flag-OFF, known issue in release notes, hotfix in 48h); No-go (with what must change to become Go).
+**Three possible outcomes:**
 
-**In interviews, say this:** "I don't sign off on 'bug-free', I sign off on 'here is what we tested, what we found, what risk remains, and my recommendation'. The business decides with that information."`,
+- **Go.**
+- **Go with conditions.** For example: feature X stays flag-OFF, the known issue is in the release notes, a hotfix comes in 48h.
+- **No-go.** Say what must change to become Go.
+
+**Example:** release 4.2 has a 97% pass rate, but one High bug is open in the new refunds feature. Refunds are behind a feature flag. QA recommends: "Go with conditions: the refunds flag stays OFF, the bug goes in the release notes, and we canary at 5% with rollback if errors rise." The PO agrees and ships.
+
+**In an interview, say:** "I don't sign off 'bug-free'. I sign off: here is what we tested, what we found, what risk remains, and my recommendation. The business decides."`,
       keyPoints: [
         'Release validation = smoke + regression + release-specific + fix verification on the RC.',
         'Go/no-go inputs: exit criteria, open defects, residual risk, rollback plan, operational readiness.',
@@ -407,28 +438,38 @@ BUG-325 Can't reproduce: cart empties after login
     },
     {
       heading: 'Testing in production: smoke, canary, feature flags and monitoring',
-      body: `**Intuition:** staging is a dress rehearsal; production is opening night. Some problems (real data, real traffic, real third-party behaviour) only appear on opening night, so modern teams test there too, carefully.
+      body: `**Testing in production** means careful checks on the live system after a release. Some problems only appear with real data, real traffic and real third-party services. It is an *extra* safety net, never a replacement for testing before release.
 
-**Production smoke test:** a few minutes of checks right after deployment, using safe test accounts: home page loads, login with a test user, search returns results, add to cart, payment page renders (often stopping before real payment or using a 1-rupee internal product). Automated Playwright smoke suites tagged @prod-smoke are common.
+**Production smoke test:** a few minutes of checks right after deploy, using safe test accounts.
 
-**Canary release** (Danilo Sato, martinfowler.com): deploy the new version to a small subset of servers/users first (say 5%), compare error rates, latency and business metrics against the old version, then widen gradually (5% → 25% → 100%) or roll back quickly. Named after the canary in a coal mine.
+*Example:* on a shop, the home page loads → log in as a test user → search "backpack" shows results → add to cart → the payment page opens. Stop before a real payment, or buy a 1-rupee internal product. Teams often tag these Playwright tests @prod-smoke.
 
-**Blue-green deployment:** two identical environments; switch traffic from blue (old) to green (new); switching back is the rollback.
+**Canary release** (Danilo Sato, martinfowler.com): give the new version to a small group first, say 5% of users. Compare its error rate, speed and business numbers with the old version. Then widen it (5% → 25% → 100%) or roll back fast. The name comes from the canary in a coal mine.
 
-**Feature flags / toggles** (Pete Hodgson, martinfowler.com) separate *deploy* from *release*: code is in production but the feature is OFF until someone flips it. Four categories:
+*Example:* at 5%, orders per minute drop by 14% on the new version. The rollback rule says "more than 10%", so you roll back before 95% of users ever see the problem.
 
-| Toggle type | Purpose | Lifetime |
+**Blue-green deployment:** keep two identical environments. Switch traffic from blue (old) to green (new). Switching back is the rollback.
+
+**Feature flags** (also called toggles; Pete Hodgson, martinfowler.com) separate *deploy* from *release*. The code is in production, but the feature stays OFF until someone switches it on. There are four types:
+
+| Toggle type | Purpose | How long it lives |
 |---|---|---|
 | Release toggle | Hide unfinished or risky features | Short (days–weeks) |
 | Experiment toggle | A/B tests | Hours–weeks |
-| Ops toggle | Kill switch for a costly or risky feature | Short, some long-lived |
-| Permissioning toggle | Feature only for premium/beta/internal users | Long |
+| Ops toggle | Kill switch for a costly or risky feature | Short; some long-lived |
+| Permissioning toggle | Feature only for premium, beta or internal users | Long |
 
-**What flags mean for QA:** test both states (ON and OFF) of every flag that ships; test the flip itself (no restart needed? cache?); do not try every combination: Hodgson suggests testing the configuration expected in production with the new release toggles ON, the fallback with them OFF, and optionally all toggles ON; remove old flags (flag debt). In Playwright, tests often set the flag via an API or cookie before the scenario.
+**What flags mean for testers:**
 
-**Monitoring and observability as testing:** dashboards for error rate, latency, conversion; alerts; synthetic monitors (scripted user journeys every few minutes); log searches after a release. A tester who reads dashboards after release catches issues before customers report them.
+- Test both states, ON and OFF, of every flag that ships.
+- Test the switch itself. Does it work without a restart? What about cached pages?
+- Don't test every combination. Hodgson suggests: the production setup with the new release toggles ON, the fallback with them OFF, and optionally all toggles ON.
+- Remove old flags, or they become "flag debt".
+- In Playwright, set the flag through an API call or cookie before the test.
 
-**Common mistake:** "testing in prod" as an excuse to skip testing before prod. It is an *additional* safety net, for what staging cannot simulate.`,
+**Monitoring as testing:** dashboards (errors, speed, orders), alerts, **synthetic monitors** (scripted user journeys that run every few minutes) and log searches. A tester who watches them after a release finds problems before customers do.
+
+**Common mistake:** using "we test in prod" as an excuse to skip testing before prod.`,
       code: [
         {
           language: 'text',
@@ -460,22 +501,30 @@ Owner on call: Ravi (dev), you (QA) watching dashboard + support queue`,
     },
     {
       heading: 'Test execution reports vs test summary (completion) reports',
-      body: `**Intuition:** an execution (progress) report is the live score during the match; a summary (completion) report is the match report written after the final whistle, with the result and what it means.
+      body: `ISTQB CTFL v4.0 (5.3.2) names two kinds of test report:
 
-ISTQB CTFL v4.0 (5.3.2) names two report types:
+- **Test progress report** (also called execution or status report): sent during testing, to steer the work. Like the live score during a cricket match.
+- **Test completion report** (also called summary or closure report): written at the end, to help people decide and learn. Like the match report after the last ball.
 
-| | Test progress report (execution / status) | Test completion report (summary / closure) |
+| | Test progress report | Test completion report |
 |---|---|---|
 | When | Regularly during testing (daily, per build) | When a test level, sprint or release finishes |
-| Audience | Team, PO, scrum master | PO, release owner, stakeholders, auditors |
-| Content | Period covered; progress vs plan (planned/executed/passed/failed/blocked); open defects by severity; impediments and workarounds; new/changed risks; plan for next period | Summary of what was tested (scope, builds, environments); results vs exit criteria; deviations from the plan; defects found and still open; residual/unmitigated risks; quality evaluation; recommendation; lessons learned |
-| Purpose | Control: steer the testing now | Decide + learn: ship or not, improve next time |
+| Who reads it | Team, PO, Scrum Master | PO, release owner, stakeholders, auditors |
+| What is in it | Period covered; progress vs plan (planned / executed / passed / failed / blocked); open bugs by severity; blockers and workarounds; new risks; plan for the next period | What was tested (scope, builds, environments); results vs exit criteria; changes from the plan; bugs found and still open; risks left; quality evaluation; recommendation; lessons learned |
+| Purpose | Control: steer the testing now | Decide and learn: ship or not, improve next time |
 
-In Agile teams, progress reporting is often the board, burn-down and pipeline dashboard rather than a document; the completion report may be a short page in Confluence attached to the release.
+In Agile teams the progress report is often just the board, the burn-down chart and the pipeline dashboard. The completion report may be a short Confluence page for the release.
 
-**What makes a report good:** numbers *with interpretation* ("pass rate 94%: the 6% failing are all in the new refunds flow"), clear statement of what was **not** tested, residual risk in business language, and an explicit recommendation.
+**A good report** gives numbers *with meaning*, says what was **not** tested, explains the risk in business words, and ends with a clear recommendation.
 
-**Common mistake:** a report that is only a table of numbers ("Executed 412, passed 389") with no conclusion. Stakeholders cannot decide from raw counts.`,
+**Example:**
+
+- Weak: "Executed 412, passed 389."
+- Strong: "Pass rate 94%. All failures are in the new refunds flow. Refunds to UPI were not tested because the sandbox was down. Recommend: ship with refunds behind a flag set to OFF."
+
+**In an interview, say:** "The progress report helps us steer testing now. The completion report helps someone decide to ship, and helps the team improve."
+
+**Common mistake:** a table of numbers with no conclusion. Stakeholders cannot decide from raw counts.`,
       code: [
         {
           language: 'text',
@@ -507,25 +556,32 @@ Need from PO:  Decision: ship CHK-77 behind flag OFF if not finished?`,
     },
     {
       heading: 'QA metrics that help (and those that hurt)',
-      body: `**Intuition:** a metric is a flashlight: point it at a decision you need to make. If no decision changes based on the number, it is decoration, and people will game it.
+      body: `A **QA metric** is a number that helps the team make a decision. If no decision changes because of the number, it is decoration, and people will game it.
 
-ISTQB v4.0 groups test metrics as: project progress, test progress, product quality, defect, risk, coverage and cost metrics. In Agile teams the most useful are:
+ISTQB v4.0 groups test metrics into: project progress, test progress, product quality, defect, risk, coverage and cost metrics. The most useful in Agile teams:
 
 | Metric | Why it helps | Watch out |
 |---|---|---|
-| Test execution progress (executed / planned, pass / fail / blocked) | Shows if testing will finish in time | 100% executed ≠ well tested |
-| Requirements / AC coverage | Which stories have verified AC | Coverage of what was written, not what was missed |
-| Open defects by severity, trend over builds | Readiness for release | A falling count can mean less testing |
-| Escaped defects (found in prod) per release | The real outcome of testing | Needs honest production bug tagging |
-| Automated suite pass rate + flaky rate | Pipeline trust | A 99% pass rate with 5% flaky retries hides problems |
-| Cycle time for stories, time in "Testing" column | Flow problems, test bottlenecks | Not a tester performance score |
-| Mean time to detect / restore (with ops) | How fast we catch and fix prod issues | Needs monitoring in place |
+| Test execution progress (executed / planned; pass / fail / blocked) | Shows if testing will finish in time | 100% executed ≠ well tested |
+| Requirements / AC coverage | Shows which stories have checked AC | Covers what was written, not what was missed |
+| Open bugs by severity, trend over builds | Readiness for release | A falling count can mean less testing |
+| Escaped defects (found in production) per release | The real result of testing | Needs honest tagging of production bugs |
+| Automated suite pass rate + flaky rate | Can we trust the pipeline? | 99% pass with 5% flaky retries hides problems |
+| Cycle time; time in the "Testing" column | Shows flow problems and test bottlenecks | Not a score for the tester |
+| Mean time to detect / restore (with ops) | How fast we catch and fix production issues | Needs monitoring in place |
 
-Detailed defect formulas (defect density, DRE, leakage, reopen rate) are covered in the Defects topic; here the point is choosing metrics for a sprint or release decision.
+Detailed formulas (defect density, DRE, leakage, reopen rate) are in the Defects topic. Here the point is choosing metrics for a sprint or release decision.
 
-**Vanity / harmful metrics:** number of test cases written, bugs logged per tester (encourages splitting one bug into five), "100% automation" (some things should be explored by humans), velocity used to compare teams.
+**Example:** "5 escaped defects this release, 4 of them in payments" leads to a decision: add an exploratory session on payments next sprint. "We wrote 1,200 test cases" leads to no decision at all.
 
-**In interviews, say this:** "I pick a small set of metrics tied to decisions: execution progress and blocked tests to steer the sprint, open criticals and escaped defects to judge release quality, and flaky rate to judge whether we can trust the pipeline. I always show trends, not single numbers."`,
+**Vanity (harmful) metrics:**
+
+- Number of test cases written.
+- Bugs logged per tester (people split one bug into five).
+- "100% automation" (some things need human exploration).
+- Velocity used to compare teams.
+
+**In an interview, say:** "I pick a few metrics tied to decisions. Execution progress and blocked tests steer the sprint. Open Criticals and escaped defects judge release quality. Flaky rate tells us if we can trust the pipeline. I always show trends, not single numbers."`,
       keyPoints: [
         'Tie every metric to a decision; show trends, not snapshots.',
         'Escaped defects measure outcome; test-case counts measure activity.',
@@ -535,28 +591,39 @@ Detailed defect formulas (defect density, DRE, leakage, reopen rate) are covered
     },
     {
       heading: 'Kanban for testers',
-      body: `**Intuition:** Kanban is a supermarket checkout rule: only so many trolleys at each till. If the "Testing" till is full, people further back stop piling in and help clear it.
+      body: `**Kanban** is a way of working without fixed sprints. Work items (cards) move across a board, and each column has a limit.
 
-**Kanban practices** (the Kanban Guide lists six general practices): visualise the work, **limit work in progress (WIP)**, manage flow, make policies explicit (e.g. "Ready for test" means deployed to QA env with notes), implement feedback loops, and improve collaboratively / evolve experimentally. No fixed sprints: work is pulled when capacity frees up; releases can be continuous or on a cadence.
+**Kanban practices** (the Kanban Guide lists six general practices):
+
+1. Visualise the work on a board.
+2. **Limit work in progress (WIP):** set a maximum number of cards per column.
+3. Manage the flow.
+4. Make rules explicit, e.g. "Ready for test" means "deployed to the QA server, with notes".
+5. Use feedback loops.
+6. Improve together through small experiments.
+
+There are no sprints. Work is pulled when someone has free capacity. Releases can be continuous or on a schedule.
 
 **Flow metrics**
 
-- **Lead time:** from the commitment point (the team agrees to do it) to completion; the Kanban Guide's core flow metric.
-- **Delivery rate (throughput):** items completed per unit of time.
-- **Cycle time:** from work started to done.
-- **Cumulative flow diagram:** widening band in a column = a bottleneck.
+- **Lead time:** from the commitment point (the team agrees to do the item) until it is done. This is the Kanban Guide's main flow metric.
+- **Delivery rate (throughput):** items finished per unit of time, e.g. per week.
+- **Cycle time:** from the moment work starts until it is done.
+- **Cumulative flow diagram:** a chart of cards per column over time. A band that keeps getting wider shows a bottleneck.
+
+*Example:* the team commits to a card on Monday. Work starts on Wednesday. It is done on Friday. Lead time = 4 days (Monday → Friday). Cycle time = 2 days (Wednesday → Friday).
 
 | | Scrum | Kanban |
 |---|---|---|
-| Cadence | Fixed sprints (≤ 1 month) | Continuous flow |
+| Rhythm | Fixed sprints (≤ 1 month) | Continuous flow |
 | Commitment | Sprint Goal and forecast | WIP limits and service levels |
 | Roles | PO, SM, Developers | None required |
 | Change mid-cycle | Avoid changing the Sprint Goal | New items can be pulled any time |
-| QA signal | Carry-over and burn-down | Cards piling in "Testing", rising cycle time |
+| Warning sign for QA | Carry-over and burn-down | Cards piling in "Testing"; rising cycle time |
 
-**Worked example:** board WIP limits: Dev 4, Ready for test 2, Testing 3. Testing holds 3 cards and Ready for test holds 2: Dev is blocked from moving more cards forward, so a developer pairs with QA to test a card or fixes a bug. That is the point: WIP limits expose the bottleneck and make the team swarm.
+**Example:** WIP limits are Dev 4, Ready for test 2, Testing 3. Testing holds 3 cards and Ready for test holds 2. Both are full, so a developer cannot move a finished card forward. Instead, the developer pairs with QA to test a card, or fixes a bug. The WIP limit exposed the bottleneck and made the team **swarm** (work together on it).
 
-**In interviews, say this:** "In Kanban I watch the Testing column and cycle time. If work queues in testing, the fix is team-wide: smaller cards, devs testing, more automation; not me working weekends."`,
+**In an interview, say:** "In Kanban I watch the Testing column and the cycle time. If work queues in Testing, the fix is team-wide: smaller cards, developers testing, more automation. Not me working weekends."`,
       diagram: `  Backlog | Ready(5) | Dev(4) | Ready for test(2) | Testing(3) | Done
   --------+----------+--------+-------------------+------------+-----
   [ ][ ]  | [ ][ ]   | [ ][ ] | [X][X]  FULL      | [X][X][X]  | [ ]
@@ -649,11 +716,11 @@ d) Finish refund tests when sandbox returns; flag ON in 4.2.1
       followUps: [
         {
           q: 'The PO says "just put PASS, the management only reads the first line". What do you do?',
-          a: 'Keep the first line short but honest: "Go with conditions: refunds behind flag OFF, one High bug retest pending". A one-line summary is fine; a misleading one is not, because if refunds fail in production the report is the record of what QA knew. I would offer to present the conditions in 60 seconds at the go/no-go meeting so management gets the headline without losing the risk.',
+          a: 'Keep the first line short but honest: "Go with conditions: refunds behind a flag set to OFF; one High bug retest pending." A one-line summary is fine; a misleading one is not. If refunds fail in production, the report is the record of what QA knew. I would offer to explain the conditions in 60 seconds at the go/no-go meeting.',
         },
         {
           q: 'Who should sign the release if QA recommends "No-go" but the business wants to ship?',
-          a: 'The release owner (PO or release manager) owns the decision and its risk. QA makes sure the risk is written down clearly, proposes mitigations (feature flag, canary, extra monitoring, hotfix plan) and records that the business accepted the residual risk. That is not a failure of QA; it is the business making an informed trade-off, which is exactly what the report is for.',
+          a: 'The release owner (PO or release manager) owns the decision and its risk. QA makes sure the risk is written down clearly, suggests ways to reduce it (feature flag, canary, extra monitoring, hotfix plan) and records that the business accepted the remaining risk. That is not a QA failure; it is an informed business trade-off.',
         },
       ],
     },
@@ -729,11 +796,11 @@ Feature: Delivery fee at checkout
       followUps: [
         {
           q: 'The PO does not know the answer to Q2 (before or after coupon). Should the story still enter the sprint?',
-          a: 'Usually not as-is. If the rule is unknown, the developer will guess and QA will test a different guess. Options: the PO gets the answer from finance before planning, the team splits the story (fee without coupons now, coupon interaction next), or the story enters with an explicit spike. Whatever we pick, the open question must be visible, not buried.',
+          a: 'Usually not as it is. If the rule is unknown, the developer will guess and QA will test a different guess. Options: the PO gets the answer from finance before planning; the team splits the story (fee without coupons now, coupons next); or the story enters with an explicit spike. Either way, the open question must be visible.',
         },
         {
           q: 'How would you automate the Scenario Outline?',
-          a: 'Ideally at the API or unit level: call the pricing/fee endpoint with the three subtotals and assert the fee, which is fast and stable. Then one Playwright UI test checks that the checkout page displays whatever fee the API returns, plus the "Add X more" message. Running all boundary rows through the UI would be slow and add little extra confidence.',
+          a: 'Best at the API or unit level: call the fee endpoint with the three subtotals and check the fee. That is fast and stable. Then one Playwright UI test checks that checkout shows whatever fee the API returns, plus the "Add X more" message. Running every boundary row through the UI would be slow and add little.',
         },
       ],
     },
@@ -742,36 +809,31 @@ Feature: Delivery fee at checkout
     {
       id: 'mt-agile-release-iq-1',
       difficulty: 'easy',
-      question: 'What is the role of a QA engineer in a Scrum team? Walk me through what you do in each Scrum event.',
+      question: 'What does a QA engineer do in a Scrum team? Walk me through what you do in each Scrum event.',
       whatInterviewerLooksFor: [
-        'Knows testers are part of the Developers, not a separate phase',
-        'Concrete activities per event, not just event names',
-        'Mentions refinement / three amigos and shift-left',
+        'Knows testers are Developers in Scrum, not a separate phase',
+        'Says what they actually do in each event, not just the names',
+        'Mentions refinement / three amigos and testing early',
         'Understands the Definition of Done',
       ],
-      modelAnswer: `In Scrum there is no separate "QA role": I am one of the **Developers** and share the Sprint Goal. My job is to give the team fast, honest information about quality, starting before code is written.
+      modelAnswer: `In Scrum there is no "QA role". I am one of the **Developers** and I share the Sprint Goal. My job is fast, honest feedback about quality, starting before any code is written.
 
-**Refinement (ongoing):** I join three-amigos conversations, ask "what happens if…" questions, help turn rules into examples and acceptance criteria, and flag stories that are not testable yet (no test data, unknown rule).
+- **Refinement:** in three amigos I ask "what if…" questions. Example: "Is exactly 499.00 free delivery?" I turn the answers into acceptance criteria.
+- **Sprint Planning:** I size the testing work and add test tasks (automation, exploratory sessions, test data) to the Sprint Backlog.
+- **Daily Scrum (15 min):** "Story 3 is ready for test. Story 4 is blocked: the test server is down."
+- **During the sprint:** I test each story as soon as it is deployed, log and retest bugs, and automate stable flows.
+- **Sprint Review:** I help demo the working Increment on staging.
+- **Retrospective:** I bring data, e.g. "4 bugs escaped, all in payments."
 
-**Sprint Planning:** I help size testing effort, make sure test tasks (automation, exploratory sessions, environment setup) are in the Sprint Backlog, and point out risky stories that need early delivery.
-
-**During the sprint:** I write test ideas and Gherkin scenarios early, test each story as soon as it is deployed, log and retest bugs, automate stable flows with Playwright, and run exploratory sessions on integrated features.
-
-**Daily Scrum (15 min):** I say which stories are ready for test, what is blocked (environment down, data missing) and which bugs threaten the Sprint Goal.
-
-**Sprint Review:** I help demo a working increment on a real environment and capture stakeholder feedback as new backlog items.
-
-**Retrospective:** I bring data: escaped defects, stories that arrived for testing on day 9, flaky tests, and suggest one improvement.
-
-Throughout, I care about the **Definition of Done**: a story with unverified AC or open high-severity bugs is not Done, even if the code is merged.`,
+A story with unchecked AC or an open High bug is not Done, even if the code is merged.`,
       followUps: [
         {
           q: 'What if the developers finish coding on the last day and there is no time to test?',
-          a: 'The story is not Done, so it does not count and goes back to the backlog or next sprint, with the PO deciding. Then in the retro we fix the root cause: smaller stories, dev-QA pairing, WIP limits, testing on preview environments. I would not cut testing silently or work late every sprint, because that hides the problem instead of solving it.',
+          a: 'Then the story is not Done. It does not count, and the PO decides whether it goes back to the backlog or into the next sprint. In the retro we fix the cause: smaller stories, dev-QA pairing, WIP limits, preview environments. I would not cut testing silently or work late every sprint, because that hides the problem.',
         },
         {
           q: 'Is a tester the "quality owner" in Scrum?',
-          a: 'No. The whole team owns quality; the Definition of Done is a team commitment. The tester brings testing skills, risk thinking and an independent viewpoint, and often coaches others on testing, but developers also write unit tests, review each other and fix their bugs. If only one person "owns" quality, everyone else stops caring about it.',
+          a: 'No. The whole team owns quality, and the Definition of Done is a team commitment. The tester brings testing skills, risk thinking and a fresh view, and often coaches others. But developers also write unit tests, review code and fix their bugs. If one person "owns" quality, everyone else stops caring.',
         },
       ],
       pitfalls: [
@@ -785,34 +847,34 @@ Throughout, I care about the **Definition of Done**: a story with unverified AC 
       difficulty: 'medium',
       question: 'Explain the Agile Testing Quadrants. How would you use them for a new "refund to wallet" feature?',
       whatInterviewerLooksFor: [
-        'Correct axes (business vs technology facing; support team vs critique product)',
+        'Correct axes (business vs technology facing; supports the team vs critiques the product)',
         'Correct examples in each quadrant',
-        'Knows the quadrants are not a sequence',
-        'Applies them to a concrete feature',
+        'Knows the quadrants are not an order',
+        'Applies them to the feature',
       ],
-      modelAnswer: `The quadrants (Brian Marick's idea, popularised by Lisa Crispin and Janet Gregory) classify tests on two axes: **business-facing vs technology-facing**, and **supporting the team** (guiding development) vs **critiquing the product** (evaluating what was built).
+      modelAnswer: `The quadrants (Brian Marick's idea, made popular by Lisa Crispin and Janet Gregory) sort tests on two axes: **business-facing vs technology-facing**, and **supports the team** (guides coding) vs **critiques the product** (judges what was built).
 
-- **Q1** technology-facing, supports the team: unit and component tests, mostly automated by developers.
-- **Q2** business-facing, supports the team: functional/story tests, examples, BDD scenarios, API tests, prototypes.
-- **Q3** business-facing, critiques the product: exploratory testing, usability, UAT, demos.
-- **Q4** technology-facing, critiques the product: performance, load, security, reliability.
+- **Q1** (tech, supports): unit and component tests.
+- **Q2** (business, supports): story tests, examples, BDD, API tests.
+- **Q3** (business, critiques): exploratory, usability, UAT.
+- **Q4** (tech, critiques): performance, load, security.
 
-They are a **coverage checklist, not an order**. For "refund to wallet":
+They are a **checklist, not an order**. For "refund to wallet":
 
-- **Q1:** unit tests for the refund amount calculation (full, partial, with coupon), currency rounding, idempotency key handling.
-- **Q2:** Gherkin examples agreed with the PO: refund to wallet within 5 minutes, partial refund for one item, refund rejected after 30 days; API tests for POST /refunds and GET /wallet/balance; contract test with the payment service.
-- **Q3:** exploratory sessions: refund then cancel order, two refunds in parallel tabs, refund while wallet is frozen, how support agents see it; PO demo in review.
-- **Q4:** security (can a user refund someone else's order by changing the order id? authorization), reliability (payment service timeout, retry without double credit), a quick load check before a sale.
+- **Q1:** unit tests for the amount: full, partial, with a coupon.
+- **Q2:** Gherkin examples: refund reaches the wallet within 5 minutes; refund rejected after 30 days. API test for POST /refunds.
+- **Q3:** explore: refund then cancel, two refunds from two tabs.
+- **Q4:** security: can I refund someone else's order by changing the order id? Reliability: a payment timeout plus retry must not credit twice.
 
-Using the quadrants in planning made us notice Q4 early: a double credit under retries is a real money-loss risk, so the idempotency tests were planned in sprint 1, not left to the end.`,
+That double-credit risk is why we planned Q4 tests in sprint 1.`,
       followUps: [
         {
           q: 'Which quadrants should be automated?',
-          a: 'Q1 almost entirely, and most of Q2 for regression (API and key UI flows). Q3 is human by nature: exploration, usability judgement, UAT. Q4 uses tools (k6, JMeter, ZAP) but needs human analysis of the results. Crispin and Gregory label Q1 "automated", Q2 "automated and manual", Q3 "manual" and Q4 "tools". Automation decisions are still per test, based on value and stability.',
+          a: 'Q1 almost fully, and most of Q2 for regression (API and key UI flows). Q3 is human work: exploring, judging usability, UAT. Q4 uses tools (k6, JMeter, ZAP) but a human must read the results. Crispin and Gregory label Q1 "automated", Q2 "automated and manual", Q3 "manual" and Q4 "tools". Each test is still decided on its own value.',
         },
         {
           q: 'Where does ISTQB put the quadrants?',
-          a: 'ISTQB CTFL v4.0 covers them in chapter 5 (test management, section 5.1.7) as a model to group test levels and types so that all needed test types are considered in Agile planning. It uses the same axes: business vs technology facing, and support the team vs critique the product.',
+          a: 'ISTQB CTFL v4.0 covers them in chapter 5 (test management), section 5.1.7. They group test levels and types so that Agile planning considers every needed kind of test. The axes are the same: business vs technology facing, and supports the team vs critiques the product.',
         },
       ],
       pitfalls: [
@@ -826,35 +888,33 @@ Using the quadrants in planning made us notice Q4 early: a double credit under r
       difficulty: 'medium',
       question: 'What is the difference between Definition of Ready, Definition of Done and acceptance criteria? Give an example of each.',
       whatInterviewerLooksFor: [
-        'Clear distinction of scope: per story vs every increment',
+        'Clear scope: one story vs every story',
         'Knows DoD is in the Scrum Guide and DoR is not',
-        'Concrete QA-relevant examples',
-        'Understands what happens when DoD is not met',
+        'Concrete examples a tester would use',
+        'Knows what happens when the DoD is not met',
       ],
       modelAnswer: `They answer three different questions.
 
-| | Answers | Scope | Example |
-|---|---|---|---|
-| **Definition of Ready** | Can we start this story? | Every story, before planning | "AC written with a negative example; test data identified; designs attached; dependencies known" |
-| **Acceptance criteria** | What must this story do? | One specific story | "Given subtotal 498.99, delivery fee is 40.00; at 499.00 it is free" |
-| **Definition of Done** | Is this work really finished? | Every item / the Increment | "Code reviewed; AC verified on staging; regression green; no open Critical/High bugs; automated checks added; release notes updated" |
+| | Question | Example |
+|---|---|---|
+| **Definition of Ready** | Can we start this story? | "AC written with a negative example; test data known; designs attached" |
+| **Acceptance criteria** | What must this one story do? | "Subtotal 498.99 → fee 40.00; 499.00 → free delivery" |
+| **Definition of Done** | Is this work really finished? (every story) | "Code reviewed; AC checked on staging; regression green; no open Critical/High bugs" |
 
-Two important facts:
+Two key facts:
 
-1. **DoD is part of the Scrum Guide 2020**: it is the commitment for the Increment. If an item does not meet the DoD, it cannot be released or shown as Done in the review; it goes back to the Product Backlog.
-2. **DoR is not in the Scrum Guide.** It is a useful team practice, but if it is used as a rigid gate ("we won't touch it until a 20-point checklist is perfect") it becomes waterfall in disguise. I prefer a light DoR.
+1. **The DoD is in the Scrum Guide 2020.** It is the Increment's commitment. An item that fails it cannot be released or shown as Done; it goes back to the Product Backlog.
+2. **The DoR is not in the Scrum Guide.** It is a team practice. If it becomes a rigid gate, it is waterfall in disguise.
 
-AC can pass while DoD fails: the coupon story meets all its AC, but no regression was run or a High bug is open in a related flow, so it is not Done.
-
-As a QA, I make sure testing activities are explicit in the DoD, because "tested" written vaguely tends to shrink under deadline pressure.`,
+AC can pass while the DoD fails. Example: the coupon story meets all its AC, but regression was never run, so it is not Done.`,
       followUps: [
         {
           q: 'Who creates the Definition of Done?',
-          a: 'Per the Scrum Guide, if the organisation has a DoD standard, all teams follow it as a minimum; otherwise the Scrum Team creates one appropriate for the product. In practice the Developers, PO and Scrum Master agree it together and review it in retrospectives. QA should push for concrete, checkable testing items in it.',
+          a: 'The Scrum Guide says: if the organisation has a DoD standard, every team follows it as a minimum. If not, the Scrum Team creates one that fits the product. In practice the Developers, PO and Scrum Master agree it and review it in retros. QA should push for concrete, checkable testing items in it.',
         },
         {
           q: 'A story meets its AC but you found an unrelated Medium bug elsewhere. Is the story Done?',
-          a: 'Usually yes for that story, if the DoD says "no open Critical/High bugs linked to the story" and the Medium bug is in another area. I would log the bug, take it to triage and let the PO prioritise it. If the bug was caused by this story (a regression), then it is linked and the story should not be Done until it is triaged and accepted or fixed.',
+          a: 'Usually yes, if the DoD says "no open Critical/High bugs linked to the story" and the Medium bug is in another area. I log the bug and take it to triage. But if this story caused the bug (a regression), it is linked, and the story is not Done until the bug is fixed or accepted.',
         },
       ],
       pitfalls: [
@@ -866,42 +926,33 @@ As a QA, I make sure testing activities are explicit in the DoD, because "tested
     {
       id: 'mt-agile-release-iq-4',
       difficulty: 'hard',
-      question: 'It is the day of the release. You still have one High-severity bug open and 15% of regression not executed. Do you give the go-ahead?',
+      question: 'It is release day. One High-severity bug is still open and 15% of regression has not run. Do you give the go-ahead?',
       whatInterviewerLooksFor: [
         'Does not answer with a blind yes or no',
-        'Gathers facts: impact of the bug, which tests are pending, risk',
-        'Offers mitigations (flags, canary, rollback, workaround)',
-        'Understands QA recommends and the business decides',
-        'Communicates clearly and documents the decision',
+        'Gathers facts: what the bug affects, which tests are pending',
+        'Offers ways to reduce risk (flags, canary, rollback, workaround)',
+        'Knows QA recommends and the business decides',
+        'Communicates clearly and writes the decision down',
       ],
-      modelAnswer: `I would not answer "yes" or "no" by reflex. I would give the release owner a **recommendation backed by facts** within the hour.
+      modelAnswer: `I don't answer "yes" or "no" by reflex. Within the hour I give the release owner a **recommendation backed by facts**.
 
-**1. Understand the High bug**
-- Which users and flows does it affect, how often, is there a workaround? A High bug in a rarely used admin export is different from one in checkout.
-- Can the feature be turned off with a feature flag, or is the fix small and verifiable today?
+**1. The High bug:** who does it hit, how often, is there a workaround? A High bug in a rarely used admin export is very different from one in checkout. Can a feature flag turn it off?
 
-**2. Understand the untested 15%**
-- Which areas? If it is low-risk, unchanged modules covered by stable automation in earlier builds, the risk is small. If it includes payment or the changed module, the risk is high.
-- Can I prioritise: run the riskiest pending tests in the next 2–3 hours, and maybe a quick exploratory pass on the changed area?
+**2. The missing 15%:** which areas? Unchanged modules that passed on the last build = small risk. Payments or the changed module = big risk. I run the riskiest pending tests first, in the next 2–3 hours.
 
-**3. Mitigations**
-- Ship with the affected feature flagged OFF.
-- Canary rollout (5% first) with clear rollback triggers; prod smoke test right after deploy.
-- Known issue in release notes and support briefed.
-- Hotfix plan with date.
+**3. Ways to reduce risk:** feature flag OFF; canary at 5% with rollback rules; prod smoke test; known issue in release notes; a hotfix date.
 
-**4. Recommendation and communication**
-For example: "Go with conditions: coupon v2 stays flag-OFF because of BUG-311; remaining tests are in unchanged reporting modules last passed on rc1; canary with rollback if 5xx > 0.5%." Or "No-go: the High bug double-charges cards and has no workaround; fix ETA 4h, retest 1h, re-plan for tomorrow."
+**Example:** "Go with conditions: coupon v2 stays flag-OFF because of BUG-311; the untested 15% is the unchanged reports module; canary with rollback if errors pass 0.5%." Or: "No-go: the bug double-charges cards and has no workaround."
 
-The **release owner (PO/release manager) decides**. I make sure the residual risk is written down in the test summary report so the decision is informed and traceable.`,
+The **PO or release manager decides**. I write the remaining risk in the test summary report.`,
       followUps: [
         {
           q: 'The manager says "we release anyway" and the bug causes an incident. Whose fault is it?',
-          a: 'Blame is less useful than learning. If the risk was clearly documented and the business accepted it, QA did its job. In the post-incident review, I would focus on why we got to release day with a High bug open: late handover, missing automation, too-big stories. I would also check whether my communication of impact was clear enough, because a vague risk statement makes it easy to override.',
+          a: 'Blame helps less than learning. If the risk was written down clearly and the business accepted it, QA did its job. In the incident review I would ask why we reached release day with a High bug open: late handover, missing automation, stories too big. I would also check whether my risk statement was clear enough, because a vague warning is easy to ignore.',
         },
         {
           q: 'What if there were no feature flag and no rollback plan?',
-          a: 'Then the risk of going ahead is much higher, because any problem becomes a forward-fix under pressure. I would state that clearly in the recommendation and lean towards No-go for anything affecting money or data. I would also raise "every risky change needs a rollback path or a flag" as a DoD or release-checklist improvement in the retro.',
+          a: 'Then going ahead is much riskier, because any problem must be fixed forward under pressure. I would say so clearly and lean towards No-go for anything touching money or data. In the retro I would propose "every risky change needs a rollback path or a flag" as a DoD or release-checklist item.',
         },
       ],
       pitfalls: [
@@ -913,42 +964,35 @@ The **release owner (PO/release manager) decides**. I make sure the residual ris
     {
       id: 'mt-agile-release-iq-5',
       difficulty: 'medium',
-      question: 'What do you include in a test summary report, and how is it different from a daily test execution report?',
+      question: 'What goes into a test summary report, and how is it different from a daily test execution report?',
       whatInterviewerLooksFor: [
-        'Distinguishes progress (during) from completion (end) reports',
-        'Lists contents: scope, results vs exit criteria, defects, deviations, residual risk, recommendation, lessons',
-        'Knows the audience differs',
-        'Values interpretation over raw numbers',
+        'Separates the progress report (during) from the completion report (end)',
+        'Lists contents: scope, results vs exit criteria, bugs, deviations, remaining risk, recommendation, lessons',
+        'Knows the readers are different',
+        'Explains the numbers instead of only listing them',
       ],
       modelAnswer: `ISTQB CTFL v4.0 calls them the **test progress report** and the **test completion report**.
 
-**Daily execution / progress report** (during testing, for the team and PO, to steer):
-- Period and build tested.
-- Progress against plan: planned, executed, passed, failed, blocked.
-- Open defects by severity and their trend.
-- Blockers and impediments (environment down, data missing) with owners.
-- New or changed risks, and what is planned for the next period.
+**Daily progress (execution) report:** sent during testing, to the team and PO, to steer the work. It has: build tested; planned / executed / passed / failed / blocked; open bugs by severity; blockers with owners; new risks; tomorrow's plan.
 
-**Test summary / completion report** (at the end of a sprint, test level or release, for stakeholders, to decide and learn):
-- **Scope**: what was tested and not tested, builds, environments, devices.
-- **Results vs exit criteria**: e.g. 97% executed vs 95% target (met); 1 open High vs target 0 (not met).
-- **Defects**: found, fixed, still open with status and accepted known issues.
-- **Deviations** from the plan (skipped tests, changed scope, why).
-- **Residual risks** in business language: "partial refunds untested; risk of wrong refund amounts".
-- **Quality evaluation and recommendation**: Go / Go with conditions / No-go.
-- **Lessons learned** for the retrospective.
+**Summary (completion) report:** written at the end of a sprint, test level or release, for the people who decide. It has:
 
-The key difference is purpose: the progress report helps us *control* testing now; the completion report helps someone *decide* and helps the team *improve*. Both should interpret the numbers. "302 passed" is data; "pass rate 96%, all failures in the new refunds flow, which is behind a flag" is information someone can act on.
+- **Scope:** what was and was not tested.
+- **Results vs exit criteria:** e.g. 97% executed vs a 95% target (met); 1 open High vs a target of 0 (not met).
+- **Bugs** still open, and changes from the plan.
+- **Remaining risk:** "partial refunds untested; refund amounts could be wrong."
+- **Recommendation:** Go / Go with conditions / No-go.
+- **Lessons learned.**
 
-In Agile teams much of the progress report is the board and pipeline dashboard; I still write a short completion page for releases because it records what we knew when we shipped.`,
+Both must explain the numbers. "302 passed" is data. "96% pass rate; every failure is in the new refunds flow, which is behind a flag" is something a PO can act on.`,
       followUps: [
         {
           q: 'Which tool would you use to produce these reports?',
-          a: 'Whatever the team already uses: Jira dashboards with Xray or Zephyr for execution counts, TestRail run reports, the Playwright HTML report or Allure for automation results, and a short Confluence page for the summary. The tool matters less than the content; I usually add a few written sentences of interpretation, because auto-generated charts never say what the risk is.',
+          a: 'Whatever the team already uses: Jira dashboards with Xray or Zephyr for counts, TestRail run reports, the Playwright HTML report or Allure for automation, and a short Confluence page for the summary. The tool matters less than the content. I always add a few written sentences, because charts never say what the risk is.',
         },
         {
           q: 'How often do you send a progress report?',
-          a: 'It depends on the phase. During a normal sprint, the board and daily Scrum are often enough, with a short written update only if stakeholders outside the team need it. During release hardening I send a daily (sometimes twice-daily) status with blockers and risks, so nobody is surprised at the go/no-go meeting.',
+          a: 'It depends on the phase. In a normal sprint the board and the Daily Scrum are usually enough, plus a short written update if people outside the team need it. During release testing I send a daily (sometimes twice-daily) status with blockers and risks, so nobody is surprised at go/no-go.',
         },
       ],
       pitfalls: [
@@ -962,36 +1006,31 @@ In Agile teams much of the progress report is the board and pipeline dashboard; 
       difficulty: 'hard',
       question: 'How do feature flags and canary releases change the way you test? What would you test differently?',
       whatInterviewerLooksFor: [
-        'Understands deploy vs release separation',
-        'Tests both flag states and the flip',
-        'Knows canary mechanics and metrics-based rollback',
+        'Knows that deploy and release become separate',
+        'Tests both flag states and the switch itself',
+        'Knows how a canary works and rolls back on metrics',
         'Mentions flag debt and combinations',
         'Sees production monitoring as part of testing',
       ],
-      modelAnswer: `**Feature flags** separate *deploying* code from *releasing* a feature (Pete Hodgson's article on martinfowler.com describes release, experiment, ops and permissioning toggles). That changes testing in several ways:
+      modelAnswer: `**Feature flags** separate *deploying* code from *releasing* a feature (Pete Hodgson, martinfowler.com: release, experiment, ops and permissioning toggles). So I test differently:
 
-- **Test both states.** Every flag that ships needs the OFF path (existing behaviour must be unchanged, a regression risk) and the ON path (new feature).
-- **Test the flip.** Turning the flag on or off in a running system: does the UI update without a restart, what about users mid-checkout, cached pages, mobile apps that cache config?
-- **Targeting rules.** Permissioning flags ("only beta users", "only India"): test included and excluded users and the boundary of rules.
-- **Combinations.** Two flags touching checkout can interact; test the likely combinations, not all 2^n.
-- **Flag debt.** Old flags must be removed; removing a flag is itself a change to regression-test.
-- **Automation.** Playwright tests set the flag state explicitly (API call, cookie, header) so tests are deterministic.
+- **Both states.** OFF: the old behaviour must not change (regression). ON: the new feature works.
+- **The switch.** Flip it while the app runs. Example: a user is mid-checkout when "new_coupon_engine" turns ON. Does the cart break? Do cached pages update?
+- **Targeting.** "Beta users only": test a beta user and a normal user.
+- **Combinations.** Test the likely ones, not all 2^n.
+- **Flag debt.** Removing an old flag is a change too, so regression-test it.
 
-**Canary releases** (Danilo Sato, martinfowler.com) send a small slice of traffic to the new version first:
+**Canary releases** (Danilo Sato, martinfowler.com) send a small slice of traffic to the new version first. Test normally before it; the canary is an extra net. During it, run a safe prod smoke test and compare canary vs old version with **rollback rules fixed in advance**. Example: "roll back if 5xx errors pass 0.5% or orders drop more than 10%." Then widen 5% → 25% → 100%.
 
-- Before the canary: normal pre-prod testing; canary is an extra net, not a replacement.
-- During: prod smoke test on the canary, compare canary vs baseline metrics (5xx rate, p95 latency, conversion, payment success), with **predefined rollback thresholds**.
-- Then widen 5% → 25% → 100%, or roll back.
-
-**What I'd do differently as a tester:** agree flag states for each environment in the test plan, add rows for "flag OFF" in regression, write prod smoke tests that are safe (test accounts, no real payments), and watch dashboards and the support queue during rollout. Production monitoring becomes part of my test oracles.`,
+Dashboards become part of my test oracle.`,
       followUps: [
         {
           q: 'What is the difference between a canary release and an A/B test?',
-          a: 'A canary is a risk-reduction technique: a small share of traffic gets the new version to detect technical or business problems before everyone does, and the goal is to roll out to 100% or roll back. An A/B test (experiment toggle) splits users on purpose to compare two variants statistically and choose the better one. Both route a fraction of users, but they answer different questions.',
+          a: 'A canary reduces risk: a small share of traffic gets the new version so problems show up before everyone sees them. The goal is to roll out to 100% or roll back. An A/B test (experiment toggle) splits users on purpose to compare two versions and pick the better one. Both send a fraction of users somewhere, but they answer different questions.',
         },
         {
           q: 'How do you write a production smoke test safely?',
-          a: 'Use dedicated test accounts that are flagged internally, avoid irreversible actions (no real payments; use a zero-value internal product or stop at the payment page), never touch real customer data, keep it short (a few critical journeys), make it idempotent and clean up, and tag it (for example @prod-smoke) so it runs after each deploy and from synthetic monitoring.',
+          a: 'Use dedicated test accounts marked as internal. Avoid actions you cannot undo: no real payments, use a zero-value internal product or stop at the payment page. Never touch real customer data. Keep it short (a few key journeys), clean up after itself, and tag it (e.g. @prod-smoke) so it runs after each deploy and from synthetic monitoring.',
         },
       ],
       pitfalls: [
@@ -1008,33 +1047,32 @@ In Agile teams much of the progress report is the board and pipeline dashboard; 
         'Knows WIP limits and pull-based flow',
         'Treats it as a team bottleneck, not a personal workload issue',
         'Uses data (cycle time, cumulative flow)',
-        'Suggests concrete fixes: smaller cards, swarming, automation, shift-left',
+        'Suggests concrete fixes: smaller cards, swarming, automation, testing earlier',
       ],
-      modelAnswer: `A queue in Testing is a **flow problem for the whole team**, and Kanban is designed to make it visible.
+      modelAnswer: `A queue in Testing is a **flow problem for the whole team**. Kanban is built to make it visible.
 
-**1. Look at the data.** Cycle time per column, the cumulative flow diagram (a widening Testing band), and why cards wait: environment not ready, unclear AC, bugs ping-ponging, big cards that take days to test.
+**1. Look at the data.** Cycle time per column, and the cumulative flow diagram (is the Testing band getting wider?). Then ask why cards wait: no test environment, unclear AC, bugs bouncing back, huge cards.
 
-**2. Use WIP limits properly.** If Testing has a limit of 3 and it is full, developers should not push more cards; they **swarm**: pair-test, fix bugs on cards in testing, write automation, or prepare test data. Starting new dev work only makes the queue longer and cycle time worse.
+**2. Respect the WIP limits.** If Testing has a limit of 3 and it is full, developers stop pushing cards. They **swarm**: pair-test, fix bugs on cards in Testing, write automation. Example: a developer finishes card C8 but Ready for test is full, so she helps test C5 instead of starting C11.
 
-**3. Fix the causes**
-- **Smaller cards**: a card that takes 30 minutes to test moves; a card that takes 3 days blocks.
-- **Shift left**: three amigos before coding, so fewer bugs reach Testing and fewer cards bounce back.
-- **Developers test too**: unit and API tests in the DoD; devs run the happy path before moving a card.
-- **Automate regression** so each card does not need a full manual rerun.
-- **Explicit policies**: "Ready for test" means deployed to QA env with notes and test data.
-- **Environment**: if testers wait for deployments, fix the pipeline.
+**3. Fix the causes.**
+- Smaller cards: 30 minutes of testing moves; 3 days blocks.
+- Three amigos before coding, so fewer cards bounce back.
+- Developers run the happy path before moving a card.
+- Automate regression.
+- Clear rule: "Ready for test" = deployed, with notes and test data.
 
-**4. Review in the next improvement meeting** with the before/after cycle time.
+**4. Check the result** at the next improvement meeting, using cycle time before and after.
 
-What I would not do is quietly work overtime to clear the column: that hides the bottleneck and it comes back next week.`,
+I would not quietly work overtime. That hides the bottleneck, and it returns next week.`,
       followUps: [
         {
           q: 'What is the difference between lead time and cycle time?',
-          a: 'The Kanban Guide defines lead time from the commitment point (the team agrees to do the item) until it is completed; it is close to what the customer feels. Some teams measure from when the request is first made. Cycle time is measured from when work actually starts until it is done; it shows how efficient the team is once it picks something up. A long lead time with short cycle time means items wait a long time before anyone starts.',
+          a: 'The Kanban Guide defines lead time from the commitment point (the team agrees to do the item) until it is done; it is close to what the customer feels. Some teams measure from when the request is first made. Cycle time runs from when work actually starts until done. Example: committed Monday, started Wednesday, done Friday = lead time 4 days, cycle time 2 days. Long lead time with short cycle time means items wait before anyone starts.',
         },
         {
           q: 'Would you rather work in Scrum or Kanban as a tester?',
-          a: 'Both work if the team collaborates. Scrum gives a rhythm with planning, reviews and a Sprint Goal, which helps for product development with stakeholders. Kanban suits continuous flow such as support, maintenance or teams releasing many times a day. As a tester I care more about early involvement, small work items and a real DoD than about the framework name.',
+          a: 'Both work if the team collaborates. Scrum gives a rhythm (planning, reviews, a Sprint Goal), which suits product development with stakeholders. Kanban suits continuous work like support, maintenance or teams releasing many times a day. As a tester I care more about early involvement, small work items and a real DoD than the framework name.',
         },
       ],
       pitfalls: [
@@ -1048,7 +1086,7 @@ What I would not do is quietly work overtime to clear the column: that hides the
     {
       id: 'mt-agile-release-drill-1',
       question:
-        'Go/no-go from a report. Release 5.0 of a banking web app. Exit criteria: ≥ 95% planned tests executed, ≥ 95% pass rate of executed, 0 open Critical, 0 open High without an approved workaround, all P1 stories AC verified. Given the numbers below, decide Go / Go with conditions / No-go and justify.',
+        'Go/no-go from a report. Release 5.0 of a banking web app. Exit criteria: ≥ 95% of planned tests executed, ≥ 95% pass rate of executed, 0 open Critical, 0 open High without an approved workaround, AC checked for all P1 stories. Using the numbers below, decide: Go, Go with conditions, or No-go. Explain why.',
       assumptions: [
         'Planned 480 tests; executed 462; passed 441; failed 13; blocked 8 (the remaining 10 not run)',
         'Open: 0 Critical; 2 High: H1 = statement PDF has wrong date format for one locale (workaround: CSV export); H2 = fund transfer to new payee fails when OTP is re-sent twice',
@@ -1074,18 +1112,18 @@ What I would not do is quietly work overtime to clear the column: that hides the
 
 Without the flag, the answer would be **No-go**: a High bug in money transfer without workaround plus an unverified P1 story fails two exit criteria.`,
       insight:
-        'Exit criteria are inputs, not the decision. The same numbers can lead to Go or No-go depending on what mitigation (feature flag, rollback) exists, which is why QA should know the release mechanics.',
+        'Exit criteria are inputs, not the decision. The same numbers can mean Go or No-go, depending on whether a feature flag or rollback exists. That is why a tester must know how the release works.',
       followUps: [
         {
           q: 'What if the 8 blocked tests were all in the statement module?',
-          a: 'Then the statement module (where H1 already lives) has a coverage gap as well as a known bug. I would push to unblock or run them before go/no-go, or at least state "statement module: 8 tests blocked plus H1 open" as residual risk, and suggest the PO checks whether statements are critical this release (month-end volume).',
+          a: 'Then the statement module (where H1 already lives) has a coverage gap as well as a known bug. I would push to unblock and run them before go/no-go. If not possible, I would list "statement module: 8 tests blocked plus H1 open" as remaining risk, and ask the PO whether statements are critical this release (month-end volume).',
         },
       ],
     },
     {
       id: 'mt-agile-release-drill-2',
       question:
-        'Plan QA across a 2-week sprint (10 working days). Team: 4 developers, 1 QA (you). Sprint backlog: 5 stories (S1 login with OTP 5 pts, S2 profile photo upload 3 pts, S3 order history filters 3 pts, S4 refund status page 5 pts, S5 copy changes 1 pt). Lay out what you do each day and how you avoid the end-of-sprint testing cliff.',
+        'Plan QA across a 2-week sprint (10 working days). Team: 4 developers and 1 QA (you). Sprint backlog: S1 login with OTP (5 pts), S2 profile photo upload (3 pts), S3 order history filters (3 pts), S4 refund status page (5 pts), S5 copy changes (1 pt). Say what you do each day, and how you avoid the end-of-sprint testing pile-up.',
       assumptions: [
         'QA capacity ≈ 6 focused hours/day → about 60 hours in the sprint',
         'Automated regression takes 40 minutes in CI; manual regression checklist takes 6 hours',
@@ -1103,18 +1141,18 @@ Without the flag, the answer would be **No-go**: a High bug in money transfer wi
       ],
       answer: `A plan where risky stories (S1, S4) are delivered and tested **early in thin slices**, trivial ones fill gaps, automation is written while stories are fresh, and day 9 is reserved for regression rather than first-time testing. Total ~60 QA hours: ~37h story testing, ~10h automation, ~6h regression, ~7h meetings and triage. If S4 slips past day 7, raise it in the daily and ask the PO whether to ship it behind a flag or move it out.`,
       insight:
-        'Sequencing is the main tool a single QA has: ask for the riskiest stories first and in slices, so that defects come back while there is still sprint left to fix them.',
+        'Order of work is the main tool a single tester has. Ask for the riskiest stories first and in small slices, so bugs come back while there is still sprint time to fix them.',
       followUps: [
         {
           q: 'Developers say they cannot split S4. What then?',
-          a: 'Suggest technical slices that are still testable: the refund status API first (you can test it with Postman or Playwright request), then the UI. Meanwhile, pair with a developer on unit-test review and prepare test data so testing is fast when it lands. If S4 still arrives on day 8, make the risk visible early instead of absorbing it silently.',
+          a: 'Suggest technical slices that are still testable: the refund status API first (test it with Postman or a Playwright request), then the UI. Meanwhile, review unit tests with a developer and prepare test data, so testing is fast when it lands. If S4 still arrives on day 8, raise the risk early instead of absorbing it silently.',
         },
       ],
     },
     {
       id: 'mt-agile-release-drill-3',
       question:
-        'Compute the execution report metrics and write the 3-line interpretation. Day 6 of release testing: planned 250 tests; 210 executed (190 passed, 14 failed, 6 blocked); 40 not run. Of the 14 failed, 9 are in the new "Wishlist" module. Open defects: 0 Critical, 2 High (both Wishlist), 5 Medium, 6 Low. Yesterday: 170 executed, 160 passed, 3 High open.',
+        'Work out the execution report numbers and write a 3-line interpretation. Day 6 of release testing: 250 tests planned; 210 executed (190 passed, 14 failed, 6 blocked); 40 not run. 9 of the 14 failures are in the new "Wishlist" module. Open bugs: 0 Critical, 2 High (both Wishlist), 5 Medium, 6 Low. Yesterday: 170 executed, 160 passed, 3 High open.',
       assumptions: [
         'Blocked tests were started but could not complete (env issue: wishlist service in staging restarts every ~20 min)',
         'Testing window ends on day 8; daily capacity ≈ 40 tests',
@@ -1134,11 +1172,11 @@ Without the flag, the answer would be **No-go**: a High bug in money transfer wi
 2. Wishlist is the risk: 9 failures, 2 High, and an unstable staging service; the pass-rate drop is all there.
 3. Remaining tests fit in 2 days only if staging is fixed today; otherwise recommend releasing with wishlist_v1 OFF.`,
       insight:
-        'Raw totals hide where the problem is. Splitting failures by area turns a vague "pass rate dropped" into a clear decision: the release is fine, one flagged feature is not.',
+        'Totals hide where the problem is. Splitting failures by area turns "the pass rate dropped" into a clear decision: the release is fine; one flagged feature is not.',
       followUps: [
         {
           q: 'Should the 6 blocked tests count as executed?',
-          a: 'Teams differ, so state your rule in the report. ISTQB-style progress reports show blocked separately from passed and failed. I count them as "attempted but not completed": they are not evidence of quality, so they must not raise the pass rate, and they should appear with the reason and owner of the blocker.',
+          a: 'Teams differ, so state your rule in the report. ISTQB-style progress reports show blocked separately from passed and failed. I count them as "attempted but not completed": they prove nothing about quality, so they must not raise the pass rate. List them with the reason and the owner of the blocker.',
         },
       ],
     },
@@ -1147,37 +1185,37 @@ Without the flag, the answer would be **No-go**: a High bug in money transfer wi
     {
       id: 'mt-agile-release-mcq-01',
       difficulty: 'easy',
-      question: 'According to the Scrum Guide 2020, which accountability does a tester in a Scrum team belong to?',
+      question: 'In the Scrum Guide 2020, which accountability does a tester belong to?',
       options: ['Product Owner', 'Scrum Master', 'Developers', 'A separate QA role defined by the guide'],
       correct: [2],
       explanation:
-        'The Scrum Guide 2020 defines three accountabilities: Product Owner, Scrum Master and Developers. Anyone who helps create the Increment, including testers, is one of the Developers. The guide defines no separate QA role; the Product Owner owns backlog value and the Scrum Master coaches the framework.',
+        'The Scrum Guide 2020 has three accountabilities: Product Owner, Scrum Master and Developers. Everyone who builds the Increment, testers included, is a Developer. There is no separate QA role. The Product Owner owns the backlog and its value; the Scrum Master coaches the team in Scrum.',
       followUps: [
         {
           q: 'Why does it matter that there is no separate QA role?',
-          a: 'Because quality becomes a shared commitment through the Definition of Done. The tester still brings testing expertise, but the team as a whole owns whether the Increment is Done, so testing cannot be treated as someone else\'s phase after development.',
+          a: 'Because quality becomes a shared commitment through the Definition of Done. The tester still brings testing skills, but the whole team owns whether the Increment is Done. So testing cannot be "someone else\'s phase" after development.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-02',
       difficulty: 'easy',
-      question: 'Which of these is part of the Scrum Guide 2020 as the commitment for the Increment?',
+      question: 'Which item is in the Scrum Guide 2020 as the commitment for the Increment?',
       options: ['Definition of Ready', 'Definition of Done', 'Acceptance criteria', 'Test completion report'],
       correct: [1],
       explanation:
-        'Each Scrum artifact has a commitment: Product Goal (Product Backlog), Sprint Goal (Sprint Backlog) and Definition of Done (Increment). Definition of Ready is a popular team practice but is not in the Scrum Guide. Acceptance criteria are per story, and test reports are not Scrum artifacts.',
+        'Each Scrum artifact has a commitment: Product Backlog → Product Goal, Sprint Backlog → Sprint Goal, Increment → Definition of Done. Definition of Ready is a popular team practice but is not in the Scrum Guide. Acceptance criteria belong to one story, and test reports are not Scrum artifacts.',
       followUps: [
         {
           q: 'What happens to a backlog item that does not meet the Definition of Done at the end of the sprint?',
-          a: 'It cannot be released or presented as Done in the Sprint Review. It returns to the Product Backlog for future consideration, and the PO decides when to continue it. It also does not count toward what the team delivered.',
+          a: 'It cannot be released or shown as Done in the Sprint Review. It goes back to the Product Backlog, and the PO decides when to continue it. It also does not count toward what the team delivered.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-03',
       difficulty: 'medium',
-      question: 'In which Agile Testing Quadrant does an exploratory testing session on a new checkout belong?',
+      question: 'An exploratory testing session on a new checkout belongs in which Agile Testing Quadrant?',
       options: [
         'Q1: technology-facing, supports the team',
         'Q2: business-facing, supports the team',
@@ -1186,18 +1224,18 @@ Without the flag, the answer would be **No-go**: a High bug in money transfer wi
       ],
       correct: [2],
       explanation:
-        'Exploratory testing evaluates the built product from a user/business perspective, so it is Q3, alongside usability testing and UAT. Q2 holds story tests and examples that guide development, Q1 unit tests, and Q4 performance and security testing. Beginners often pick Q2 because exploratory is "functional", but it critiques rather than guides.',
+        'Exploratory testing judges the built product from the user\'s side, so it is Q3, with usability testing and UAT. Q2 holds story tests and examples that guide coding; Q1 holds unit tests; Q4 holds performance and security. Many people pick Q2 because exploratory testing is "functional", but it critiques the product rather than guiding the coding.',
       followUps: [
         {
           q: 'Give one Q4 test for the same checkout.',
-          a: 'A load test showing the checkout API keeps p95 latency under 1 second at 200 requests per second during a sale, or a security test checking that a user cannot change the order id in the request to pay for or view another user\'s order.',
+          a: 'A load test showing the checkout API keeps p95 latency under 1 second at 200 requests per second during a sale. Or a security test: a user changes the order id in the request and must not be able to pay for or see another user\'s order.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-04',
       difficulty: 'medium',
-      question: 'Select ALL statements about the Agile Testing Quadrants that are correct.',
+      question: 'Select ALL correct statements about the Agile Testing Quadrants.',
       options: [
         'They must be executed in order: Q1, then Q2, then Q3, then Q4',
         'One axis separates business-facing from technology-facing tests',
@@ -1207,18 +1245,18 @@ Without the flag, the answer would be **No-go**: a High bug in money transfer wi
       ],
       correct: [1, 2, 3],
       explanation:
-        'The quadrants use two axes (business vs technology facing; support the team vs critique the product). Q1 unit/component tests are mostly automated, and Q4 contains performance, security and other "-ility" testing. The quadrants are explicitly not a sequence, and exploratory testing is Q3, not Q1.',
+        'The quadrants have two axes: business vs technology facing, and supports the team vs critiques the product. Q1 unit and component tests are mostly automated. Q4 holds performance, security and other "-ility" tests. The quadrants are NOT an order, and exploratory testing is Q3, not Q1.',
       followUps: [
         {
           q: 'How would you use the quadrants in sprint planning?',
-          a: 'As a checklist per story or feature: which quadrants matter, what test in each, and who does it. It makes gaps visible, for example a feature with good unit and story tests but no thought about performance or usability.',
+          a: 'As a checklist for each story: which quadrants matter, what test goes in each, and who does it. Example: a feature with good unit and story tests but no thought about performance or usability shows a clear gap.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-05',
       difficulty: 'medium',
-      question: 'Review these acceptance criteria. Which one is the most testable?',
+      question: 'Look at these acceptance criteria. Which one is the most testable?',
       code: {
         language: 'text',
         title: 'Story: password reset',
@@ -1231,11 +1269,11 @@ D) Users should have a good experience when resetting passwords.`,
       options: ['A', 'B', 'C', 'D'],
       correct: [2],
       explanation:
-        'C states a specific rule (30 minutes), a boundary (30:01) and an observable outcome (exact message and an offer of a new link), so a tester can pass or fail it unambiguously. A, B and D use subjective words ("fast", "correctly", "good experience") that two people would test differently.',
+        'C gives an exact rule (30 minutes), a boundary (30:01) and a visible result (the exact message and a new-link offer). Any tester gets the same pass or fail. A, B and D use vague words ("fast", "correctly", "good experience") that two people would test in two different ways.',
       followUps: [
         {
           q: 'What question would you ask the PO about C?',
-          a: 'Boundary and edge questions: is exactly 30:00 still valid; does sending a new link invalidate the old one; can a link be used twice; what time source is used (server time) so timezone or clock changes do not break the rule.',
+          a: 'Boundary and edge questions: is exactly 30:00 still valid? Does sending a new link cancel the old one? Can a link be used twice? Which clock is used (server time), so time zones or clock changes do not break the rule?',
         },
       ],
     },
@@ -1263,18 +1301,18 @@ D) Users should have a good experience when resetting passwords.`,
       ],
       correct: [0],
       explanation:
-        'The scenario is a recorded script: CSS selectors and clicks in the steps make it brittle and unreadable for the business, and it has many actions instead of one behaviour. A declarative version would be "Given I am signed in with a backpack in my cart / When I start checkout / Then I am asked for my delivery details". URLs are allowed, Then can check text, and Background is optional.',
+        'The scenario reads like a recorded script. CSS selectors and clicks make it fragile and hard for business people to read, and it has many actions instead of one behaviour. A declarative version: "Given I am signed in with a backpack in my cart / When I start checkout / Then I am asked for my delivery details". URLs are allowed, Then can check text, and Background is optional.',
       followUps: [
         {
           q: 'Where should the selectors live if this is automated with Playwright?',
-          a: 'In the step definitions or, better, in page objects that the step definitions call, using user-facing locators such as getByRole and getByLabel. The feature file then describes behaviour only and does not change when the UI markup changes.',
+          a: 'In the step definitions, or better in page objects that the steps call, using user-facing locators such as getByRole and getByLabel. The feature file then describes behaviour only, and it does not change when the HTML changes.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-07',
       difficulty: 'hard',
-      question: 'Which Gherkin construct best covers the delivery-fee rule "orders of 499.00 or more ship free" with boundary data?',
+      question: 'Which Gherkin keywords best cover the rule "orders of 499.00 or more ship free" with boundary data?',
       code: {
         language: 'gherkin',
         code: `Rule: Orders of 499.00 or more ship free
@@ -1295,18 +1333,18 @@ D) Users should have a good experience when resetting passwords.`,
       ],
       correct: [0],
       explanation:
-        'A Scenario Outline runs once per row in its Examples table, substituting <subtotal> and <fee>, which is ideal for boundary values of one rule. Background holds common Given steps and has no Examples. "Data" and "Table" are not Gherkin keywords, although data tables can be attached to individual steps.',
+        'A Scenario Outline runs once for each row of its Examples table, filling in <subtotal> and <fee>. That is ideal for boundary values of one rule. Background only holds shared Given steps and has no Examples. "Data" and "Table" are not Gherkin keywords (though a single step can have a data table).',
       followUps: [
         {
           q: 'Which extra row would you add, and why?',
-          a: '499.01 (just above the boundary), to complete the three-value boundary set, and possibly a case where a coupon moves the subtotal from above to below 499.00, because the order of calculation (discount before or after the threshold check) is a common source of bugs.',
+          a: '499.01, just above the boundary, to complete the three-value boundary set. Also a case where a coupon moves the subtotal from above 499.00 to below it, because the order of calculation (discount before or after the check) is a common source of bugs.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-08',
       difficulty: 'medium',
-      question: 'Select ALL items that belong in a test completion (summary) report rather than only in a daily progress report.',
+      question: 'Select ALL items that belong in a test completion (summary) report, not only in a daily progress report.',
       options: [
         'Lessons learned for the next release',
         'Residual risks and areas not tested',
@@ -1316,11 +1354,11 @@ D) Users should have a good experience when resetting passwords.`,
       ],
       correct: [0, 1, 2],
       explanation:
-        'ISTQB CTFL v4.0 describes the completion report as summarising testing at the end, including results against exit criteria, residual risks, deviations and lessons learned, plus an evaluation for the decision. A specific daily blocker and "tomorrow\'s plan" are progress-report content used to steer testing while it runs.',
+        'ISTQB CTFL v4.0 says the completion report sums up testing at the end: results against exit criteria, remaining risks, changes from the plan, lessons learned and an evaluation for the decision. One day\'s blocker and "tomorrow\'s plan" are progress-report content, used to steer testing while it runs.',
       followUps: [
         {
           q: 'Who is the audience of each report?',
-          a: 'The progress report is mainly for the team, PO and Scrum Master who steer the work day to day. The completion report is for the release owner, stakeholders and sometimes auditors who need to decide and to know later what the team knew when it shipped.',
+          a: 'The progress report is mainly for the team, PO and Scrum Master, who steer the daily work. The completion report is for the release owner, stakeholders and sometimes auditors, who must decide and later need to know what the team knew when it shipped.',
         },
       ],
     },
@@ -1346,18 +1384,18 @@ Rollback < 10 min. Monitoring and canary available.`,
       ],
       correct: [0],
       explanation:
-        'Only one criterion fails, and the bug lives in a module that can stay switched off with a flag, so the exposure in production is removed. "Go with conditions" captures that. An automatic No-go treats exit criteria as the decision instead of an input; an unconditional Go ignores the High bug; waiting for every Medium/Low bug is not a realistic bar.',
+        'Only one criterion fails (0 High), and that bug lives in a module that can stay OFF behind a flag, so customers never reach it. "Go with conditions" says exactly that. An automatic No-go treats exit criteria as the decision instead of an input. An unconditional Go ignores the High bug. Waiting for every Medium/Low bug is not a realistic bar.',
       followUps: [
         {
           q: 'What if reports_v2 had no flag?',
-          a: 'Then customers would hit the corruption bug, and the decision depends on exposure: how many users export more than 10,000 rows, and is there a workaround (CSV export)? I would lean towards No-go or a quick fix plus retest, and make the residual risk explicit if the business still chooses to ship.',
+          a: 'Then customers would hit the corruption bug. The decision depends on exposure: how many users export more than 10,000 rows, and is there a workaround such as CSV export? I would lean to No-go or a quick fix plus retest, and write down the risk if the business still ships.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-10',
       difficulty: 'medium',
-      question: 'A new search feature is shipped behind a release toggle. Select ALL tests a tester should plan.',
+      question: 'A new search feature ships behind a release toggle. Select ALL tests the tester should plan.',
       options: [
         'Regression of the old search with the toggle OFF',
         'The new search with the toggle ON',
@@ -1366,18 +1404,18 @@ Rollback < 10 min. Monitoring and canary available.`,
       ],
       correct: [0, 1, 2],
       explanation:
-        'Shipping code behind a flag still changes the codebase, so the OFF path needs regression (the new code may leak into it). The ON path is the feature itself, and the flip is a behaviour change at runtime that can break caches or sessions. "Nothing OFF" is the classic mistake: deploy changed the code even if release did not.',
+        'Shipping code behind a flag still changes the code, so the OFF path needs regression: the new code may leak into the old search. The ON path is the feature itself. Flipping the toggle at runtime can break sessions or caches. "Nothing with the toggle OFF" is the classic mistake: the deploy changed the code even though the release did not.',
       followUps: [
         {
           q: 'What is "flag debt"?',
-          a: 'Old toggles that are never removed. They multiply code paths and test combinations, confuse people about what is live, and can be flipped by accident. Release toggles should be removed soon after full rollout, and that removal should be tested like any other change.',
+          a: 'Old toggles that are never removed. They add code paths and test combinations, confuse people about what is live, and can be flipped by accident. Remove release toggles soon after full rollout, and test that removal like any other change.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-11',
       difficulty: 'hard',
-      question: 'During a canary release at 5% traffic, which observation should trigger a rollback according to a typical canary plan?',
+      question: 'During a canary release at 5% traffic, which observation should trigger a rollback under this plan?',
       code: {
         language: 'text',
         code: `Rollback triggers: 5xx > 0.5% OR p95 latency > 1.2 s
@@ -1391,18 +1429,18 @@ Observed after 30 min (canary vs baseline):
       options: ['A', 'B', 'C', 'D'],
       correct: [1],
       explanation:
-        'B breaches the business trigger: orders per minute dropped 14%, more than the 10% limit, even though errors and latency look acceptable. That is exactly the kind of silent failure (for example, a broken button) that canaries catch by watching business metrics. A, C and D stay inside all three thresholds.',
+        'B breaks the business rule: orders per minute dropped 14%, more than the 10% limit, even though errors and speed look fine. Canaries watch business numbers to catch exactly this kind of silent failure, such as a broken Pay button. A, C and D stay inside all three limits.',
       followUps: [
         {
           q: 'Why compare against a baseline instead of fixed numbers only?',
-          a: 'Because traffic and behaviour vary by time of day and season. Comparing the canary with the old version running at the same time removes most of that noise; a drop that appears only on the canary points to the release rather than to normal variation.',
+          a: 'Because traffic changes by time of day and season. Comparing the canary with the old version running at the same moment removes most of that noise. A drop that appears only on the canary points to the release, not to normal ups and downs.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-12',
       difficulty: 'easy',
-      question: 'Which group attends a "three amigos" session?',
+      question: 'Who joins a "three amigos" session?',
       options: [
         'Business (PO/BA), development and testing perspectives',
         'Scrum Master, Product Owner and the customer',
@@ -1411,18 +1449,18 @@ Observed after 30 min (canary vs baseline):
       ],
       correct: [0],
       explanation:
-        'Three amigos brings together business, development and testing perspectives to discuss a story before coding, agree examples and surface questions. It is about perspectives, not job titles or a fixed head-count; it is not a peer review among testers and not an infrastructure meeting.',
+        'Three amigos brings together three viewpoints, business, development and testing, to discuss a story before coding, agree examples and raise questions. It is about viewpoints, not job titles or an exact head-count. It is not a peer review among testers, and not an infrastructure meeting.',
       followUps: [
         {
           q: 'What does a good three-amigos session produce?',
-          a: 'Concrete examples that become acceptance criteria (often Gherkin), a list of open questions with owners, assumptions made explicit, and sometimes a decision to split the story or add a spike. If it produces nothing written, the knowledge is lost by the time testing starts.',
+          a: 'Concrete examples that become acceptance criteria (often in Gherkin), open questions with owners, assumptions written down, and sometimes a decision to split the story. If nothing is written down, the knowledge is lost by the time testing starts.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-13',
       difficulty: 'expert',
-      question: 'Select ALL that are good QA metrics to bring to a release retrospective, as opposed to vanity metrics.',
+      question: 'Select ALL good QA metrics to bring to a release retrospective (not vanity metrics).',
       options: [
         'Defects that escaped to production per release, with the area they came from',
         'Number of test cases written by each tester',
@@ -1432,18 +1470,18 @@ Observed after 30 min (canary vs baseline):
       ],
       correct: [0, 2, 3],
       explanation:
-        'Escaped defects measure the outcome of testing, time-in-testing reveals flow bottlenecks, and flaky rate tells the team whether the pipeline can be trusted; each drives a decision. Counting test cases or bugs per person measures activity and invites gaming (splitting one bug into five), and using them to rank people destroys collaboration.',
+        'Escaped defects show the real result of testing. Time waiting in "Testing" shows a flow bottleneck. Flaky rate shows whether the pipeline can be trusted. Each one leads to a decision. Counting test cases or bugs per person only measures activity, invites gaming (one bug split into five), and ranking people with it destroys teamwork.',
       followUps: [
         {
           q: 'Escaped defects went up this release. What do you do with that number?',
-          a: 'Break them down by area, type and root cause: were they in untested scope, missed scenarios, environment differences or late changes? Then pick one or two improvements, such as an extra exploratory session for risky modules or a missing integration test, and track the trend over the next releases.',
+          a: 'Break them down by area, type and root cause: untested scope, missed scenarios, environment differences or late changes? Then pick one or two fixes, such as an extra exploratory session on a risky module or a missing integration test, and track the trend over the next releases.',
         },
       ],
     },
     {
       id: 'mt-agile-release-mcq-14',
       difficulty: 'hard',
-      question: 'A Kanban board has WIP limits Dev 4, Ready for test 2, Testing 3. Testing has 3 cards, Ready for test has 2, and a developer just finished a card. What should happen?',
+      question: 'A Kanban board has WIP limits Dev 4, Ready for test 2, Testing 3. Testing has 3 cards, Ready for test has 2, and a developer just finished card C8. What should happen?',
       code: {
         language: 'text',
         code: `| Dev (4)      | Ready for test (2) | Testing (3)    | Done |
@@ -1458,11 +1496,11 @@ Observed after 30 min (canary vs baseline):
       ],
       correct: [0],
       explanation:
-        'Ready for test is at its limit, so C8 cannot move. Kanban\'s pull system says the free developer should swarm on the bottleneck: pair-test, fix defects on cards in Testing, or automate checks. Breaking the limit or starting new work grows the queue and cycle time; permanently raising limits hides the bottleneck instead of fixing it.',
+        'Ready for test is at its limit, so C8 cannot move. In Kanban\'s pull system the free developer swarms on the bottleneck: pair-test, fix bugs on cards in Testing, or automate checks. Breaking the limit or starting new work makes the queue and cycle time worse. Raising the limit for good hides the bottleneck instead of fixing it.',
       followUps: [
         {
           q: 'This happens every week. What longer-term changes would you suggest?',
-          a: 'Smaller cards that are quicker to test, three amigos before development so fewer cards bounce back with bugs, developers running agreed checks before moving cards, more regression automation, and a stable test environment. Track cycle time and the cumulative flow diagram to see whether the Testing band narrows.',
+          a: 'Smaller cards that are quicker to test; three amigos before coding so fewer cards bounce back with bugs; developers running agreed checks before moving a card; more regression automation; a stable test environment. Track cycle time and the cumulative flow diagram to see if the Testing band gets narrower.',
         },
       ],
     },
@@ -1479,11 +1517,11 @@ Observed after 30 min (canary vs baseline):
       ],
       correct: [0, 2, 3],
       explanation:
-        'Thin slices create early handovers, three amigos reduces rework and bug ping-pong, and API/contract tests let testing start before the UI exists. Testing last sprint\'s work and "testing sprints" are mini-waterfall: the Increment is not Done when the sprint ends and feedback arrives late.',
+        'Thin slices give early handovers. Three amigos cuts rework and bug ping-pong. API and contract tests let testing start before the UI exists. Testing last sprint\'s work, or a "testing sprint", is mini-waterfall: the Increment is not Done at sprint end, and feedback arrives late.',
       followUps: [
         {
           q: 'A manager suggests "QA lags one sprint behind development". How do you respond?',
-          a: 'Explain the cost: stories are reported Done when they are not, defects come back to developers who have moved on, and velocity becomes misleading. Offer alternatives with a trial period: thinner stories, WIP limits, devs owning unit and API tests, and testing on preview environments. Measure carry-over and escaped defects before and after.',
+          a: 'Explain the cost: stories are called Done when they are not, bugs return to developers who have moved on, and velocity becomes misleading. Offer a trial instead: thinner stories, WIP limits, developers owning unit and API tests, testing on preview environments. Measure carry-over and escaped defects before and after.',
         },
       ],
     },

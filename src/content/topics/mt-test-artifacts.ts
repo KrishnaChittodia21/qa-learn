@@ -20,37 +20,43 @@ const topic: Topic = {
   ],
   tags: ['test-case', 'test-scenario', 'test-data', 'test-plan', 'test-strategy', 'rtm', 'traceability', 'xray', 'testrail'],
   cheatSheet: [
-    'Scenario = WHAT to test (one line, "verify checkout with valid details"); test case = HOW (preconditions, steps, data, expected result); script = executable/automated version.',
-    'Core test case fields: ID, title, requirement link, preconditions, test data, steps, expected result per step, priority, type; actual result + status at execution.',
-    'A good test case is atomic (one objective), independent, repeatable, has ONE clear expected result per check, and is understandable by a new joiner.',
-    'Test data: prepare it up front, cover boundaries and invalid classes, never use real PII unmasked; prefer synthetic or masked data; reset state between runs.',
-    'Test suite = a named collection of cases run together (smoke, regression, feature, sprint); suites get re-planned, not copied blindly.',
+    'Scenario = WHAT to test, in one line ("check checkout with valid details"). Test case = HOW (preconditions, steps, data, expected result). Script = the runnable, often automated, version.',
+    'Main test case fields: ID, title, requirement link, preconditions, test data, steps, expected result per step, priority, type. When run: actual result + status.',
+    'A good test case has one goal (atomic), runs on its own (independent), gives the same result every time (repeatable), and has ONE exact expected result per check.',
+    'Test data: prepare it early, include boundaries and invalid values, never use real customer data (PII) unmasked; prefer synthetic or masked data; reset between runs.',
+    'Test suite = a named group of cases run together (smoke, regression, feature, sprint). Build suites with tags, not copies.',
     'IEEE 829 test plan: identifier, introduction, test items, features to / not to be tested, approach, pass/fail criteria, suspension/resumption, deliverables, tasks, environment, responsibilities, staffing, schedule, risks, approvals.',
-    'Test strategy = organisation/product-level, long-lived "how we test"; test plan = project/release-level "what, when, who, with what" that applies the strategy.',
-    'RTM: forward (requirement → tests, finds untested requirements), backward (test → requirement, finds orphan/gold-plated tests), bidirectional (both; supports impact analysis).',
-    'Review test cases with a checklist: traceable, correct expected results, preconditions, data, negative and boundary coverage, no duplicates.',
-    'Tools: Jira + Xray (Test, Precondition, Test Set, Test Plan, Test Execution issue types), Zephyr Scale (cases, cycles, plans), TestRail (suites/sections, runs, milestones).',
+    'Test strategy = long-lived "how we test here" for the company or product. Test plan = "what, when, who, with what" for one release; it follows the strategy.',
+    'RTM: forward (requirement → tests; finds untested requirements), backward (test → requirement; finds orphan tests), bidirectional (both; allows impact analysis).',
+    'Review test cases with a checklist: linked to a requirement, correct expected results, preconditions, data, negative and boundary cases, no duplicates.',
+    'Tools: Jira + Xray (Test, Precondition, Test Set, Test Plan, Test Execution), Zephyr Scale (cases, cycles, plans), TestRail (suites/sections, runs, milestones).',
   ],
   sections: [
     {
       heading: 'Test scenario vs test case vs test script',
-      body: `**Intuition:** a scenario is the chapter title ("Pay for an order"), a test case is the recipe with exact quantities and steps, and a test script is the recipe turned into a machine that cooks it for you.
+      body: `- A **test scenario** says *what* to test, in one line.
+- A **test case** says *how* to test it: preconditions, data, steps and the expected result.
+- A **test script** (or test procedure) is the order to run cases in, often as automated code.
 
-| Artifact | Answers | Level of detail | Example (SauceDemo) |
-|---|---|---|---|
-| **Test scenario** (test condition) | *What* should we test? | One line, high level | Verify a user can complete checkout with valid details |
-| **Test case** | *How* exactly do we test it, and what should happen? | Preconditions, data, steps, expected results | TC-CHK-004: logged in as standard_user, backpack in cart, enter "Asha / Rao / 560001", Continue, Finish → "Thank you for your order!" |
-| **Test script / procedure** | In what order do we execute (often automated)? | Step sequence or code | A Playwright spec or a manual procedure chaining TC-CHK-001..006 |
+**Why it matters:** interviewers ask this almost every time, and one scenario usually becomes **several** test cases (positive, negative, boundary).
 
-One scenario usually expands into **several** test cases (positive, negative, boundary). The ISTQB vocabulary is slightly different: *test conditions* come from **test analysis** (what), *test cases* from **test design** (how), and *test procedures/scripts* from **test implementation**.
+**Example (SauceDemo checkout):**
+
+| Artifact | Example |
+|---|---|
+| **Scenario** | Check a user can complete checkout with valid details |
+| **Test case** | TC-CHK-004: logged in as standard_user, backpack in cart, enter "Asha / Rao / 560001", click Continue, then Finish → page shows "Thank you for your order!" |
+| **Script** | A Playwright spec, or a manual procedure that runs TC-CHK-001 to 006 in order |
+
+**ISTQB words:** a scenario is a **test condition** (from test analysis: *what*). A test case comes from **test design** (*how*). A procedure or script comes from **test implementation**.
 
 **When to use which:**
 
-- Early, under time pressure, or in exploratory-heavy teams: scenarios plus charters.
-- For regulated, high-risk or handed-over work: detailed test cases.
-- For anything run every sprint: automate into scripts (your Playwright future).
+- Little time, or a team that explores a lot: scenarios plus charters.
+- Regulated, high-risk, or handed-over work: detailed test cases.
+- Anything you run every sprint: automate it as a script.
 
-**Interview tip:** when asked "write test cases for X", start by listing **scenarios** out loud (shows coverage thinking), then detail two or three into full test cases (shows rigour).`,
+**In an interview, say:** when asked "write test cases for X", first list **scenarios** out loud (shows coverage). Then write two or three as full test cases (shows detail).`,
       diagram: `  REQUIREMENT  CHK-02 "User can pay for items in cart"
         |
         +-- SCENARIO  Checkout with valid details           (what)
@@ -61,52 +67,62 @@ One scenario usually expands into **several** test cases (positive, negative, bo
         |      +-- TC-CHK-007  empty postal code -> error message
         +-- SCRIPT    checkout.spec.ts runs 004, 006, 007 in CI    (automated)`,
       keyPoints: [
-        'Scenario = what; case = how + expected result; script = executable sequence.',
+        'Scenario = what; case = how + expected result; script = the order to run, often automated.',
         'One scenario → many test cases.',
-        'Interviewers like scenario lists first, then a few detailed cases.',
+        'Interviewers like a scenario list first, then a few detailed cases.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 1.4.1 test analysis/design/implementation; Guru99 — Test scenario vs test case',
     },
     {
       heading: 'Anatomy of a great test case',
-      body: `**Intuition:** write every test case as if you will be on leave tomorrow and a new joiner must run it without asking you a single question.
+      body: `A **good test case** is one a new joiner can run without asking you a single question, and get the same result.
+
+**Why it matters:** if two testers can disagree on pass or fail, the test case is broken.
+
+**Example (weak vs strong):**
 
 | Field | Purpose | Weak | Strong |
 |---|---|---|---|
-| **ID** | Unique reference for RTM, defects, automation | 1 | TC-LOGIN-003 |
-| **Title** | Intent in one line | Login test | Locked-out user sees lock-out error and stays on login page |
-| **Requirement / story** | Traceability | — | REQ-AUTH-02 / SHOP-118 |
-| **Preconditions** | State before step 1 | — | On https://www.saucedemo.com, logged out, cookies cleared |
+| **ID** | Unique reference for RTM, bugs, automation | 1 | TC-LOGIN-003 |
+| **Title** | The goal in one line | Login test | Locked-out user sees lock-out error and stays on login page |
+| **Requirement / story** | Traceability (link to the requirement) | — | REQ-AUTH-02 / SHOP-118 |
+| **Preconditions** | The state before step 1 | — | On https://www.saucedemo.com, logged out, cookies cleared |
 | **Test data** | Exact values | valid user | Username locked_out_user, password secret_sauce |
 | **Steps** | Numbered, one action each | Login and check | 1. Enter username 2. Enter password 3. Click Login |
-| **Expected result** | Observable, specific outcome | Error shown | Red banner "Epic sadface: Sorry, this user has been locked out."; URL unchanged |
-| **Priority / type** | Selection for smoke/regression | — | P1, Functional, Negative |
-| **Actual result / status** | Filled at execution | — | Pass / Fail (defect id) / Blocked (reason) |
-| **Author, date, version** | Ownership and history | — | Priya, 2026-10-14, v2 |
+| **Expected result** | Exact, visible outcome | Error shown | Red banner "Epic sadface: Sorry, this user has been locked out."; URL unchanged |
+| **Priority / type** | Picks it for smoke or regression | — | P1, Functional, Negative |
+| **Actual result / status** | Filled in when you run it | — | Pass / Fail (bug id) / Blocked (reason) |
+| **Author, date, version** | Owner and history | — | Priya, 2026-10-14, v2 |
 
 **Qualities to aim for:**
 
-- **Atomic:** one objective per case; if the title contains "and", consider splitting.
-- **Independent:** does not rely on another case having run first (or states it in preconditions).
-- **Repeatable:** same data and state give the same result; include cleanup if state changes.
-- **Specific expected result:** exact text, value or state. Myers stressed long ago that a necessary part of every test case is the definition of the expected output; without it, testers "see what they want to see".
-- **Traceable and prioritised:** links to a requirement and has a priority for suite selection.
+- **Atomic:** one goal per case. If the title has "and", think about splitting it.
+- **Independent:** does not need another case to run first (or says so in preconditions).
+- **Repeatable:** same data and state give the same result. Clean up if the test changes data.
+- **Exact expected result:** exact text, value or state. Myers said every test case must define the expected output, or testers "see what they want to see".
+- **Traceable and prioritised:** linked to a requirement, with a priority.
 
-**Common mistake:** "Expected: should work properly." A failing system can also "work" in someone's opinion.`,
+**Common mistake:** "Expected: should work properly." Someone can call a broken screen "working" too.`,
       keyPoints: [
-        'Preconditions + exact data + specific expected result = a repeatable test.',
-        'Atomic and independent cases are easier to automate later.',
-        'Every expected result must be observable and unambiguous.',
+        'Preconditions + exact data + exact expected result = a repeatable test.',
+        'Atomic, independent cases are easier to automate later.',
+        'Every expected result must be visible and have only one meaning.',
       ],
       source: 'Glenford Myers — The Art of Software Testing, Ch 2 (expected output principle); Guru99 — How to write test cases; ISTQB CTFL v4.0.1 — 1.4.3 Testware',
     },
     {
       heading: 'Worked example: SauceDemo login test cases',
-      body: `**Feature:** SauceDemo login (https://www.saucedemo.com). All accepted users share the password **secret_sauce**: standard_user, locked_out_user, problem_user, performance_glitch_user, error_user, visual_user. A successful login lands on **/inventory.html** with the heading **Products**.
+      body: `**Example feature:** SauceDemo login (https://www.saucedemo.com). Every accepted user has the password **secret_sauce**: standard_user, locked_out_user, problem_user, performance_glitch_user, error_user, visual_user. A good login opens **/inventory.html** with the heading **Products**.
 
-**Scenarios first:** valid login; invalid password; unknown user; empty fields; locked-out user; case sensitivity; slow user; logout and back button; keyboard (Enter) submit; error banner can be dismissed.
+**Why it matters:** "write test cases for a login page" is the most common practical interview task.
 
-Below are six full test cases written with the template from the previous section. Note how each expected result quotes exact text or a URL, so a tester (or a future Playwright assertion) can decide pass/fail without debate.`,
+**Step 1, list scenarios:**
+
+- Valid login; wrong password; unknown user; empty fields.
+- Locked-out user; upper/lower case; slow user.
+- Logout and the Back button; submit with the Enter key; close the error banner.
+
+**Step 2, write full cases.** Below are six, using the template from the previous section. Each expected result quotes exact text or a URL. So a tester, or a future Playwright check, can decide pass or fail without debate.`,
       code: [
         {
           language: 'text',
@@ -134,35 +150,37 @@ Traceability: 001,006 -> REQ-AUTH-01 | 002,004,005 -> REQ-AUTH-02 (validation)
       ],
       keyPoints: [
         'Quote exact messages and URLs in expected results.',
-        'Positive and negative cases, each with a priority and requirement link.',
+        'Write positive and negative cases, each with a priority and a requirement link.',
         'Post-conditions keep cases independent (log out after a successful login).',
       ],
       source: 'Sauce Labs — SauceDemo demo site (users and error messages observed on www.saucedemo.com)',
     },
     {
       heading: 'Test data: preparation, masking, synthetic and boundary data',
-      body: `**Intuition:** test data is the ingredient list. The best recipe fails if you only ever cook with the same three ingredients, or if you steal ingredients from a customer's fridge.
+      body: `**Test data** is the input values and records you need to run your tests: users, products, coupons, carts.
 
-**Kinds of test data you need for any feature:**
+**Why it matters:** if you always use the same few values, you miss bugs. If you use real customer data, you break privacy law.
 
-| Kind | Purpose | Coupon field example |
+**Example (coupon field, minimum cart 500):**
+
+| Kind | Purpose | Coupon example |
 |---|---|---|
-| Valid / happy path | Prove the main flow works | SAVE10 on a 1,000 cart |
-| Invalid classes | Prove validation and errors | Unknown code, expired, already used, wrong case |
-| Boundary values | Catch off-by-one bugs | Cart at 499, 500, 501 when minimum is 500 |
-| Special / edge | Robustness | Leading/trailing spaces, emoji, 255 characters, SQL-like text |
-| State-dependent | Lifecycle rules | Coupon used once already; coupon that expires at midnight |
-| Volume | Performance awareness | 50 items in cart; 10,000 coupons in DB |
+| Valid (happy path) | Show the main flow works | SAVE10 on a 1,000 cart |
+| Invalid | Show errors work | Unknown code, expired, already used |
+| Boundary | Catch off-by-one bugs | Cart at 499, 500, 501 |
+| Special / edge | Robustness | Spaces around the code, emoji, 255 characters, SQL-like text |
+| State-based | Rules that change over time | Coupon used once already; coupon that expires at midnight |
+| Volume | Performance awareness | 50 items in the cart; 10,000 coupons in the database |
 
-**Where data comes from:**
+**Where test data comes from:**
 
-- **Synthetic (generated):** created by scripts or libraries (later: Faker in your Playwright framework). Safe, unlimited, but may miss real-world weirdness.
-- **Masked / anonymised production copy:** realistic distributions, but personal fields (names, phones, emails, card numbers, Aadhaar/SSN) must be **masked or tokenised** first. Privacy laws such as GDPR and India's DPDP Act 2023 make careless use of real customer data a serious issue.
-- **Hand-crafted:** small, precise sets for boundaries and specific rules.
+- **Synthetic** (made up by scripts or tools like Faker): safe and unlimited, but may miss real-world oddities.
+- **Masked copy of production:** realistic, but personal fields (names, phones, emails, card numbers, Aadhaar/SSN) must be **masked** (hidden or replaced) first. Laws like GDPR and India's DPDP Act 2023 punish careless use of real customer data.
+- **Hand-made:** small, exact sets for boundaries and special rules.
 
-**Preparation checklist:** list data needs during test design (ISTQB "test data requirements"), create it during implementation, document where it lives, make it **unique per run** where tests create records, and plan **cleanup/reset** so the next run starts clean.
+**How to prepare it:** list data needs while designing tests (ISTQB calls these "test data requirements"). Create the data before running. Write down where it lives. Make it **unique per run** when tests create records. Plan a **reset**, so the next run starts clean.
 
-**Common mistake:** every tester sharing one account ("test1"), so one person's cart changes break another's test. Give each tester or automated worker its own data.`,
+**Common mistake:** all testers share one account ("test1"). One person's cart change breaks another person's test. Give each tester (or automated worker) their own data.`,
       code: [
         {
           language: 'text',
@@ -181,62 +199,74 @@ PII rule: no real customer emails/phones; use @example.test domain`,
         },
       ],
       keyPoints: [
-        'Plan data per equivalence class and boundary, not just happy path.',
-        'Never use unmasked production PII; prefer synthetic or masked data.',
-        'Isolate data per tester/worker and plan cleanup.',
+        'Plan data for each valid and invalid group and each boundary, not just the happy path.',
+        'Never use unmasked real customer data (PII); prefer synthetic or masked data.',
+        'Give each tester or worker their own data, and plan a reset.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 1.4.1 test design (test data requirements) and implementation; Guru99 — Test data generation',
     },
     {
       heading: 'Test suites: organising cases for execution',
-      body: `**Intuition:** a test suite is a playlist: the same songs (test cases) can appear in several playlists depending on the occasion.
+      body: `A **test suite** is a named group of test cases that you run together for one purpose.
 
-A **test suite** is a named collection of test cases (or procedures) executed together. Typical suites:
+**Why it matters:** you never run every test every time. Suites let you pick the right set for the moment.
 
-| Suite | Contents | When run | SauceDemo size (example) |
+**Example:** a suite is like a music playlist. The same song (test case) can be in several playlists. *Example:* TC-LOGIN-001 sits in both the smoke suite and the regression suite.
+
+| Suite | What is in it | When you run it | SauceDemo example |
 |---|---|---|---|
-| **Smoke** | Critical path, one case per major feature | Every new build | 10–15 cases: login, add to cart, checkout complete, logout |
-| **Feature / sprint** | All cases for new stories | When stories are ready | e.g. 42 cases for coupons |
-| **Regression** | Previously passing cases for existing behaviour, prioritised | Before release, after significant change | 150–300 cases |
-| **Sanity** | Narrow checks around a fix or change | After a hotfix | 5–10 cases |
-| **Browser/device** | Subset rerun per platform | Per release | P1 cases on Safari, Firefox, mobile |
+| **Smoke** | The critical path, one case per main feature | Every new build | 10–15 cases: login, add to cart, checkout, logout |
+| **Feature / sprint** | All cases for the new stories | When stories are ready | 42 cases for coupons |
+| **Regression** | Old cases for existing features, by priority | Before release, after big changes | 150–300 cases |
+| **Sanity** | A few checks around one fix | After a hotfix | 5–10 cases |
+| **Browser / device** | A subset run on each platform | Each release | P1 cases on Safari, Firefox, mobile |
 
-**Organising tips:**
+**How to organise:**
 
-- Group by **feature/module** in the repository (Login, Inventory, Cart, Checkout), then **tag** cases (smoke, regression, P1) so suites are filtered views, not copies. Copies drift apart.
-- Order cases inside a suite to respect data flow but keep each case **independent**.
-- Review suites every few sprints: remove obsolete cases, add one for every escaped defect.
+- Group cases by **feature** (Login, Inventory, Cart, Checkout). Then **tag** them (smoke, regression, P1). A suite becomes a filter on tags, not a copy. Copies drift apart over time.
+- Keep each case **independent**, even inside a suite.
+- Review suites every few sprints. Remove old cases. Add one case for every bug that escaped to production.
 
-This maps directly to Playwright later: folders by feature, **tags** like @smoke, and running a subset with a grep filter.`,
+**Example (Playwright later):** folders by feature, tags like @smoke, and run only those tests with a grep filter.`,
       keyPoints: [
-        'Suites are selections for a purpose; the same case can belong to several suites.',
-        'Use tags/filters instead of duplicating cases.',
-        'Maintain suites; add cases for escaped defects.',
+        'A suite is a selection for a purpose; one case can be in several suites.',
+        'Use tags and filters instead of copying cases.',
+        'Maintain suites; add a case for every escaped bug.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 1.4.1 test implementation (test procedures assembled into test suites); TestRail documentation — suites and sections',
     },
     {
       heading: 'The test plan (IEEE 829 and ISO/IEC/IEEE 29119-3)',
-      body: `**Intuition:** a test plan is the trip itinerary: where we are going (scope), what we skip, how we travel (approach), who drives, when we leave and arrive, and what we do if it rains (risks).
+      body: `A **test plan** is a document that says what you will test, what you will skip, how, who, when, and what could go wrong.
 
-**IEEE 829-1998** (the classic outline many companies still copy) has 16 sections:
+**Why it matters:** it gets everyone to agree on scope *before* testing starts. Interviewers ask about its sections.
+
+**IEEE 829-1998** is the classic outline. Many companies still copy its 16 sections:
 
 | # | Section | # | Section |
 |---|---|---|---|
 | 1 | Test plan identifier | 9 | Test deliverables |
 | 2 | Introduction (scope, references) | 10 | Testing tasks |
-| 3 | Test items (what build/versions) | 11 | Environmental needs |
+| 3 | Test items (which build or version) | 11 | Environmental needs |
 | 4 | Features to be tested | 12 | Responsibilities |
 | 5 | Features not to be tested (and why) | 13 | Staffing and training needs |
 | 6 | Approach | 14 | Schedule |
 | 7 | Item pass/fail criteria | 15 | Risks and contingencies |
 | 8 | Suspension criteria and resumption requirements | 16 | Approvals |
 
-IEEE 829 has been superseded by **ISO/IEC/IEEE 29119-3**, and the ISTQB v4.0 lists typical plan content as: context (scope, objectives, test basis), assumptions and constraints, stakeholders, communication, risk register, test approach (levels, types, techniques, deliverables, entry/exit criteria, independence, metrics, data and environment needs), budget and schedule.
+IEEE 829 was replaced by **ISO/IEC/IEEE 29119-3**. ISTQB v4.0 lists typical plan content:
 
-**Why "features not to be tested" matters:** stating exclusions (and why) is how you avoid "why did QA not test this?" after release. It turns a silent gap into an agreed risk.
+- Context: scope, objectives, test basis.
+- Assumptions and constraints; stakeholders; communication.
+- Risk register.
+- Test approach: levels, types, techniques, deliverables, entry/exit criteria, independence, metrics, data and environment needs.
+- Budget and schedule.
 
-**Agile reality:** many teams keep a one- or two-page release test plan in Confluence plus a long-lived test strategy. The headings still matter; the length does not.`,
+**Why "features not to be tested" matters.** Writing down what you skip, and why, prevents "why did QA not test this?" after release. A silent gap becomes an agreed risk. *Example:* "Payment gateway internals: out of scope, vendor-certified."
+
+**Example:** see the plan excerpt below for a SauceDemo checkout release.
+
+**In Agile:** many teams keep a one- or two-page release plan in Confluence, plus a long-lived test strategy. The headings still matter; the length does not.`,
       code: [
         {
           language: 'text',
@@ -262,57 +292,68 @@ IEEE 829 has been superseded by **ISO/IEC/IEEE 29119-3**, and the ISTQB v4.0 lis
         },
       ],
       keyPoints: [
-        'Know the IEEE 829 headings; know that ISO 29119-3 replaced it.',
-        'Out-of-scope items and suspension criteria are what interviewers probe.',
+        'Know the IEEE 829 headings, and that ISO 29119-3 replaced it.',
+        'Interviewers probe out-of-scope items and suspension criteria.',
         'In Agile, keep the plan short but keep the decisions.',
       ],
       source: 'IEEE 829-1998 test plan outline; ISO/IEC/IEEE 29119-3; ISTQB CTFL v4.0.1 — 5.1.1 Purpose and Content of a Test Plan',
     },
     {
       heading: 'Test strategy vs test plan',
-      body: `**Intuition:** the strategy is the company's travel policy ("always book refundable fares, economy under 6 hours"); the plan is this specific trip's itinerary that follows the policy.
+      body: `- A **test strategy** says *how we usually test* in this company or product. It is general and lasts a long time.
+- A **test plan** says *what, when, who and with what* for **one** project or release. It follows the strategy.
+
+**Why it matters:** "strategy vs plan" is a standard interview question, and people often mix them up.
+
+**Example (travel):** the strategy is the company travel policy: "always book refundable fares; economy if under 6 hours". The plan is one trip's itinerary that follows the policy.
+
+**Example (software):**
 
 | | Test strategy | Test plan |
 |---|---|---|
-| Level | Organisation, product or programme | Project, release or test level |
-| Lifetime | Long-lived, changes rarely | Per release/project, updated often |
-| Answers | *How do we generally test here?* | *What, when, who, with what, for this release?* |
-| Typical content | Test levels and types used, automation approach and tools, environments policy, defect management process, metrics, standards, risk approach | Scope in/out, schedule, resources, specific environments, entry/exit criteria, risks for this release, deliverables |
-| Owner | QA manager / test architect | Test lead / QA for the project |
-| Example statement | "All P1 flows are automated with Playwright and run on every merge" | "Coupon feature regression runs 16–17 Oct on Chrome/Safari by Priya and Arjun" |
+| Level | Company, product or programme | Project, release or test level |
+| Lifetime | Long; changes rarely | One release; updated often |
+| Answers | *How do we test here in general?* | *What, when, who, with what, for this release?* |
+| Typical content | Test levels and types, automation approach and tools, environment policy, defect process, metrics, risk approach | Scope in/out, schedule, people, environments, entry/exit criteria, risks for this release, deliverables |
+| Owner | QA manager / test architect | Test lead / QA on the project |
+| Sample line | "All P1 flows are automated with Playwright and run on every merge" | "Coupon regression runs 16–17 Oct on Chrome and Safari, by Priya and Arjun" |
 
-Some organisations also have a **test policy** above the strategy (why we test, quality goals), and in small Agile teams the strategy and plan are sometimes merged into one page. Say that honestly in an interview; the distinction is about *scope and lifetime*, not about document names.
+Some companies also have a **test policy** above the strategy (why we test, quality goals). Small Agile teams sometimes merge strategy and plan into one page. Say so honestly: the difference is *scope and lifetime*, not the document name.
 
-**Common mistake:** "the test plan is created first and the strategy is part of it". In the ISTQB view the plan *applies* (or explains deviations from) the existing strategy. Where a plan contains an "approach" section, that is the project-specific slice of the strategy.`,
+**In an interview, say:** "The strategy is the long-term 'how we test'. The plan applies it to one release: scope, dates, people, criteria."
+
+**Common mistake:** "the plan comes first and contains the strategy". In ISTQB's view, the plan *follows* the existing strategy, or explains why it differs. A plan's "approach" section is the project-specific slice of the strategy.`,
       keyPoints: [
-        'Strategy = general, long-lived; plan = specific, per release.',
-        'The plan follows the strategy or documents why it deviates.',
-        'Small teams may merge them; the distinction is scope and lifetime.',
+        'Strategy = general and long-lived; plan = specific, per release.',
+        'The plan follows the strategy, or writes down why it differs.',
+        'Small teams may merge them; the difference is scope and lifetime.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 5.1.1 (plan adheres to test policy and strategy); Software Testing Help — Test plan vs test strategy',
     },
     {
       heading: 'Requirements Traceability Matrix (RTM)',
-      body: `**Intuition:** an RTM is a two-way address book between requirements and tests. Pick a requirement and you can find every test that covers it; pick a test and you can find why it exists.
+      body: `A **Requirements Traceability Matrix (RTM)** is a table that links each requirement to its test cases, their results, and any bugs.
 
-**Definition.** A Requirements Traceability Matrix maps each requirement (test basis) to its test conditions, test cases, execution results and defects. The ISTQB says traceability supports coverage evaluation, impact analysis of changes, audits, and clear progress reporting.
+**Why it matters:** it shows if every requirement is tested (**coverage**), and what to retest when a requirement changes (**impact analysis**). ISTQB also lists audits and clear progress reports.
 
-| Type | Direction | Question it answers | Catches |
+**Three types:**
+
+| Type | Direction | Question it answers | Finds |
 |---|---|---|---|
-| **Forward** | Requirement → test cases | Is every requirement tested? | Untested requirements (coverage gaps) |
-| **Backward** | Test case → requirement | Why does this test exist? | Orphan tests, gold-plating, tests for removed features |
-| **Bidirectional** | Both | What is affected if REQ-X changes? Which requirement does this failure put at risk? | Both gaps, plus enables **impact analysis** |
+| **Forward** | Requirement → tests | Is every requirement tested? | Untested requirements (gaps) |
+| **Backward** | Test → requirement | Why does this test exist? | **Orphan tests** (no requirement), extra features nobody asked for ("gold-plating"), tests for removed features |
+| **Bidirectional** | Both ways | What is affected if REQ-X changes? | Both of the above, plus **impact analysis** |
 
-In practice almost everyone maintains a **bidirectional** RTM, often generated automatically by Jira + Xray or TestRail rather than hand-built in Excel.
+Most teams keep a **bidirectional** RTM. Tools like Jira + Xray or TestRail usually build it for you, instead of a hand-made Excel sheet.
 
-**Worked example (coupon feature).** Read the matrix below and look for problems before reading the notes underneath it.
+**Example (coupon feature):** look at the matrix below and find the problems before reading on.
 
-**What the RTM tells us:**
+- **REQ-CPN-04 has no tests.** Forward gap: the "one coupon per order" rule is untested.
+- **TC-CPN-09 has no requirement.** Backward finding: either a requirement is missing (ask the PO) or the test is out of date.
+- **REQ-CPN-03 is at risk.** One of its tests failed and the bug is open, so the requirement is not met, even though another test passed.
+- **Impact analysis:** if the PO changes REQ-CPN-02 ("minimum cart 500 becomes 750"), the RTM shows at once that TC-CPN-03, 04 and 05 need updating.
 
-- **REQ-CPN-04 has no tests:** a forward-traceability gap. The "one coupon per order" rule is untested.
-- **TC-CPN-09 has no requirement:** a backward-traceability finding. Either a requirement is missing (ask the PO) or the test is obsolete.
-- **REQ-CPN-03 is at risk:** one of its tests failed with an open defect, so the requirement is not yet satisfied, even though other tests passed.
-- If the PO changes REQ-CPN-02 ("minimum cart 500 becomes 750"), the RTM instantly shows TC-CPN-03, 04 and 05 need updating: impact analysis.`,
+**In an interview, say:** "Forward traceability finds untested requirements. Backward finds tests with no reason to exist. We kept a bidirectional RTM in Xray, so when a requirement changed I knew exactly which tests to update."`,
       code: [
         {
           language: 'text',
@@ -340,58 +381,75 @@ Actions : write tests for REQ-CPN-04; ask PO about TC-CPN-09; track BUG-881`,
    BIDIRECTIONAL = both arrows -> impact analysis when REQ-CPN-02 changes`,
       keyPoints: [
         'Forward finds untested requirements; backward finds orphan tests.',
-        'Bidirectional RTM enables impact analysis when requirements change.',
-        'Include status and defects so the RTM shows coverage AND quality.',
+        'A bidirectional RTM allows impact analysis when requirements change.',
+        'Include status and bugs, so the RTM shows coverage AND quality.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 1.4.4 Traceability between the Test Basis and Testware; QA Touch, aqua cloud, BirdEatsBug — RTM types and templates',
     },
     {
       heading: 'Reviewing test cases',
-      body: `**Intuition:** test cases are code for humans. Like code, they have bugs, and a second pair of eyes catches what the author cannot see.
+      body: `A **test case review** means another person reads your test cases to find mistakes before you run them. It is **static testing of testware** (test documents).
 
-A test case review is **static testing of testware**. It is usually a peer review (informal or walkthrough) and sometimes includes the BA or developer to confirm expected results.
+**Why it matters:** test cases have bugs too. A wrong expected result can make a real bug "pass".
+
+**Example:** the story says "minimum cart is 500, inclusive". A test case expects a cart of exactly 500 to be **rejected**. The reviewer catches it. Without the review, the tester would log a false bug, or worse, pass a broken build that rejects 500.
+
+Usually a peer review (informal or a walkthrough). Sometimes the BA or developer joins to confirm expected results.
 
 **Review checklist:**
 
 | Check | Question to ask |
 |---|---|
 | Traceability | Is every case linked to a requirement? Is every requirement covered? |
-| Correctness | Is the expected result actually what the requirement says (not what the current build does)? |
-| Completeness | Are negative, boundary and error cases present, not just happy paths? |
+| Correctness | Does the expected result match the requirement (not what the current build does)? |
+| Completeness | Are negative, boundary and error cases there, not just happy paths? |
 | Clarity | Could a new joiner run it without asking? Exact data and messages? |
-| Preconditions | Is the starting state defined (logged in? cart empty? feature flag on?) |
-| Independence | Does it secretly depend on a previous case? |
-| Atomicity | One objective per case; no 25-step monsters testing five things |
+| Preconditions | Is the starting state clear (logged in? cart empty? feature flag on?) |
+| Independence | Does it secretly need a previous case to run first? |
+| Atomicity | One goal per case; no 25-step monsters testing five things |
 | Duplication | Is the same check repeated in several cases or suites? |
-| Priority | Are P1s really the critical, high-risk paths? |
+| Priority | Are the P1 cases really the critical, high-risk paths? |
 | Automation fit | Is it stable and repetitive enough to automate later? |
 
-**Process tip:** log review comments in the tool (Xray/TestRail comments or a review sheet) with an ID and status, and agree that cases are **baselined** only after comments are resolved. This becomes an entry criterion for execution.`,
+**Process:** log review comments in the tool (Xray/TestRail comments or a review sheet), each with an ID and status. Cases are **baselined** (frozen as the approved version) only after all comments are fixed. This becomes an entry criterion for test execution.
+
+**Common mistake:** writing the expected result from what the app does today, not from the requirement.`,
       keyPoints: [
         'Reviewing testware is static testing; test cases contain defects too.',
-        'Check expected results against requirements, not against the current build.',
-        'Track comments to closure before baselining.',
+        'Check expected results against the requirement, not against the current build.',
+        'Track comments until closed, then baseline the cases.',
       ],
       source: 'ISTQB CTFL v4.0.1 — 3.1.1 Work Products Examinable by Static Testing (includes testware), 3.2.4 Review Types',
     },
     {
       heading: 'Test management tools: Jira + Xray/Zephyr and TestRail',
-      body: `**Intuition:** test management tools are the filing cabinet and dashboard for all the artifacts above, linked to the place where developers already work (Jira).
+      body: `A **test management tool** stores your test cases, test runs, results and links to bugs, all in one place. Most link to Jira, where developers already work.
 
-| Tool | Model | Key objects | Good to know |
+**Why it matters:** it builds the RTM and the test dashboard for you. Interviewers ask "which tool did you use?"
+
+| Tool | How it works | Key objects | Good to know |
 |---|---|---|---|
-| **Xray** (Jira app) | Tests are Jira issues | Test, Precondition, Test Set, Test Plan, Test Execution; Test Runs inside executions | Built-in traceability report from stories to tests to defects; can import JUnit/Playwright results via API/CI |
+| **Xray** (Jira app) | Tests are Jira issues | Test, Precondition, Test Set, Test Plan, Test Execution; Test Runs inside executions | Built-in traceability report: story → tests → bugs; can import JUnit/Playwright results from CI |
 | **Zephyr Scale** (Jira app) | Test library inside Jira | Test cases (folders), test cycles, test plans | Versioned test cases, reusable steps, coverage on stories |
-| **TestRail** (standalone, integrates with Jira) | Separate tool linked to Jira | Projects, suites/sections, test cases, test runs, test plans, milestones | Strong reporting; result upload via API from automation |
-| Spreadsheets | Manual | Rows and tabs | Fine for tiny teams; traceability and history break down quickly |
+| **TestRail** (separate tool, links to Jira) | Its own app | Projects, suites/sections, test cases, test runs, test plans, milestones | Strong reports; automation can upload results through the API |
+| Spreadsheets | Manual | Rows and tabs | Fine for tiny teams; links and history break quickly |
 
-**Typical flow in Jira + Xray:** story SHOP-412 → tests created and linked (coverage) → grouped in a Test Plan for release 3.2 → Test Execution per build/environment → failures create linked Bugs → the story's coverage panel shows covered/failing/not run.
+**Example (flow in Jira + Xray):**
 
-**Bridge to automation:** once you write Playwright tests, put the test case ID in the test title or an annotation (e.g. "TC-LOGIN-003 locked user sees error"), export JUnit XML from CI, and import it into Xray or TestRail so manual and automated results share one dashboard and one RTM.`,
+1. Story SHOP-412 (coupon) is created.
+2. You create tests and link them to the story (coverage).
+3. You group them in a Test Plan for release 3.2.
+4. You create a Test Execution for each build or environment, and run the tests.
+5. A failed test creates a linked Bug.
+6. The story's coverage panel shows: covered, failing, or not run.
+
+**Example (bridge to automation):** put the test case ID in the Playwright test title, e.g. "TC-LOGIN-003 locked user sees error". Export JUnit XML from CI and import it into Xray or TestRail. Now manual and automated results share one dashboard and one RTM.
+
+**In an interview, say:** "We used Jira with Xray. Tests were linked to stories, executions were per build, and failed runs created linked bugs, so the RTM was always up to date."`,
       keyPoints: [
-        'Xray models tests as Jira issues; Zephyr Scale and TestRail use their own libraries.',
+        'Xray stores tests as Jira issues; Zephyr Scale and TestRail use their own test libraries.',
         'Linking stories → tests → executions → bugs gives a live RTM.',
-        'Automated results can be imported (JUnit XML/API) to keep one source of truth.',
+        'Automated results can be imported (JUnit XML or API), so there is one source of truth.',
       ],
       source: 'Xray documentation (Atlassian Marketplace); Zephyr Scale documentation; TestRail user guide',
     },
@@ -400,8 +458,8 @@ A test case review is **static testing of testware**. It is usually a peer revie
     {
       id: 'mt-test-artifacts-cc-1',
       title: 'Rewrite a weak SauceDemo checkout test case',
-      context: `A junior tester wrote this test case for the checkout information step on SauceDemo. In review, nobody could agree whether it passed or failed on the last build.`,
-      task: `Rewrite it into well-formed test cases that a new joiner could execute without questions. Split it if it tests more than one objective, and give each case preconditions, exact data, numbered steps and specific expected results.`,
+      context: `A junior tester wrote this test case for the SauceDemo checkout information step. In review, nobody could agree if it passed or failed on the last build.`,
+      task: `Rewrite it into clear test cases that a new joiner can run without questions. Split it if it tests more than one goal. Give each case preconditions, exact data, numbered steps and exact expected results.`,
       starter: {
         language: 'text',
         title: 'Weak test case',
@@ -412,8 +470,8 @@ Expected: Checkout should work properly and errors should come.
 Priority: High`,
       },
       hints: [
-        'How many different objectives are hidden in "with details and without details"?',
-        'Which user, which product, which exact field values? What page are you on before step 1?',
+        'How many different goals are hidden in "with details and without details"?',
+        'Which user, which product, which exact field values? Which page are you on before step 1?',
         'What exactly appears on screen when a field is missing? What does the overview page show for one backpack?',
       ],
       solution: {
@@ -444,31 +502,31 @@ TC-CHK-007  Postal code missing                       P2  Negative
  2. First "Asha"; Last "Rao"; Zip empty; Continue
     -> Error "Error: Postal Code is required"; stays on step one`,
       },
-      explanation: `**Fixes applied:**
+      explanation: `**What was fixed:**
 
-- **Split into atomic cases:** the original mixed a happy path and at least two negative paths; one "Fail" would not tell you which part broke.
-- **Preconditions:** user, starting page and cart contents are defined, so the result is repeatable.
-- **Exact test data:** names, postal code and one known product make totals predictable.
-- **Specific expected results:** URLs, exact error texts and the price breakdown (item $29.99 + 8% tax $2.40 = $32.39) replace "should work properly".
+- **Split into atomic cases:** the original mixed one happy path and at least two negative paths. One "Fail" would not tell you which part broke.
+- **Preconditions:** the user, the start page and the cart are defined, so the result repeats.
+- **Exact test data:** fixed names, postal code and one known product make the totals predictable.
+- **Exact expected results:** URLs, exact error texts and the price breakdown (item $29.99 + 8% tax $2.40 = $32.39) replace "should work properly".
 - **Traceability and priority per case:** each links to a requirement and has its own priority (the happy path is P1).
-- **Post-condition:** returning home keeps the next case independent.
-- **Automation-ready:** each step has one action and one observable check, which maps one-to-one to Playwright actions and web-first assertions later.`,
+- **Post-condition:** going back home keeps the next case independent.
+- **Ready to automate:** each step has one action and one visible check. Later, that maps one-to-one to Playwright actions and assertions.`,
       followUps: [
         {
-          q: 'How would you cover the last-name-missing case without writing yet another nearly identical case?',
-          a: 'Use a data-driven case: one test case "Required field missing shows error" with a data table of rows (first missing, last missing, zip missing, all missing) and the expected message per row. Test management tools support parameters or datasets, and in Playwright the same table becomes a loop generating one test per row.',
+          q: 'How would you cover "last name missing" without writing yet another near-identical case?',
+          a: 'Use one data-driven case: "Required field missing shows error", with a table of rows (first missing, last missing, zip missing, all missing) and the expected message for each row. Test management tools support parameters or datasets. In Playwright, the same table becomes a loop that creates one test per row.',
         },
         {
-          q: 'Is the tax value a good thing to hard-code in the expected result?',
-          a: 'For this demo, yes, because the tax rate is fixed and the exact number catches rounding bugs. In a real shop with tax rules that change by region or date, reference the rule and the input ("8% of item total, rounded half-up to 2 decimals") and keep the computed value in the test data sheet so a rule change updates one place.',
+          q: 'Is it a good idea to hard-code the tax value in the expected result?',
+          a: 'For this demo, yes. The tax rate is fixed, and the exact number catches rounding bugs. In a real shop where tax changes by region or date, write the rule ("8% of item total, rounded half-up to 2 decimals") and keep the computed value in the test data sheet, so a rule change updates one place.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-cc-2',
       title: 'Strengthen a one-paragraph test plan',
-      context: `Your manager forwarded the "test plan" for a mobile-web coupon release and asked you to make it fit for sign-off by the PO and engineering manager.`,
-      task: `Rewrite it into a concise test plan that states scope in and out, approach, environments, entry/exit and suspension criteria, deliverables, schedule, responsibilities and risks with mitigations. Keep it to one screen.`,
+      context: `Your manager sent you the "test plan" for a mobile-web coupon release. You must make it good enough for the PO and engineering manager to sign off.`,
+      task: `Rewrite it as a short test plan with: scope in and out, approach, environments, entry, exit and suspension criteria, deliverables, schedule, who does what, and risks with mitigations. Keep it to one screen.`,
       starter: {
         language: 'text',
         title: 'Weak test plan',
@@ -479,8 +537,8 @@ logged in Jira. Testing will finish when the feature is stable.
 Risks: none.`,
       },
       hints: [
-        '"Completely" and "all devices" are impossible promises. What will you actually cover and what will you not?',
-        'What must be true to start, to pause, and to finish? Make each measurable.',
+        '"Completely" and "all devices" are impossible promises. What will you actually cover, and what not?',
+        'What must be true to start, to pause, and to finish? Make each one measurable.',
         'Is "Risks: none" ever true? Think about people, environments, third parties and unclear requirements.',
       ],
       solution: {
@@ -513,22 +571,22 @@ RISKS      1. Tax-before/after-discount rule unconfirmed -> answer by 7 Oct
            2. Staging shared with another team -> booked slots 15-16 Oct
            3. One tester on leave 13 Oct -> dev pairs on regression`,
       },
-      explanation: `**Why this version is sign-off ready:**
+      explanation: `**Why this version is ready for sign-off:**
 
-- **Honest scope:** "completely on all devices" becomes explicit in/out lists, with exclusions justified, which the IEEE 829 "features not to be tested" section exists for.
-- **Approach tied to risk:** effort and techniques are proportional to impact; automation scope is stated.
-- **Measurable criteria:** entry, suspension/resumption and exit replace "when the feature is stable".
-- **Environments justified by data:** two real devices chosen from traffic share rather than "all devices".
-- **Responsibilities and turnaround times:** "done by the QA team" becomes who does what, including developer and PO commitments.
-- **Real risks with mitigations and dates:** "Risks: none" is never true; listing them early lets the PO act.`,
+- **Honest scope:** "completely on all devices" becomes clear in and out lists, with reasons for each exclusion. That is exactly what the IEEE 829 "features not to be tested" section is for.
+- **Approach based on risk:** effort and techniques match the impact; the automation scope is stated.
+- **Measurable criteria:** entry, suspension/resumption and exit rules replace "when the feature is stable".
+- **Devices chosen by data:** two real devices picked by traffic share, not "all devices".
+- **Who does what, and how fast:** "done by the QA team" becomes named duties, including developer and PO commitments.
+- **Real risks, with fixes and dates:** "Risks: none" is never true. Listing risks early lets the PO act.`,
       followUps: [
         {
           q: 'The PO asks why you are not testing the coupon admin console. What do you say?',
-          a: 'It is out of scope because the admin console ships next release and this release only consumes coupons created by a seed script. The risk is low for 3.3 because no admin UI changes are deployed. I will include it in the next plan, and if the PO wants it now, we can add it with an estimated two extra days of testing.',
+          a: 'It is out of scope because the admin console ships next release. This release only uses coupons created by a seed script, and no admin UI changes are deployed, so the risk is low for 3.3. I will add it to the next plan. If the PO wants it now, we can add it, with about two extra days of testing.',
         },
         {
-          q: 'How would you keep this plan useful during the release rather than writing it once and forgetting it?',
-          a: 'Treat it as a living document: update scope and risks when stories change, track progress against the schedule in the daily status note, revisit entry/exit criteria at the go/no-go meeting, and record deviations (for example a waived criterion) with who approved them. The summary report then compares actual results against the plan.',
+          q: 'How do you keep this plan useful during the release, instead of writing it once and forgetting it?',
+          a: 'Treat it as a living document. Update scope and risks when stories change. Track progress against the schedule in the daily status note. Recheck entry and exit criteria at the go/no-go meeting. Record any change (for example a skipped criterion) and who approved it. The summary report then compares real results with the plan.',
         },
       ],
     },
@@ -539,14 +597,14 @@ RISKS      1. Tax-before/after-discount rule unconfirmed -> answer by 7 Oct
       difficulty: 'easy',
       question: 'What fields do you put in a test case, and which one do junior testers most often get wrong? Show me with a SauceDemo login example.',
       whatInterviewerLooksFor: [
-        'Lists core fields (ID, title, requirement, preconditions, data, steps, expected, priority, status)',
+        'Lists the main fields (ID, title, requirement, preconditions, data, steps, expected, priority, status)',
         'Explains why preconditions and expected results matter',
         'Gives exact expected text, not "should work"',
         'Mentions atomic, independent, repeatable',
       ],
-      modelAnswer: `**Fields I always include:** ID, title, linked requirement/story, preconditions, test data, numbered steps, expected result per step, priority and type (positive/negative). At execution time: actual result, status (pass/fail/blocked), defect link, build and environment.
+      modelAnswer: `**Fields I always include:** ID, title, linked requirement or story, preconditions, test data, numbered steps, expected result per step, priority and type (positive/negative). When I run it: actual result, status (pass/fail/blocked), bug link, build and environment.
 
-**What juniors get wrong most:** the **expected result**. "Login should work" or "error should come" cannot be judged objectively. Second place: missing **preconditions** (which user, which page, logged in or not).
+**What juniors get wrong most:** the **expected result**. "Login should work" or "error should come" cannot be judged. Second: missing **preconditions** (which user, which page, logged in or not).
 
 **Example:**
 
@@ -555,24 +613,24 @@ RISKS      1. Tax-before/after-discount rule unconfirmed -> answer by 7 Oct
 - **Preconditions:** browser at saucedemo.com, logged out
 - **Data:** locked_out_user / secret_sauce
 - **Steps:** 1. Enter username 2. Enter password 3. Click Login
-- **Expected:** banner "Epic sadface: Sorry, this user has been locked out."; URL remains the login page; no inventory shown
+- **Expected:** banner "Epic sadface: Sorry, this user has been locked out."; URL stays on the login page; no products shown
 - **Priority/type:** P1, negative
 
-**Principles behind it:** one objective per case (atomic), no hidden dependency on other cases (independent), same data and state give the same result (repeatable). Written this way, the case is also ready to be automated: each step becomes an action and each expected result becomes an assertion.`,
+**Rules behind it:** one goal per case (atomic), no hidden need for another case to run first (independent), same data gives the same result (repeatable). Written like this, the case is also ready to automate: each step becomes an action, and each expected result becomes an assertion.`,
       followUps: [
         {
           q: 'How detailed should test steps be? Isn\'t this slow to write?',
-          a: 'Detail should match risk and audience. For critical, regulated or outsourced execution I write full steps. For a mature team testing a low-risk UI tweak, a scenario with clear expected results is enough. A good compromise is detailed expected results with concise steps, because the expected result is what decides pass or fail.',
+          a: 'Match the detail to the risk and the reader. For critical, regulated or outsourced work I write full steps. For an experienced team testing a small, low-risk UI change, a scenario with clear expected results is enough. A good middle way: short steps but exact expected results, because the expected result decides pass or fail.',
         },
         {
           q: 'What is the difference between preconditions and test data?',
-          a: 'Preconditions describe the system state before step 1, such as logged out, cart containing one backpack, or feature flag enabled. Test data are the input values used during the steps, such as the username, password or coupon code. Mixing them makes cases hard to reuse with different data sets.',
+          a: 'Preconditions are the system state before step 1: logged out, one backpack in the cart, a feature flag switched on. Test data are the values you type or use during the steps: username, password, coupon code. Mixing them makes it hard to reuse the case with other data.',
         },
       ],
       pitfalls: [
         'Expected results like "works fine" or "error shown"',
         'No preconditions or test data',
-        'One giant case testing many objectives',
+        'One giant case testing many goals',
       ],
     },
     {
@@ -580,42 +638,42 @@ RISKS      1. Tax-before/after-discount rule unconfirmed -> answer by 7 Oct
       difficulty: 'easy',
       question: 'For a coupon field on a checkout page, show me the difference between a test scenario, a test case and a test script.',
       whatInterviewerLooksFor: [
-        'Scenario = what (one line), case = how with expected result, script = executable',
-        'One scenario expands into many cases',
+        'Scenario = what (one line), case = how with expected result, script = runnable',
+        'One scenario becomes many cases',
         'Uses the coupon example concretely',
         'Knows when scenarios are enough',
       ],
-      modelAnswer: `**Test scenario (what to test):** one-line conditions derived from the requirement, for example:
+      modelAnswer: `**Test scenario (what to test):** one line each, taken from the requirement:
 
 - Apply a valid percentage coupon
 - Apply an expired coupon
 - Apply a coupon below the minimum cart value
-- Apply a coupon with different letter case or extra spaces
+- Apply a coupon in a different letter case or with extra spaces
 - Remove an applied coupon
 
-**Test case (how, with exact expectations):** one scenario becomes several precise cases. For "below minimum cart value":
+**Test case (how, with exact results):** one scenario becomes several exact cases. For "below minimum cart value":
 
 - TC-CPN-03: cart 499, code MIN500 → message "Add 1 more to use this coupon", total unchanged
 - TC-CPN-04: cart 500 → 5% discount applied, total 475
 - TC-CPN-05: cart 501 → total 475.95
 
-Each has preconditions (logged in, cart built with known items), data and expected results.
+Each case has preconditions (logged in, cart built from known items), data and expected results.
 
-**Test script (executable sequence):** the cases above as an automated test, e.g. a Playwright spec that builds the cart, fills the coupon field, clicks Apply and asserts the total text, or a manual procedure that runs the three in a fixed order.
+**Test script (runnable order):** the same cases as an automated test. *Example:* a Playwright spec that builds the cart, types the coupon, clicks Apply and checks the total text. Or a manual procedure that runs the three cases in a fixed order.
 
-**When I use which:** scenarios for fast coverage thinking and in exploratory-heavy sprints; detailed cases for high-risk rules like money calculations; scripts for anything repeated every release, because regression is the best candidate for automation.`,
+**When I use which:** scenarios to think about coverage fast, and in teams that explore a lot. Detailed cases for high-risk rules like money. Scripts for anything repeated every release, because regression is the best thing to automate.`,
       followUps: [
         {
-          q: 'Can a test scenario be executed directly?',
-          a: 'Yes, by an experienced tester, often in an exploratory style, because the scenario says what to test and the tester decides the details on the fly. The risk is inconsistency: two testers may pick different data and get different results, so for critical or regulated areas I convert scenarios into explicit cases.',
+          q: 'Can a test scenario be run directly?',
+          a: 'Yes, by an experienced tester, often in an exploratory way. The scenario says what to test, and the tester picks the details on the spot. The risk is inconsistency: two testers may pick different data and get different results. So for critical or regulated areas, I turn scenarios into exact cases.',
         },
         {
-          q: 'Where do test conditions in ISTQB terms fit in this picture?',
-          a: 'ISTQB test conditions are the output of test analysis, the "what to test", which is essentially what most companies call scenarios. Test design turns conditions into test cases, and test implementation organises them into procedures, scripts and suites.',
+          q: 'Where do ISTQB "test conditions" fit in this picture?',
+          a: 'ISTQB test conditions come out of test analysis: the "what to test". That is basically what most companies call scenarios. Test design turns conditions into test cases. Test implementation arranges them into procedures, scripts and suites.',
         },
       ],
       pitfalls: [
-        'Saying scenario and test case are the same thing',
+        'Saying a scenario and a test case are the same thing',
         'Scenarios that already contain detailed steps and data',
         'No concrete example',
       ],
@@ -623,78 +681,78 @@ Each has preconditions (logged in, cart built with known items), data and expect
     {
       id: 'mt-test-artifacts-iq-03',
       difficulty: 'medium',
-      question: 'Halfway through the sprint, the PO changes the minimum cart value for coupons from 500 to 750. How do your RTM and test artifacts help you react, and what exactly do you update?',
+      question: 'Halfway through the sprint, the PO changes the coupon minimum cart value from 500 to 750. How do your RTM and test artifacts help you react, and what exactly do you update?',
       whatInterviewerLooksFor: [
         'Uses bidirectional traceability for impact analysis',
-        'Updates cases, data, and automation, not just one document',
-        'Communicates impact on estimates and regression',
-        'Keeps history/versioning',
+        'Updates cases, data and automation, not just one document',
+        'Tells the team the impact on estimates and regression',
+        'Keeps history (versions)',
       ],
-      modelAnswer: `**Step 1: impact analysis from the RTM.** I open the requirement (REQ-CPN-02, minimum cart value) and follow forward traceability: TC-CPN-03, 04 and 05 (boundaries 499/500/501), plus any end-to-end cases that use MIN500, and the test data row D-05. Backward links from failed tests and open defects tell me whether any existing defect is now invalid.
+      modelAnswer: `**Step 1: find the impact with the RTM.** I open the requirement (REQ-CPN-02, minimum cart value) and follow its links forward: TC-CPN-03, 04 and 05 (boundaries 499/500/501), any end-to-end cases that use MIN500, and test data row D-05. Backward links from failed tests and open bugs show me if any existing bug is now invalid.
 
-**Step 2: update artifacts.**
+**Step 2: update the artifacts.**
 
-- **Requirement link:** confirm the change is recorded in the story (new AC text, inclusive or exclusive?).
-- **Test cases:** new boundaries 749 / 750 / 751; update expected totals; version the cases (v2) rather than overwriting history.
-- **Test data:** update D-05 and the cart-building data that reaches exactly 750.
-- **Automation:** if the Playwright tests read the minimum from a data file, one change updates them; if it is hard-coded, fix it and note the smell.
-- **Regression scope:** checkout totals and any marketing banner that says "orders above 500".
+- **Requirement:** check the story records the change (new AC text; is 750 inclusive?).
+- **Test cases:** new boundaries 749 / 750 / 751; new expected totals. Save as version 2; do not overwrite history.
+- **Test data:** update D-05, and the cart data that adds up to exactly 750.
+- **Automation:** if Playwright reads the minimum from a data file, one change updates it. If it is hard-coded, fix it and note the problem.
+- **Regression scope:** checkout totals, and any banner that says "orders above 500".
 
-**Step 3: communicate.** Tell the team the estimate impact (e.g. half a day) and whether already-executed results are now invalid and need re-execution.
+**Step 3: tell the team.** Share the estimate impact (e.g. half a day) and whether tests already run must be run again.
 
-**Why this matters:** without traceability I would grep through spreadsheets and probably miss the banner text or a data row. The RTM turns "what does this change break?" into a lookup.`,
+**Why it matters:** without traceability I would search through sheets and probably miss the banner text or a data row. The RTM turns "what does this change break?" into a quick lookup.`,
       followUps: [
         {
           q: 'What if your project has no RTM at all?',
-          a: 'I would build a lightweight one starting with the highest-risk features: a sheet or Jira links mapping stories to test cases. Most test management tools generate it if tests are linked to stories, so the real habit is simply "always link". Even partial traceability for payment and login gives most of the benefit.',
+          a: 'I would start a simple one with the highest-risk features first: a sheet, or Jira links from stories to test cases. Most test tools build the RTM for you if tests are linked to stories, so the real habit is "always link". Even partial traceability for payment and login gives most of the benefit.',
         },
         {
-          q: 'How do you show requirement coverage to a manager in one number, and what is wrong with that number?',
-          a: 'Percentage of requirements with at least one linked test (or with all linked tests passing). The weakness is that one trivial test can mark a complex requirement as "covered". So I pair it with risk: high-risk requirements must have tests for each rule and boundary, and I list known gaps explicitly.',
+          q: 'How do you show requirement coverage to a manager as one number, and what is wrong with that number?',
+          a: 'The percentage of requirements with at least one linked test (or with all linked tests passing). The weakness: one trivial test can mark a complex requirement as "covered". So I add risk: high-risk requirements must have a test for each rule and boundary, and I list known gaps openly.',
         },
       ],
       pitfalls: [
-        'Only updating the test case and forgetting data and automation',
+        'Updating only the test case and forgetting data and automation',
         'Overwriting cases with no version history',
-        'Not telling anyone about re-execution impact',
+        'Not telling anyone that tests must be run again',
       ],
     },
     {
       id: 'mt-test-artifacts-iq-04',
       difficulty: 'medium',
-      question: 'What is the difference between a test strategy and a test plan in your organisation, and who writes each? Be honest if your team merges them.',
+      question: 'What is the difference between a test strategy and a test plan in your company, and who writes each? Be honest if your team merges them.',
       context: 'Glassdoor manual-tester interview reports frequently list "test strategy vs test plan" as a basic question.',
       whatInterviewerLooksFor: [
-        'Strategy = long-lived, organisation/product level; plan = release/project specific',
+        'Strategy = long-lived, company/product level; plan = for one release or project',
         'Concrete content examples for each',
-        'Knows the plan applies the strategy',
+        'Knows the plan follows the strategy',
         'Honest about real-world practice',
       ],
-      modelAnswer: `**Test strategy:** the long-lived "how we test here" for a product or organisation. Owned by a QA manager or test architect. Examples of content: which test levels we use and who owns them (developers: unit; QA: system and regression; business: UAT), automation approach (Playwright for UI, API tests in CI, smoke on every merge), environments policy, defect severity definitions and workflow, metrics we report, risk approach.
+      modelAnswer: `**Test strategy:** the long-term "how we test here" for a product or company. A QA manager or test architect owns it. Typical content: which test levels we use and who owns them (developers: unit; QA: system and regression; business: UAT), the automation approach (Playwright for UI, API tests in CI, smoke on every merge), environment rules, bug severity definitions and workflow, metrics, and how we handle risk.
 
-**Test plan:** a specific project or release document that applies the strategy. Owned by a test lead or the QA on that project. Content: scope in/out, schedule, people, specific environments and devices, entry/exit and suspension criteria, deliverables, risks for this release.
+**Test plan:** a document for one project or release that applies the strategy. A test lead or the project QA owns it. Content: scope in and out, schedule, people, environments and devices, entry, exit and suspension criteria, deliverables, and risks for this release.
 
 | | Strategy | Plan |
 |---|---|---|
-| Changes | Rarely | Each release |
-| Scope | Product/organisation | Release/feature |
-| Example | "P1 flows are automated and gate merges" | "Coupon regression on Chrome/Safari, 15–16 Oct" |
+| Changes | Rarely | Every release |
+| Scope | Product / company | Release / feature |
+| Example | "P1 flows are automated and must pass before merge" | "Coupon regression on Chrome/Safari, 15–16 Oct" |
 
-**Honest note:** in my last team (a 6-person Scrum team), the strategy was a two-page Confluence page and each release had a half-page plan section in the release ticket. In smaller startups they are often merged. What matters is that the decisions exist: scope, approach, criteria, risks.
+**Honest note:** in my last team (6 people, Scrum), the strategy was a two-page Confluence page. Each release had a half-page plan in the release ticket. Small startups often merge them. What matters is that the decisions exist: scope, approach, criteria, risks.
 
-**Order:** strategy first, then plans that follow it or document deviations.`,
+**Order:** strategy first. Plans follow it, or write down why they differ.`,
       followUps: [
         {
           q: 'What is a test policy, and how is it different from a strategy?',
-          a: 'A test policy is the highest-level statement of why the organisation tests and what quality goals it holds, for example "no release with known Critical defects; customer data never used unmasked in testing". The strategy then explains how testing is generally done to meet that policy, and plans apply the strategy to individual projects.',
+          a: 'A test policy is the top-level statement of why the company tests and what quality goals it has, e.g. "no release with known Critical bugs; never use unmasked customer data in testing". The strategy then explains how testing is usually done to meet that policy, and each plan applies the strategy to one project.',
         },
         {
-          q: 'Which section of a test plan do you think is most often skipped and most often regretted?',
-          a: 'Features not to be tested, together with risks and contingencies. Teams skip them because they feel negative, but they are exactly what protects everyone after release: an agreed exclusion with a reason turns "QA missed it" into a known, accepted risk.',
+          q: 'Which test plan section is most often skipped, and most often regretted?',
+          a: 'Features not to be tested, together with risks and contingencies. Teams skip them because they feel negative. But they protect everyone after release: an agreed exclusion with a reason turns "QA missed it" into a known, accepted risk.',
         },
       ],
       pitfalls: [
-        'Saying they are the same with no nuance',
+        'Saying they are the same, with no detail',
         'Claiming the plan comes first and contains the strategy',
         'Pretending your Agile team has heavy IEEE documents when it does not',
       ],
@@ -702,118 +760,118 @@ Each has preconditions (logged in, cart built with known items), data and expect
     {
       id: 'mt-test-artifacts-iq-05',
       difficulty: 'hard',
-      question: 'A developer gives you a database dump from production to use as test data for a bug in the loyalty-points screen. What do you do?',
+      question: 'A developer gives you a production database dump to use as test data for a bug in the loyalty-points screen. What do you do?',
       whatInterviewerLooksFor: [
-        'Recognises privacy/legal risk of unmasked PII',
-        'Knows masking, anonymisation and synthetic alternatives',
-        'Still solves the bug investigation pragmatically',
-        'Follows/creates a data handling process',
+        'Sees the privacy and legal risk of unmasked personal data (PII)',
+        'Knows masking, anonymisation and synthetic data',
+        'Still helps reproduce the bug in a practical way',
+        'Follows or creates a data-handling process',
       ],
-      modelAnswer: `**First, stop and check before using it.** A raw production dump almost certainly contains personal data: names, phone numbers, emails, addresses, maybe payment tokens. Copying it to a QA environment that has weaker access control can breach company policy and laws such as GDPR or India's DPDP Act 2023. So I do not load it as-is, and I tell the developer why politely.
+      modelAnswer: `**First, stop and check.** A raw production dump almost surely has personal data: names, phones, emails, addresses, maybe payment tokens. Copying it to a QA server with weaker access control can break company policy and laws like GDPR or India's DPDP Act 2023. So I do not load it as it is, and I politely tell the developer why.
 
-**Then solve the real problem: reproducing the bug.**
+**Then solve the real problem: reproduce the bug.**
 
-1. **Understand what makes the data special.** For a loyalty-points bug it is probably the shape: a customer with points expiring today, a negative adjustment, 5,000+ transactions, a specific tier.
-2. **Options, in order of preference:**
-   - **Synthetic data** that recreates that shape (script or SQL insert), stored as a reusable dataset for regression.
-   - **Masked/anonymised copy** produced by the approved masking process (names, emails, phones replaced consistently; IDs tokenised; dates shifted), if realistic volume matters.
-   - **Production read access under supervision** by the people allowed to see it, only for diagnosis, not testing.
-3. **Record the dataset** in the test data sheet, link it to the defect, and add a regression test case using it.
+1. **Find what makes the data special.** For a loyalty-points bug it is probably the *shape*: a customer whose points expire today, a negative adjustment, 5,000+ transactions, a certain tier.
+2. **Options, best first:**
+   - **Synthetic data** that recreates that shape (a script or SQL insert), saved as a reusable dataset for regression.
+   - A **masked copy** from the approved masking process (names, emails, phones replaced the same way everywhere; IDs tokenised; dates shifted), if realistic volume matters.
+   - **Supervised production read access** by people allowed to see it, only to diagnose, not to test.
+3. **Record the dataset** in the test data sheet, link it to the bug, and add a regression test case that uses it.
 
-**Process improvement:** if this keeps happening, propose a standard masked snapshot refreshed monthly, and a rule in the test strategy: "No unmasked production PII outside production."`,
+**Process fix:** if this keeps happening, propose a standard masked snapshot refreshed monthly, and a rule in the test strategy: "No unmasked production PII outside production."`,
       followUps: [
         {
           q: 'What is the difference between masking and synthetic data?',
-          a: 'Masking starts from real data and replaces or scrambles sensitive fields while keeping realistic structure and relationships. Synthetic data is generated from scratch by rules or tools, so it contains no real person at all. Masked data is more realistic for volume and odd combinations; synthetic data is safer and easier to create on demand for specific cases.',
+          a: 'Masking starts from real data and replaces or scrambles the sensitive fields, but keeps the realistic structure and links. Synthetic data is made from scratch by rules or tools, so it contains no real person. Masked data is more realistic for volume and odd combinations; synthetic data is safer and easy to create for specific cases.',
         },
         {
           q: 'How do you keep masked data consistent across tables?',
-          a: 'Use deterministic masking: the same original value always maps to the same masked value, so a customer ID or email masked in the orders table still matches the customers table. Random per-row masking breaks joins and makes the data useless for end-to-end tests.',
+          a: 'Use deterministic masking: the same original value always becomes the same masked value. So a customer ID or email masked in the orders table still matches the customers table. Random masking per row breaks those links and makes the data useless for end-to-end tests.',
         },
       ],
       pitfalls: [
         'Using the dump directly because "it is only QA"',
-        'Refusing without offering an alternative to reproduce the bug',
+        'Refusing without offering another way to reproduce the bug',
         'Not knowing what masking or synthetic data means',
       ],
     },
     {
       id: 'mt-test-artifacts-iq-06',
       difficulty: 'medium',
-      question: 'You have been asked to review 40 test cases a teammate wrote for the SauceDemo cart before they are baselined. What do you look for, and how do you give the feedback?',
+      question: 'You must review 40 test cases a teammate wrote for the SauceDemo cart before they are baselined. What do you look for, and how do you give feedback?',
       whatInterviewerLooksFor: [
         'A concrete checklist (traceability, expected results, negatives, preconditions, independence)',
-        'Verifies expected results against requirements, not current behaviour',
-        'Constructive, tracked feedback',
+        'Checks expected results against requirements, not current behaviour',
+        'Kind, tracked feedback',
         'Thinks about automation readiness',
       ],
-      modelAnswer: `**Preparation:** I read the cart stories and acceptance criteria first, so I judge cases against the requirement, not against how the current build behaves.
+      modelAnswer: `**Prepare:** I read the cart stories and acceptance criteria first. Then I judge cases against the requirement, not against what today's build does.
 
-**Checklist I apply:**
+**My checklist:**
 
-1. **Traceability:** each case links to a story; each cart requirement (add, remove, badge count, persistence after logout, continue shopping, checkout button) has at least one case.
-2. **Expected results:** specific and correct, e.g. "badge shows 2" not "badge updates". I check them against the AC.
-3. **Negative and edge coverage:** removing the last item hides the badge; adding all 6 products; cart after logout/login; checkout with an empty cart (should it be allowed?).
-4. **Preconditions and data:** which user, cart initial state.
-5. **Independence and atomicity:** no case relying on the previous one's cart; no 20-step cases testing everything.
-6. **Duplicates:** same check written three times in different words.
-7. **Priority sanity:** P1s are the critical path.
+1. **Traceability:** each case links to a story. Each cart requirement (add, remove, badge count, cart kept after logout, continue shopping, checkout button) has at least one case.
+2. **Expected results:** exact and correct, e.g. "badge shows 2", not "badge updates". I check them against the AC.
+3. **Negative and edge cases:** removing the last item hides the badge; adding all 6 products; cart after logout and login; checkout with an empty cart (allowed or not?).
+4. **Preconditions and data:** which user, what is in the cart at the start.
+5. **Independence and atomicity:** no case relies on the previous case's cart; no 20-step cases testing everything.
+6. **Duplicates:** the same check written three times in different words.
+7. **Priority:** P1s are really the critical path.
 8. **Automation fit:** stable steps with clear checks.
 
-**Giving feedback:** comments in the tool, numbered, each with the case ID, the issue, and a suggestion ("TC-CART-012: expected 'cart updated' → specify badge count and item row removed"). I separate **must-fix** (wrong expected result, missing requirement) from **suggestions** (wording). A quick 15-minute walkthrough for the big items avoids long comment threads. Cases are baselined once must-fix items are closed.
+**Feedback:** numbered comments in the tool, each with the case ID, the issue and a fix. *Example:* "TC-CART-012: expected 'cart updated' → state the badge count and that the item row is removed". I separate **must-fix** (wrong expected result, missing requirement) from **suggestions** (wording). A 15-minute walkthrough handles the big items. Cases are baselined once must-fix items are closed.
 
-**Bonus:** I note patterns (e.g. "negative cases missing in general") to share in the team checklist, which improves the process, not just these 40 cases.`,
+**Bonus:** I note patterns (e.g. "negative cases often missing") for the team checklist, so the process improves, not just these 40 cases.`,
       followUps: [
         {
-          q: 'You find that 10 of the 40 cases have expected results copied from the current build. Why is that a problem?',
-          a: 'Then the tests confirm whatever the software does, including its bugs. If the build shows the badge count wrong, the case would "pass" while the requirement fails. Expected results must come from the test basis (requirements, ACs, an oracle like a pricing rule), and where the requirement is unclear the right move is a question to the PO, not copying the screen.',
+          q: 'You find that 10 of the 40 cases copy their expected results from the current build. Why is that a problem?',
+          a: 'Then the tests confirm whatever the software does, bugs included. If the build shows the wrong badge count, the case "passes" while the requirement fails. Expected results must come from the test basis (requirements, ACs, or a rule like a pricing formula). If the requirement is unclear, ask the PO; do not copy the screen.',
         },
         {
           q: 'How long should a review like this take, and how do you stop it becoming a bottleneck?',
-          a: 'Roughly one to two hours for 40 cases, depending on complexity. To avoid a bottleneck, review in small batches as cases are written, use a shared checklist so authors self-review first, and time-box the walkthrough. Reviewing high-risk cases deeply and low-risk ones quickly is also legitimate.',
+          a: 'About one to two hours for 40 cases, depending on complexity. To avoid a bottleneck: review small batches as cases are written, use a shared checklist so authors check their own work first, and time-box the walkthrough. Reviewing high-risk cases deeply and low-risk ones quickly is fine too.',
         },
       ],
       pitfalls: [
         'Only checking spelling and formatting',
-        'Validating expected results against the build instead of the requirement',
-        'Untracked verbal feedback with no follow-up',
+        'Checking expected results against the build instead of the requirement',
+        'Spoken feedback with no tracking or follow-up',
       ],
     },
     {
       id: 'mt-test-artifacts-iq-07',
       difficulty: 'hard',
-      question: 'Your team is starting Playwright automation. Should you keep maintaining the manual test cases in Xray or TestRail once a case is automated? Explain how you would connect the two.',
+      question: 'Your team is starting Playwright automation. Once a case is automated, should you keep maintaining the manual test case in Xray or TestRail? How would you connect the two?',
       whatInterviewerLooksFor: [
-        'Avoids duplication while keeping traceability',
+        'Avoids duplicate work but keeps traceability',
         'Knows how to link automated tests to case IDs and import results',
-        'Distinguishes what stays manual (exploratory, usability)',
-        'Practical migration plan',
+        'Knows what stays manual (exploratory, usability)',
+        'Gives a practical migration plan',
       ],
       modelAnswer: `**Short answer:** keep one source of truth for *traceability and reporting*, but do not maintain two detailed copies of the same steps.
 
-**How I would connect them:**
+**How I connect them:**
 
-1. **Mark the case as automated** in the tool (a field or label such as "automation status: automated") and keep its ID, title, requirement link and expected behaviour. The detailed manual steps can be trimmed, since the spec file is now the procedure.
-2. **Reference the ID in the Playwright test**, for example in the title ("TC-LOGIN-003 locked user sees error") or as an annotation, so anyone can jump from a failing CI test to the requirement.
-3. **Import results:** CI produces JUnit XML (Playwright has a JUnit reporter), and Xray or TestRail import it via API so each run creates a Test Execution or Test Run. The RTM then shows manual and automated results together.
+1. **Mark the case as automated** in the tool (a field or label like "automation status: automated"). Keep its ID, title, requirement link and expected behaviour. The detailed manual steps can be cut, because the spec file is now the procedure.
+2. **Put the ID in the Playwright test**, e.g. in the title ("TC-LOGIN-003 locked user sees error") or as an annotation. Anyone can then jump from a failing CI test to the requirement.
+3. **Import results:** CI produces JUnit XML (Playwright has a JUnit reporter). Xray or TestRail imports it through the API, so each run becomes a Test Execution or Test Run. The RTM then shows manual and automated results together.
 4. **Keep manual what should be manual:** exploratory charters, usability, one-off checks, visual judgement. They stay as manual cases or charters in the same tool.
 
-**Migration plan:** automate the smoke and highest-value regression first, link as you go, and review weekly that new cases are either automated, intentionally manual, or candidates.
+**Migration plan:** automate smoke and the most valuable regression first, and link as you go. Each week, check that every new case is automated, intentionally manual, or a candidate.
 
 **Why it matters:** managers still ask "is REQ-AUTH-03 tested on this build?". If automation lives only in Git and manual results only in Xray, nobody can answer quickly.`,
       followUps: [
         {
-          q: 'An automated test fails in CI. Where should the defect be logged and linked?',
-          a: 'First triage: is it a product bug, a test bug or an environment problem? For a product bug, log it in Jira with the CI run link, trace, screenshot and the test case ID, and link it to the imported Test Execution so the RTM shows the requirement as failing. Test or environment issues go to the automation backlog instead, so they do not inflate product defect counts.',
+          q: 'An automated test fails in CI. Where should the bug be logged and linked?',
+          a: 'First triage: is it a product bug, a test bug or an environment problem? For a product bug, log it in Jira with the CI run link, trace, screenshot and test case ID, and link it to the imported Test Execution, so the RTM shows the requirement failing. Test or environment problems go to the automation backlog, so they do not inflate product bug counts.',
         },
         {
           q: 'Which test cases would you NOT automate?',
-          a: 'Cases that run rarely, change constantly, need human judgement (look and feel, usability), are hard to make deterministic (third-party CAPTCHAs, physical devices), or cost more to automate and maintain than to run manually. Exploratory testing by definition stays human.',
+          a: 'Cases that run rarely, change all the time, need human judgement (look and feel, usability), are hard to make stable (third-party CAPTCHAs, physical devices), or cost more to automate and maintain than to run by hand. Exploratory testing stays human by definition.',
         },
       ],
       pitfalls: [
-        'Maintaining full manual steps and code in parallel forever',
-        'Abandoning the test management tool so traceability disappears',
+        'Maintaining full manual steps and code side by side forever',
+        'Dropping the test management tool, so traceability disappears',
         'Saying everything should be automated',
       ],
     },
@@ -821,7 +879,7 @@ Each has preconditions (logged in, cart built with known items), data and expect
   envelopeQuestions: [
     {
       id: 'mt-test-artifacts-drill-1',
-      question: 'Build the forward and backward traceability for these 4 SauceDemo requirements and 7 test cases, then list every gap. Requirements: R1 user can log in with valid credentials; R2 locked-out user cannot log in; R3 cart badge shows the number of items; R4 user can sort products by price low→high. Tests: T1 valid login standard_user; T2 login with Enter key; T3 locked_out_user error; T4 badge shows 1 after adding backpack; T5 badge hidden after removing last item; T6 product images load for problem_user; T7 sort Name Z→A.',
+      question: 'Build forward and backward traceability for these 4 SauceDemo requirements and 7 test cases, then list every gap. Requirements: R1 user can log in with valid credentials; R2 locked-out user cannot log in; R3 cart badge shows the number of items; R4 user can sort products by price low→high. Tests: T1 valid login standard_user; T2 login with Enter key; T3 locked_out_user error; T4 badge shows 1 after adding backpack; T5 badge hidden after removing last item; T6 product images load for problem_user; T7 sort Name Z→A.',
       assumptions: [
         'A test covers a requirement only if it checks that requirement\'s rule.',
         'Forward = requirement → tests; backward = test → requirement.',
@@ -831,22 +889,22 @@ Each has preconditions (logged in, cart built with known items), data and expect
         { label: 'Forward R2', calc: 'T3 → covered' },
         { label: 'Forward R3', calc: 'T4, T5 → covered' },
         { label: 'Forward R4', calc: 'No test sorts by price low→high (T7 sorts by name) → GAP' },
-        { label: 'Backward T6', calc: 'Product images for problem_user → no requirement → orphan (missing requirement or obsolete test?)' },
-        { label: 'Backward T7', calc: 'Sort Name Z→A → no matching requirement (R4 is price) → orphan / missing requirement' },
+        { label: 'Backward T6', calc: 'Product images for problem_user → no requirement → orphan (missing requirement, or old test?)' },
+        { label: 'Backward T7', calc: 'Sort Name Z→A → no matching requirement (R4 is about price) → orphan / missing requirement' },
         { label: 'Coverage', calc: '3 of 4 requirements covered = 75%' },
       ],
-      answer: 'Forward gaps: R4 (price sort) has no test. Backward findings: T6 and T7 trace to no requirement. Coverage 3/4 = 75%. Actions: write a price-sort test for R4; ask the PO whether name sorting and image loading are real requirements to add (or whether T6/T7 are obsolete).',
-      insight: 'A test that looks related (T7 sorts products) can still miss the requirement (price, not name). Traceability forces you to check the rule, not the feature area.',
+      answer: 'Forward gap: R4 (price sort) has no test. Backward findings: T6 and T7 link to no requirement. Coverage 3/4 = 75%. Actions: write a price-sort test for R4; ask the PO if name sorting and image loading are real requirements to add (or if T6/T7 are out of date).',
+      insight: 'A test that looks related (T7 sorts products) can still miss the requirement (price, not name). Traceability forces you to check the rule, not just the feature area.',
       followUps: [
         {
           q: 'R3 is "covered" by two tests. Is it fully covered?',
-          a: 'Not necessarily. T4 and T5 check 1 item and 0 items, but not several items, adding all six products, or whether the badge persists after logout/login. Coverage by link count is a minimum; real coverage depends on the rule\'s partitions and boundaries, which is why high-risk requirements need a deeper look than "has a test".',
+          a: 'Not necessarily. T4 and T5 check 1 item and 0 items, but not several items, all six products, or whether the badge stays after logout and login. Counting links gives a minimum only. Real coverage depends on the rule\'s groups and boundaries, so high-risk requirements need a deeper look than "has a test".',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-drill-2',
-      question: 'Estimate the manual effort for system-testing the coupon feature: you have 5 scenarios that expand into 42 test cases, 2 testers, and a regression suite of 54 cases. Plan writing, review, data setup, one execution cycle, one retest/regression cycle, and reporting, then say whether 8 working days is enough.',
+      question: 'Estimate the manual effort to system-test the coupon feature: 5 scenarios that become 42 test cases, 2 testers, and a regression suite of 54 cases. Plan writing, review, data setup, one execution cycle, one retest/regression cycle and reporting. Is 8 working days enough?',
       assumptions: [
         'Writing: 20 min per case; review: 5 min per case.',
         'Data setup: 3 hours once.',
@@ -865,37 +923,37 @@ Each has preconditions (logged in, cart built with known items), data and expect
         { label: 'Hands-on total', calc: '14 + 3.5 + 3 + 7 + 1 + 5.4 = 33.9 h' },
         { label: 'Capacity', calc: '2 testers × 8 days × (8 − 1 h overhead) = 112 h' },
       ],
-      answer: 'About 34 hours of hands-on work against roughly 112 available hours, so 8 days is comfortably enough for one cycle. The slack (~78 h) should go to exploratory charters on the discount maths, cross-browser runs and a buffer for a second build.',
-      insight: 'Breaking effort into per-artifact rates makes estimates defensible and shows where time really goes (writing cases is ~40% of hands-on effort here, a strong argument for reusing and automating cases).',
+      answer: 'About 34 hours of hands-on work against about 112 available hours, so 8 days is plenty for one cycle. Use the spare ~78 h for exploratory sessions on the discount maths, cross-browser runs and a buffer for a second build.',
+      insight: 'Splitting effort into a rate per artifact makes the estimate easy to defend, and shows where time really goes. Here, writing cases is ~40% of hands-on effort: a strong reason to reuse and automate cases.',
       followUps: [
         {
           q: 'The PO cuts the window to 3 days. What do you drop or change first?',
-          a: 'Capacity becomes 2 × 3 × 7 = 42 h, still above 34 h, but with no buffer. I would write high-risk cases in full and low-risk ones as scenarios (saves writing time), run regression on the P1 subset first, and agree with the PO which browsers to defer. I would also flag that a second build with fixes would not fit.',
+          a: 'Capacity becomes 2 × 3 × 7 = 42 h. That is still above 34 h, but with no buffer. I would write high-risk cases in full and low-risk ones as scenarios (less writing time), run the P1 regression subset first, and agree with the PO which browsers to postpone. I would also warn that a second build with fixes would not fit.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-drill-3',
-      question: 'Review this test case and list every defect in it, then give the corrected version: "TC-12 | Title: Sorting | Pre: none | Steps: 1. Login 2. Sort products 3. Check | Expected: Products sorted | Priority: — | Req: —".',
+      question: 'Review this test case, list every defect in it, then write the corrected version: "TC-12 | Title: Sorting | Pre: none | Steps: 1. Login 2. Sort products 3. Check | Expected: Products sorted | Priority: — | Req: —".',
       assumptions: [
         'Target is SauceDemo inventory sorting (Name A→Z, Name Z→A, Price low→high, Price high→low).',
         'Products include Sauce Labs Onesie ($7.99, cheapest) and Sauce Labs Fleece Jacket ($49.99, most expensive).',
       ],
       steps: [
-        { label: 'Title', calc: 'Vague; does not say which sort option → name the objective' },
-        { label: 'Preconditions', calc: '"none" is false: needs logged-in user on /inventory.html' },
-        { label: 'Data', calc: 'Missing user/credentials and which sort option' },
-        { label: 'Steps', calc: '"Sort products" and "Check" are not actionable; specify dropdown and option' },
-        { label: 'Expected', calc: '"Products sorted" is not checkable; state first/last item and ordering rule' },
-        { label: 'Priority & requirement', calc: 'Missing → cannot select into suites or trace' },
+        { label: 'Title', calc: 'Vague; does not say which sort option → name the goal' },
+        { label: 'Preconditions', calc: '"none" is wrong: it needs a logged-in user on /inventory.html' },
+        { label: 'Data', calc: 'Missing user/password and which sort option' },
+        { label: 'Steps', calc: '"Sort products" and "Check" are not clear actions; name the dropdown and the option' },
+        { label: 'Expected', calc: '"Products sorted" cannot be checked; state the first and last item and the order rule' },
+        { label: 'Priority & requirement', calc: 'Missing → cannot pick it for suites or trace it' },
         { label: 'Atomicity', calc: 'Four sort options hidden in one case → one case per option (or data-driven)' },
       ],
       answer: `Corrected: **TC-INV-012 Price (low to high) sorts cheapest first** | Req: REQ-INV-04 | P2 | Pre: logged in as standard_user, on /inventory.html | Steps: 1. Open sort dropdown 2. Select "Price (low to high)" | Expected: first item "Sauce Labs Onesie" $7.99, last item "Sauce Labs Fleece Jacket" $49.99, each price ≥ the previous one. Repeat as a data-driven case for the other three options.`,
-      insight: 'Seven defects in a five-line test case is normal for unreviewed testware, which is exactly why test case reviews are part of static testing.',
+      insight: 'Seven defects in a five-line test case is normal for testware nobody reviewed. That is exactly why test case reviews are part of static testing.',
       followUps: [
         {
-          q: 'Why check "each price ≥ the previous one" and not just the first and last items?',
-          a: 'First and last could be correct while the middle is wrong, for example two items swapped because prices were compared as text ("15.99" vs "9.99"). Checking the whole order is the real rule. In Playwright later, you collect all prices into an array and compare it with a sorted copy.',
+          q: 'Why check "each price ≥ the previous one", not just the first and last items?',
+          a: 'The first and last can be right while the middle is wrong, e.g. two items swapped because prices were compared as text ("15.99" vs "9.99"). Checking the whole order is the real rule. In Playwright later, you collect all prices into an array and compare it with a sorted copy.',
         },
       ],
     },
@@ -904,7 +962,7 @@ Each has preconditions (logged in, cart built with known items), data and expect
     {
       id: 'mt-test-artifacts-mcq-01',
       difficulty: 'easy',
-      question: 'Which of these is a test SCENARIO rather than a detailed test case?',
+      question: 'Which of these is a test SCENARIO, not a detailed test case?',
       options: [
         'Verify a user can complete checkout with valid shipping details',
         'Login as standard_user, add backpack, enter "Asha/Rao/560001", Finish; expect "Thank you for your order!"',
@@ -912,18 +970,18 @@ Each has preconditions (logged in, cart built with known items), data and expect
         'Leave postal code empty, click Continue; expect "Error: Postal Code is required"',
       ],
       correct: [0],
-      explanation: `A scenario is a one-line statement of WHAT to test, without exact data, steps or expected values. The other three options include specific data, steps and exact expected results, which makes them test cases. Scenarios are later expanded into several such cases.`,
+      explanation: `A scenario is one line saying WHAT to test, with no exact data, steps or expected values. The other three options have specific data, steps and exact expected results, so they are test cases. Later, a scenario is expanded into several such cases.`,
       followUps: [
         {
           q: 'Expand that scenario into three test cases, briefly.',
-          a: 'One: valid details with one item completes the order and shows the thank-you page. Two: valid details with all six items shows the correct item total, tax and total on the overview. Three: postal code with letters and spaces (e.g. "SW1A 1AA") is accepted if the requirement allows international formats.',
+          a: 'One: valid details with one item completes the order and shows the thank-you page. Two: valid details with all six items shows the right item total, tax and total on the overview. Three: a postal code with letters and spaces (e.g. "SW1A 1AA") is accepted, if the requirement allows international formats.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-02',
       difficulty: 'easy',
-      question: 'Which expected result is the BEST written?',
+      question: 'Which expected result is written BEST?',
       options: [
         'Login should work properly',
         'User is logged in successfully and everything looks fine',
@@ -931,11 +989,11 @@ Each has preconditions (logged in, cart built with known items), data and expect
         'No errors should come after login',
       ],
       correct: [2],
-      explanation: `A good expected result is specific and observable, so two testers would always agree on pass or fail. Option C names an exact URL and visible text. The others are subjective ("properly", "looks fine") or only negative ("no errors"), which a broken page showing nothing could also satisfy.`,
+      explanation: `A good expected result is exact and visible, so two testers always agree on pass or fail. Option C names an exact URL and visible text. The others are opinions ("properly", "looks fine") or only negative ("no errors"). A broken blank page with no errors would also "pass" those.`,
       followUps: [
         {
-          q: 'How would this expected result translate into automation later?',
-          a: 'Directly into web-first assertions: one checking the page URL matches /inventory.html and one checking the heading with text "Products" is visible. Specific manual expected results become reliable automated assertions with almost no rework.',
+          q: 'How would this expected result turn into automation later?',
+          a: 'Directly into web-first assertions: one checks the page URL matches /inventory.html, and one checks the "Products" heading is visible. Exact manual expected results become reliable automated assertions with almost no extra work.',
         },
       ],
     },
@@ -945,11 +1003,11 @@ Each has preconditions (logged in, cart built with known items), data and expect
       question: 'Which type of traceability helps you find test cases that no longer belong to any requirement?',
       options: ['Forward traceability', 'Backward traceability', 'Horizontal traceability', 'Vertical code coverage'],
       correct: [1],
-      explanation: `Backward traceability goes from a test case back to its requirement, so it exposes orphan tests (for removed features or gold-plating). Forward traceability (requirement → tests) instead finds untested requirements. "Horizontal traceability" and code coverage are unrelated terms here and are distractors for beginners.`,
+      explanation: `Backward traceability goes from a test case back to its requirement, so it finds orphan tests (for removed features, or extras nobody asked for). Forward traceability (requirement → tests) finds untested requirements instead. "Horizontal traceability" and code coverage are not the answer here; they are distractors.`,
       followUps: [
         {
           q: 'You find 12 orphan tests. Do you delete them?',
-          a: 'Not immediately. For each, ask whether a requirement is missing (implicit behaviour users rely on, such as password masking) or whether the feature was removed. Add the requirement where behaviour is still wanted, retire tests for removed features, and record the decision so the suite stays lean but nothing important is silently dropped.',
+          a: 'Not at once. For each one, ask: is a requirement missing (behaviour users rely on, like password masking), or was the feature removed? Add the requirement where the behaviour is still wanted, retire tests for removed features, and record the decision. The suite stays lean and nothing important is silently dropped.',
         },
       ],
     },
@@ -973,11 +1031,11 @@ REQ-03   -                  -
         'TC-09 proves REQ-03 is implemented',
       ],
       correct: [1],
-      explanation: `REQ-03 has no linked test, so it is an untested requirement (forward gap), and TC-09 maps to no requirement (backward finding). Coverage is 2 of 3 requirements. REQ-02 has a test, but it fails with an open defect, so it is not satisfied. TC-09 cannot prove REQ-03 since they are not linked.`,
+      explanation: `REQ-03 has no linked test, so it is untested (forward gap). TC-09 links to no requirement (backward finding). Coverage is 2 of 3 requirements. REQ-02 has a test, but it fails with an open bug, so it is not met. TC-09 cannot prove REQ-03, because they are not linked.`,
       followUps: [
         {
           q: 'How would you report this RTM to the PO in two lines?',
-          a: '"2 of 3 requirements tested (67%); REQ-01 passing, REQ-02 failing due to BUG-17 (Major, fix due Thursday), REQ-03 not yet tested, cases being written today. One extra test (TC-09) needs a requirement decision from you." Short, numeric and with an action for the reader.',
+          a: '"2 of 3 requirements tested (67%). REQ-01 passing; REQ-02 failing due to BUG-17 (Major, fix due Thursday); REQ-03 not yet tested, cases being written today. One extra test (TC-09) needs a requirement decision from you." Short, with numbers, and with an action for the reader.',
         },
       ],
     },
@@ -993,11 +1051,11 @@ REQ-03   -                  -
         'Unit test source code',
       ],
       correct: [0, 1, 3],
-      explanation: `IEEE 829 test plans include features not to be tested, suspension/resumption requirements, and risks and contingencies (along with test items, approach, pass/fail criteria, deliverables, schedule and approvals). Root cause analysis belongs to defect management after incidents, and unit test code is a development artifact, not a plan section.`,
+      explanation: `An IEEE 829 test plan includes features not to be tested, suspension/resumption requirements, and risks and contingencies (plus test items, approach, pass/fail criteria, deliverables, schedule and approvals). Root cause analysis belongs to defect management after incidents. Unit test code is a development artifact, not a plan section.`,
       followUps: [
         {
-          q: 'What is the purpose of suspension criteria? Give one example.',
-          a: 'They define when to pause testing because continuing would waste effort or give unreliable results, and resumption requirements say what must happen to restart. Example: suspend if the login service is down for over 2 hours or a Blocker prevents over 30% of cases; resume when a new build passes the smoke suite.',
+          q: 'What are suspension criteria for? Give one example.',
+          a: 'They say when to pause testing, because going on would waste effort or give unreliable results. Resumption requirements say what must happen to restart. Example: suspend if the login service is down for over 2 hours, or a Blocker stops over 30% of cases; resume when a new build passes the smoke suite.',
         },
       ],
     },
@@ -1012,7 +1070,7 @@ REQ-03   -                  -
         'They are identical documents with different names',
       ],
       correct: [1],
-      explanation: `A test strategy describes the general, relatively stable approach to testing for an organisation or product, while a test plan applies that approach to a specific project or release with scope, schedule, resources and criteria. Option A reverses their lifetimes. Plans do not simply list test cases, and while small teams may merge the documents, the concepts differ.`,
+      explanation: `A test strategy is the general, stable approach to testing for a company or product. A test plan applies it to one project or release, with scope, schedule, people and criteria. Option A swaps their lifetimes. Plans do not just list test cases. Small teams may merge the documents, but the ideas are different.`,
       followUps: [
         {
           q: 'Give one statement that belongs in the strategy and one in the plan.',
@@ -1040,11 +1098,11 @@ Expected: Cart works`,
         'It is linked to too many requirements',
       ],
       correct: [0, 1, 2],
-      explanation: `The case mixes adding, removing, checkout and session persistence (not atomic), "Cart works" cannot be judged objectively, and there is no starting state or data (which user, which items). It actually has too FEW expected results, not too many, and it links to no requirement at all rather than too many.`,
+      explanation: `The case mixes adding, removing, checkout and staying logged in (not atomic). "Cart works" cannot be judged. There is no starting state or data (which user, which items). It has too FEW expected results, not too many. And it links to no requirement at all, not too many.`,
       followUps: [
         {
-          q: 'Which single case would you extract first from it and why?',
-          a: 'Cart persistence after logout and login, because it is the least obvious behaviour, often missed in development, and easy to state precisely: "Add backpack, log out, log in as the same user; badge shows 1 and the backpack is in /cart.html." The add/remove behaviours deserve their own simple cases too.',
+          q: 'Which single case would you pull out of it first, and why?',
+          a: 'Cart kept after logout and login. It is the least obvious behaviour, often missed by developers, and easy to state exactly: "Add backpack, log out, log in as the same user; badge shows 1 and the backpack is in /cart.html." Add and remove deserve their own simple cases too.',
         },
       ],
     },
@@ -1060,18 +1118,18 @@ Expected: Cart works`,
         'Reuse one "test1" account for everyone to save setup time',
       ],
       correct: [0, 2, 3],
-      explanation: `Isolated data per tester or worker avoids interference, boundary and invalid values find defects that happy-path data cannot, and cleanup keeps runs repeatable. Unmasked production copies risk privacy breaches, and a single shared account causes tests to break each other's state.`,
+      explanation: `Separate data per tester or worker stops tests interfering. Boundary and invalid values find bugs that happy-path data cannot. Cleanup keeps runs repeatable. Unmasked production copies risk privacy breaches. One shared account makes tests break each other's state.`,
       followUps: [
         {
-          q: 'Why does isolated data matter even more once tests run in parallel in Playwright?',
-          a: 'Parallel workers run at the same time; if two tests use the same account, one may empty the cart while the other asserts on it, producing random failures (flakiness). Unique data per test or worker makes each test independent, which is the foundation for running safely with multiple workers.',
+          q: 'Why does separate data matter even more when Playwright tests run in parallel?',
+          a: 'Parallel workers run at the same time. If two tests use the same account, one may empty the cart while the other checks it, causing random failures (flakiness). Unique data per test or worker makes each test independent, which is the basis for running safely with many workers.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-09',
       difficulty: 'hard',
-      question: 'The PO changes REQ-CPN-02 (minimum cart value). Which artifact most directly tells you which test cases, data and defects are affected?',
+      question: 'The PO changes REQ-CPN-02 (minimum cart value). Which artifact tells you most directly which test cases, data and bugs are affected?',
       options: [
         'The test summary report from last release',
         'A bidirectional requirements traceability matrix',
@@ -1079,18 +1137,18 @@ Expected: Cart works`,
         'The defect life cycle diagram',
       ],
       correct: [1],
-      explanation: `A bidirectional RTM links each requirement to its tests, results and defects, so following REQ-CPN-02 gives the impacted cases and defects instantly: impact analysis. Last release's summary report is historical, the strategy is too general, and the defect life cycle only describes defect states.`,
+      explanation: `A bidirectional RTM links each requirement to its tests, results and bugs. Following REQ-CPN-02 gives the affected cases and bugs at once: that is impact analysis. Last release's summary report is history, the strategy is too general, and the defect life cycle only shows bug states.`,
       followUps: [
         {
-          q: 'What else besides test cases might need updating after this change?',
-          a: 'Test data rows that build carts at the old boundary, automated tests that hard-code the old value, documentation or UI text mentioning the threshold, and the estimate for the sprint. Defects raised against the old rule may also need re-evaluation or closure as "no longer valid".',
+          q: 'Besides test cases, what else might need updating after this change?',
+          a: 'Test data rows that build carts at the old boundary, automated tests that hard-code the old value, documents or UI text that mention the limit, and the sprint estimate. Bugs raised against the old rule may also need rechecking, or closing as "no longer valid".',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-10',
       difficulty: 'hard',
-      question: 'Read this test plan excerpt. Which missing section creates the biggest risk of a post-release blame game?',
+      question: 'Read this test plan excerpt. Which missing section creates the biggest risk of blame after release?',
       code: {
         language: 'text',
         title: 'Test plan TP-12 (excerpt)',
@@ -1107,32 +1165,32 @@ Exit: 0 open Critical; 100% executed`,
         'Approvals page layout',
       ],
       correct: [0],
-      explanation: `Without stating what is out of scope (for example Firefox, native apps, payment gateway internals) and why, any defect found there after release looks like a QA miss. Explicit exclusions turn gaps into agreed risks. An identifier, glossary or approvals layout are useful housekeeping but do not prevent that dispute.`,
+      explanation: `If the plan does not say what is out of scope (e.g. Firefox, native apps, payment gateway internals) and why, any bug found there after release looks like a QA miss. Written exclusions turn gaps into agreed risks. An identifier, glossary or approvals layout are useful housekeeping, but they do not prevent that argument.`,
       followUps: [
         {
-          q: 'What other important element is missing from this excerpt?',
-          a: 'Risks and contingencies, entry criteria and suspension/resumption criteria are absent, along with responsibilities. For example, there is no plan if the environment is down for a day or if a tester is on leave, and no rule for when a broken build should be rejected.',
+          q: 'What other important part is missing from this excerpt?',
+          a: 'Risks and contingencies, entry criteria, suspension/resumption criteria, and responsibilities. For example, there is no plan if the environment is down for a day or a tester is on leave, and no rule for when to reject a broken build.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-11',
       difficulty: 'hard',
-      question: 'In Jira with the Xray app, which object records that a set of tests was run against a specific build and environment, with per-test results?',
+      question: 'In Jira with Xray, which object records that a set of tests was run on a specific build and environment, with a result for each test?',
       options: ['Test Set', 'Test Plan', 'Test Execution', 'Precondition'],
       correct: [2],
-      explanation: `In Xray a Test Execution holds the test runs (per-test results) for a particular build/environment. A Test Set is just a grouping of tests, a Test Plan tracks which tests are planned for a release and aggregates executions, and a Precondition is a reusable starting state linked to tests.`,
+      explanation: `In Xray, a Test Execution holds the test runs (a result per test) for one build or environment. A Test Set is only a group of tests. A Test Plan tracks which tests are planned for a release and collects executions. A Precondition is a reusable starting state linked to tests.`,
       followUps: [
         {
-          q: 'How would automated Playwright results end up in Xray?',
-          a: 'Configure Playwright\'s JUnit reporter in CI, then call Xray\'s import API (or use a CI plugin) to upload the XML, which creates or updates a Test Execution. If test titles or annotations carry the Xray test keys, results map to the existing tests and coverage updates automatically.',
+          q: 'How would automated Playwright results get into Xray?',
+          a: 'Turn on Playwright\'s JUnit reporter in CI, then call Xray\'s import API (or use a CI plugin) to upload the XML. This creates or updates a Test Execution. If test titles or annotations include the Xray test keys, results map to the existing tests and coverage updates automatically.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-12',
       difficulty: 'medium',
-      question: 'A teammate wrote expected results by copying what the current build displays. Why is this a problem during test case review?',
+      question: 'A teammate wrote expected results by copying what the current build shows. Why is this a problem in test case review?',
       options: [
         'It makes test cases too long to read',
         'Tests will then confirm existing bugs instead of the requirement',
@@ -1140,18 +1198,18 @@ Exit: 0 open Critical; 100% executed`,
         'It violates the IEEE 829 formatting rules',
       ],
       correct: [1],
-      explanation: `Expected results must come from the test basis (requirements, acceptance criteria or another oracle). Copying current behaviour bakes any existing defect into the expected result, so the test passes on wrong behaviour. Length, tool storage and formatting standards are irrelevant to that core problem.`,
+      explanation: `Expected results must come from the test basis (requirements, acceptance criteria or another trusted source). Copying today's behaviour builds any existing bug into the expected result, so the test passes on wrong behaviour. Length, tool storage and formatting rules have nothing to do with this core problem.`,
       followUps: [
         {
-          q: 'The requirement is silent about the expected behaviour. What do you write?',
-          a: 'I do not guess or copy. I raise a question to the PO or BA, mark the case as "expected result pending clarification", and, if I must run it, record the observed behaviour as an observation rather than a pass. The answer then updates both the requirement and the test case.',
+          q: 'The requirement says nothing about the expected behaviour. What do you write?',
+          a: 'I do not guess or copy. I ask the PO or BA, mark the case "expected result pending clarification", and if I must run it, I record what I saw as an observation, not a pass. The answer then updates both the requirement and the test case.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-13',
       difficulty: 'medium',
-      question: 'Select ALL characteristics of a well-written test case.',
+      question: 'Select ALL features of a well-written test case.',
       options: [
         'Has a single clear objective',
         'Can be run without depending on another case having run first',
@@ -1160,18 +1218,18 @@ Exit: 0 open Critical; 100% executed`,
         'Combines happy path and all negatives to save time',
       ],
       correct: [0, 1, 3],
-      explanation: `Good test cases are atomic, independent and repeatable, with exact data and preconditions. Vague words make pass/fail subjective rather than "flexible", and combining happy and negative paths makes a failure ambiguous and the case hard to maintain or automate.`,
+      explanation: `Good test cases are atomic, independent and repeatable, with exact data and preconditions. Vague words make pass/fail a matter of opinion; they do not make a case "flexible". Mixing happy and negative paths makes a failure unclear, and the case hard to maintain or automate.`,
       followUps: [
         {
-          q: 'When is it acceptable for one case to depend on another?',
-          a: 'In an explicitly ordered end-to-end procedure (e.g. create booking, then cancel it), as long as the dependency is documented in preconditions and the suite runs them in order. Even then, it is better to create the needed state directly (via API or seeded data) so each case can run alone.',
+          q: 'When is it OK for one case to depend on another?',
+          a: 'In a clearly ordered end-to-end procedure (e.g. create a booking, then cancel it), if the dependency is written in the preconditions and the suite runs them in order. Even then, it is better to create the needed state directly (through an API or seeded data), so each case can run alone.',
         },
       ],
     },
     {
       id: 'mt-test-artifacts-mcq-14',
       difficulty: 'expert',
-      question: 'Your manager reports "requirement coverage 100%" from the RTM, yet a serious coupon-stacking bug escaped. Which explanation is MOST likely?',
+      question: 'Your manager reports "requirement coverage 100%" from the RTM, yet a serious coupon-stacking bug reached production. Which explanation is MOST likely?',
       code: {
         language: 'text',
         title: 'RTM row',
@@ -1186,11 +1244,11 @@ Tests:      TC-CPN-11  "Apply SAVE10 -> discount shown"   Pass`,
         'The requirement was out of scope, so coverage is still valid',
       ],
       correct: [1],
-      explanation: `TC-CPN-11 applies a single coupon and never tries a second one, so the stacking rule was never exercised even though the requirement shows as "covered". Link-based coverage counts links, not rule coverage. The tool math is fine, stacking is easy to test manually, and the requirement is clearly in scope.`,
+      explanation: `TC-CPN-11 applies one coupon and never tries a second, so the stacking rule was never tested, even though the requirement shows as "covered". Link-based coverage counts links, not rules. The tool maths is fine, stacking is easy to test by hand, and the requirement is clearly in scope.`,
       followUps: [
         {
           q: 'How do you prevent this kind of false coverage?',
-          a: 'Review traceability links during test case review ("does this test actually check the rule?"), break complex requirements into individual testable conditions in the RTM, and for high-risk requirements require at least one test per rule and boundary. Escaped defects should always trigger a check of why the linked tests missed them.',
+          a: 'Check the links in test case review ("does this test really check the rule?"). Split complex requirements into separate testable conditions in the RTM. For high-risk requirements, require at least one test per rule and boundary. And every escaped bug should trigger a check of why the linked tests missed it.',
         },
       ],
     },
@@ -1206,11 +1264,11 @@ Tests:      TC-CPN-11  "Apply SAVE10 -> discount shown"   Pass`,
         'Cases rely on the order in which a tester happens to run them',
       ],
       correct: [0, 1, 2],
-      explanation: `One action plus one observable result maps directly to an action plus a web-first assertion; stable IDs let automated results link back to the RTM; separated data enables data-driven tests. Vague visual judgement cannot be asserted, and hidden ordering dependencies break when tests run in parallel.`,
+      explanation: `One action plus one visible result maps straight to an action plus a web-first assertion. Stable IDs let automated results link back to the RTM. Separate data allows data-driven tests. "Looks right" cannot be asserted, and hidden order dependencies break when tests run in parallel.`,
       followUps: [
         {
-          q: 'What would you do with a case that genuinely needs "looks right" judgement?',
-          a: 'Either keep it manual (usability, visual polish) or turn it into something checkable: specific elements visible, a layout breakpoint behaviour, or a screenshot comparison against an approved baseline, which Playwright supports with visual comparisons. The key is defining an objective oracle.',
+          q: 'What would you do with a case that really needs "looks right" judgement?',
+          a: 'Either keep it manual (usability, visual polish) or make it checkable: specific elements visible, a layout change at a breakpoint, or a screenshot compared with an approved baseline, which Playwright supports with visual comparisons. The key is a clear, objective pass/fail rule.',
         },
       ],
     },

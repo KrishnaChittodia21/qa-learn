@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 1,
   title: 'Test Design Techniques',
   subtitle:
-    'Equivalence partitioning, 2-value and 3-value boundary value analysis, decision tables, state transitions, use cases, pairwise and experience-based techniques: how to pick a small set of tests that still finds bugs.',
+    'How to pick a small set of tests that still finds bugs: equivalence partitioning, 2-value and 3-value boundary value analysis, decision tables, state transitions, use cases, pairwise and error guessing.',
   estimatedMinutes: 110,
   sources: [
     'ISTQB CTFL v4.0 syllabus — Ch 4 Test Analysis and Design (4.2 black-box, 4.4 experience-based)',
@@ -23,61 +23,62 @@ const topic: Topic = {
   ],
   tags: ['test-design', 'equivalence-partitioning', 'boundary-value-analysis', 'decision-table', 'state-transition', 'pairwise', 'use-case', 'error-guessing', 'istqb'],
   cheatSheet: [
-    'EP: split inputs into groups the system treats the same; one value per partition is enough. Coverage = partitions exercised / partitions identified.',
-    'Test invalid partitions one at a time: two invalid values in one test can mask each other (the first error message hides the second defect).',
+    'EP: split inputs into groups the system treats the same. One value per partition is enough. Coverage = partitions tested / partitions found.',
+    'Test invalid partitions one per test. Two invalid values in one test can mask each other: the first error hides the second bug.',
     'BVA works only on ordered partitions. Boundary values = min and max of each partition. Age 18–60 → boundaries 17|18 and 60|61.',
     '2-value BVA (ISTQB v4.0): boundary + nearest neighbour in the adjacent partition → age 18–60 gives {17, 18, 60, 61}.',
     '3-value BVA: boundary + both neighbours → {16, 17, 18, 19, 59, 60, 61, 62}. It catches "x <= 10" coded as "x == 10"; 2-value cannot.',
-    'Decision table: n binary conditions → 2^n rules; one test per (feasible) rule. Collapse rules whose actions are identical with a "–" (don\'t care) entry.',
-    'State transition coverage: all states < valid transitions (0-switch) < all transitions (also tries invalid ones). Test one invalid transition per test.',
-    'Use-case testing: one test per flow — main success, each alternative, each exception (e.g. card declined at checkout).',
+    'Decision table: n yes/no conditions → 2^n rules, one test per feasible rule. Collapse rules with identical actions using a "–" (don\'t care) entry.',
+    'State transition coverage: all states < valid transitions (0-switch) < all transitions (adds invalid ones). One invalid transition per test.',
+    'Use-case testing: one test per flow. Main success, each alternative, each exception (e.g. card declined at checkout).',
     'Pairwise: every pair of parameter values appears at least once. 3 browsers × 2 OS × 3 payments × 2 users = 36 combos → ~9 pairwise tests (lower bound 3 × 3).',
-    'Experience-based: error guessing (fault attacks: empty, null, 0, very long, special chars, double-click), checklist-based, exploratory. Complement, never replace, the formal techniques.',
+    'Experience-based: error guessing (fault attacks: empty, null, 0, very long, special chars, double-click), checklists, exploratory. They add to formal techniques, never replace them.',
     'In interviews, name the technique, show the values, and justify the count: "6 tests: 4 boundaries + 2 invalid types".',
   ],
   sections: [
     {
       heading: 'Why test design techniques exist',
-      body: `**Intuition:** you cannot taste every grain of rice to check if it is cooked; you taste a spoonful from the middle and one from the edge of the pot. Test design techniques are the rules for choosing *which* spoonfuls.
+      body: `**Test design techniques** are rules for choosing a small set of tests that still finds most bugs. They also let you explain *why* those tests are enough.
 
-Exhaustive testing is impossible (ISTQB principle 2). A single "age" field that accepts integers up to 999 already has 1,000 inputs; add a country dropdown with 200 values and you have 200,000 combinations. Techniques let you pick a **small, justified** set of tests and say *why* they are enough.
+You cannot test everything. ISTQB principle 2 says exhaustive testing is impossible.
+
+**Example:** an "age" field that accepts whole numbers up to 999 already has 1,000 possible inputs. Add a country dropdown with 200 values, and you have 200,000 combinations. With equivalence partitioning and boundary value analysis, about 9 tests cover the age field well.
 
 ISTQB CTFL v4.0 groups techniques into three families:
 
-| Family | Based on | Techniques in this topic | Typical coverage measure |
+| Family | Based on | Techniques in this topic | How coverage is measured |
 |---|---|---|---|
-| **Black-box** (specification-based) | Requirements, user stories, specs | Equivalence partitioning, BVA, decision tables, state transition | Partitions / boundaries / rules / transitions exercised |
-| **White-box** (structure-based) | Code structure | Statement and branch coverage | % statements / branches executed |
-| **Experience-based** | Tester knowledge and past defects | Error guessing, checklist-based, exploratory | Hard to measure; checklist items or charters covered |
+| Black-box (specification-based) | Requirements, user stories, specs | Equivalence partitioning, BVA, decision tables, state transition | Partitions / boundaries / rules / transitions tested |
+| White-box (structure-based) | Code structure | Statement and branch coverage | % of statements / branches run |
+| Experience-based | Tester knowledge and past bugs | Error guessing, checklist-based, exploratory | Hard to measure; checklist items or charters covered |
 
-Use-case testing and pairwise (combinatorial) testing are also black-box techniques; v4.0 moved use-case testing out of the core list, but interviewers still ask about it, so it is covered here.
+Use-case testing and pairwise testing are also black-box techniques. v4.0 moved use-case testing out of the core list, but interviewers still ask about it, so it is covered here.
 
-**Every technique follows the same three steps:**
-1. **Analyse**: identify the *coverage items* (partitions, boundary values, rules, transitions).
-2. **Design**: write one or more test cases that exercise each coverage item.
-3. **Measure**: coverage = items exercised ÷ items identified × 100%.
+Every technique follows the same three steps:
 
-**In interviews, say this:** "I do not pick test values at random. I name the technique, list the coverage items, and can tell you the coverage percentage my tests reach."`,
+1. **Analyse:** find the *coverage items* (partitions, boundary values, rules, transitions).
+2. **Design:** write test cases that exercise each coverage item.
+3. **Measure:** coverage = items tested ÷ items found × 100%.
+
+**In an interview, say:** "I don't pick test values at random. I name the technique, list the coverage items, and tell you the coverage my tests reach."`,
       keyPoints: [
-        'Techniques turn "infinite inputs" into a small, defensible set of tests.',
-        'Black-box = from the spec; white-box = from the code; experience-based = from the tester.',
-        'Every technique defines its own coverage items, so coverage can be measured.',
+        'Techniques turn "endless inputs" into a small set of tests you can defend.',
+        'Black-box = from the spec. White-box = from the code. Experience-based = from the tester.',
+        'Every technique has its own coverage items, so coverage can be measured.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.1 Test Techniques Overview',
     },
     {
       heading: 'Equivalence Partitioning (EP)',
-      body: `**Intuition:** if a lift works for a person weighing 70 kg, it almost certainly works for 71 kg. People in the same "weight band" get the same treatment, so testing one of them stands for the whole band.
+      body: `**Equivalence Partitioning (EP)** splits the inputs (or outputs) into groups, called **partitions**, that the system should treat the same way. If one value in a partition finds a bug, the others probably would too. So **one value per partition** is enough.
 
-**Definition:** Equivalence partitioning splits the input (or output) domain into **partitions** whose members the system is expected to process the same way. If one value in a partition reveals a defect, the others probably would too, so **one value per partition** is enough.
+- **Valid partitions** hold values the system should accept.
+- **Invalid partitions** hold values it should reject. Think wider than numbers: wrong type, empty, too long, special characters.
+- **Coverage** = partitions tested ÷ partitions found. 100% EP coverage means every partition has at least one test.
 
-- **Valid partitions** contain values the system should accept.
-- **Invalid partitions** contain values it should reject. Think wider than numbers: wrong type, empty, too long, special characters.
-- **Coverage** = partitions exercised ÷ partitions identified. 100% EP coverage means every partition has at least one test.
+**Example: registration age field.** Requirement: *"Age must be a whole number from 18 to 60 inclusive."*
 
-**Worked example: Registration age field.** Requirement: *"Age must be a whole number from 18 to 60 inclusive."*
-
-| # | Partition | Type | Representative value | Expected |
+| # | Partition | Type | Test value | Expected |
 |---|---|---|---|---|
 | P1 | Integers < 18 | Invalid | 10 | "You must be at least 18" |
 | P2 | Integers 18–60 | Valid | 35 | Accepted |
@@ -86,11 +87,13 @@ Use-case testing and pairwise (combinatorial) testing are also black-box techniq
 | P5 | Decimal | Invalid | 25.5 | "Enter a whole number" |
 | P6 | Empty | Invalid | (blank) | "Age is required" |
 
-Six tests give 100% EP coverage. Testing 20, 30, 40 and 50 adds nothing: they are all in P2.
+Six tests give 100% EP coverage. Testing 20, 30, 40 and 50 adds nothing, because they are all in P2.
 
-**The single-fault rule:** combine *valid* values freely, but test **each invalid partition on its own**. If a test enters age "abc" *and* an empty email, the form might report only the first error, hiding a defect in the second check (defect masking).
+**The single-fault rule:** you may combine *valid* values in one test. But test **each invalid partition on its own**. Why? Say one test enters age "abc" *and* leaves email empty. The form may show only "Email is required", so the age check was never really tested. This is called **defect masking**.
 
-**Common mistake:** forgetting **output** partitions. A tax calculator might have income partitions of 0–2.5 lakh (0%), 2.5–5 lakh (5%) and so on; each tax slab is a partition even though the input field is one number.`,
+**In an interview, say:** "EP groups inputs that behave the same. I test one value per group, and each invalid group in its own test."
+
+**Common mistake:** forgetting **output** partitions. Example: tax slabs of 0–2.5 lakh (0%), 2.5–5 lakh (5%) and so on. Each slab is a partition, even though the input is one number.`,
       code: [
         {
           language: 'text',
@@ -113,37 +116,61 @@ invalid ones isolated so one error cannot hide another).`,
         },
       ],
       keyPoints: [
-        'One value per partition; more values in the same partition add cost, not coverage.',
-        'Combine valid partitions; isolate invalid partitions (one per test).',
-        'Partition outputs and data types too, not just numeric ranges.',
+        'One value per partition. More values from the same partition add cost, not coverage.',
+        'Combine valid partitions. Test invalid partitions one per test.',
+        'Partition outputs and data types too, not just number ranges.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.1 Equivalence Partitioning',
     },
     {
       heading: 'Boundary Value Analysis (BVA): 2-value and 3-value',
-      body: `**Intuition:** developers rarely get the middle of a range wrong; they type \`>\` when they meant \`>=\`. Bugs live at the edges, so BVA tests the edges.
+      body: `**Boundary Value Analysis (BVA)** tests the edges of each partition. Developers rarely get the middle of a range wrong. They type \`>\` when they meant \`>=\`. So bugs hide at the edges.
 
-**Definition (ISTQB v4.0):** BVA exercises the **boundary values** of *ordered* equivalence partitions, meaning the minimum and maximum of each partition. It finds boundaries that were moved up or down by one, or left out entirely.
+**Definition (ISTQB v4.0):** BVA tests the **boundary values** of *ordered* partitions, meaning the minimum and maximum of each partition. It finds boundaries that moved up or down by one, or are missing.
 
 The v4.0 syllabus defines two variants:
 
-| Variant | Coverage items per boundary value | Age 18–60 (integers) | Catches |
+- **2-value BVA:** for each boundary value, test the boundary and its closest neighbour in the **adjacent** partition.
+- **3-value BVA:** for each boundary value, test the boundary and **both** its neighbours.
+
+**Example: age 18–60 (whole numbers).** The partitions are "too young" (up to 17), valid (18–60) and "too old" (61 and above). So the boundary values are 17 and 18 at the lower border, and 60 and 61 at the upper border.
+
+| Variant | Lower border (17/18) | Upper border (60/61) | Test set |
 |---|---|---|---|
-| **2-value BVA** | The boundary + its closest neighbour in the **adjacent** partition | 17, 18, 60, 61 | Off-by-one shifts (\`> 18\` instead of \`>= 18\`) |
-| **3-value BVA** | The boundary + **both** neighbours | 16, 17, 18, 19, 59, 60, 61, 62 | Also faulty operators such as \`== 18\` instead of \`>= 18\` |
+| 2-value | 17, 18 | 60, 61 | {17, 18, 60, 61}: 4 tests |
+| 3-value | 16, 17, 18, 19 | 59, 60, 61, 62 | {16, 17, 18, 19, 59, 60, 61, 62}: 8 tests |
 
-**Why 3-value is stronger:** suppose the rule "x <= 10" is coded as "x == 10". 2-value BVA tests 10 (passes) and 11 (correctly rejected), so the bug survives. 3-value BVA also tests 9, which the broken code wrongly rejects. This is the example ISTQB itself uses.
+How 3-value gets four values at one border:
 
-**Careful: both sides of a border are boundary values.** At the 17|18 border, 17 is the maximum of the "too young" partition and 18 is the minimum of the valid one. In 3-value BVA each of them brings its two neighbours, so the border yields four items: 16, 17, 18, 19. Many blogs say "3-value = 17, 18, 19"; that is the older textbook version. Follow the syllabus in a certification exam.
+| Boundary value | Its neighbours | 3-value items |
+|---|---|---|
+| 17 (max of "too young") | 16 and 18 | 16, 17, 18 |
+| 18 (min of valid) | 17 and 19 | 17, 18, 19 |
+| Union at the 17/18 border | | 16, 17, 18, 19 |
 
-**What about the outer edge of the domain?** The values above only cover the two borders of the valid range. If the domain itself has a lower limit (age can't be negative, so the \`too young\` partition is 0–17), then 0 is also a boundary value: 2-value BVA adds **0**, and 3-value adds **0 and 1** (−1 is outside the domain, so it is infeasible). The animation below assumes this domain, which is why it shows these extra values. Many test designers also add a negative or non-numeric input as a separate invalid partition.
+**Both sides of a border are boundary values.** 17 is the max of the "too young" partition, and 18 is the min of the valid one. In 3-value BVA each one brings its two neighbours, so one border gives four items. Many blogs say "3-value = 17, 18, 19". That is the older textbook version. Follow the syllabus in a certification exam.
 
-**Worked example: password length 8–64.**
-- Partitions: 0–7 (too short), 8–64 (valid), 65+ (too long).
-- 2-value: {0, 7, 8, 64, 65}. Note 0 (empty) is an *outer* boundary with no neighbour below.
-- 3-value: {0, 1, 6, 7, 8, 9, 63, 64, 65, 66}.
+**Why 3-value is stronger:** take the rule "x <= 10", wrongly coded as "x == 10".
 
-**In interviews, say this:** "EP gives me one value from the middle of each partition; BVA adds the edges, where off-by-one mistakes hide. I use 2-value by default and 3-value for risky rules like money or eligibility."`,
+| Value | Correct code (x <= 10) | Buggy code (x == 10) | Bug visible? |
+|---|---|---|---|
+| 9 | Accept | Reject | Yes (only 3-value tests 9) |
+| 10 | Accept | Accept | No |
+| 11 | Reject | Reject | No |
+
+2-value BVA tests only 10 and 11, so the bug survives. 3-value also tests 9, which exposes it. This is the example ISTQB itself uses.
+
+**The outer edge of the domain.** The values above cover only the two borders of the valid range. But the domain itself may have a lower limit. Age can't be negative, so the "too young" partition is 0–17. Then 0 is also a boundary value. 2-value BVA adds **0**. 3-value BVA adds **0 and 1**, because −1 is outside the domain and so is infeasible. The animation below assumes this domain, which is why it shows these extra values. Many testers also add a negative or non-numeric input as a separate invalid partition.
+
+**Example 2: password length 8–64.**
+
+| Item | Values |
+|---|---|
+| Partitions | 0–7 (too short), 8–64 (valid), 65+ (too long) |
+| 2-value | {0, 7, 8, 64, 65}; 0 (empty) is an outer boundary with no neighbour below |
+| 3-value | {0, 1, 6, 7, 8, 9, 63, 64, 65, 66} |
+
+**In an interview, say:** "EP gives me one value from each partition. BVA adds the edges, where off-by-one mistakes hide. I use 2-value by default and 3-value for risky rules like money or eligibility."`,
       diagram: `  Age field: valid 18..60 (integers)
 
    invalid (too young)  |      valid       |  invalid (too old)
@@ -181,9 +208,11 @@ Plus EP for non-boundary invalid types: "abc", 25.5, blank.`,
     },
     {
       heading: 'BVA beyond integers: decimals, dates, lengths and open ends',
-      body: `**Intuition:** "plus one" depends on what you count. For whole rupees the neighbour of 500 is 501; for paise it is 500.01; for dates it is tomorrow.
+      body: `The neighbour of a boundary is one **step** away, and the step depends on the data. For whole rupees, the neighbour of 500 is 501. For paise, it is 500.01. For dates, it is the next day.
 
-The **step size** (precision) of the data decides the neighbour:
+If you pick the wrong step, you test the wrong values and miss the bug.
+
+**Example:** free shipping for orders >= 499.00, with prices in paise. The correct 2-value pair is 498.99 and 499.00. Testing 498 and 499 uses a step of one rupee, and would miss a bug like "> 498.5".
 
 | Data | Rule | Boundaries (2-value) | Note |
 |---|---|---|---|
@@ -194,30 +223,39 @@ The **step size** (precision) of the data decides the neighbour:
 | Quantity in cart | 1–10 per item | 0, 1, 10, 11 | Also try the "+" button at 10 |
 | Time slot | Booking 09:00–17:59 | 08:59, 09:00, 17:59, 18:00 | Step = 1 minute |
 
-**Open (unbounded) partitions:** "age 61 and above" has a minimum (61) but no maximum, so it has only one boundary value. You may still add a *practical* maximum (field length, integer overflow such as 2147483647) as an error-guessing test, but that is not BVA proper.
+**Open partitions** have no end. "Age 61 and above" has a minimum (61) but no maximum, so it has only one boundary value. You may still add a *practical* maximum as an error-guessing test, such as the field length or integer overflow (2147483647). But that is not BVA proper.
 
-**Outer boundaries:** a length can't be -1, so 0 has no lower neighbour. Do not invent infeasible coverage items.
+**Outer boundaries:** a length can't be −1, so 0 has no lower neighbour. Do not invent test items that cannot exist.
 
-**Questions to ask before deriving values** (interviewers love this):
-- Inclusive or exclusive? "Between 18 and 60" is ambiguous.
-- What precision? Integer, 2 decimals, seconds?
-- Is the boundary on the input, or on a calculated output (for example, a total after discount)?
+Ask these questions before choosing values (interviewers love this):
 
-**Common mistake:** applying BVA to an unordered set ("payment method = Card / UPI / COD"). There is no "next to UPI"; use EP or a decision table instead.`,
+- Inclusive or exclusive? "Between 18 and 60" is unclear.
+- What precision? Whole numbers, 2 decimals, seconds?
+- Is the boundary on the input, or on a calculated output, like a total after discount?
+
+**In an interview, say:** "The neighbour is one step of the data's precision. For money in paise, the value below 499.00 is 498.99."
+
+**Common mistake:** using BVA on an unordered list like "payment method = Card / UPI / COD". There is no "next to UPI". Use EP or a decision table instead.`,
       keyPoints: [
-        'The neighbour of a boundary is boundary ± one step of the data precision.',
+        'The neighbour of a boundary is the boundary ± one step of the data precision.',
         'Clarify inclusive/exclusive, units and precision before writing values.',
-        'Open partitions have one boundary; outer boundaries have no neighbour beyond the domain.',
+        'Open partitions have one boundary. Outer boundaries have no neighbour outside the domain.',
       ],
       source: "Lee Copeland — A Practitioner's Guide to Software Test Design, Ch 4 Boundary Value Testing",
     },
     {
       heading: 'Decision table testing',
-      body: `**Intuition:** when the answer depends on several yes/no questions *together* ("member? big order? coupon?"), a table of every combination stops you missing the one combination nobody thought about.
+      body: `A **decision table** lists every combination of conditions and the result each one should give. Use it when the answer depends on several yes/no questions *together*. It stops you missing the one combination nobody thought about.
 
-**Definition:** a decision table lists **conditions** (inputs) in the top half and **actions** (outputs) in the bottom half. Each **column is a rule**: one combination of condition values and the actions it should trigger. With *n* binary conditions there are **2^n** rules. Coverage = rules exercised ÷ feasible rules.
+How it is built:
 
-**Worked example: discount rules for an online shop.**
+- **Conditions** (inputs) go in the top rows. **Actions** (outputs) go in the bottom rows.
+- Each **column is a rule**: one combination of condition values and its expected actions.
+- With *n* yes/no conditions there are **2^n** rules. Write one test per rule.
+- **Coverage** = rules tested ÷ feasible rules.
+
+**Example: discount rules for an online shop.**
+
 - Members get 10% off.
 - Orders of ₹2,000 or more get free shipping.
 - A valid coupon gives 15% off and **replaces** the member discount (no stacking).
@@ -226,17 +264,21 @@ The **step size** (precision) of the data decides the neighbour:
 
 | | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 |
 |---|---|---|---|---|---|---|---|---|
-| **C1** Member? | Y | Y | Y | Y | N | N | N | N |
-| **C2** Order >= ₹2,000? | Y | Y | N | N | Y | Y | N | N |
-| **C3** Valid coupon? | Y | N | Y | N | Y | N | Y | N |
-| **A1** Discount | 15% | 10% | 15% | 10% | 15% | 0% | 15% | 0% |
-| **A2** Free shipping | Yes | Yes | No | No | Yes | Yes | No | No |
+| C1 Member? | Y | Y | Y | Y | N | N | N | N |
+| C2 Order >= ₹2,000? | Y | Y | N | N | Y | Y | N | N |
+| C3 Valid coupon? | Y | N | Y | N | Y | N | Y | N |
+| A1 Discount | 15% | 10% | 15% | 10% | 15% | 0% | 15% | 0% |
+| A2 Free shipping | Yes | Yes | No | No | Yes | Yes | No | No |
 
-Each column becomes one test case, for example R1: *member logs in, adds ₹2,500 of items, applies SAVE15 → 15% off, shipping ₹0, no extra 10%*. R1 is exactly where a "stacking" bug (25% off) would hide.
+Each column becomes one test case. For R1: a member adds ₹2,500 of items and applies SAVE15. Expected: 15% off, shipping ₹0, and no extra 10%. R1 is exactly where a "stacking" bug (25% off) would hide.
 
-**Why interviewers like it:** writing the table **finds requirement gaps before any code exists**. While filling R1 you have to ask "can coupon and member discount stack?" If the spec does not say, that is a question for the product owner, not a guess.
+Writing the table **finds requirement gaps before any code exists**. While filling R1, you must ask: "Can the coupon and member discount stack?" If the spec does not say, ask the product owner. Don't guess.
 
-**Infeasible rules:** some combinations cannot happen (for example "age < 18" and "age > 60" both true). Mark them infeasible and exclude them from the coverage count.`,
+**Infeasible rules:** some combinations cannot happen, like "age < 18" and "age > 60" both true. Mark them infeasible and leave them out of the coverage count.
+
+**In an interview, say:** "When several conditions combine, I list all 2^n combinations in a decision table and write one test per rule."
+
+**Common mistake:** testing only the obvious combinations and missing the overlap, like coupon + member.`,
       code: [
         {
           language: 'text',
@@ -258,19 +300,23 @@ TC-DT-R6  Guest + >= 2000 + no coupon
         },
       ],
       keyPoints: [
-        'Conditions on top, actions below, one column per rule, one test per rule.',
+        'Conditions on top, actions below. One column per rule, one test per rule.',
         '2^n grows fast: 4 conditions = 16 rules, 6 conditions = 64. Collapse or split the table.',
-        'Filling the table exposes missing or contradictory requirements early.',
+        'Filling the table shows missing or conflicting requirements early.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.3 Decision Table Testing',
     },
     {
       heading: 'Collapsing a decision table',
-      body: `**Intuition:** if the answer is the same whether a light switch is up or down, you do not need to test both positions; write "doesn't matter" and test once.
+      body: `**Collapsing** (minimising) a decision table means merging rules that give the **same actions**. The condition that does not matter becomes a **"–" (don't care)** entry. Fewer rules means fewer tests.
 
-**Collapsing (minimising)** merges rules that lead to the **same actions** and differ in only one condition. The condition that does not matter becomes a **"–" (don't care)** entry.
+Merge two rules only when:
 
-In the discount table, when a valid coupon is applied the discount is always 15%, whatever the membership. Shipping depends only on order value. So:
+1. their **actions are identical**, and
+2. they differ in **exactly one** condition. That condition becomes "–".
+3. Repeat until nothing more merges.
+
+**Example:** in the discount table, a valid coupon always gives 15%, whatever the membership. Shipping depends only on order value. So R1 and R5 merge (they differ only in Member), and so do R3 and R7:
 
 | | R1+R5 | R3+R7 | R2 | R4 | R6 | R8 |
 |---|---|---|---|---|---|---|
@@ -282,32 +328,32 @@ In the discount table, when a valid coupon is applied the discount is always 15%
 
 8 rules → 6 rules, so 6 tests.
 
-**Rules for safe collapsing:**
-1. Merge only columns whose **actions are identical**.
-2. They must differ in **exactly one** condition; that one becomes "–".
-3. Repeat until nothing more merges.
+**The risk (say this in interviews):** collapsing assumes the "–" condition truly does not matter. But what if the code *does* check membership when a coupon is present (the stacking bug)? A collapsed test may use only a non-member and miss it. For risky logic like money, keep the full table. Or at least pick the "–" value most likely to expose the bug. Here that is **member = Y**, because that is where stacking could happen.
 
-**The risk (say this in interviews):** collapsing assumes the "don't care" condition truly does not matter. If the code *does* check membership when a coupon is present (the stacking bug), a collapsed table may test only the non-member side and miss it. For high-risk logic like money, keep the full table, or at least pick the "–" value that is most likely to expose the bug (here: **member = Y**, because that is where stacking could happen).
+**Extended-entry tables:** a condition can have more than two values, like customer tier = Gold / Silver / None. Then the rule count is the product of the value counts, for example 3 × 2 × 2 = 12.
 
-**Extended-entry tables:** conditions can have more than two values (customer tier = Gold / Silver / None). Then the rule count is the product of the value counts (3 × 2 × 2 = 12).`,
+**In an interview, say:** "I merge rules with the same result that differ in one condition. For money rules, I test the don't-care value most likely to break."`,
       keyPoints: [
         'Collapse only rules with identical actions that differ in exactly one condition.',
-        '"–" means the condition should not affect the outcome; it is an assumption about the code.',
-        'For risky rules, test the "–" value most likely to break the assumption.',
+        '"–" means the condition should not change the result. It is an assumption about the code.',
+        'For risky rules, test the "–" value most likely to break that assumption.',
       ],
       source: "ISTQB CTFL v4.0 syllabus — 4.2.3; Lee Copeland — A Practitioner's Guide to Software Test Design, Ch 5 Decision Table Testing",
     },
     {
       heading: 'State transition testing',
-      body: `**Intuition:** a traffic light does not care only about the button you press; it cares about what colour it shows *now*. When the same input gives different results depending on history, model the system as **states** and **transitions**.
+      body: `**State transition testing** models the system as **states** and the **transitions** (moves) between them. Use it when the same input gives different results depending on what happened before.
 
-**Vocabulary:**
-- **State**: a condition the system is in (Waiting for PIN, Card blocked).
-- **Event**: something that happens (PIN entered).
-- **Guard**: a condition on the event ([PIN correct]).
-- **Action**: what the system does on the transition (eject card).
+**Example:** at an ATM, a wrong PIN on the first try shows "2 tries left". A wrong PIN on the third try keeps your card. The input is the same, but the history is different.
 
-**Worked example: ATM PIN entry.** Insert card, three attempts at the PIN, card retained after the third wrong PIN, cancel ejects the card.
+Words you need:
+
+- **State:** a situation the system is in (Waiting for PIN, Card blocked).
+- **Event:** something that happens (PIN entered).
+- **Guard:** a condition on the event ([PIN correct]).
+- **Action:** what the system does during the move (eject card).
+
+**Worked example: ATM PIN entry.** Insert the card. You get three attempts at the PIN. The card is kept after the third wrong PIN. Cancel ejects the card.
 
 | From state | Event [guard] | Action | To state |
 |---|---|---|---|
@@ -323,17 +369,23 @@ In the discount table, when a valid coupon is applied the discount is always 15%
 
 That is 6 states and 11 valid transitions.
 
-**Coverage levels (weakest to strongest, ISTQB v4.0):**
+Coverage levels, weakest to strongest (ISTQB v4.0):
 
 | Criterion | Coverage items | Minimum for the ATM |
 |---|---|---|
-| **All states** | Every state visited | 2 tests (one path to S5, one to S4) |
-| **Valid transitions (0-switch)** | Every valid transition fired | 11 transitions, fitted into a few test paths |
-| **All transitions** | Valid transitions + every *invalid* one attempted | Also try e.g. "enter PIN" in S0 or S5 |
+| All states | Every state visited | 2 tests (one path to S5, one to S4) |
+| Valid transitions (0-switch) | Every valid transition fired | 11 transitions, fitted into a few test paths |
+| All transitions | Valid transitions + every invalid one attempted | Also try e.g. "enter PIN" in S0 or S5 |
 
-Full valid-transition coverage guarantees all-states coverage, and all-transitions guarantees both. Test **one invalid transition per test** so a failure points to one cause.
+Full valid-transition coverage also gives all-states coverage. All-transitions coverage gives both. Test **one invalid transition per test**, so a failure points to one cause.
 
-**Bugs this finds:** the counter not resetting after a correct PIN (a later wrong attempt goes straight to "1 try left"); cancel at attempt 3 not resetting attempts for the next session; card retained after the *second* wrong PIN (an off-by-one in the counter).`,
+**Bugs this finds:**
+
+- The counter does not reset after a correct PIN. A later wrong attempt jumps straight to "1 try left".
+- Cancel at attempt 3 does not reset the attempts for the next session.
+- The card is kept after the *second* wrong PIN (an off-by-one in the counter).
+
+**In an interview, say:** "When behaviour depends on history, I list the states and transitions. I aim for at least valid-transition coverage, plus a few invalid transitions."`,
       diagram: `  [S0 Idle] -insert-> [S1 Try 1] -wrong-> [S2 Try 2] -wrong-> [S3 Try 3]
      ^   ^                |                   |                |      |
      |   |             correct             correct         correct  wrong
@@ -344,31 +396,40 @@ Full valid-transition coverage guarantees all-states coverage, and all-transitio
       keyPoints: [
         'Use it when behaviour depends on history: logins, carts, orders, workflows, wizards.',
         'Coverage ladder: all states < valid transitions (0-switch) < all transitions.',
-        'Write the state table first; the diagram is for people, the table is for coverage.',
+        'Write the state table first. The diagram is for people; the table is for coverage.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.4 State Transition Testing',
     },
     {
       heading: 'Use-case testing: main, alternative and exception flows',
-      body: `**Intuition:** a use case is a story of a user getting something done. You test the happy story once, then every way the story can branch or go wrong.
+      body: `A **use case** describes a user (the **actor**) getting something done with the system. **Use-case testing** writes at least one test for each path through that story.
 
-A use case has an **actor**, **preconditions**, a **main success scenario** (basic flow), **alternative flows** (different route, still success) and **exception flows** (failure handled gracefully). Use-case testing writes **at least one test per flow**. It finds integration and workflow bugs that field-level techniques like BVA miss.
+A use case has:
 
-**Worked example: SauceDemo checkout** (\`https://www.saucedemo.com\`).
+- **Preconditions:** what must be true first (the user is logged in).
+- **Main success scenario** (basic flow): the normal happy path.
+- **Alternative flows:** a different route that still succeeds.
+- **Exception flows:** something goes wrong and the system handles it.
+
+It finds workflow and integration bugs that field-level techniques like BVA miss.
+
+**Example: SauceDemo checkout** (\`https://www.saucedemo.com\`).
 
 | Flow | Path | Expected |
 |---|---|---|
-| **Main** | Login as standard_user → add backpack → cart → Checkout → first/last name + postal code → Continue → Finish | "Thank you for your order!", cart badge cleared |
-| **Alt 1** | Remove an item from the cart before checkout | Totals recalculate; checkout still succeeds |
-| **Alt 2** | Click "Continue Shopping" from the cart, add another item | Cart keeps both items |
-| **Exc 1** | Leave First Name empty on step one | "Error: First Name is required"; stays on step one |
-| **Exc 2** | Leave Postal Code empty | "Error: Postal Code is required" |
-| **Exc 3** | Login as locked_out_user | "Epic sadface: Sorry, this user has been locked out." |
-| **Exc 4** | Click Cancel on the overview page | Back to inventory; cart unchanged |
+| Main | Login as standard_user → add backpack → cart → Checkout → first/last name + postal code → Continue → Finish | "Thank you for your order!", cart badge cleared |
+| Alt 1 | Remove an item from the cart before checkout | Totals recalculate; checkout still succeeds |
+| Alt 2 | Click "Continue Shopping" from the cart, add another item | Cart keeps both items |
+| Exc 1 | Leave First Name empty on step one | "Error: First Name is required"; stays on step one |
+| Exc 2 | Leave Postal Code empty | "Error: Postal Code is required" |
+| Exc 3 | Login as locked_out_user | "Epic sadface: Sorry, this user has been locked out." |
+| Exc 4 | Click Cancel on the overview page | Back to inventory; cart unchanged |
 
-**Combining techniques:** inside the main flow, apply BVA to quantity or postal code length, and a decision table to the discount step. Use cases give the *journey*; the other techniques give the *values* at each step.
+**Combine techniques:** inside the main flow, use BVA on quantity or postal code length, and a decision table for the discount step. The use case gives the *journey*. The other techniques give the *values* at each step.
 
-**Gherkin is a natural format** for use-case tests and becomes the bridge to automation later.`,
+Gherkin is a natural format for use-case tests. It also becomes the bridge to automation later.
+
+**In an interview, say:** "I write one test for the main flow, one for each alternative flow, and one for each exception flow."`,
       code: [
         {
           language: 'gherkin',
@@ -399,26 +460,34 @@ A use case has an **actor**, **preconditions**, a **main success scenario** (bas
       ],
       keyPoints: [
         'One test per flow: main, each alternative, each exception.',
-        'Use cases test journeys and integration; combine with BVA/EP for the values inside them.',
-        'Scenario Outline tables are a clean way to express exception flows.',
+        'Use cases test journeys. Combine with BVA/EP for the values inside them.',
+        'Scenario Outline tables are a clean way to write exception flows.',
       ],
       source: "ISTQB CTFL v3.1 syllabus — 4.2.5 Use Case Testing; Lee Copeland — A Practitioner's Guide to Software Test Design, Ch 9",
     },
     {
       heading: 'Pairwise and combinatorial testing',
-      body: `**Intuition:** most configuration bugs are caused by one setting, or by two settings clashing ("UPI fails only on Safari"). Very few need three specific settings at once. So instead of every combination, make sure **every pair** of values meets at least once.
+      body: `**Pairwise testing** picks a small set of tests in which **every pair** of parameter values appears together at least once. Use it when many independent settings combine, like browser, OS and payment method.
 
-**The maths:** a checkout must work across Browser (Chrome, Firefox, Safari) × OS (Windows, macOS) × Payment (Card, UPI, COD) × User (Guest, Registered).
-- **Exhaustive:** 3 × 2 × 3 × 2 = **36** tests.
-- **Pairwise:** at least 3 × 3 = 9 (the two largest parameters must meet in every pair), and a tool usually finds a set of about **9–10**.
+It works because most configuration bugs come from one setting, or from two settings clashing ("UPI fails only on Safari"). Very few need three specific settings at once.
 
-Studies such as the NIST work on combinatorial testing found most field failures are triggered by one or two interacting factors, which is why pairwise gives good value. It is not a guarantee: a bug that needs three specific values can be missed. Increase the order (3-wise) for risky areas.
+**Example:** checkout must work across Browser (Chrome, Firefox, Safari) × OS (Windows, macOS) × Payment (Card, UPI, COD) × User (Guest, Registered).
 
-**Tools:** Microsoft **PICT** (free, command line), AllPairs, and pairwise features in test management tools. PICT also handles **constraints**, for example Safari exists only on macOS, so impossible combinations are never generated.
+| Approach | Tests | Why |
+|---|---|---|
+| Exhaustive | 3 × 2 × 3 × 2 = 36 | Every combination |
+| Pairwise, lower bound | 3 × 3 = 9 | Every pair of the two largest parameters (Browser, Payment) needs its own row |
+| Pairwise, tool output | About 9–10 | A tool like PICT fits the other values into those rows |
 
-**Orthogonal arrays** are the older, more mathematical cousin: balanced tables where each pair appears the same number of times. Pairwise tools are the practical choice today.
+Studies such as the NIST work on combinatorial testing found most field failures come from one or two interacting factors. That is why pairwise gives good value. But it is not a guarantee: a bug that needs three specific values can be missed. Raise the order (3-wise) for risky areas.
 
-**Where it fits:** configuration matrices (browser/OS/device), feature flags, form fields with many independent dropdowns, API query parameter combinations. **Where it does not:** dependent business rules; use a decision table, because every rule there matters, not just pairs.`,
+**Tools:** Microsoft **PICT** (free, command line), AllPairs, and pairwise features in test management tools. PICT also handles **constraints**. For example, Safari exists only on macOS, so impossible combinations are never generated.
+
+**Orthogonal arrays** are the older, more mathematical cousin. They are balanced tables where each pair appears the same number of times. Pairwise tools are the practical choice today.
+
+**Good fit:** configuration matrices (browser/OS/device), feature flags, forms with many independent dropdowns, API query parameter combinations. **Bad fit:** dependent business rules. Use a decision table there, because every rule matters, not just pairs.
+
+**In an interview, say:** "Pairwise makes sure every pair of values meets at least once. It cuts 36 combinations to about 9 tests. I add constraints, and go 3-wise for risky areas."`,
       code: [
         {
           language: 'text',
@@ -443,17 +512,19 @@ IF [User] = "Guest" THEN [Payment] <> "COD";
       keyPoints: [
         'Pairwise: every pair of values appears in at least one test.',
         'Lower bound = product of the two largest parameter sizes.',
-        'Use constraints for impossible combinations; raise to 3-wise for high-risk areas.',
+        'Use constraints for impossible combinations. Go 3-wise for high-risk areas.',
       ],
       source: 'Microsoft PICT documentation (github.com/microsoft/pict); Software Testing Help — Pairwise Testing',
     },
     {
       heading: 'Experience-based techniques: error guessing and checklists',
-      body: `**Intuition:** an experienced mechanic listens to an engine and checks the part that *usually* breaks. Error guessing is that instinct, written down.
+      body: `**Experience-based techniques** use the tester's knowledge and past bugs to design tests. ISTQB names three: error guessing, checklist-based testing and exploratory testing.
 
-**Error guessing** anticipates mistakes developers commonly make and the failures they cause. ISTQB v4.0 describes a methodical version called a **fault attack**: keep a list of likely errors, defects and failures, then design tests that attack each one.
+**Error guessing** means predicting the mistakes developers often make, and testing for them. ISTQB v4.0 describes a methodical version called a **fault attack**. You keep a written list of likely errors, defects and failures. Then you design a test to attack each one.
 
-**A starter fault-attack list for any form or API:**
+**Example:** a team once shipped a bug where double-clicking "Place order" created two orders. Now "double submit" is on their attack list, and every form gets that test.
+
+A starter fault-attack list for any form or API:
 
 | Attack | Example on SauceDemo / a booking API |
 |---|---|
@@ -467,21 +538,23 @@ IF [User] = "Guest" THEN [Payment] <> "COD";
 | Concurrent edits | Same booking updated in two tabs |
 | Injection strings | \`' OR 1=1 --\`, \`<script>\` in a name field |
 
-**Checklist-based testing** uses a list of conditions to verify, built from experience, standards or past defects ("every form: tab order, required-field markers, error text near the field, labels read by a screen reader"). Checklists keep a team consistent; review them so they do not go stale.
+**Checklist-based testing** uses a list of things to check. The list comes from experience, standards or past bugs. Example for every form: tab order, required-field markers, error text near the field, labels read by a screen reader. Checklists keep a team consistent. Review them so they don't go stale.
 
-**Exploratory testing** is the third experience-based technique (covered in its own topic).
+**Exploratory testing** is the third experience-based technique. It has its own topic.
 
-**Interview angle:** experience-based techniques **complement** formal ones. Formal techniques give measurable coverage of the spec; error guessing covers what the spec forgot. Say both, and give a concrete past defect as an example.`,
+These techniques **add to** the formal ones; they don't replace them. Formal techniques give measurable coverage of the spec. Error guessing covers what the spec forgot.
+
+**In an interview, say:** "I run EP, BVA and decision tables first for measurable coverage. Then I spend a time-box on fault attacks from my list, like double submit and session expiry."`,
       keyPoints: [
         'Error guessing becomes systematic as a fault attack with a written list.',
-        'Checklists encode team experience; keep them short and current.',
-        'Experience-based testing fills gaps the specification never mentioned.',
+        'Checklists hold team experience. Keep them short and current.',
+        'Experience-based testing fills gaps the spec never mentioned.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.4.1 Error Guessing, 4.4.3 Checklist-Based Testing',
     },
     {
       heading: 'Choosing a technique, and carrying it into automation',
-      body: `**Intuition:** each technique is a different lens. Pick the lens that matches the shape of the requirement.
+      body: `Each technique fits a certain **shape** of requirement. Look at the shape first, then pick the technique.
 
 | Requirement looks like… | Use | Coverage items |
 |---|---|---|
@@ -493,9 +566,15 @@ IF [User] = "Guest" THEN [Payment] <> "COD";
 | Many independent settings | Pairwise | Value pairs |
 | "What usually breaks here?" | Error guessing, checklists | Attacks / checklist items |
 
-A real feature uses several. A login page has EP/BVA on password length, a state machine for lockout, and error guessing for SQL injection.
+**Example: a login page** needs several techniques at once:
 
-**From technique to Playwright:** the tables you design manually become **data** in a parameterised test. One test body, many rows, so adding a boundary is one line, and the test title tells you which partition failed. Playwright's docs recommend a plain \`for...of\` loop that declares one \`test()\` per row.`,
+- EP and BVA on password length.
+- State transition for the lockout after 3 wrong passwords.
+- Error guessing for SQL injection in the username.
+
+**From technique to Playwright:** the tables you design by hand become **data** in a parameterised test. One test body runs many rows. Adding a boundary is one new line, and the test title tells you which partition failed. Playwright's docs recommend a plain \`for...of\` loop that declares one \`test()\` per row.
+
+**In an interview, say:** "I match the technique to the requirement. Ranges get EP and BVA, combined conditions get a decision table, and history gets state transition."`,
       code: [
         {
           language: 'typescript',
@@ -529,9 +608,9 @@ for (const { input, valid, why } of ageCases) {
         },
       ],
       keyPoints: [
-        'Match the technique to the shape of the requirement; combine several per feature.',
-        'Designed tables map directly to data rows in a parameterised automated test.',
-        'Name each automated case after its coverage item so failures are self-explaining.',
+        'Match the technique to the shape of the requirement. Combine several per feature.',
+        'Designed tables become data rows in a parameterised automated test.',
+        'Name each automated case after its coverage item, so failures explain themselves.',
       ],
       source: 'Playwright docs — Parameterize tests; ISTQB CTFL v4.0 — 4.1 Test Techniques Overview',
     },
@@ -713,7 +792,7 @@ I would also check that the **server** enforces the range, since client-side val
         },
         {
           q: 'The requirement says "between 18 and 60". Does that change anything?',
-          a: '"Between" is ambiguous: it may or may not include 18 and 60. I would ask the product owner and get the answer written into the acceptance criteria. The boundary values I test depend on it: inclusive means 18 is valid, exclusive means 18 is the invalid boundary and 19 the first valid one.',
+          a: '"Between" is ambiguous: it may or may not include 18 and 60. I would ask the product owner and get the answer written into the acceptance criteria. My boundary values depend on it. Inclusive means 18 is valid. Exclusive means 18 is the invalid boundary and 19 is the first valid value.',
         },
         {
           q: 'How would this change if the field were a date of birth instead of an age?',
@@ -745,9 +824,9 @@ I would also check that the **server** enforces the range, since client-side val
 - 2-value: {0, 7, 8, 64, 65}. Five items, and 0 is an outer boundary with no lower neighbour.
 - 3-value: {0, 1, 6, 7, 8, 9, 63, 64, 65, 66}. Ten items.
 
-Note that 7 *and* 8 are both boundary values (the max of one partition and the min of the next), so 3-value gives **four** items per internal border, not three.
+Note that 7 *and* 8 are both boundary values: the max of one partition and the min of the next. So 3-value gives **four** items per inside border, not three.
 
-**What 3-value catches that 2-value misses:** a faulty relational operator. If "length <= 64" were coded as "length == 64", the 2-value tests 64 (passes) and 65 (rejected, as expected) both pass, so the bug survives. The 3-value test at 63 is wrongly rejected, which exposes it. 2-value is enough for the classic off-by-one where the boundary moved by one position.
+**What 3-value catches that 2-value misses:** a faulty relational operator. Say "length <= 64" is coded as "length == 64". The 2-value tests 64 (accepted) and 65 (rejected) both pass, so the bug survives. The 3-value test at 63 is wrongly rejected, which exposes it. 2-value is enough for the classic off-by-one where the boundary moved by one position.
 
 **When it is worth it:**
 - Money, eligibility, legal or safety thresholds (loan limits, age for alcohol or medicine dosage).
@@ -758,11 +837,11 @@ For low-risk UI fields under time pressure, 2-value plus EP is a sensible defaul
       followUps: [
         {
           q: 'Many blogs say 3-value BVA for 1–10 is 0, 1, 2 and 9, 10, 11. Is that wrong?',
-          a: 'It is an older, simplified convention that looks only at the valid partition\'s edges. Under ISTQB v4.0, 0 is also a boundary value (the max of the invalid partition below), so its neighbour -1 is included too, giving -1, 0, 1, 2 and 9, 10, 11, 12. For a certification exam follow the syllabus; at work, what matters is stating which convention you used.',
+          a: 'It is an older, simplified convention that looks only at the valid partition\'s edges. Under ISTQB v4.0, 0 is also a boundary value (the max of the invalid partition below). So its neighbour -1 is included too. That gives -1, 0, 1, 2 and 9, 10, 11, 12. For a certification exam follow the syllabus; at work, what matters is stating which convention you used.',
         },
         {
           q: 'Can you apply BVA to a dropdown of countries?',
-          a: 'No. BVA requires ordered partitions, and a country list has no meaningful "next value". I would use equivalence partitioning instead, grouping countries by the behaviour they trigger (tax rules, currency, shipping zone) and testing one country per group, plus error guessing for unusual names.',
+          a: 'No. BVA requires ordered partitions, and a country list has no meaningful "next value". I would use equivalence partitioning instead. Group countries by the behaviour they trigger (tax rules, currency, shipping zone) and test one country per group. Add error guessing for unusual names.',
         },
       ],
       pitfalls: [
@@ -774,7 +853,7 @@ For low-risk UI fields under time pressure, 2-value plus EP is a sensible defaul
     {
       id: 'mt-test-design-iq-03',
       difficulty: 'medium',
-      question: 'A product owner gives you this rule: "Free delivery for Prime members, or for anyone ordering ₹499 or more, except for bulky items." How do you design the tests?',
+      question: 'The product owner gives this rule: "Free delivery for Prime members, or for anyone ordering ₹499 or more, except for bulky items." How do you design the tests?',
       whatInterviewerLooksFor: [
         'Recognises combined conditions and reaches for a decision table',
         'Computes the number of rules correctly (2^3 = 8)',
@@ -804,7 +883,7 @@ Three binary conditions → **2^3 = 8 rules**:
       followUps: [
         {
           q: 'The PO adds a fourth condition: "first order is always free". What happens to your table?',
-          a: 'The table doubles to 2^4 = 16 rules. I would check for collapsing first: if "first order" overrides everything, all 8 first-order rules become one rule with three don\'t-care entries, giving about 9 rules. I would confirm that override with the PO, since "always" may or may not beat the bulky exception.',
+          a: 'The table doubles to 2^4 = 16 rules. I would try collapsing first. If "first order" overrides everything, all 8 first-order rules become one rule with three don\'t-care entries. That gives about 9 rules. I would confirm that override with the PO, since "always" may or may not beat the bulky exception.',
         },
         {
           q: 'How would you automate this decision table?',
@@ -831,7 +910,12 @@ Three binary conditions → **2^3 = 8 rules**:
 
 **States:** S0 Idle, S1 Attempt 1, S2 Attempt 2, S3 Attempt 3, S4 Access granted, S5 Card retained.
 
-**Valid transitions (11):** insert card (S0→S1); correct PIN from S1, S2 and S3 (→S4); wrong PIN S1→S2, S2→S3, S3→S5; cancel from S1, S2 and S3 (→S0, eject card); finish from S4 (→S0).
+**Valid transitions (11):**
+- Insert card (S0→S1).
+- Correct PIN from S1, S2 and S3 (→S4).
+- Wrong PIN: S1→S2, S2→S3, S3→S5.
+- Cancel from S1, S2 and S3 (→S0, eject card).
+- Finish from S4 (→S0).
 
 **Coverage level:** this is a banking, security-relevant feature, so I would aim for **all transitions**: every valid transition, plus attempts at invalid ones. All-states coverage alone needs only two tests (wrong ×3, and correct first time) and would miss most bugs.
 
@@ -845,7 +929,7 @@ Three binary conditions → **2^3 = 8 rules**:
 7. Invalid: in S5, press keys or enter PIN → ignored, card not returned.
 8. Invalid: in S0, enter digits without a card → nothing happens.
 
-**Extra risk-based checks:** timeout at the PIN prompt, power loss at attempt 3, and whether the counter is stored on the card/host (so another ATM sees two prior failures).
+**Extra risk-based checks:** timeout at the PIN prompt, and power loss at attempt 3. Also: is the counter stored on the card or host, so another ATM sees two earlier failures?
 
 Each invalid transition gets its own test, so a failure points to one cause.`,
       followUps: [
@@ -855,7 +939,7 @@ Each invalid transition gets its own test, so a failure points to one cause.`,
         },
         {
           q: 'How would you test this if you cannot use a real ATM?',
-          a: 'Test the logic at the service layer: call the PIN-verification API with a test card, observing the attempt counter and card status in responses or in the database. Use a simulator for the hardware actions (eject, retain). Keep a small number of end-to-end tests on a lab ATM for the physical behaviour.',
+          a: 'Test the logic at the service layer. Call the PIN-verification API with a test card. Watch the attempt counter and card status in the responses or the database. Use a simulator for the hardware actions (eject, retain). Keep a small number of end-to-end tests on a lab ATM for the physical behaviour.',
         },
       ],
       pitfalls: [
@@ -901,7 +985,7 @@ PICT model:
         },
         {
           q: 'When would pairwise be the wrong technique?',
-          a: 'When the parameters are dependent business rules rather than independent settings. For example, a discount that depends on membership, cart value and coupon together: every combination has a specific expected result, so a decision table is correct. Pairwise assumes interactions above two factors are rare, which is false for business logic.',
+          a: 'When the parameters are dependent business rules rather than independent settings. For example, a discount that depends on membership, cart value and coupon together. Every combination has its own expected result, so a decision table is right. Pairwise assumes interactions above two factors are rare, which is false for business logic.',
         },
       ],
       pitfalls: [
@@ -920,9 +1004,9 @@ PICT model:
         'Gives concrete attacks, ideally from a real past defect',
         'Positions it as a complement to formal techniques',
       ],
-      modelAnswer: `**Error guessing** is an experience-based technique: I anticipate the mistakes developers are likely to make, and the failures those mistakes cause, then design tests aimed at them. It draws on how the application worked before, the kinds of mistakes this team makes, and failures seen in similar products.
+      modelAnswer: `**Error guessing** is an experience-based technique. I predict the mistakes developers are likely to make, and the failures they cause. Then I design tests aimed at them. It draws on how the application worked before, the kinds of mistakes this team makes, and failures seen in similar products.
 
-**Making it systematic: fault attacks.** The ISTQB v4.0 syllabus describes a methodical approach: keep a **written list** of likely errors, defects and failures, then design a test for each one. My list for forms and APIs includes:
+**Making it systematic: fault attacks.** The ISTQB v4.0 syllabus describes a methodical approach. Keep a **written list** of likely errors, defects and failures. Then design a test for each one. My list for forms and APIs includes:
 - Empty, whitespace-only and null input
 - Very long input, Unicode, emoji, apostrophes (O'Brien)
 - 0, negative numbers, leading zeros
@@ -933,7 +1017,7 @@ PICT model:
 
 **Feeding the list:** every production bug and every escaped defect from a retrospective gets added. That way the list becomes the team's memory.
 
-**Example:** on an e-commerce project, a double click on "Place order" created two orders, because the button was not disabled while the request was in flight. Since then "double submit" has been on every checklist I use, and it has found the same bug in two other forms.
+**Example:** on an e-commerce project, a double click on "Place order" created two orders. The button was not disabled while the request was running. Since then "double submit" has been on every checklist I use, and it has found the same bug in two other forms.
 
 **Positioning:** it is not a replacement for EP, BVA or decision tables. Those give measurable coverage of the specification; error guessing covers what the specification never mentioned. I run the formal tests first, then spend a fixed time-box on attacks. I record the attack list in the test plan, so the work is reviewable and not invisible "random testing".`,
       followUps: [
@@ -962,9 +1046,9 @@ PICT model:
         'Descriptive test titles that name the coverage item',
         'Thinks about data setup, maintenance and execution time',
       ],
-      modelAnswer: `**1. Keep the design as data.** Each EP partition, boundary value or decision-table rule becomes a **row**: input values, expected outcome, and a label such as "BVA max" or "rule R3". The design table and the code then stay in sync, and adding a boundary is one line.
+      modelAnswer: `**1. Keep the design as data.** Each EP partition, boundary value or decision-table rule becomes a **row**. A row has input values, the expected outcome, and a label such as "BVA max" or "rule R3". The design table and the code then stay in sync, and adding a boundary is one line.
 
-**2. One test body, many rows.** Playwright's recommended pattern is a \`for...of\` loop over the rows that declares one \`test()\` per row, with the row label in the title. A failure then reads "quantity 11 -> rejected (BVA above max)" and needs no investigation to understand. Each row is a separate test, so they run in parallel and retry individually.
+**2. One test body, many rows.** Playwright's recommended pattern is a \`for...of\` loop over the rows. It declares one \`test()\` per row, with the row label in the title. A failure then reads "quantity 11 -> rejected (BVA above max)" and needs no investigation to understand. Each row is a separate test, so they run in parallel and retry individually.
 
 **3. Push permutations down the pyramid.** Most of those 40 cases check **business rules**, not the UI. The discount table's 8 rules are best checked against the pricing API with the \`request\` fixture: milliseconds each, no browser, no flaky rendering. The UI keeps:
 - one or two representative rules end-to-end (does the discount *display* correctly?),
@@ -972,9 +1056,9 @@ PICT model:
 
 A typical split for 40 cases: about 30 API or component-level checks, 6–8 UI tests.
 
-**4. Fast, independent setup.** Create users, carts and coupons through the API in a fixture, not by clicking through the UI, so each row is independent and can run in any order.
+**4. Fast, independent setup.** Create users, carts and coupons through the API in a fixture, not by clicking through the UI. Then each row is independent and can run in any order.
 
-**5. Keep traceability.** Tag tests with the requirement ID (\`@REG-04\`) and the technique in the title, so the report maps back to the manual design and the RTM.
+**5. Keep traceability.** Tag tests with the requirement ID (\`@REG-04\`) and put the technique in the title. Then the report maps back to the manual design and the RTM.
 
 **What I would not automate:** one-off error-guessing explorations and visual judgement calls. Those stay manual or exploratory.`,
       followUps: [
@@ -984,7 +1068,7 @@ A typical split for 40 cases: about 30 API or component-level checks, 6–8 UI t
         },
         {
           q: 'Your 3-value BVA rows all fail at once after a release. What do you check first?',
-          a: 'When every boundary row fails together, the cause is usually shared rather than a boundary bug: the error message text changed, the locator for the alert changed, or setup data failed. I would open one trace, compare the actual message with the expected one, and only then look at the business rule.',
+          a: 'When every boundary row fails together, the cause is usually shared, not a boundary bug. The error text changed, the alert locator changed, or setup data failed. I would open one trace, compare the actual message with the expected one, and only then look at the business rule.',
         },
       ],
       pitfalls: [
@@ -1018,13 +1102,13 @@ A typical split for 40 cases: about 30 API or component-level checks, 6–8 UI t
 
 **3-value BVA:** 0, 1, 2, 8, 9, 10, 11, 499, 500, 501, 502 (11 values).
 
-Expected results: 0 → "Comment is required"; 1–9 → "Minimum 10 characters"; 10–500 → posted; 501+ → "Maximum 500 characters" (or typing blocked at 500, so check both the counter and a paste of 501 characters).`,
+Expected results: 0 → "Comment is required". 1–9 → "Minimum 10 characters". 10–500 → posted. 501+ → "Maximum 500 characters". Typing may be blocked at 500, so check both the counter and a paste of 501 characters.`,
       insight:
         'Because "empty" is its own partition (required), the lower range has two partitions with their own boundaries. Treating the field as just "<10 / 10–500 / >500" would miss the 0|1 boundary, where "required" and "too short" messages are often confused.',
       followUps: [
         {
           q: 'The field has maxlength="500" in HTML, so you cannot type 501 characters. Is the 501 test pointless?',
-          a: 'Not pointless, just moved. In the UI, test that typing stops at 500 and that pasting 600 characters truncates or warns. Then send 501 characters directly to the API to prove the server enforces the rule, because maxlength is a browser hint that any client can bypass.',
+          a: 'Not pointless, just moved. In the UI, test that typing stops at 500 and that pasting 600 characters truncates or warns. Then send 501 characters straight to the API to prove the server enforces the rule. maxlength is only a browser hint that any client can bypass.',
         },
       ],
     },
@@ -1085,11 +1169,11 @@ Expected results: 0 → "Comment is required"; 1–9 → "Minimum 10 characters"
 - **Valid-transition coverage:** 3 tests: (1) the full path to Returned; (2) Placed → Cancelled; (3) Placed → Paid → Cancelled.
 - **All-transitions coverage** adds one test per invalid attempt, e.g. try to cancel a Shipped order (expected: blocked with a clear message), and try to return a Placed order.`,
       insight:
-        'All-states coverage needed only 2 tests but missed the Paid → Cancelled transition, the one that triggers a refund and is most likely to have bugs. That is why valid-transition coverage is the usual minimum in practice.',
+        'All-states coverage needed only 2 tests, but it missed Paid → Cancelled. That transition triggers a refund and is the most likely to have bugs. That is why valid-transition coverage is the usual minimum in practice.',
       followUps: [
         {
           q: 'Which invalid transition would you prioritise, and why?',
-          a: 'Shipped → Cancelled. Customers try it often, and if the system allows it, it may refund money for goods already handed to the courier. It has a direct financial impact, so it gets tested first, along with checking the API rejects it as well as the UI hiding the Cancel button.',
+          a: 'Shipped → Cancelled. Customers try it often, and if the system allows it, it may refund money for goods already handed to the courier. It costs money directly, so I test it first. I check that the API rejects it, not just that the UI hides the Cancel button.',
         },
       ],
     },
@@ -1160,7 +1244,7 @@ Expected results: 0 → "Comment is required"; 1–9 → "Minimum 10 characters"
       options: ['6, 7, 8, 9', '7, 8, 9', '7, 8', '8, 9, 10'],
       correct: [0],
       explanation:
-        'Both 7 (max of the "too short" partition) and 8 (min of the valid partition) are boundary values. 3-value BVA tests each boundary value and both its neighbours: 7 → 6, 7, 8 and 8 → 7, 8, 9, whose union is 6, 7, 8, 9. "7, 8, 9" is the older simplified convention, which forgets that 7 is itself a boundary. "7, 8" is 2-value BVA.',
+        'Both 7 (max of the "too short" partition) and 8 (min of the valid partition) are boundary values. 3-value BVA tests each boundary value and both its neighbours. 7 → 6, 7, 8 and 8 → 7, 8, 9. Together: 6, 7, 8, 9. "7, 8, 9" is the older simplified convention, which forgets that 7 is itself a boundary. "7, 8" is 2-value BVA.',
       followUps: [
         {
           q: 'How many 3-value coverage items does the whole requirement have?',
@@ -1222,7 +1306,7 @@ C4 Annual mileage over 15,000 km? Y / N`,
       followUps: [
         {
           q: 'How would you reduce 24 tests if time is short?',
-          a: 'First collapse rules with identical outcomes using don\'t-care entries. If the premium depends on each factor independently rather than on specific combinations, I would confirm that with the business and then consider pairwise to cover all pairs in about 6 tests, while keeping the full table for the riskiest combinations.',
+          a: 'First collapse rules with identical outcomes using don\'t-care entries. Does the premium depend on each factor on its own, not on combinations? If the business confirms that, pairwise can cover all pairs in about 6 tests. Keep the full table for the riskiest combinations.',
         },
       ],
     },
@@ -1239,11 +1323,11 @@ C4 Annual mileage over 15,000 km? Y / N`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'EP assumes all members of a partition behave the same, so one value covers it; partitions can be defined on outputs (tax slabs) as well as inputs; invalid partitions are isolated to avoid masking. Non-numeric data (file types, user roles, countries) can be partitioned too. Ordering is a requirement of BVA, not of EP.',
+        'EP assumes all members of a partition behave the same, so one value covers it. Partitions can be defined on outputs (tax slabs) as well as inputs. Invalid partitions are tested alone to avoid masking. Non-numeric data (file types, user roles, countries) can be partitioned too. Ordering is a requirement of BVA, not of EP.',
       followUps: [
         {
           q: 'Give an example of a non-numeric partition.',
-          a: 'File upload types: allowed (PDF, JPG, PNG) as one valid partition, disallowed (EXE, ZIP) as an invalid one, and a renamed file (virus.exe renamed to virus.pdf) as another invalid partition, because the content does not match the extension.',
+          a: 'File upload types. Allowed types (PDF, JPG, PNG) are one valid partition. Blocked types (EXE, ZIP) are an invalid one. A renamed file (virus.exe renamed to virus.pdf) is another invalid partition, because the content does not match the extension.',
         },
       ],
     },
@@ -1279,7 +1363,7 @@ Action        Pay  Fail Fail Fail Rej  Rej`,
       options: ['R5 and R6', 'R3 and R4', 'R1 and R2', 'R2 and R4'],
       correct: [0, 1, 3],
       explanation:
-        'Merging needs identical actions and a difference in exactly one condition. R5/R6 (both Reject, differ only in balance) merge into "card N → Reject". R3/R4 (both Fail, differ only in OTP) merge into "card Y, balance N, OTP –". R2/R4 (both Fail, differ only in balance) also qualify on their own, though you would choose either R3/R4 or R2/R4, not both, since R4 can only be merged once. R1 and R2 have different actions (Pay vs Fail), so they cannot merge.',
+        'Merging needs identical actions and a difference in exactly one condition. R5/R6 (both Reject, differ only in balance) merge into "card N → Reject". R3/R4 (both Fail, differ only in OTP) merge into "card Y, balance N, OTP –". R2/R4 (both Fail, differ only in balance) also qualify on their own. But you would pick either R3/R4 or R2/R4, not both, since R4 can only be merged once. R1 and R2 have different actions (Pay vs Fail), so they cannot merge.',
       followUps: [
         {
           q: 'After collapsing, which "don\'t care" value would you choose for the "card N" test?',
@@ -1303,7 +1387,7 @@ Action        Pay  Fail Fail Fail Rej  Rej`,
       followUps: [
         {
           q: 'Which missing transition is the most important to add?',
-          a: 'Correct PIN at attempt 3 (S3 → S4). It sits on the edge of the lockout rule: an off-by-one in the counter would retain the card even though the third PIN was correct, which is a serious customer-facing defect.',
+          a: 'Correct PIN at attempt 3 (S3 → S4). It sits on the edge of the lockout rule. An off-by-one in the counter would keep the card even though the third PIN was correct. Customers would feel that bug badly.',
         },
       ],
     },
@@ -1314,7 +1398,7 @@ Action        Pay  Fail Fail Fail Rej  Rej`,
       options: ['12', '24', '9', '6'],
       correct: [0],
       explanation:
-        'Every Browser–Language pair (4 × 3 = 12) must appear, and each test row holds exactly one such pair, so at least 12 rows are needed. Theme values can be spread across those rows. 24 is the exhaustive count (4 × 3 × 2). 9 and 6 are below the lower bound set by the two largest parameters.',
+        'Every Browser–Language pair (4 × 3 = 12) must appear. Each test row holds exactly one such pair, so at least 12 rows are needed. Theme values can be spread across those rows. 24 is the exhaustive count (4 × 3 × 2). 9 and 6 are below the lower bound set by the two largest parameters.',
       followUps: [
         {
           q: 'When would you not trust pairwise for this matrix?',
@@ -1378,7 +1462,7 @@ LOCKED      --30 min-->  S0`,
     {
       id: 'mt-test-design-mcq-15',
       difficulty: 'expert',
-      question: 'Your team has one sprint to test a new pricing engine with 5 interacting business rules, plus a UI that must work on 4 browsers and 3 screen sizes. Which test design plan is strongest?',
+      question: 'You have one sprint to test a new pricing engine with 5 interacting business rules. The UI must also work on 4 browsers and 3 screen sizes. Which test design plan is strongest?',
       options: [
         'Decision table for the pricing rules (mostly via API tests), pairwise for browser × screen size, BVA on price thresholds',
         'Pairwise for everything, because it gives the fewest tests across rules, browsers and screens',
@@ -1387,7 +1471,7 @@ LOCKED      --30 min-->  S0`,
       ],
       correct: [0],
       explanation:
-        'Interacting business rules need a decision table, since every combination has a specific expected price, and API tests make those cheap. Independent environment factors suit pairwise. Thresholds need BVA. Pairwise on dependent rules would skip combinations that matter; exhaustive UI testing multiplies rules × browsers × screens unnecessarily; error guessing alone gives no measurable coverage.',
+        'Interacting business rules need a decision table, since every combination has a specific expected price, and API tests make those cheap. Independent environment factors suit pairwise. Thresholds need BVA. Pairwise on dependent rules would skip combinations that matter. Exhaustive UI testing multiplies rules × browsers × screens for no reason. Error guessing alone gives no measurable coverage.',
       followUps: [
         {
           q: 'Where would error guessing still fit in this plan?',
