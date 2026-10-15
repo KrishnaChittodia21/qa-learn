@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PW_LAB_ABOUT, PW_LAB_APP_URL, PW_LAB_STEPS, type PwLabStep } from '../content/pwlab';
 import { Badge, CodeBlock, Markdown, ProgressBar } from '../components/ui';
+import { celebrate } from '../lib/celebrate';
+import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 
 // ---------- judge results (written by `npm run judge` to public/judge-results.json) ----------
 interface StepResult {
@@ -260,6 +262,16 @@ function StepView({ s, n, prev, next }: { s: PwLabStep; n: number; prev?: PwLabS
   const judge = useJudgeResults();
   const { load } = judge;
   const r = load.state === 'ok' ? load.data.steps[s.id] : undefined;
+  const allCaught = r?.status === 'scored' && r.mutantsTotal > 0 && r.mutantsCaught === r.mutantsTotal;
+
+  // celebrate the first time a step's results show every hidden bug caught
+  useEffect(() => {
+    if (!allCaught) return;
+    const seen = getUiPrefs().celebratedPwSteps;
+    if (seen.includes(s.id)) return;
+    saveUiPrefs({ celebratedPwSteps: [...seen, s.id] });
+    celebrate('Every bug caught!', `${s.title}: your tests catch all ${r?.mutantsTotal} hidden bugs.`);
+  }, [allCaught, s.id, s.title, r?.mutantsTotal]);
 
   return (
     <div className="page">

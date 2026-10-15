@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useBlocker, useParams } from 'react-router-dom';
-import { MCQ_TOPIC, TOPIC_BY_ID } from '../content';
+import { MCQ_TOPIC, TOPICS, TOPIC_BY_ID } from '../content';
+import { ArrowRight } from 'lucide-react';
+import { celebrate } from '../lib/celebrate';
 import type { Difficulty, MCQ } from '../types';
 import { recordAnswers, recordTest, useProgress } from '../lib/progress';
 import { weakSections } from '../lib/weak';
@@ -117,9 +119,12 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
     if (phase === 'done' && !recorded.current) {
       recorded.current = true;
       recordAnswers(items.map((it) => ({ id: it.q.id, correct: sameSet(answers[it.q.id] ?? [], it.q.correct) })));
-      if (recordTopicId && items.length === total) recordTest(recordTopicId, score);
+      if (recordTopicId && items.length === total) {
+        recordTest(recordTopicId, score);
+        if (score >= p.settings.passMark) celebrate('Exam passed!', `${title}: ${score}%`);
+      }
     }
-  }, [phase, items, answers, total, recordTopicId, score]);
+  }, [phase, items, answers, total, recordTopicId, score, p.settings.passMark, title]);
 
   // countdown
   useEffect(() => {
@@ -400,6 +405,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
               All weak areas →
             </Link>
           </div>
+          {passed && full && <NextTopicLink topicId={recordTopicId} />}
         </div>
       </div>
       <AttemptAnalysis items={items.map((it) => it.q)} missed={missed} />
@@ -503,6 +509,20 @@ function AttemptAnalysis({ items, missed }: { items: MCQ[]; missed: MCQ[] }) {
           Sections are matched automatically from each question&apos;s wording. Use the review below for the exact reasoning.
         </p>
       )}
+    </div>
+  );
+}
+
+/** After a passing exam: one obvious way forward. */
+function NextTopicLink({ topicId }: { topicId?: string }) {
+  const idx = TOPICS.findIndex((t) => t.id === topicId);
+  const next = TOPICS[idx + 1];
+  return (
+    <div className="next-up inline">
+      <span className="next-up-lead">Topic done.</span>
+      <Link className="btn btn-primary" to={next ? `/topic/${next.id}` : '/coding'}>
+        {next ? `Next topic: ${next.title}` : 'Practise JS coding problems'} <ArrowRight size={16} aria-hidden="true" />
+      </Link>
     </div>
   );
 }

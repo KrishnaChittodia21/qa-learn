@@ -19,6 +19,9 @@ export interface McqRecord {
   lastAt: string;
 }
 
+/** Settings → Accent colour (applied as data-accent on <html>) */
+export type Accent = 'indigo' | 'teal' | 'rose' | 'amber';
+
 export interface Settings {
   passMark: number;
   secondsPerQuestion: number;
@@ -26,6 +29,8 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark';
   /** study-first lock: which practice unlocks only after every Learn section is marked read */
   studyLock: 'off' | 'exam' | 'exam-interview';
+  /** optional for saves made before accent themes existed; defaults to 'indigo' */
+  accent?: Accent;
 }
 
 export interface Progress {
@@ -37,9 +42,13 @@ export interface Progress {
   drafts: Record<string, string>;
   /** solved JavaScript coding problems */
   code: Record<string, true>;
+  /** company questions marked as practised */
+  company: Record<string, true>;
   mcq: Record<string, McqRecord>;
   /** applied one-off data migrations */
   migrations?: string[];
+  /** local dates (YYYY-MM-DD) with any study activity, oldest first (max 400); drives the study streak */
+  activityDays?: string[];
   settings: Settings;
 }
 
@@ -53,10 +62,12 @@ const DEFAULT: Progress = {
   cc: {},
   drafts: {},
   code: {},
+  company: {},
   mcq: {},
   // fresh progress already matches current content, so no migration applies
   migrations: [],
-  settings: { passMark: 70, secondsPerQuestion: 90, shuffle: true, theme: 'system', studyLock: 'exam' },
+  activityDays: [],
+  settings: { passMark: 70, secondsPerQuestion: 90, shuffle: true, theme: 'system', studyLock: 'exam', accent: 'indigo' },
 };
 
 function load(): Progress {
@@ -93,8 +104,24 @@ export function getProgress(): Progress {
   return state;
 }
 
-export function update(fn: (p: Progress) => Progress) {
+/** local calendar date, e.g. "2026-10-15" */
+export function localDay(d = new Date()): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function withActivity(p: Progress): Progress {
+  const today = localDay();
+  const days = p.activityDays ?? [];
+  if (days[days.length - 1] === today) return p;
+  return { ...p, activityDays: [...days.filter((d) => d !== today), today].slice(-400) };
+}
+
+/** Apply a change. Study actions also record today in `activityDays`; settings changes pass activity=false. */
+export function update(fn: (p: Progress) => Progress, activity = true) {
   state = fn(state);
+  if (activity) state = withActivity(state);
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
@@ -148,7 +175,7 @@ export function markAllSectionsRead(topicId: string, count: number) {
   update((p) => ({ ...p, sections: { ...p.sections, [topicId]: Array.from({ length: count }, (_, i) => i) } }));
 }
 
-export function setFlag(bucket: 'boe' | 'cc' | 'code', id: string, on: boolean) {
+export function setFlag(bucket: 'boe' | 'cc' | 'code' | 'company', id: string, on: boolean) {
   update((p) => {
     const next = { ...p[bucket] };
     if (on) next[id] = true;
@@ -171,11 +198,11 @@ export function setDraft(id: string, text: string) {
 }
 
 export function setSettings(s: Partial<Settings>) {
-  update((p) => ({ ...p, settings: { ...p.settings, ...s } }));
+  update((p) => ({ ...p, settings: { ...p.settings, ...s } }), false);
 }
 
 export function resetProgress() {
-  update((p) => ({ ...DEFAULT, settings: p.settings }));
+  update((p) => ({ ...DEFAULT, settings: p.settings }), false);
 }
 
 export function isPassed(p: Progress, topicId: string) {

@@ -218,3 +218,25 @@ Files: `practice-app/server.mjs` + `practice-app/public/` (the QA Shop app), `sr
   `npm run judge -- --reference`: every step must pass on the correct app, show no flakiness, and catch 100% of its
   mutants. A new step also needs a `PW_LAB_STEPS` entry (id `stepN`, tag `@stepN`) and at least one mutant.
 
+
+---
+
+## Company-reported interview questions (`src/content/company/<area>.ts`)
+
+Each file exports `export const QUESTIONS: CompanyQuestion[] = [...]` (see `CompanyQuestion` in `src/types.ts`). They appear on
+the **Company Questions** page (filter by company and area) and in a **Company Qs** tab on the topic set in `topic`.
+
+**Sourcing is the whole point, so the rules are strict:**
+- Every question needs `source: { name, url, year }` where `url` is a page you actually **opened** and that **explicitly ties
+  this question to this company** (an interview-experience write-up, a candidate's report, a company-tagged question
+  list). A search-result snippet alone is not enough. A generic "top QA questions" list is not a company source.
+- Prefer first-hand reports: GeeksforGeeks "Interview Experience" articles, Medium/LinkedIn/dev.to candidate write-ups,
+  LeetCode Discuss, Reddit (r/QualityAssurance, r/softwaretesting, r/developersIndia), InterviewBit/Glassdoor/AmbitionBox
+  pages when they load. Note that AmbitionBox and Glassdoor often block automated fetching.
+- `company` exactly as the source names it. `role`/`round` only if the source says so. `year` = the year of the
+  interview or report (not today).
+- Rewrite the question in your own words (keep its meaning). Never invent a company, a question, a round or a year.
+  If research finds fewer questions than hoped, ship fewer — honest and sourced beats padded.
+- `answer` is our own strong answer (≥ 250 chars, markdown), 1–2 `followUps`, and `topic` = the topic id that teaches it.
+- IDs: `co-<area>-<company-slug>-<n>`, e.g. `co-manual-infosys-3`.
+- Validate: `node scripts/validate-company.mjs <file>` (structure, URL/year, topic exists, same-company duplicates).

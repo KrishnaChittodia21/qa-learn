@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { ChevronRight, Play } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import EditorModule from 'react-simple-code-editor';
@@ -75,7 +77,7 @@ export function CodeBlock({ snippet, compact }: { snippet: CodeSnippet; compact?
               window.location.hash = '#/playground';
             }}
           >
-            ▶ Try it
+            <Play size={12} aria-hidden="true" /> Try it
           </button>
         )}
         <button className="btn-ghost btn-xs" onClick={copy} type="button">
@@ -140,9 +142,21 @@ export function Reveal({ label, children, defaultOpen = false }: { label: string
   return (
     <div className={`reveal ${open ? 'open' : ''}`}>
       <button type="button" className="reveal-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="chev">{open ? '▾' : '▸'}</span> {label}
+        <ChevronRight size={16} aria-hidden="true" className={`chev chev-icon ${open ? 'open' : ''}`} /> {label}
       </button>
-      {open && <div className="reveal-body">{children}</div>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            className="reveal-anim"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            <div className="reveal-body">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

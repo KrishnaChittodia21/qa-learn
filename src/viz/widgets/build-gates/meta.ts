@@ -7,5 +7,6 @@ export const meta: VizMeta = {
   placements: [
     { topic: 'mt-test-levels-types', heading: 'Smoke vs sanity' },
     { topic: 'mt-test-levels-types', heading: 'Regression testing' },
+    { topic: 'qa-manual-bank', heading: 'Cluster 3: Levels and types' },
   ],
 };

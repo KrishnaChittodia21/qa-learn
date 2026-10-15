@@ -1,34 +1,34 @@
 /* Prism tokens (light + dark) */
 :root {
-  --tk-comment: #8a8983;
+  --tk-comment: #5f6b80;
   --tk-keyword: #7c3aed;
   --tk-string: #15803d;
   --tk-number: #b45309;
   --tk-function: #2563eb;
   --tk-class: #0e7490;
-  --tk-operator: #5c5b57;
+  --tk-operator: #475569;
   --tk-property: #be185d;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --tk-comment: #6b6f7a;
+    --tk-comment: #8a90b4;
     --tk-keyword: #c4a7ff;
     --tk-string: #86efac;
     --tk-number: #fcd34d;
     --tk-function: #93c5fd;
     --tk-class: #67e8f9;
-    --tk-operator: #b4b5bc;
+    --tk-operator: #b5bad8;
     --tk-property: #f9a8d4;
   }
 }
 :root[data-theme='dark'] {
-  --tk-comment: #6b6f7a;
+  --tk-comment: #8a90b4;
   --tk-keyword: #c4a7ff;
   --tk-string: #86efac;
   --tk-number: #fcd34d;
   --tk-function: #93c5fd;
   --tk-class: #67e8f9;
-  --tk-operator: #b4b5bc;
+  --tk-operator: #b5bad8;
   --tk-property: #f9a8d4;
 }
 .token.comment,

@@ -7,5 +7,6 @@ export const meta: VizMeta = {
   placements: [
     { topic: 'mt-test-design', heading: 'Equivalence Partitioning' },
     { topic: 'mt-test-design', heading: 'Boundary Value Analysis' },
+    { topic: 'qa-manual-bank', heading: 'Cluster 4: Test design techniques' },
   ],
 };

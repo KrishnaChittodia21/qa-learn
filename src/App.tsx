@@ -1,4 +1,5 @@
 import { RouterProvider, createHashRouter, isRouteErrorResponse, useRouteError } from 'react-router-dom';
+import { MotionConfig } from 'motion/react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import TopicPage from './pages/Topic';
@@ -7,7 +8,9 @@ import { CodingListPage, CodingProblemPage } from './pages/Coding';
 import RoadmapPage from './pages/Roadmap';
 import { PwLabOverviewPage, PwLabStepPage } from './pages/PwLab';
 import PlaygroundPage from './pages/Playground';
+import CompaniesPage from './pages/Companies';
 import SettingsPage from './pages/Settings';
+import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
 import { resumeLocation } from './lib/uiPrefs';
 
@@ -24,6 +27,7 @@ const router = createHashRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <Home /> },
+      { path: 'contents', element: <ContentsPage /> },
       { path: 'topic/:id', element: <TopicPage /> },
       { path: 'topic/:id/exam', element: <ExamPage /> },
       { path: 'coding', element: <CodingListPage /> },
@@ -32,6 +36,7 @@ const router = createHashRouter([
       { path: 'pw-lab', element: <PwLabOverviewPage /> },
       { path: 'pw-lab/:step', element: <PwLabStepPage /> },
       { path: 'playground', element: <PlaygroundPage /> },
+      { path: 'companies', element: <CompaniesPage /> },
       { path: 'weak-areas', element: <WeakAreasPage /> },
       { path: 'practice', element: <PracticePage /> },
       { path: 'settings', element: <SettingsPage /> },
@@ -41,7 +46,12 @@ const router = createHashRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  // reducedMotion="user": the OS "reduce motion" setting turns off transform/layout animations
+  return (
+    <MotionConfig reducedMotion="user">
+      <RouterProvider router={router} />
+    </MotionConfig>
+  );
 }
 
 function RouteError() {

@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { CODING_PROBLEMS } from '../content';
 import type { CodingProblem } from '../types';
 import { setDraft, setFlag, useProgress } from '../lib/progress';
+import { celebrate } from '../lib/celebrate';
+import { Lightbulb } from 'lucide-react';
 import { TestRunner } from '../components/TestRunner';
 import { Badge, CodeBlock, CodeEditor, DifficultyBadge, FollowUps, Markdown, ProgressBar, Reveal } from '../components/ui';
 
@@ -136,7 +138,7 @@ function ProblemView({ q, prev, next }: { q: CodingProblem; prev?: CodingProblem
           <div className="row gap-s wrap">
             {hints < q.hints.length && (
               <button className="btn-ghost" type="button" onClick={() => setHints((h) => h + 1)}>
-                💡 Hint {hints + 1}/{q.hints.length}
+                <Lightbulb size={15} aria-hidden="true" /> Hint {hints + 1}/{q.hints.length}
               </button>
             )}
           </div>
@@ -158,7 +160,10 @@ function ProblemView({ q, prev, next }: { q: CodingProblem; prev?: CodingProblem
             code={code}
             fnName={q.fnName}
             tests={q.tests}
-            onAllPassed={() => setFlag('code', q.id, true)}
+            onAllPassed={() => {
+              setFlag('code', q.id, true);
+              celebrate('Problem solved!', `${q.title}: all ${q.tests.length} tests pass.`);
+            }}
             extraActions={
               <button
                 className="btn-ghost"

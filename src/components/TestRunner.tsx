@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, Play } from 'lucide-react';
 import type { CodingTest } from '../types';
 import { runTests, type RunResult } from '../lib/runCode';
 
@@ -48,11 +49,11 @@ export function TestRunner({
       <div className="row gap-s wrap coding-actions">
         {hasHidden && (
           <button className="btn" type="button" disabled={busy} onClick={() => execute('run')}>
-            ▶ Run examples
+            <Play size={15} aria-hidden="true" /> Run examples
           </button>
         )}
         <button className="btn btn-primary" type="button" disabled={busy} onClick={() => execute('submit')}>
-          ✓ {hasHidden ? `Submit (all ${tests.length} tests)` : `Run all ${tests.length} tests`}
+          <Check size={15} aria-hidden="true" /> {hasHidden ? `Submit (all ${tests.length} tests)` : `Run all ${tests.length} tests`}
         </button>
         {extraActions}
       </div>

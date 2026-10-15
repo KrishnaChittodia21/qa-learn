@@ -7,5 +7,6 @@ export const meta: VizMeta = {
   placements: [
     { topic: 'mt-exploratory-risk', heading: 'Risk-based testing' },
     { topic: 'mt-exploratory-risk', heading: 'Prioritising under time pressure' },
+    { topic: 'qa-manual-bank', heading: 'Cluster 6: Exploratory and risk-based testing' },
   ],
 };

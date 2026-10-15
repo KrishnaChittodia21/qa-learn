@@ -154,3 +154,45 @@ export interface CodingProblem {
   askedIn?: string;
   followUps?: FollowUp[];
 }
+
+// ---------- Company-reported interview questions (src/content/company/*.ts) ----------
+
+export type CompanyArea =
+  | 'manual'
+  | 'scenario'
+  | 'api'
+  | 'sql'
+  | 'javascript'
+  | 'playwright'
+  | 'automation'
+  | 'ai'
+  | 'behavioral';
+
+export interface CompanySource {
+  /** e.g. "GeeksforGeeks — Infosys QA interview experience" */
+  name: string;
+  /** a page that was actually opened and that reports this question at this company */
+  url: string;
+  /** year the interview was reported, e.g. 2025 */
+  year: number;
+}
+
+export interface CompanyQuestion {
+  id: string;
+  /** company name exactly as the source reports it, e.g. "Infosys", "Amazon" */
+  company: string;
+  area: CompanyArea;
+  /** role the source mentions, e.g. "QA Engineer", "SDET-1", "Test Engineer" */
+  role?: string;
+  /** round the source mentions, e.g. "Technical round 1", "Managerial" */
+  round?: string;
+  difficulty: Difficulty;
+  /** the question as asked, rewritten in our own words */
+  question: string;
+  /** markdown: a strong, concise answer */
+  answer: string;
+  followUps?: FollowUp[];
+  /** topic id where this is taught (gets a "Company Qs" tab entry) */
+  topic?: string;
+  source: CompanySource;
+}

@@ -1,4 +1,4 @@
-import type { CodingProblem, Topic } from '../types';
+import type { CodingProblem, CompanyQuestion, Topic } from '../types';
 import { PHASES } from './phases';
 
 const topicModules = import.meta.glob<{ default: Topic }>('./topics/*.ts', { eager: true });
@@ -27,5 +27,22 @@ export const CODING_PROBLEMS: CodingProblem[] = Object.values(codingModules)
       CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category) ||
       DIFF_ORDER.indexOf(a.difficulty) - DIFF_ORDER.indexOf(b.difficulty),
   );
+
+// company-reported questions live in company/*.ts, each exporting `QUESTIONS: CompanyQuestion[]`
+const companyModules = import.meta.glob<{ QUESTIONS: CompanyQuestion[] }>('./company/*.ts', { eager: true });
+export const COMPANY_QUESTIONS: CompanyQuestion[] = Object.values(companyModules)
+  .flatMap((m) => m.QUESTIONS ?? [])
+  .sort((a, b) => a.company.localeCompare(b.company) || b.source.year - a.source.year);
+
+/** topic id → company questions taught there */
+export const COMPANY_BY_TOPIC = COMPANY_QUESTIONS.reduce((m, q) => {
+  if (q.topic) m.set(q.topic, [...(m.get(q.topic) ?? []), q]);
+  return m;
+}, new Map<string, CompanyQuestion[]>());
+// the manual interview bank revises every manual topic, so it collects all manual and scenario questions
+COMPANY_BY_TOPIC.set(
+  'qa-manual-bank',
+  COMPANY_QUESTIONS.filter((q) => q.area === 'manual' || q.area === 'scenario'),
+);
 
 export { PHASES };

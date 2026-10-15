@@ -7,5 +7,6 @@ export const meta: VizMeta = {
   placements: [
     { topic: 'mt-agile-release', heading: 'The sprint testing workflow' },
     { topic: 'mt-agile-release', heading: 'Three amigos' },
+    { topic: 'qa-manual-bank', heading: 'Cluster 7: Agile and release' },
   ],
 };

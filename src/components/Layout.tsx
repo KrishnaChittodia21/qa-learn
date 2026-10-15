@@ -1,9 +1,67 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CODING_PROBLEMS, PHASES, TOPICS } from '../content';
+import { AnimatePresence, motion } from 'motion/react';
+import {
+  Building2,
+  ChevronDown,
+  Code2,
+  Compass,
+  FlaskConical,
+  LayoutDashboard,
+  ListTree,
+  Map as MapIcon,
+  Menu,
+  Moon,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Sun,
+  Target,
+  Terminal,
+} from 'lucide-react';
+import { Toaster } from './Toaster';
+import { SiteFooter } from './SiteFooter';
+import { on, openGuide } from '../lib/appEvents';
+import { CODING_PROBLEMS, COMPANY_QUESTIONS, PHASES, TOPICS } from '../content';
 import { setSettings, useProgress } from '../lib/progress';
 import { topicStatus } from '../lib/stats';
 import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
+import { applyThemeAttrs } from '../lib/theme';
+
+// overlays are lazy so cmdk and the tour stay out of the main bundle until first use
+const CommandPalette = lazy(() => import('./CommandPalette'));
+const WelcomeTour = lazy(() => import('./WelcomeTour'));
+
+/** pages worth offering under "Continue where you left off" */
+const STUDY_PAGE = /^\/(topic|coding|pw-lab|playground|companies|roadmap)/;
+
+/** true when a keystroke is going into a text field or code editor */
+function typingInField(e: KeyboardEvent) {
+  const t = e.target as HTMLElement | null;
+  return !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
+}
+
+const STATUS_LABEL = { new: 'not started', 'in-progress': 'in progress', passed: 'passed' } as const;
+
+/** Sidebar link with the shared active pill that slides between items (motion layoutId). */
+function SideLink({ to, end, className = '', children }: { to: string; end?: boolean; className?: string; children: ReactNode }) {
+  return (
+    <NavLink to={to} end={end} className={`side-link ${className}`}>
+      {({ isActive }) => (
+        <>
+          {isActive && (
+            <motion.span
+              layoutId="side-active"
+              className="side-active"
+              aria-hidden="true"
+              transition={{ type: 'spring', stiffness: 520, damping: 42 }}
+            />
+          )}
+          {children}
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 const isMobile = () => window.matchMedia('(max-width: 900px)').matches;
 
@@ -20,11 +78,7 @@ export default function Layout() {
   const firstRoute = useRef(true);
   const sidebarRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (p.settings.theme === 'system') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', p.settings.theme);
-  }, [p.settings.theme]);
+  useEffect(() => applyThemeAttrs(p.settings), [p.settings]);
 
   // track the OS preference so the toggle icon is right while theme = 'system'
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -38,7 +92,38 @@ export default function Layout() {
 
   useEffect(() => saveUiPrefs({ sidebarCollapsed }), [sidebarCollapsed]);
   useEffect(() => saveUiPrefs({ collapsedPhases: collapsed }), [collapsed]);
-  useEffect(() => saveUiPrefs({ lastLocation: loc }), [loc]);
+  useEffect(() => {
+    saveUiPrefs(STUDY_PAGE.test(loc) ? { lastLocation: loc, lastStudyLocation: loc } : { lastLocation: loc });
+  }, [loc]);
+
+  // ---- guide (welcome tour) and command palette ----
+  const [tourOpen, setTourOpen] = useState(() => !getUiPrefs().tourSeen);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteLoaded, setPaletteLoaded] = useState(false);
+  const showPalette = useCallback(() => {
+    setPaletteLoaded(true);
+    setPaletteOpen(true);
+  }, []);
+  const closeTour = useCallback(() => setTourOpen(false), []);
+  useEffect(() => {
+    if (tourOpen) saveUiPrefs({ tourSeen: true });
+  }, [tourOpen]);
+  useEffect(() => on('open-guide', () => setTourOpen(true)), []);
+  useEffect(() => on('open-palette', showPalette), [showPalette]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (paletteOpen) setPaletteOpen(false);
+        else showPalette();
+      } else if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !typingInField(e) && !paletteOpen) {
+        e.preventDefault();
+        setTourOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [paletteOpen, showPalette]);
 
   // New page → top of page, except on app start, where we restore the saved scroll position.
   useEffect(() => {
@@ -106,13 +191,21 @@ export default function Layout() {
           title={sidebarCollapsed ? 'Show topics' : 'Hide topics'}
           type="button"
         >
-          ☰
+          <Menu size={20} aria-hidden="true" />
         </button>
         <NavLink to="/" className="brand">
-          <span className="brand-mark">◆</span> QA Learn <span className="brand-sub">Manual · JS · Playwright</span>
+          <span className="brand-tile" aria-hidden="true">
+            <ShieldCheck size={16} strokeWidth={2.4} />
+          </span>
+          <span className="brand-name">QA Learn</span>
+          <span className="brand-sub">Manual · JS · Playwright</span>
         </NavLink>
         <div className="topbar-right">
-          <span className="pill">
+          <button type="button" className="btn-ghost guide-btn" onClick={openGuide} aria-label="Open the guide" title="Guide (press ?)">
+            <Compass size={18} aria-hidden="true" />
+            <span className="guide-btn-text">Guide</span>
+          </button>
+          <span className="pill topbar-pill">
             {passedCount}/{TOPICS.length} passed
           </span>
           <button
@@ -122,28 +215,35 @@ export default function Layout() {
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {isDark ? '☀️' : '🌙'}
+            {isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
           </button>
-          <NavLink to="/settings" className="btn-ghost">
-            Settings
+          <NavLink to="/settings" className="btn-ghost icon-btn" aria-label="Settings" title="Settings">
+            <SettingsIcon size={18} aria-hidden="true" />
           </NavLink>
         </div>
       </header>
 
-      <aside ref={sidebarRef} className={`sidebar ${navOpen ? 'open' : ''}`}>
+      <motion.aside ref={sidebarRef} layoutScroll className={`sidebar ${navOpen ? 'open' : ''}`}>
         <input
           className="search"
-          placeholder="Search topics, tags…"
+          placeholder="Filter topics, tags…"
+          aria-label="Filter topics"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <nav>
-          <NavLink to="/" end className="side-link">
+          <SideLink to="/" end>
+            <LayoutDashboard size={16} aria-hidden="true" className="side-icon" />
             Dashboard
-          </NavLink>
-          <NavLink to="/weak-areas" className="side-link">
+          </SideLink>
+          <SideLink to="/contents">
+            <ListTree size={16} aria-hidden="true" className="side-icon" />
+            Contents
+          </SideLink>
+          <SideLink to="/weak-areas">
+            <Target size={16} aria-hidden="true" className="side-icon" />
             Weak Areas{weakCount > 0 && <span className="side-badge">{weakCount}</span>}
-          </NavLink>
+          </SideLink>
           {PHASES.map((ph) => {
             const topics = filtered.filter((t) => t.phase === ph.id);
             if (!topics.length) return null;
@@ -154,48 +254,85 @@ export default function Layout() {
                   className="side-phase-title"
                   onClick={() => setCollapsed((c) => ({ ...c, [ph.id]: !c[ph.id] }))}
                   type="button"
+                  aria-expanded={!isCollapsed}
                 >
-                  <span>
-                    {ph.number}. {ph.title}
+                  <span className="side-phase-name">
+                    <span className="side-phase-num">{ph.number}</span>
+                    {ph.title}
                   </span>
-                  <span className="muted">{isCollapsed ? '▸' : '▾'}</span>
+                  <ChevronDown size={14} aria-hidden="true" className={`chev-icon ${isCollapsed ? 'closed' : ''}`} />
                 </button>
-                {!isCollapsed &&
-                  topics.map((t) => (
-                    <NavLink key={t.id} to={`/topic/${t.id}`} className="side-link side-topic">
-                      <span className={`dot dot-${topicStatus(p, t)}`} />
-                      {t.title}
-                    </NavLink>
-                  ))}
+                <AnimatePresence initial={false}>
+                  {!isCollapsed && (
+                    <motion.div
+                      className="side-phase-list"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                    >
+                      {topics.map((t) => {
+                        const st = topicStatus(p, t);
+                        return (
+                          <SideLink key={t.id} to={`/topic/${t.id}`} className="side-topic">
+                            <span className={`dot dot-${st}`} aria-hidden="true" />
+                            {t.title}
+                            <span className="sr-only">, {STATUS_LABEL[st]}</span>
+                          </SideLink>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
           <div className="side-phase">
             <div className="side-phase-title static">Practice</div>
-            <NavLink to="/coding" className="side-link side-topic">
-              <span className="lock">⌨️</span>
+            <SideLink to="/coding" className="side-topic">
+              <Code2 size={16} aria-hidden="true" className="side-icon" />
               JS Coding Practice ({Object.keys(p.code).length}/{CODING_PROBLEMS.length})
-            </NavLink>
-            <NavLink to="/pw-lab" className="side-link side-topic">
-              <span className="lock">🧪</span>
+            </SideLink>
+            <SideLink to="/pw-lab" className="side-topic">
+              <FlaskConical size={16} aria-hidden="true" className="side-icon" />
               Playwright Lab (Judge)
-            </NavLink>
-            <NavLink to="/playground" className="side-link side-topic">
-              <span className="lock">▶️</span>
+            </SideLink>
+            <SideLink to="/companies" className="side-topic">
+              <Building2 size={16} aria-hidden="true" className="side-icon" />
+              Company Questions ({COMPANY_QUESTIONS.length})
+            </SideLink>
+            <SideLink to="/playground" className="side-topic">
+              <Terminal size={16} aria-hidden="true" className="side-icon" />
               JS Playground
-            </NavLink>
-            <NavLink to="/roadmap" className="side-link side-topic">
-              <span className="lock">🗺️</span>
+            </SideLink>
+            <SideLink to="/roadmap" className="side-topic">
+              <MapIcon size={16} aria-hidden="true" className="side-icon" />
               12-Week Roadmap &amp; Projects
-            </NavLink>
+            </SideLink>
           </div>
         </nav>
-      </aside>
+      </motion.aside>
       {navOpen && <div className="scrim" onClick={() => setNavOpen(false)} />}
 
       <main className="main">
-        <Outlet />
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
+        <SiteFooter />
       </main>
+
+      <Toaster />
+      <Suspense fallback={null}>
+        {paletteLoaded && <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />}
+        {tourOpen && <WelcomeTour onClose={closeTour} />}
+      </Suspense>
     </div>
   );
 }

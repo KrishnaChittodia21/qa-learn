@@ -1,8 +1,13 @@
+import { Check, Compass } from 'lucide-react';
 import { resetProgress, setSettings, useProgress } from '../lib/progress';
+import { saveUiPrefs, useUiPrefs } from '../lib/uiPrefs';
+import { openGuide } from '../lib/appEvents';
+import { ACCENTS } from '../lib/theme';
 
 export default function SettingsPage() {
   const p = useProgress();
   const s = p.settings;
+  const ui = useUiPrefs();
   return (
     <div className="page narrow">
       <h1>Settings</h1>
@@ -60,6 +65,45 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="field">
+          <span id="accent-label">Accent colour</span>
+          <div className="accent-picker" role="group" aria-labelledby="accent-label">
+            {ACCENTS.map((a) => {
+              const on = (s.accent ?? 'indigo') === a.id;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`accent-swatch ${on ? 'on' : ''}`}
+                  data-value={a.id}
+                  aria-pressed={on}
+                  onClick={() => setSettings({ accent: a.id })}
+                >
+                  <span className="accent-dot" aria-hidden="true">
+                    {on && <Check size={14} strokeWidth={3} />}
+                  </span>
+                  {a.label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="muted small">Buttons, links and highlights. Charts keep their own colours so they stay comparable.</span>
+        </div>
+      </div>
+      <div className="card form">
+        <h3>Guide</h3>
+        <label className="check">
+          <input type="checkbox" checked={ui.showCoachTips} onChange={(e) => saveUiPrefs({ showCoachTips: e.target.checked })} /> Show coach
+          tips (a short how-to the first time you open each tab)
+        </label>
+        <div className="row gap-s wrap">
+          <button type="button" className="btn" onClick={openGuide}>
+            <Compass size={16} aria-hidden="true" /> Replay the welcome tour
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => saveUiPrefs({ coachDismissed: {}, showCoachTips: true })}>
+            Show dismissed tips again
+          </button>
         </div>
       </div>
       <div className="card danger">
