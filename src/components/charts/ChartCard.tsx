@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { BarChart3, Table2 } from 'lucide-react';
 import { Legend, type LegendItem } from './Legend';
+import { BugBuddy } from '../Doodles';
 
 export interface TableData {
   columns: string[];
@@ -52,7 +53,10 @@ export function ChartCard({
         </div>
       </header>
       {empty ? (
-        <div className="chart-empty">{empty}</div>
+        <div className="chart-empty">
+          <BugBuddy size={72} mood="sleepy" />
+          <div className="chart-empty-body">{empty}</div>
+        </div>
       ) : asTable && table ? (
         <div className="table-wrap chart-table-wrap">
           <table className="chart-table">

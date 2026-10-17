@@ -1,8 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // self-hosted variable fonts (woff2; browsers fetch only the unicode-range subsets a page uses)
-import '@fontsource-variable/inter/wght.css'
-import '@fontsource-variable/newsreader/opsz.css'
+// Bricolage Grotesque = display, Figtree = body (+ its italic for <em> in lessons), JetBrains Mono = code
+import '@fontsource-variable/bricolage-grotesque/wght.css'
+import '@fontsource-variable/figtree/wght.css'
+import '@fontsource-variable/figtree/wght-italic.css'
 import '@fontsource-variable/jetbrains-mono/wght.css'
 import './index.css'
 import './prism-theme.css'

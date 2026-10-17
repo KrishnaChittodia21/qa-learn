@@ -1,11 +1,11 @@
 import type { Accent, Settings } from './progress';
 
-/** Pen inks (Settings → Ink). Ids are the saved setting values from earlier versions, so old saves keep working. */
+/** Colour themes (Settings → Colour). Ids are the saved setting values from earlier versions, so old saves keep working. */
 export const ACCENTS: { id: Accent; label: string }[] = [
-  { id: 'indigo', label: 'Blue-black' },
-  { id: 'teal', label: 'Teal' },
-  { id: 'rose', label: 'Plum' },
-  { id: 'amber', label: 'Graphite' },
+  { id: 'indigo', label: 'Bubblegum' },
+  { id: 'teal', label: 'Lagoon' },
+  { id: 'rose', label: 'Tangerine' },
+  { id: 'amber', label: 'Blueberry' },
 ];
 
 /** Mirror the theme + accent settings onto <html> (CSS tokens key off data-theme / data-accent). */

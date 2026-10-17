@@ -14,12 +14,12 @@ export function Toaster() {
             key={t.id}
             className="toast"
             layout
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            initial={{ opacity: 0, y: 40, scale: 0.8, rotate: 4 }}
+            animate={{ opacity: 1, y: 0, scale: 1, rotate: -1 }}
+            exit={{ opacity: 0, x: 60, rotate: 6, transition: { duration: 0.18 } }}
+            transition={{ type: 'spring', stiffness: 420, damping: 20 }}
           >
-            <PartyPopper size={20} aria-hidden="true" className="toast-icon" />
+            <PartyPopper size={18} aria-hidden="true" className="toast-icon" />
             <div>
               <strong>{t.title}</strong>
               {t.detail && <div className="small muted">{t.detail}</div>}

@@ -26,6 +26,7 @@ import { VIZ, vizForSection } from '../viz/registry';
 import { TAB_META, tabLabel, type TabId } from '../lib/studyLoop';
 import { weakTopics } from '../lib/weak';
 import { ProgressRing } from '../components/ProgressRing';
+import { EmptyState } from '../components/Doodles';
 
 const STATUS_LABEL = { new: 'New', 'in-progress': 'In progress', passed: 'Passed' } as const;
 
@@ -159,7 +160,9 @@ export default function ContentsPage() {
         <div className="eyebrow">
           <ListTree size={14} aria-hidden="true" /> Contents
         </div>
-        <h1>Everything in this course</h1>
+        <h1>
+          Everything you&apos;ll <span className="marker">learn</span>
+        </h1>
         <div className="contents-totals">
           <span>
             <strong>{PHASES.length}</strong> phases
@@ -193,7 +196,7 @@ export default function ContentsPage() {
           <Search size={16} aria-hidden="true" />
           <input
             type="search"
-            placeholder="Search topics, tags and section headings…"
+            placeholder="Find a topic, tag or section…"
             aria-label="Search the contents"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -276,7 +279,11 @@ export default function ContentsPage() {
           </section>
         );
       })}
-      {filtering && !views.size && <p className="muted">Nothing matches. Try another word or turn off the toggles.</p>}
+      {filtering && !views.size && (
+        <EmptyState title="No matches here" mood="sleepy">
+          Try another word, or switch off a filter or two.
+        </EmptyState>
+      )}
 
       <section id="practice-tools" className="contents-phase">
         <div className="contents-phase-head static">

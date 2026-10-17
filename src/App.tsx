@@ -63,16 +63,17 @@ function RouteError() {
   const staleChunk = /dynamically imported module|Failed to fetch|Importing a module script failed/i.test(message);
   return (
     <div className="page narrow" style={{ padding: 40 }}>
-      <h1>Something went wrong on this page</h1>
-      <p className="muted">Your progress is safe. It&apos;s stored in this browser.</p>
-      {staleChunk && <p>Part of the app failed to download (it was probably rebuilt or restarted). Reloading usually fixes it.</p>}
+      <div className="eyebrow">Oops</div>
+      <h1>Whoops, this page tripped over</h1>
+      <p className="lead">Don&apos;t worry: your progress is safe and sound in this browser.</p>
+      {staleChunk && <p>Part of the app didn&apos;t download (it was probably rebuilt or restarted). A quick reload usually sorts it.</p>}
       <pre className="console-out">{message}</pre>
       <div className="row gap-s">
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
-          Reload
+          Try again
         </button>
         <a className="btn" href="#/">
-          Back to dashboard
+          Back to today
         </a>
       </div>
     </div>

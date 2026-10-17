@@ -38,8 +38,9 @@ export function celebrate(title: string, detail?: string) {
   if (prefersReducedMotion()) return;
   import('canvas-confetti')
     .then(({ default: confetti }) => {
-      const colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#22c55e', '#fbbf24'];
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors, disableForReducedMotion: true });
+      // the sticker fills: sun, bubblegum, mint, sky, tangerine
+      const colors = ['#ffc93c', '#ff6fae', '#4fe0b6', '#7cc8ff', '#ff9a52'];
+      confetti({ particleCount: 110, spread: 75, origin: { y: 0.7 }, colors, scalar: 1.1, disableForReducedMotion: true });
       setTimeout(() => confetti({ particleCount: 50, spread: 100, origin: { y: 0.6 }, colors, disableForReducedMotion: true }), 180);
     })
     .catch(() => {

@@ -60,15 +60,15 @@ export default function AchievementCelebration({ items, onClose, onViewAll }: { 
         aria-labelledby="ach-title"
         aria-describedby="ach-desc"
         tabIndex={-1}
-        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
+        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.85, y: 30, rotate: -3 }}
+        animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 20 }}
       >
         <button type="button" className="btn-ghost icon-btn ach-close" aria-label="Close" onClick={onClose}>
           <X size={18} aria-hidden="true" />
         </button>
         <p className="eyebrow ach-eyebrow">
-          <Sparkles size={14} aria-hidden="true" /> {single ? 'Achievement unlocked' : 'Achievements unlocked'}
+          <Sparkles size={14} aria-hidden="true" /> {single ? 'Achievement unlocked!' : 'Achievements unlocked!'}
         </p>
 
         {single && first ? (
@@ -86,9 +86,9 @@ export default function AchievementCelebration({ items, onClose, onViewAll }: { 
           </div>
         ) : (
           <>
-            <h2 id="ach-title">You&apos;ve earned {list.length} achievements</h2>
+            <h2 id="ach-title">Whoa, {list.length} new badges!</h2>
             <p id="ach-desc" className="muted">
-              Nice work. Here is everything your progress has unlocked.
+              Look at you go. Here&apos;s everything your progress just unlocked.
             </p>
             <ul className="ach-burst-grid">
               {list.map((i, n) => (
@@ -112,7 +112,7 @@ export default function AchievementCelebration({ items, onClose, onViewAll }: { 
             View all achievements <ArrowRight size={15} aria-hidden="true" />
           </button>
           <button type="button" className="btn btn-primary" onClick={onClose} data-autofocus>
-            Keep going
+            Woohoo, keep going
           </button>
         </div>
       </motion.div>

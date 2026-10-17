@@ -174,9 +174,9 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
       loop
       filter={(_value, q, keywords) => defaultFilter(keywords?.join(' ') ?? '', q)}
     >
-      <Command.Input value={search} onValueChange={setSearch} placeholder="Search pages, topics, sections, questions…" className="cmd-input" />
+      <Command.Input value={search} onValueChange={setSearch} placeholder="Where to? Pages, topics, sections, questions…" className="cmd-input" />
       <Command.List className="cmd-list">
-        <Command.Empty className="cmd-empty">No results. Try fewer words.</Command.Empty>
+        <Command.Empty className="cmd-empty">Hmm, nothing by that name. Try a shorter word?</Command.Empty>
         {!typing && recent.length > 0 && (
           <Command.Group heading="Recent">
             {recent.map((it) => {

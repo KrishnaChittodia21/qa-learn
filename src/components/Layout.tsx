@@ -343,9 +343,9 @@ export default function Layout() {
         <AnimatePresence initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            initial={{ opacity: 0, y: 22, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 330, damping: 26, opacity: { duration: 0.2 } }}
           >
             <Outlet />
           </motion.div>

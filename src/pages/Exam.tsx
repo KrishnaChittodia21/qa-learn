@@ -199,7 +199,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
         <Link to={backHref} className="muted small">
           ← Back
         </Link>
-        <h1>Exam setup</h1>
+        <h1>Ready, set, test!</h1>
         <div className="card form">
           <label>
             <span>Time limit (minutes)</span>
@@ -387,7 +387,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
       <div className={`card result ${passed ? 'pass' : 'fail'}`}>
         <div className="result-score">{score}%</div>
         <div>
-          <h2>{passed ? (full ? 'Passed 🎉' : 'Great practice run') : 'Not yet. Review and retake.'}</h2>
+          <h2>{passed ? (full ? 'You passed! 🎉' : 'Great practice run!') : 'So close! Review, then have another go.'}</h2>
           <p>
             {correctCount}/{items.length} correct · time used {formatClock(elapsed)} · pass mark {p.settings.passMark}%
             {!full && ' · practice (not counted towards passing)'}
@@ -410,7 +410,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
       </div>
       <AttemptAnalysis items={items.map((it) => it.q)} missed={missed} />
       <div className="row between">
-        <h2>Review</h2>
+        <h2>Let&apos;s review</h2>
         <div className="row gap-s">
           <button type="button" className={`chip ${reviewFilter === 'all' ? 'on' : ''}`} onClick={() => setReviewFilter('all')}>
             All
@@ -467,7 +467,7 @@ function AttemptAnalysis({ items, missed }: { items: MCQ[]; missed: MCQ[] }) {
   const multiTopic = byTopic.size > 1;
   return (
     <div className="card weak-card">
-      <h2>{missed.length ? 'Where you lost marks' : 'No weak spots in this attempt'}</h2>
+      <h2>{missed.length ? 'Where the marks slipped away' : 'Not a single weak spot this time!'}</h2>
       <div className="diff-row">
         {levels.map((d) => {
           const qs = items.filter((q) => q.difficulty === d);

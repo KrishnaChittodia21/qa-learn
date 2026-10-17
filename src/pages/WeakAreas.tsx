@@ -5,6 +5,7 @@ import type { Difficulty } from '../types';
 import { useProgress } from '../lib/progress';
 import { accuracyBreakdown, currentlyWrong, pct, weakTopics, type Accuracy } from '../lib/weak';
 import { Badge, ProgressBar } from '../components/ui';
+import { EmptyState } from '../components/Doodles';
 import { Exam } from './Exam';
 
 function AccuracyBar({ label, a }: { label: ReactNode; a: Accuracy }) {
@@ -33,14 +34,20 @@ export function WeakAreasPage() {
   if (!answered) {
     return (
       <div className="page narrow">
+        <div className="eyebrow">Your tricky spots</div>
         <h1>Weak areas</h1>
-        <div className="card info">
-          Nothing to analyse yet. Take any topic exam and this page will show the topics, sections and question types where you
-          lose marks, with links straight to what to revise.
-        </div>
-        <Link to="/" className="btn btn-primary">
-          Go to the roadmap →
-        </Link>
+        <EmptyState
+          title="Nothing to analyse… yet!"
+          mood="sleepy"
+          action={
+            <Link to="/" className="btn btn-primary">
+              Find my next exam →
+            </Link>
+          }
+        >
+          Take any topic exam and this page lights up with the topics, sections and question types where you lose marks, plus
+          links straight to what to revise.
+        </EmptyState>
       </div>
     );
   }
@@ -48,7 +55,7 @@ export function WeakAreasPage() {
   const levels: Difficulty[] = ['easy', 'medium', 'hard', 'expert'];
   return (
     <div className="page">
-      <div className="eyebrow">Your analytics</div>
+      <div className="eyebrow">Your tricky spots</div>
       <h1>Weak areas</h1>
       <p className="lead">
         Based on your latest answer to each of the {answered} exam questions you&apos;ve attempted. A question leaves this list once
@@ -85,7 +92,11 @@ export function WeakAreasPage() {
           </Link>
         )}
       </div>
-      {!weak.length && <div className="card info">No weak topics right now. Every question you&apos;ve attempted is currently correct.</div>}
+      {!weak.length && (
+        <EmptyState title="Clean sheet!" mood="party">
+          No weak topics right now. Every question you&apos;ve attempted is currently correct. Go you.
+        </EmptyState>
+      )}
 
       {weak.map((w) => (
         <article key={w.topic.id} className="card weak-topic-card">
@@ -99,7 +110,7 @@ export function WeakAreasPage() {
                   w.passed ? (
                     <Badge tone="good">Passed</Badge>
                   ) : (
-                    <Badge tone="expert">Not passed</Badge>
+                    <Badge tone="bad">Not passed</Badge>
                   )
                 ) : (
                   <Badge>Drill only</Badge>
@@ -168,13 +179,18 @@ export function PracticePage() {
   if (!questions.length) {
     return (
       <div className="page narrow">
-        <h1>No mistakes to practise</h1>
-        <p className="lead">
+        <h1>Nothing to fix. Nice!</h1>
+        <EmptyState
+          title="Zero mistakes in the drill pile"
+          mood="party"
+          action={
+            <Link to="/weak-areas" className="btn">
+              ← Back to weak areas
+            </Link>
+          }
+        >
           {topic ? `Every question you've attempted in ${topic.title} is currently correct.` : 'Every question you have attempted is currently correct.'}
-        </p>
-        <Link to="/weak-areas" className="btn">
-          ← Weak areas
-        </Link>
+        </EmptyState>
       </div>
     );
   }

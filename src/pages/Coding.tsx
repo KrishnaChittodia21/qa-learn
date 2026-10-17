@@ -62,7 +62,7 @@ export function CodingListPage() {
       {!CODING_PROBLEMS.length && <p className="muted">Problems are still being written. Check back soon.</p>}
       <div className="card-grid">
         {list.map((q) => (
-          <Link key={q.id} to={`/coding/${q.id}`} className={`topic-card ${p.code[q.id] ? 'st-passed' : ''}`}>
+          <Link key={q.id} to={`/coding/${q.id}`} className={`topic-card coding-card cat-${q.category} ${p.code[q.id] ? 'st-passed' : ''}`}>
             <div className="topic-card-top">
               <span className={`dot dot-${p.code[q.id] ? 'passed' : 'new'}`} />
               <DifficultyBadge d={q.difficulty} />

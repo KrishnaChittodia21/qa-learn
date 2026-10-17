@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { ArrowRight, BookOpen, MessageSquare, RotateCcw, Target } from 'lucide-react';
+import { BugBuddy, Sparkle } from '../components/Doodles';
+import { reveal } from '../lib/motionPresets';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import { useProgress } from '../lib/progress';
 import { PW_LAB_STEPS } from '../content/pwlab';
@@ -70,10 +73,10 @@ export default function Home() {
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 4);
   const HOW: [string, string][] = [
-    ['Read', 'the short sections on each topic’s Learn tab and tick “Read” as you finish each one.'],
+    ['Read', 'the bite-sized sections on each topic’s Learn tab and tick “Read” as you finish each one.'],
     ['Improve This', 'turn weak tests and buggy code into strong ones. The JavaScript labs are judged by running real tests.'],
     ['Interview Qs & Drills', 'answer out loud and rate yourself, then work the Practice Drills one step at a time.'],
-    ['Pass', `the timed Exam (${passMark}% or more). The topic is then marked passed in your record.`],
+    ['Pass', `the timed Exam (${passMark}% or more) and the topic gets its shiny “passed” tick.`],
   ];
 
   // ---- study record ----
@@ -95,17 +98,21 @@ export default function Home() {
 
   return (
     <div className="page dash">
-      <header className="today-lead">
+      <header className="today-hero">
+        <Sparkle size={34} color="var(--pop-pink)" style={{ top: -18, left: '38%' }} />
+        <Sparkle size={22} color="#fffdf7" style={{ bottom: 22, left: -12 }} />
+        <Sparkle size={26} color="var(--pop-mint)" style={{ top: 24, right: 380 }} className="hide-narrow" />
         <section className="today-main" aria-labelledby="today-title">
-          <p className="eyebrow today-date">{today}</p>
-          <p className="today-kicker">{fresh ? 'Start here' : 'Your next step'}</p>
+          <p className="today-date">{today}</p>
+          <p className="today-kicker">{fresh ? 'Let’s kick things off!' : 'Up next for you'}</p>
           <h1 id="today-title" className="today-title">
             {step.title}
           </h1>
+          <span className="squiggle" aria-hidden="true" />
           <p className="today-detail">{step.detail}</p>
           <div className="row gap-s wrap today-actions">
             <Link to={step.href} className="btn btn-primary btn-lg">
-              {fresh ? 'Open the first lesson' : step.kind === 'read' ? 'Continue reading' : 'Go'}{' '}
+              {fresh ? 'Start lesson one' : step.kind === 'read' ? 'Keep reading' : 'Let’s go'}{' '}
               <ArrowRight size={18} aria-hidden="true" />
             </Link>
             {step.secondary && (
@@ -116,7 +123,7 @@ export default function Home() {
           </div>
           {resume && (
             <Link to={resume.href} className="resume-line">
-              <span className="resume-label">Where you left off</span>
+              <span className="resume-label">Pick up where you left off</span>
               <span className="resume-target">{resume.label}</span>
               <ArrowRight size={14} aria-hidden="true" />
             </Link>
@@ -125,7 +132,7 @@ export default function Home() {
 
         <aside className="ledger" aria-labelledby="ledger-title">
           <h2 id="ledger-title" className="ledger-title">
-            Record
+            Your scorecard
           </h2>
           <table className="ledger-phases">
             <caption className="sr-only">Topics passed per phase</caption>
@@ -184,9 +191,12 @@ export default function Home() {
       </header>
 
       {fresh && (
-        <section className="dash-section how" aria-labelledby="how-title">
+        <motion.section className="dash-section how" aria-labelledby="how-title" {...reveal}>
           <div className="dash-section-head">
-            <h2 id="how-title">How this works</h2>
+            <h2 id="how-title">
+              Four steps to <span className="marker">passed</span>
+            </h2>
+            <BugBuddy size={150} mood="party" />
           </div>
           <ol className="how-steps">
             {HOW.map(([verb, rest], i) => (
@@ -198,13 +208,15 @@ export default function Home() {
               </li>
             ))}
           </ol>
-        </section>
+        </motion.section>
       )}
 
       {onDesk.length > 0 && (
-        <section className="dash-section desk" aria-labelledby="desk-title">
+        <motion.section className="dash-section desk" aria-labelledby="desk-title" {...reveal}>
           <div className="dash-section-head">
-            <h2 id="desk-title">On your desk</h2>
+            <h2 id="desk-title">
+              Still on your <span className="marker">desk</span>
+            </h2>
             <span className="muted small">In-progress topics, closest to done first</span>
           </div>
           <ul className="desk-list">
@@ -220,18 +232,26 @@ export default function Home() {
               </li>
             ))}
           </ul>
-        </section>
+        </motion.section>
       )}
 
-      <ProgressPanel p={p} />
+      <div className="wave" aria-hidden="true" />
 
-      <AchievementsSummary p={p} />
+      <motion.div {...reveal}>
+        <ProgressPanel p={p} />
+      </motion.div>
 
-      <section className="dash-section" aria-labelledby="dash-weak">
+      <motion.div {...reveal}>
+        <AchievementsSummary p={p} />
+      </motion.div>
+
+      <motion.section className="dash-section" aria-labelledby="dash-weak" {...reveal}>
         <div className="dash-section-head">
-          <h2 id="dash-weak">Weak areas &amp; how to reattempt</h2>
+          <h2 id="dash-weak">
+            Tricky spots &amp; how to <span className="marker">beat them</span>
+          </h2>
           <Link to="/weak-areas" className="small">
-            Full weak-areas analysis →
+            See the full breakdown →
           </Link>
         </div>
         <div className="weak-grid">
@@ -241,7 +261,9 @@ export default function Home() {
             empty={
               !weak.length && (
                 <>
-                  <p>No weak areas yet. Take an exam to find them.</p>
+                  <p>
+                    <strong>No tricky spots yet!</strong> Take an exam and we’ll point out exactly what to polish.
+                  </p>
                   <Link to={step.href} className="btn btn-sm">
                     {step.title} <ArrowRight size={14} aria-hidden="true" />
                   </Link>
@@ -343,11 +365,13 @@ export default function Home() {
             </div>
           </section>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="dash-section" aria-labelledby="dash-record">
+      <motion.section className="dash-section" aria-labelledby="dash-record" {...reveal}>
         <div className="dash-section-head">
-          <h2 id="dash-record">Study record</h2>
+          <h2 id="dash-record">
+            Your study <span className="marker">story</span>
+          </h2>
         </div>
         <div className="kpi-row">
           <StatTile label="Readiness" value={<CountUp value={k.readiness} suffix="%" />} hint="average completion of every topic" />
@@ -376,7 +400,9 @@ export default function Home() {
             empty={
               !scores.length && (
                 <>
-                  <p>Take your first exam to see your scores here.</p>
+                  <p>
+                    <strong>Your scores will live here.</strong> Take your first exam to see them.
+                  </p>
                   <Link to={step.href} className="btn btn-sm">
                     {step.title} <ArrowRight size={14} aria-hidden="true" />
                   </Link>
@@ -412,7 +438,13 @@ export default function Home() {
           <ChartCard
             title="Accuracy by difficulty"
             subtitle="Share of exam questions whose latest answer is correct."
-            empty={!levels.length && <p>Answer some exam questions to see where the difficulty bites.</p>}
+            empty={
+              !levels.length && (
+                <p>
+                  <strong>Nothing to chart yet.</strong> Answer a few exam questions to see where the difficulty bites.
+                </p>
+              )
+            }
             table={{
               columns: ['Difficulty', 'Accuracy', 'Correct', 'Answered'],
               rows: levels.map((l) => [LEVEL_LABEL[l.level], `${l.pct}%`, l.correct, l.seen]),
@@ -437,7 +469,13 @@ export default function Home() {
           <ChartCard
             title="Exam score trend"
             subtitle={`Your last ${plural(timeline.length, 'full exam')}, oldest first, across all topics.`}
-            empty={timeline.length < 2 && <p>Finish two full-length exams to see your score trend.</p>}
+            empty={
+              timeline.length < 2 && (
+                <p>
+                  <strong>A trend needs two dots.</strong> Finish two full-length exams to see your line.
+                </p>
+              )
+            }
             table={{
               columns: ['Date', 'Topic', 'Score'],
               rows: timeline.map((a) => [shortDate(a.at), a.topic.title, `${a.score}%`]),
@@ -481,7 +519,7 @@ export default function Home() {
             empty={
               !ratings.total && (
                 <p>
-                  Practise questions in any topic&apos;s <strong>Interview Qs</strong> tab and rate your answer to see this.
+                  <strong>No ratings yet.</strong> Practise in any topic&apos;s Interview Qs tab and rate your answer to fill this in.
                 </p>
               )
             }
@@ -547,7 +585,7 @@ export default function Home() {
             </div>
           </ChartCard>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }

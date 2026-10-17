@@ -19,7 +19,9 @@ export function AchievementsSummary({ p }: { p: Progress }) {
   return (
     <section className="dash-section" aria-labelledby="dash-ach">
       <div className="dash-section-head">
-        <h2 id="dash-ach">Achievements</h2>
+        <h2 id="dash-ach">
+          Your trophy <span className="marker">shelf</span>
+        </h2>
         <Link to="/achievements" className="small">
           All achievements →
         </Link>

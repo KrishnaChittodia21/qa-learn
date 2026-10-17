@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const ui = useUiPrefs();
   return (
     <div className="page narrow">
+      <div className="eyebrow">Make it yours</div>
       <h1>Settings</h1>
       <div className="card form">
         <label>
@@ -67,7 +68,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="field">
-          <span id="accent-label">Ink</span>
+          <span id="accent-label">Colour</span>
           <div className="ink-picker" role="group" aria-labelledby="accent-label">
             {ACCENTS.map((a) => {
               const on = (s.accent ?? 'indigo') === a.id;
@@ -91,7 +92,7 @@ export default function SettingsPage() {
               );
             })}
           </div>
-          <span className="muted small">The pen colour for links, buttons and highlights. Passed, failed and skipped keep their own colours.</span>
+          <span className="muted small">Paints buttons, links and highlights. Passed, failed and in-progress always keep their own colours.</span>
         </div>
       </div>
       <div className="card form">
@@ -110,13 +111,13 @@ export default function SettingsPage() {
         </div>
       </div>
       <div className="card danger">
-        <h3>Reset progress</h3>
-        <p className="muted small">Clears exam results, read markers, ratings and drafts. Settings are kept.</p>
+        <h3>Fresh start</h3>
+        <p className="muted small">Clears exam results, read markers, ratings and drafts. Your settings stay put.</p>
         <button
           className="btn btn-danger"
           type="button"
           onClick={() => {
-            if (window.confirm('Reset all progress? This cannot be undone.')) resetProgress();
+            if (window.confirm('Reset all progress? This can’t be undone.')) resetProgress();
           }}
         >
           Reset all progress

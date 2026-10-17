@@ -34,7 +34,9 @@ export function ProgressPanel({ p }: { p: Progress }) {
   return (
     <section className="dash-section progress-panel" aria-labelledby="progress-title">
       <div className="dash-section-head">
-        <h2 id="progress-title">Progress at a glance</h2>
+        <h2 id="progress-title">
+          Progress at a <span className="marker">glance</span>
+        </h2>
         <p className="muted small">
           A topic is passed once its full exam is. <Link to="/contents">All topics in Contents →</Link>
         </p>

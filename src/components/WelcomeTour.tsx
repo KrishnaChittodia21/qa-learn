@@ -21,6 +21,7 @@ import { useProgress } from '../lib/progress';
 import { nextStep } from '../lib/nextStep';
 import { TAB_META, type TabId } from '../lib/studyLoop';
 import { useFocusTrap } from '../lib/useFocusTrap';
+import { BugBuddy } from './Doodles';
 
 const LOOP: TabId[] = ['learn', 'code', 'interview', 'envelope', 'exam', 'company'];
 const STEP_TITLES = ['What this is', 'The study loop', 'Finding your way', 'Your progress', 'Start here'];
@@ -68,9 +69,9 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
         aria-labelledby="tour-title"
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        initial={{ opacity: 0, scale: 0.96, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        initial={{ opacity: 0, scale: 0.9, y: 24, rotate: -2 }}
+        animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       >
         <div className="tour-head">
           <span className="eyebrow">
@@ -92,18 +93,23 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
             >
               {step === 0 && (
                 <>
-                  <h2 id="tour-title">Welcome to QA Learn</h2>
-                  <p>
-                    A guided path from zero to a job-ready QA engineer: {TOPICS.length} topics in {PHASES.length} phases, each with
-                    lessons, hands-on labs, interview practice and a timed exam.
-                  </p>
+                  <div className="tour-hello">
+                    <div>
+                      <h2 id="tour-title">Hello, future QA pro!</h2>
+                      <p>
+                        A guided path from zero to a job-ready QA engineer: {TOPICS.length} topics in {PHASES.length} phases, each with
+                        lessons, hands-on labs, interview practice and a timed exam.
+                      </p>
+                    </div>
+                    <BugBuddy size={110} mood="party" />
+                  </div>
                   <ol className="tour-phases">
                     {PHASES.map((ph, i) => (
                       <motion.li
                         key={ph.id}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 * i, duration: 0.2 }}
+                        initial={{ opacity: 0, y: 12, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 20, delay: 0.05 * i }}
                       >
                         <span className="tour-phase-num">{String(ph.number).padStart(2, '0')}</span>
                         <span>{ph.title}</span>
@@ -114,7 +120,7 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
               )}
               {step === 1 && (
                 <>
-                  <h2 id="tour-title">Every topic follows the same loop</h2>
+                  <h2 id="tour-title">Every topic, the same happy loop</h2>
                   <p className="muted">Follow the Study path at the top of each topic, left to right.</p>
                   <ol className="tour-loop">
                     {LOOP.map((id, i) => {
@@ -189,7 +195,7 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
               )}
               {step === 3 && (
                 <>
-                  <h2 id="tour-title">Your progress saves itself</h2>
+                  <h2 id="tour-title">Your progress saves itself. Magic.</h2>
                   <ul className="tour-where">
                     <li>
                       <Save size={18} aria-hidden="true" />
@@ -216,8 +222,8 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
               )}
               {step === 4 && (
                 <>
-                  <h2 id="tour-title">Start here</h2>
-                  <p>Your next step:</p>
+                  <h2 id="tour-title">Ready? Let&apos;s go!</h2>
+                  <p>Here&apos;s your first stop:</p>
                   <div className="tour-next">
                     <strong>{next.title}</strong>
                     <span className="muted small">{next.detail}</span>
@@ -237,7 +243,7 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
         </div>
         <div className="tour-foot">
           <button type="button" className="btn-ghost" onClick={onClose}>
-            Skip
+            Maybe later
           </button>
           <div className="tour-dots" role="group" aria-label="Tour steps">
             {STEP_TITLES.map((t, i) => (
@@ -261,7 +267,7 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
               </button>
             ) : (
               <button type="button" className="btn" onClick={onClose}>
-                Done
+                All done
               </button>
             )}
           </div>

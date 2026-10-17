@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Award } from 'lucide-react';
+import { EmptyState } from '../components/Doodles';
 import { AchievementCard } from '../components/achievements/AchievementCard';
 import { ACHIEVEMENTS, ACHIEVEMENT_TOTAL, GROUPS, type Achievement } from '../content/achievements';
 import { useAchievementEvaluations } from '../lib/achievements';
@@ -24,9 +25,9 @@ export default function AchievementsPage() {
     <div className="page ach-page">
       <div className="ach-page-head">
         <div>
-          <div className="eyebrow">Your record</div>
+          <div className="eyebrow">Your trophy shelf</div>
           <h1>Achievements</h1>
-          <p className="lead">Badges for milestones along the way. Tiered badges climb from bronze to diamond as you keep going.</p>
+          <p className="lead">Shiny badges for the milestones along the way. Tiered ones climb from bronze all the way to diamond as you keep going.</p>
         </div>
         <div className="ach-count" role="img" aria-label={`${earnedCount} of ${ACHIEVEMENT_TOTAL} achievements earned`}>
           <Award size={20} aria-hidden="true" className="card-icon" />
@@ -66,9 +67,11 @@ export default function AchievementsPage() {
         );
       })}
       {filter === 'earned' && earnedCount === 0 && (
-        <div className="card info">No badges yet. Mark a Learn section as read, fix an Improve This exercise or pass an exam to earn your first one.</div>
+        <EmptyState title="Your shelf is waiting" mood="sleepy">
+          Mark a Learn section as read, fix an Improve This exercise or pass an exam to earn your very first badge.
+        </EmptyState>
       )}
-      {filter === 'locked' && earnedCount === ACHIEVEMENT_TOTAL && <div className="card info">Every badge is unlocked. Ship it.</div>}
+      {filter === 'locked' && earnedCount === ACHIEVEMENT_TOTAL && <EmptyState title="Every badge unlocked. Ship it!" mood="party" />}
     </div>
   );
 }
