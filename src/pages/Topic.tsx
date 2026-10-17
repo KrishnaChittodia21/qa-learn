@@ -82,7 +82,16 @@ export default function TopicPage() {
             </Badge>
           ))}
         </div>
-        {topic.sources.length > 0 && <p className="muted small">Sources: {topic.sources.join(' · ')}</p>}
+        {topic.sources.length > 0 && (
+          <details className="topic-sources">
+            <summary>Sources ({topic.sources.length})</summary>
+            <ul>
+              {topic.sources.map((src) => (
+                <li key={src}>{src}</li>
+              ))}
+            </ul>
+          </details>
+        )}
         <div className="topic-progress">
           <ProgressRing value={topicCompletion(p, topic)} size={40} tone={topicCompletion(p, topic) === 100 ? 'good' : 'accent'} />
           <span className="small muted">{topicCompletion(p, topic)}% of this topic complete</span>
@@ -416,7 +425,7 @@ function EnvelopeCard({ q, n }: { q: EnvelopeQuestion; n: number }) {
           <div className="label">Answer</div>
           <Markdown>{q.answer}</Markdown>
           <div className="insight">
-            🎯 <strong>Takeaway:</strong> {q.insight}
+            <Lightbulb size={15} aria-hidden="true" className="card-icon" /> <strong>Takeaway:</strong> {q.insight}
           </div>
           <FollowUps items={q.followUps} />
         </div>

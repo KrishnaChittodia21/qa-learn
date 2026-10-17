@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
+import { BrandMark } from './BrandMark';
 
 /** Footer at the end of every page: brand on the left, copyright on the right. */
 export function SiteFooter() {
@@ -7,9 +7,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="footer-row">
         <Link to="/" className="brand footer-brand">
-          <span className="brand-tile" aria-hidden="true">
-            <ShieldCheck size={16} strokeWidth={2.4} />
-          </span>
+          <BrandMark size={20} />
           <span className="brand-name">QA Learn</span>
         </Link>
         <span className="footer-copy">© 2026 QA Learn</span>

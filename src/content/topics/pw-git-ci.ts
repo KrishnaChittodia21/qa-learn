@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 6,
   title: 'Git, GitHub & CI for Playwright',
   subtitle:
-    'From git basics and pull requests to a GitHub Actions pipeline with browsers, artifacts, retries, sharding with merged reports, Docker and Jenkins.',
+    'From Git basics and pull requests to a GitHub Actions pipeline: installing browsers, saving reports, retries, splitting tests across machines with one merged report, Docker and Jenkins.',
   estimatedMinutes: 100,
   sources: [
     'Pro Git book (git-scm.com/book) — Ch 2 Git Basics, Ch 3 Branching',
@@ -22,35 +22,43 @@ const topic: Topic = {
   ],
   tags: ['git', 'github', 'pull-request', 'github-actions', 'ci', 'artifacts', 'sharding', 'workers', 'docker', 'jenkins', 'tags'],
   cheatSheet: [
-    'Git flow: `git switch -c feat/x` → edit → `git add -p` → `git commit -m` → `git push -u origin feat/x` → open PR → review → merge → `git pull` on main.',
-    '`git pull` = `git fetch` + merge (or rebase with `--rebase`); `git fetch` alone never touches your files.',
+    'Git flow: `git switch -c feat/x` → edit → `git add -p` → `git commit -m` → `git push -u origin feat/x` → open a PR → review → merge → `git pull` on main.',
+    '`git pull` = `git fetch` + merge (or rebase with `--rebase`). `git fetch` alone never changes your files.',
     '.gitignore for Playwright: `node_modules/`, `test-results/`, `playwright-report/`, `blob-report/`, `playwright/.cache/`, `playwright/.auth/`, `.env`.',
-    'Generated config is CI-aware: `forbidOnly: !!process.env.CI`, `retries: process.env.CI ? 2 : 0`, `workers: process.env.CI ? 1 : undefined`, `trace: \'on-first-retry\'`.',
-    'Minimal GitHub Actions job: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload `playwright-report/` with `if: \${{ !cancelled() }}`.',
-    'Workers = parallel processes on ONE machine (default 50% of CPU cores); shards = splitting the suite across MACHINES with `--shard=i/n`.',
-    '`fullyParallel: true` lets tests inside one file run in parallel and makes shards split per test (better balance) instead of per file.',
-    'Shards: reporter `blob` on CI → upload each `blob-report/` as `blob-report-<i>` → final job downloads all → `npx playwright merge-reports --reporter html ./all-blob-reports`.',
-    'Docker: `mcr.microsoft.com/playwright:v<same version as package.json>-noble`; run with `--init --ipc=host`; browsers are pre-installed.',
-    'Selective runs: tags `{ tag: \'@smoke\' }` + `--grep @smoke`; `--grep-invert @slow`; `--only-changed=origin/main`; `--project=chromium`.',
-    'Secrets: store in GitHub repository/environment secrets, expose as `env:` in the workflow, read with `process.env`; never commit `.env` or `.auth` files.',
+    'The generated config changes on CI: `forbidOnly: !!process.env.CI`, `retries: process.env.CI ? 2 : 0`, `workers: process.env.CI ? 1 : undefined`, `trace: \'on-first-retry\'`.',
+    'Smallest GitHub Actions job: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload `playwright-report/` with `if: ${{ !cancelled() }}`.',
+    'Workers = test processes running at the same time on ONE machine (default: 50% of CPU cores). Shards = splitting the suite across MACHINES with `--shard=i/n`.',
+    '`fullyParallel: true` lets tests inside one file run at the same time. It also makes shards split per test (better balance), not per file.',
+    'Shards: `blob` reporter on CI → upload each `blob-report/` as `blob-report-<i>` → a final job downloads all → `npx playwright merge-reports --reporter html ./all-blob-reports`.',
+    'Docker: `mcr.microsoft.com/playwright:v<same version as package.json>-noble`. Run with `--init --ipc=host`. Browsers are already installed.',
+    'Pick tests: tags `{ tag: \'@smoke\' }` + `--grep @smoke`; `--grep-invert @slow`; `--only-changed=origin/main`; `--project=chromium`.',
+    'Secrets: store them as GitHub repository or environment secrets. Pass them as `env:` in the workflow. Read them with `process.env`. Never commit `.env` or `.auth` files.',
   ],
   sections: [
     {
       heading: 'Git in ten minutes: the mental model',
-      body: `**Intuition:** Git is a save-game system for a folder. You choose which changes go into the next save point (staging), create the save point (commit), and copy save points to and from a shared server (push/pull).
+      body: `**Example:** \`git add login.spec.ts\` → \`git commit -m "test: add login test"\` → \`git push\` → your new test is saved and sent to GitHub. The team can now see it.
 
-Four places your work can be:
+Git is like a save-game system for a folder. You pick which changes go into the next save point. That step is called **staging**. Then you create the save point. That is a **commit**. Then you copy save points to and from a shared server. That is **push** and **pull**.
 
-| Place | What it holds | Moves there with |
+Your work can be in four places:
+
+| Place | What it holds | Gets there with |
 |---|---|---|
 | **Working directory** | files as you edit them | your editor |
-| **Staging area (index)** | changes chosen for the next commit | \`git add\` |
+| **Staging area (index)** | changes picked for the next commit | \`git add\` |
 | **Local repository** | commits on your machine | \`git commit\` |
-| **Remote (GitHub)** | the shared copy | \`git push\` (and back with \`git fetch\`/\`git pull\`) |
+| **Remote (GitHub)** | the shared copy | \`git push\` (and back with \`git fetch\` / \`git pull\`) |
 
-A **commit** is a snapshot with an id (hash), an author, a message and a pointer to its parent. A **branch** is just a movable label pointing at a commit; \`main\` is the shared one, and your work happens on short-lived feature branches. \`HEAD\` is "where you are now".
+A **commit** is a snapshot. It has an id (called a hash), an author, a message and a link to the commit before it.
 
-**Why a tester must know Git:** your Playwright framework is code. It lives in a repository, is reviewed through pull requests, and every push triggers the CI pipeline. In interviews you will be asked for basic commands, merge conflicts, and how your tests run on a PR.`,
+A **branch** is a movable label that points at a commit. \`main\` is the shared branch. You do your work on short-lived feature branches.
+
+\`HEAD\` means "where you are now".
+
+Your Playwright framework is code. It lives in a repository. Teammates review it through pull requests. Every push starts the CI pipeline. Interviews ask about basic commands, merge conflicts and how your tests run on a pull request.
+
+**Why testers care:** without Git, you cannot share tests, get them reviewed or run them in CI.`,
       diagram: `  working dir --git add--> staging --git commit--> local repo --git push--> remote
        ^                                              |   ^                   |
        '-------- git restore / git switch ------------'   '--- git fetch -----'
@@ -60,34 +68,38 @@ A **commit** is a snapshot with an id (hash), an author, a message and a pointer
                      \\         /
   feat/x:             D---E---F     (your branch: new tests)`,
       keyPoints: [
-        'Working dir → staging → local repo → remote.',
-        'A branch is a pointer to a commit; work on short-lived branches.',
-        'Every push/PR is what triggers your CI tests.',
+        'Working directory → staging → local repo → remote.',
+        'A branch is a label pointing at a commit. Work on short-lived branches.',
+        'Every push or PR starts your CI tests.',
       ],
       source: 'Pro Git — Ch 1.3 What is Git, Ch 3.1 Branches in a Nutshell; Atlassian Git tutorials',
     },
     {
       heading: 'Everyday Git commands for a test engineer',
-      body: `**Intuition:** you need about fifteen commands for 95% of your work. Learn them by the task they solve, not alphabetically.
+      body: `**Example:** \`git status\` → Git lists the files you changed and which ones are staged. Run it before every commit.
+
+About fifteen commands cover 95% of daily work. Learn them by the job they do.
 
 | Task | Command |
 |---|---|
 | Get the repo | \`git clone <url>\` |
-| What changed? | \`git status\`, \`git diff\` (unstaged), \`git diff --staged\` |
+| What changed? | \`git status\`, \`git diff\` (not staged), \`git diff --staged\` |
 | New branch | \`git switch -c feat/checkout-tests\` (older: \`git checkout -b\`) |
-| Stage | \`git add tests/checkout.spec.ts\` or \`git add -p\` (pick hunks) |
+| Stage | \`git add tests/checkout.spec.ts\` or \`git add -p\` (pick parts of a file) |
 | Commit | \`git commit -m "test: add checkout total tests"\` |
 | History | \`git log --oneline --graph -10\` |
-| Publish branch | \`git push -u origin feat/checkout-tests\` |
-| Update from remote | \`git fetch\` then \`git pull\` (fetch + merge) or \`git pull --rebase\` |
-| Undo unstaged edits | \`git restore <file>\` |
+| Send the branch to GitHub | \`git push -u origin feat/checkout-tests\` |
+| Get updates | \`git fetch\`, then \`git pull\` (fetch + merge) or \`git pull --rebase\` |
+| Undo edits not yet staged | \`git restore <file>\` |
 | Unstage | \`git restore --staged <file>\` |
-| Park work | \`git stash\` / \`git stash pop\` |
-| Undo a pushed commit safely | \`git revert <hash>\` (new commit that reverses it) |
+| Put work aside | \`git stash\` / \`git stash pop\` |
+| Undo a pushed commit safely | \`git revert <hash>\` (a new commit that reverses it) |
 
-**Commit hygiene:** small commits with clear messages ("test: cover coupon expiry boundary"), one topic per commit. Never commit generated folders (reports, results) or secrets.
+**Good commits:** keep them small. Write a clear message, like "test: cover coupon expiry boundary". One topic per commit. Never commit generated folders (reports, results) or secrets.
 
-**Common mistake:** \`git reset --hard\` or \`git push --force\` on a shared branch. Both rewrite or discard history. On shared branches prefer \`git revert\`; if you must force-push your own branch, use \`--force-with-lease\`.`,
+**Watch out:** \`git reset --hard\` and \`git push --force\` on a shared branch. Both rewrite or throw away history. On shared branches, use \`git revert\`. If you must force-push your own branch, use \`--force-with-lease\`. It refuses to overwrite work you have not seen.
+
+**Why testers care:** these commands are enough to add, update and fix tests safely every day.`,
       code: [
         {
           language: 'bash',
@@ -110,31 +122,36 @@ git push --force-with-lease                  # only on YOUR branch after a rebas
         },
       ],
       keyPoints: [
-        'status/diff before every commit.',
-        'pull = fetch + merge; fetch alone is always safe.',
-        'revert on shared history; --force-with-lease only on your own branch.',
+        'Run status and diff before every commit.',
+        'pull = fetch + merge. fetch alone is always safe.',
+        'Use revert on shared history. Use --force-with-lease only on your own branch.',
       ],
       source: 'Pro Git — Ch 2 Git Basics; Atlassian — Saving changes, Syncing, Undoing changes',
     },
     {
       heading: 'Branches, merges and resolving conflicts',
-      body: `**Intuition:** two people edited the same sentence in a shared document. Git can combine changes to *different* lines automatically, but for the *same* lines it asks a human to choose.
+      body: `**Example:** you and a teammate both change the \`retries\` line in \`playwright.config.ts\`. Git cannot choose, so it stops and asks you. This is a **merge conflict**.
+
+Think of two people editing the same sentence in a shared document. Git joins changes to *different* lines by itself. For the *same* lines, a human must choose.
 
 **Merge vs rebase:**
 | | \`git merge origin/main\` | \`git rebase origin/main\` |
 |---|---|---|
-| History | keeps both lines + a merge commit | replays your commits on top of main: straight line |
-| Safe on shared branches? | yes | only on your own branch (rewrites hashes) |
-| Conflict resolution | once | possibly once per replayed commit |
+| History | keeps both lines of work + a merge commit | moves your commits on top of main, in a straight line |
+| Safe on shared branches? | yes | only on your own branch (it changes commit ids) |
+| Fixing conflicts | once | maybe once per moved commit |
 
-**Resolving a conflict:**
-1. Git stops and marks files as "both modified" in \`git status\`.
-2. The file contains markers: \`<<<<<<< HEAD\` (your side), \`=======\`, \`>>>>>>> origin/main\` (their side).
-3. Edit to the correct final content, keeping **both** intentions when they are compatible, and delete the markers.
-4. **Run the affected tests** (a config conflict can silently break the whole suite).
-5. \`git add <file>\` then \`git commit\` (merge) or \`git rebase --continue\` (rebase). \`git merge --abort\` / \`git rebase --abort\` returns to safety.
+**Fixing a conflict:**
+1. Git stops. \`git status\` shows the file as "both modified".
+2. The file has markers: \`<<<<<<< HEAD\` (your side), \`=======\`, \`>>>>>>> origin/main\` (their side).
+3. Edit the file to the correct final text. Keep **both** changes when they fit together. Delete the markers.
+4. **Run the affected tests.** A config conflict can quietly break the whole suite.
+5. Run \`git add <file>\`. Then run \`git commit\` (for a merge) or \`git rebase --continue\` (for a rebase).
+6. To give up and go back, use \`git merge --abort\` or \`git rebase --abort\`.
 
-**Typical conflict in a test repo:** two people both changed \`playwright.config.ts\`: one added a \`firefox\` project, the other changed \`retries\`. The right answer keeps both changes.`,
+**A typical conflict in a test repo:** two people changed \`playwright.config.ts\`. One added a \`firefox\` project. The other changed \`retries\`. The right answer keeps both changes.
+
+**Why testers care:** config files change often. A badly fixed conflict can turn off retries or whole browsers without anyone noticing.`,
       code: [
         {
           language: 'text',
@@ -154,31 +171,41 @@ git push --force-with-lease                  # only on YOUR branch after a rebas
         },
       ],
       keyPoints: [
-        'Merge preserves history; rebase rewrites your branch into a straight line.',
-        'Resolve by intent, remove markers, run tests, then add + continue.',
-        'Talk to the other author when the two intentions really disagree.',
+        'Merge keeps history as it happened. Rebase moves your commits into a straight line.',
+        'Fix by meaning, remove the markers, run the tests, then add and continue.',
+        'Talk to the other author when the two changes really disagree.',
       ],
       source: 'Pro Git — Ch 3.2 Basic Branching and Merging, Ch 3.6 Rebasing; Atlassian — Merging vs Rebasing',
     },
     {
       heading: '.gitignore for a Playwright project',
-      body: `**Intuition:** commit the recipe, not the cake. Source code and config go into Git; anything generated by running the tests, or anything secret, stays out.
+      body: `**Example:** a \`.gitignore\` line \`playwright-report/\` → Git never adds the HTML report folder to a commit.
+
+Commit the recipe, not the cake. Source code and config go into Git. Anything made by running the tests stays out. Anything secret stays out too.
 
 \`npm init playwright@latest\` already adds most of these. Make sure your repo ignores:
 
 | Path | Why it must not be committed |
 |---|---|
-| \`node_modules/\` | huge, rebuilt by \`npm ci\` from \`package-lock.json\` |
-| \`test-results/\` | per-run screenshots, videos, traces |
-| \`playwright-report/\` | generated HTML report (upload as a CI artifact instead) |
-| \`blob-report/\` | per-shard raw results |
-| \`playwright/.cache/\` | component-testing build cache |
-| \`playwright/.auth/\` | saved \`storageState\` files: **live session cookies** |
-| \`.env\`, \`.env.*\` | credentials and URLs (commit a \`.env.example\` with placeholder values) |
+| \`node_modules/\` | huge; \`npm ci\` rebuilds it from \`package-lock.json\` |
+| \`test-results/\` | screenshots, videos and traces (step-by-step test recordings) from each run |
+| \`playwright-report/\` | the generated HTML report (upload it from CI instead) |
+| \`blob-report/\` | raw results from each shard (one machine's part of a split run) |
+| \`playwright/.cache/\` | build cache for component testing |
+| \`playwright/.auth/\` | saved \`storageState\` files: **live login cookies** |
+| \`.env\`, \`.env.*\` | passwords and URLs (commit a \`.env.example\` with fake values) |
 
-**Do commit:** \`package.json\` **and** \`package-lock.json\` (so \`npm ci\` installs exact versions, including the exact Playwright version), \`playwright.config.ts\`, tests, page objects, fixtures, test data without secrets, and the workflow YAML.
+**storageState** is a saved file of cookies and local storage, so tests start already logged in. That makes it as secret as a password.
 
-**Already committed a secret?** Adding it to \`.gitignore\` later does not remove it from history. Rotate the secret immediately, then remove the file with \`git rm --cached .env\` and, if needed, clean history.`,
+**Do commit:**
+- \`package.json\` **and** \`package-lock.json\`. Then \`npm ci\` installs the exact same versions, including Playwright.
+- \`playwright.config.ts\`, tests, page objects and fixtures.
+- Test data without secrets.
+- The workflow YAML file.
+
+**Watch out:** you already committed a secret? Adding it to \`.gitignore\` later does not remove it from history. Change (rotate) the secret right away. Then remove the file with \`git rm --cached .env\`. Clean the history if needed.
+
+**Why testers care:** the repo stays small, and passwords and login cookies never leak.`,
       code: [
         {
           language: 'text',
@@ -202,58 +229,72 @@ node_modules/
         },
       ],
       keyPoints: [
-        'Ignore generated output and secrets; commit lock files.',
-        'storageState files are credentials.',
-        'A leaked secret must be rotated, not just ignored.',
+        'Ignore generated output and secrets. Commit the lock file.',
+        'storageState files are login details. Keep them out of Git.',
+        'A leaked secret must be changed, not just ignored.',
       ],
       source: 'Atlassian — .gitignore tutorial; Playwright docs — Authentication (ignore playwright/.auth)',
     },
     {
       heading: 'Pull requests and code review for test code',
-      body: `**Intuition:** a pull request is a proposal: "here are my commits; please check them and merge them into main." It is where CI runs your tests and where teammates catch problems before they reach everyone.
+      body: `**Example:** you push \`test/cart-badge\` and open a pull request → GitHub runs your Playwright tests → a teammate reviews → the branch is merged into \`main\`.
 
-**Typical PR flow on GitHub:**
-1. Push your branch, open a PR against \`main\` with a clear title and description (what is covered, how to run, linked ticket).
-2. The workflow triggered by \`pull_request\` runs the Playwright suite; results appear as checks on the PR.
-3. Reviewers comment; you push fixes to the same branch (the PR updates automatically).
-4. Once checks are green and reviews approved, the PR is merged (merge commit, squash, or rebase, per team policy).
+A **pull request** (PR) is a proposal. It says: "Here are my commits. Please check them and merge them into main." CI runs your tests there. Teammates catch problems before they reach everyone.
+
+**A typical PR flow on GitHub:**
+1. Push your branch. Open a PR against \`main\`. Give it a clear title and description: what it covers, how to run it, the linked ticket.
+2. The workflow for \`pull_request\` runs the Playwright suite. Results show as checks on the PR.
+3. Reviewers comment. You push fixes to the same branch, and the PR updates by itself.
+4. When checks are green and reviewers approve, the PR is merged. Teams pick merge commit, squash or rebase.
 5. **Branch protection** on \`main\` can require passing checks and at least one approval.
 
 **What a good reviewer checks in test code:**
 | Area | Look for |
 |---|---|
 | Reliability | no \`waitForTimeout\`, web-first assertions, no \`.only\` |
-| Locators | role/label/test-id, not long CSS/XPath |
-| Independence | own test data, no order dependence, cleanup |
-| Readability | descriptive titles, \`test.step\`, page objects reused |
+| Locators | role, label or test id — not long CSS or XPath |
+| Independence | own test data, no order dependence, clean-up |
+| Readability | clear titles, \`test.step\`, reused page objects |
 | Coverage | negative and edge cases, not just the happy path |
-| Secrets | no credentials, tokens or real personal data |
+| Secrets | no passwords, tokens or real personal data |
 | Speed | API setup instead of long UI setup |
 
-**In interviews, say this:** "Test code gets the same review standard as product code; my PRs include evidence the new tests pass reliably, e.g. a run with --repeat-each."`,
+A **web-first assertion** is an \`expect\` on a locator that keeps retrying until it passes or times out.
+
+**In an interview, say:** "Test code gets the same review as product code. My PRs show the new tests pass reliably, for example with a \`--repeat-each\` run."
+
+**Why testers care:** review and CI checks stop flaky or broken tests before they reach \`main\`.`,
       keyPoints: [
-        'PRs = review + CI gate before merging into main.',
-        'Branch protection enforces green checks and approvals.',
-        'Review test code for flakiness, locators, independence and secrets.',
+        'A PR = review + CI check before merging into main.',
+        'Branch protection requires green checks and approvals.',
+        'Review test code for flaky waits, locators, independence and secrets.',
       ],
       source: 'GitHub Docs — About pull requests, protected branches; GitHub Skills — Review pull requests',
     },
     {
       heading: 'Making the config CI-aware with process.env.CI',
-      body: `**Intuition:** your laptop and the CI runner want different things. Locally you want speed and a report that pops open; in CI you want stability, retries, evidence and machine-readable output. One config file, two behaviours, switched by an environment variable.
+      body: `**Example:** \`retries: process.env.CI ? 2 : 0\` → on CI, a failed test gets 2 more tries. On your laptop, it gets none.
 
-GitHub Actions, GitLab CI, Azure Pipelines and most CI systems set \`CI=true\` automatically, so \`process.env.CI\` is truthy there.
+Your laptop and the CI machine need different things. Locally you want speed and a report that opens by itself. In CI you want stability, retries, evidence and output that tools can read. So you keep one config file, with two behaviours. An environment variable switches between them.
+
+GitHub Actions, GitLab CI, Azure Pipelines and most CI systems set \`CI=true\` by themselves. So \`process.env.CI\` is true there.
 
 | Setting | Local | CI | Why |
 |---|---|---|---|
-| \`forbidOnly\` | false | **true** | a forgotten \`test.only\` must fail CI, not silently skip the suite |
-| \`retries\` | 0 | 2 | absorb rare infra blips; produce flaky labels |
-| \`workers\` | default (50% of cores) | 1 (docs' recommendation for stability) or a tuned number | shared runners have few cores |
-| \`reporter\` | \`list\` + html | \`dot\`/\`github\` + html (\`open: 'never'\`) + junit/blob | humans vs machines |
-| \`trace\` | as needed | \`on-first-retry\` | evidence for failures only |
+| \`forbidOnly\` | false | **true** | a forgotten \`test.only\` must fail CI, not quietly skip the rest |
+| \`retries\` | 0 | 2 | get past rare machine hiccups; mark flaky tests |
+| \`workers\` | default (50% of CPU cores) | 1 (the docs' advice for stability) or a tuned number | shared CI machines have few cores |
+| \`reporter\` | \`list\` + html | \`dot\` / \`github\` + html (\`open: 'never'\`) + junit / blob | for people vs for tools |
+| \`trace\` | as needed | \`on-first-retry\` | evidence only for failures |
 | \`webServer.reuseExistingServer\` | true | false | CI must start a fresh app |
 
-Environment URLs and credentials come from env vars as well (e.g. \`process.env.BASE_URL ?? 'http://localhost:3000'\`), set by the workflow from secrets.`,
+A **flaky test** sometimes passes and sometimes fails without any code change. With retries, Playwright marks a test "flaky" when it fails first and then passes.
+
+A **trace** is a recording of the test: each step, screenshots, network calls and console logs. You open it in the trace viewer.
+
+URLs and passwords also come from environment variables. For example: \`process.env.BASE_URL ?? 'http://localhost:3000'\`. The workflow sets them from secrets.
+
+**Why testers care:** the same tests run well in both places. A forgotten \`test.only\` can never fool CI.`,
       code: [
         {
           language: 'typescript',
@@ -287,29 +328,33 @@ export default defineConfig({
         },
       ],
       keyPoints: [
-        'CI systems set CI=true; branch config on it.',
-        'forbidOnly + retries + trace on-first-retry are the CI essentials.',
+        'CI systems set CI=true. Switch config settings on it.',
+        'forbidOnly + retries + trace on-first-retry are the CI basics.',
         'URLs and secrets come from environment variables.',
       ],
       source: 'Playwright docs — Setting up CI; Continuous Integration (workers); Test configuration',
     },
     {
       heading: 'GitHub Actions: the Playwright workflow line by line',
-      body: `**Intuition:** a workflow is a recipe that GitHub runs on a fresh virtual machine every time something happens (a push, a PR, a schedule). Because the machine starts empty, the recipe must install *everything*, including the browsers.
+      body: `**Example:** you push to \`main\` → GitHub starts a fresh Linux machine → it installs Node, your packages and the browsers → it runs \`npx playwright test\`.
 
-\`npm init playwright@latest\` can generate \`.github/workflows/playwright.yml\`. Key parts:
+A **workflow** is a recipe GitHub runs on a fresh virtual machine. It runs every time something happens: a push, a pull request or a schedule. The machine starts empty. So the recipe must install *everything*, browsers included.
 
-- **\`on:\`** triggers: \`push\` and \`pull_request\` to \`main\`/\`master\`. Add \`workflow_dispatch\` (manual button) and \`schedule\` (nightly cron) as needed.
-- **\`runs-on: ubuntu-latest\`**: a GitHub-hosted Linux runner.
-- **\`actions/checkout\`**: gets your code. **\`actions/setup-node\`** with \`node-version: lts/*\`.
-- **\`npm ci\`**: clean install from \`package-lock.json\` (exact versions, fails if the lock file is out of sync).
-- **\`npx playwright install --with-deps\`**: downloads the browsers matching *your* Playwright version **and** the Linux system libraries they need. Without it, tests fail with "Executable doesn't exist".
-- **\`npx playwright test\`**: runs the suite; a non-zero exit code fails the job.
-- **\`actions/upload-artifact\`** with \`if: \${{ !cancelled() }}\`: uploads \`playwright-report/\` **even when tests failed** (the default \`success()\` condition would skip it exactly when you need it). \`retention-days: 30\`.
+\`npm init playwright@latest\` can create \`.github/workflows/playwright.yml\` for you. The key parts:
 
-**Secrets:** add them under *Settings → Secrets and variables → Actions*, then map them in the workflow: \`env: { BOOKER_PASS: \${{ secrets.BOOKER_PASS }} }\`. GitHub masks them in logs. Pull requests from forks do not receive secrets.
+- **\`on:\`** — what starts it: \`push\` and \`pull_request\` to \`main\` / \`master\`. Add \`workflow_dispatch\` (a manual button) and \`schedule\` (a nightly timer) if needed.
+- **\`runs-on: ubuntu-latest\`** — a Linux machine hosted by GitHub. It is called a **runner**.
+- **\`actions/checkout\`** — gets your code. **\`actions/setup-node\`** with \`node-version: lts/*\` installs Node.
+- **\`npm ci\`** — a clean install from \`package-lock.json\`. It uses exact versions. It fails if the lock file does not match.
+- **\`npx playwright install --with-deps\`** — downloads the browsers for *your* Playwright version, **and** the Linux libraries they need. Without it, tests fail with "Executable doesn't exist".
+- **\`npx playwright test\`** — runs the suite. If any test fails, the job fails.
+- **\`actions/upload-artifact\`** with \`if: \${{ !cancelled() }}\` — uploads \`playwright-report/\` **even when tests failed**. The default condition is \`success()\`. It would skip the upload exactly when you need it. \`retention-days: 30\` keeps it for 30 days.
 
-**Timeouts:** add \`timeout-minutes\` on the job and \`globalTimeout\` in the Playwright config so a hung run is stopped (the config timeout still lets reporters write the report).`,
+**Secrets:** add them under *Settings → Secrets and variables → Actions*. Then pass them in the workflow: \`env: { BOOKER_PASS: \${{ secrets.BOOKER_PASS }} }\`. GitHub hides them in logs. Pull requests from forks do not get secrets.
+
+**Timeouts:** set \`timeout-minutes\` on the job. Set \`globalTimeout\` in the Playwright config. Then a stuck run is stopped. The config timeout still lets the reporters write the report.
+
+**Why testers care:** every push is tested the same way, on a clean machine, with a report you can download.`,
       code: [
         {
           language: 'yaml',
@@ -350,31 +395,35 @@ jobs:
         },
       ],
       keyPoints: [
-        'Fresh runner every time: npm ci + playwright install --with-deps are mandatory.',
-        'Upload the report with if: !cancelled() so failed runs keep their evidence.',
-        'Secrets via repository secrets → env → process.env.',
+        'A fresh machine every time: npm ci and playwright install --with-deps are required.',
+        'Upload the report with if: !cancelled(), so failed runs keep their evidence.',
+        'Secrets go from repository secrets → env → process.env.',
       ],
       source: 'Playwright docs — Setting up CI (generated workflow); GitHub Docs — Workflow syntax, Using secrets, Storing workflow data as artifacts',
     },
     {
       heading: 'Artifacts: reports, traces and retention',
-      body: `**Intuition:** the CI runner is destroyed when the job ends. Anything you did not upload as an artifact is gone, including the report you need to debug the failure.
+      body: `**Example:** \`actions/upload-artifact\` with \`path: playwright-report/\` → after the job, a zip of the HTML report appears on the run's page. You download it to debug.
+
+An **artifact** is a file a CI job saves before the machine is deleted. The CI machine is thrown away when the job ends. Anything you did not upload is gone, including the report you need.
 
 **What to upload:**
 | Artifact | Path | When |
 |---|---|---|
 | HTML report | \`playwright-report/\` | always (\`!cancelled()\`) |
-| Raw results (traces, videos, screenshots) | \`test-results/\` | on failure, if the report does not already include them |
-| JUnit XML | e.g. \`results/junit.xml\` | for CI test tabs / other tools |
-| Blob reports | \`blob-report/\` | per shard, short retention (1 day), merged later |
+| Raw results (traces, videos, screenshots) | \`test-results/\` | on failure, if the report does not already have them |
+| JUnit XML | e.g. \`results/junit.xml\` | for CI test tabs and other tools |
+| Blob reports (raw results made to be merged) | \`blob-report/\` | one per shard, kept 1 day, merged later |
 
-The HTML report embeds attachments (screenshots, videos, trace files) from \`test-results\`, so downloading the report artifact, unzipping it and running \`npx playwright show-report <folder>\` gives you everything, traces included.
+The HTML report includes the screenshots, videos and trace files from \`test-results\`. So you download the report artifact and unzip it. Then run \`npx playwright show-report <folder>\`. You get everything, traces included.
 
-**Retention and size:** artifacts count toward storage limits. Keep blob reports for a day, merged reports for 14–30 days. Prefer \`trace: 'on-first-retry'\` and \`video: 'retain-on-failure'\` so green tests produce almost nothing.
+**Storage and size:** artifacts use storage space, which has limits. Keep blob reports for a day. Keep merged reports for 14–30 days. Use \`trace: 'on-first-retry'\` and \`video: 'retain-on-failure'\`. Then passing tests save almost nothing.
 
-**Names must be unique** within a run in \`upload-artifact@v4\`: with a matrix, include the matrix value in the name (\`blob-report-\${{ matrix.shardIndex }}\`), otherwise the second upload fails.
+**Names must be unique** in one run with \`upload-artifact@v4\`. With a matrix, put the matrix value in the name, like \`blob-report-\${{ matrix.shardIndex }}\`. Otherwise the second upload fails.
 
-**Sensitive data:** traces contain network bodies and cookies, so treat artifacts as confidential; on public repos anyone can download them.`,
+**Watch out:** traces hold network data and cookies. Treat artifacts as private. On public repos, anyone can download them.
+
+**Why testers care:** when a CI test fails, the report and trace show exactly what happened.`,
       code: [
         {
           language: 'yaml',
@@ -398,31 +447,39 @@ The HTML report embeds attachments (screenshots, videos, trace files) from \`tes
         },
       ],
       keyPoints: [
-        'No artifact = no evidence once the runner is gone.',
-        'Unique artifact names per matrix job.',
-        'Short retention for raw data; artifacts may contain secrets.',
+        'No artifact = no evidence once the CI machine is gone.',
+        'Give each matrix job a unique artifact name.',
+        'Keep raw data for a short time. Artifacts may contain secrets.',
       ],
       source: 'GitHub Docs — Storing workflow data as artifacts; Playwright docs — Setting up CI, Reporters (HTML)',
     },
     {
       heading: 'Parallelism, workers and sharding',
-      body: `**Intuition:** workers are more cashiers in **one** shop; shards are opening **more shops**. Each shop (machine) runs its share of customers (tests), and each shop can have several cashiers (workers).
+      body: `**Example:** \`npx playwright test --shard=2/4\` → this machine runs only the second quarter of the tests. Three other machines run the rest at the same time.
 
-**Workers (one machine):** Playwright runs tests in parallel worker processes, each with its own browser. Default is **50% of logical CPU cores**; set \`workers\` in config or \`--workers\` / \`-j\`. Too many workers on a small runner causes CPU starvation and flaky timeouts.
+Think of a shop. **Workers** are more cashiers in **one** shop. **Shards** are **more shops**. Each shop (machine) serves its share of customers (tests). Each shop can have several cashiers (workers).
 
-**What runs in parallel:** by default, **files** run in parallel, but tests inside one file run in order in the same worker. \`fullyParallel: true\` (or \`test.describe.configure({ mode: 'parallel' })\`) lets individual tests spread across workers.
+**Workers (one machine):** a worker is a separate process with its own browser. Playwright runs tests in several workers at the same time. The default is **50% of the CPU cores**. Set \`workers\` in the config, or use \`--workers\` / \`-j\`. Too many workers on a small machine overload the CPU. Then tests time out at random.
 
-**Sharding (many machines):** \`npx playwright test --shard=2/4\` runs the second quarter of the suite. In CI, a **matrix** starts N jobs, each with its own shard index. With \`fullyParallel: true\`, shards split **per test** and are evenly balanced; without it they split **per file**, so one huge file can make one shard much slower.
+**What runs at the same time:** by default, **files** run at the same time. Tests inside one file run in order, in the same worker. \`fullyParallel: true\` (or \`test.describe.configure({ mode: 'parallel' })\`) lets single tests spread across workers.
 
-**Merging results:** each shard only knows its own tests. Configure \`reporter: process.env.CI ? 'blob' : 'html'\`, upload each \`blob-report/\` as an artifact, then a final job downloads them all and runs \`npx playwright merge-reports --reporter html ./all-blob-reports\` to produce one HTML report.
+**Sharding (many machines):** sharding splits the suite across machines. In CI, a **matrix** starts N jobs. Each job gets its own shard number. With \`fullyParallel: true\`, shards split **per test**, so they are well balanced. Without it, they split **per file**. Then one huge file can make one shard much slower.
 
-| Knob | Scope | Speeds up by | Watch out for |
+**Merging results:** each shard only knows its own tests. So:
+1. Set \`reporter: process.env.CI ? 'blob' : 'html'\`. A **blob report** is a raw results file made to be merged later.
+2. Upload each \`blob-report/\` as an artifact.
+3. A final job downloads them all.
+4. It runs \`npx playwright merge-reports --reporter html ./all-blob-reports\`. That makes one HTML report.
+
+| Setting | Works on | Speeds up by | Watch out for |
 |---|---|---|---|
-| \`workers\` | one machine | CPU cores | contention, shared data |
-| \`fullyParallel\` | test granularity | balancing | tests must be independent |
-| \`--shard\` | many machines | number of jobs | setup overhead per job, report merging |
+| \`workers\` | one machine | CPU cores | overloaded CPU, shared data |
+| \`fullyParallel\` | single tests | better balance | tests must be independent |
+| \`--shard\` | many machines | number of jobs | setup time per job, merging reports |
 
-**Wall time ≈ (tests × avg duration) ÷ (shards × workers) + per-job setup (install, browsers) + retries + merge job.**`,
+**Total time ≈ (tests × average test time) ÷ (shards × workers) + setup per job (install, browsers) + retries + merge job.**
+
+**Why testers care:** a 40-minute suite can finish in about 10 minutes, with one report for the whole run.`,
       code: [
         {
           language: 'yaml',
@@ -478,25 +535,32 @@ The HTML report embeds attachments (screenshots, videos, trace files) from \`tes
             +-- shard 4/4: [w1][w2] --> blob-report-4 --+
      (each shard = separate VM; each w = worker process with its own browser)`,
       keyPoints: [
-        'Workers parallelise inside a machine; shards across machines.',
-        'fullyParallel gives per-test parallelism and balanced shards.',
-        'Shards need blob reports + merge-reports for one combined report.',
+        'Workers run tests at the same time on one machine. Shards spread them across machines.',
+        'fullyParallel runs single tests at the same time and balances shards.',
+        'Shards need blob reports + merge-reports to make one combined report.',
       ],
       source: 'Playwright docs — Parallelism; Sharding; Continuous Integration',
     },
     {
       heading: 'Running in Docker and on Jenkins',
-      body: `**Intuition:** a Docker image is a pre-packed lunchbox: OS, Node, browsers and their system libraries, all at known versions. Every machine that opens it gets exactly the same environment, which removes a whole class of "works on my machine" failures.
+      body: `**Example:** \`docker run --rm --init --ipc=host mcr.microsoft.com/playwright:v1.64.0-noble\` → you get Linux, Node and all browsers at fixed versions. Every machine gets the same setup.
 
-**The official image:** \`mcr.microsoft.com/playwright:v1.64.0-noble\` (Ubuntu 24.04; \`-jammy\` = 22.04). Rules:
-- **Pin the tag to the same version as \`@playwright/test\` in \`package.json\`.** A mismatch means Playwright looks for browser builds the image doesn't have.
-- Run with \`--init\` (avoids zombie processes from PID 1) and \`--ipc=host\` (Chromium can run out of shared memory and crash without it).
-- Browsers are pre-installed, so skip \`npx playwright install\`, but still run \`npm ci\`.
-- The image runs as root by default, which is acceptable for testing your own app; for crawling untrusted sites use a non-root user and a seccomp profile.
+A Docker image is like a packed lunchbox. It holds the OS, Node, browsers and their system libraries, all at known versions. Every machine that opens it gets the same environment. That removes most "works on my machine" failures.
 
-**GitHub Actions container job:** add \`container: { image: mcr.microsoft.com/playwright:v1.64.0-noble, options: --user 1001 }\` to the job, then the steps are checkout, setup-node, \`npm ci\`, \`npx playwright test\`.
+**The official image:** \`mcr.microsoft.com/playwright:v1.64.0-noble\`. "noble" is Ubuntu 24.04, and \`-jammy\` is 22.04. Rules:
+- **Use the same version tag as \`@playwright/test\` in \`package.json\`.** If they differ, Playwright looks for browsers the image does not have.
+- Run with \`--init\`. It stops leftover "zombie" processes.
+- Run with \`--ipc=host\`. Without it, Chromium can run out of shared memory and crash.
+- Browsers are already installed. Skip \`npx playwright install\`, but still run \`npm ci\`.
+- The image runs as root by default. That is fine for testing your own app. For visiting untrusted sites, use a non-root user and a seccomp profile.
 
-**Jenkins:** a declarative pipeline with a Docker agent using the same image; publish \`junit\` XML with the JUnit plugin and archive \`playwright-report\` (or use the HTML Publisher plugin). Jenkins does not set \`CI\` automatically in every setup, so set \`CI=true\` in \`environment\` if your config depends on it.`,
+**GitHub Actions container job:** add \`container: { image: mcr.microsoft.com/playwright:v1.64.0-noble, options: --user 1001 }\` to the job. Then the steps are checkout, setup-node, \`npm ci\` and \`npx playwright test\`.
+
+**Jenkins:** use a declarative pipeline with a Docker agent and the same image. Publish the \`junit\` XML with the JUnit plugin. Archive \`playwright-report\`, or use the HTML Publisher plugin.
+
+**Watch out:** Jenkins does not always set \`CI\` by itself. Set \`CI=true\` in \`environment\` if your config depends on it.
+
+**Why testers care:** tests behave the same on your laptop, GitHub and Jenkins. Fewer surprises.`,
       code: [
         {
           language: 'text',
@@ -527,32 +591,40 @@ The HTML report embeds attachments (screenshots, videos, trace files) from \`tes
         },
       ],
       keyPoints: [
-        'Image tag must equal the Playwright version in package.json.',
-        '--ipc=host and --init for stable Chromium runs.',
-        'Jenkins: Docker agent + junit publishing + archived HTML report.',
+        'The image tag must match the Playwright version in package.json.',
+        'Use --ipc=host and --init so Chromium runs stably.',
+        'Jenkins: Docker agent + JUnit results + saved HTML report.',
       ],
       source: 'Playwright docs — Docker; Continuous Integration (GitHub Actions container, Jenkins)',
     },
     {
       heading: 'Tags, selective runs and pipeline strategy',
-      body: `**Intuition:** you don't run the full medical check-up every time someone sneezes. Fast checks on every PR, the full suite on a schedule or before release.
+      body: `**Example:** \`npx playwright test --grep @smoke\` → only tests tagged \`@smoke\` run. It takes minutes, not the full hour.
 
-**Tagging tests:** \`test('checkout total', { tag: ['@smoke', '@checkout'] }, async ({ page }) => {...})\` or a tag in the title (\`'checkout total @smoke'\`). Run subsets with \`--grep\` / \`--grep-invert\` (regular expressions):
+You do not get a full medical check-up every time someone sneezes. Run fast checks on every PR. Run the full suite on a schedule or before a release.
+
+**Tagging tests:** write \`test('checkout total', { tag: ['@smoke', '@checkout'] }, async ({ page }) => {...})\`. Or put the tag in the title: \`'checkout total @smoke'\`. Run groups with \`--grep\` and \`--grep-invert\`. They take regular expressions:
 - \`npx playwright test --grep @smoke\`
 - \`npx playwright test --grep "@smoke|@critical"\`
 - \`npx playwright test --grep-invert @slow\`
 
-**Other selectors:** \`--project=chromium\`, a folder or file path, \`--only-changed=origin/main\` (only test files changed vs that Git ref, plus files that import changed files), \`--last-failed\`.
+**Other ways to pick tests:**
+- \`--project=chromium\`.
+- A folder or file path.
+- \`--only-changed=origin/main\` — only test files changed since that Git ref, plus files that import changed files.
+- \`--last-failed\`.
 
 **A typical pipeline:**
-| Trigger | What runs | Target time |
+| When | What runs | Target time |
 |---|---|---|
 | Every PR | lint + \`@smoke\` on chromium + changed tests | < 10 min |
 | Merge to main | full suite, chromium, sharded | < 20 min |
 | Nightly (\`schedule: cron\`) | full suite, all browsers, \`@quarantine\` included | can be longer |
-| Before release / after deploy | smoke against the deployed environment | minutes |
+| Before release / after deploy | smoke tests against the deployed site | minutes |
 
-**Failure handling:** \`--max-failures=10\` stops a disastrous run early (e.g. the environment is down), saving CI minutes. Notify the team (Slack/email) on main/nightly failures, not on every PR.`,
+**When many tests fail:** \`--max-failures=10\` stops a hopeless run early, for example when the environment is down. This saves CI minutes. Alert the team (Slack or email) when main or nightly runs fail, not on every PR.
+
+**Why testers care:** developers get fast feedback on PRs. The full suite still runs often enough to catch everything.`,
       code: [
         {
           language: 'yaml',
@@ -582,8 +654,8 @@ jobs:
         },
       ],
       keyPoints: [
-        'Tag with { tag: \'@smoke\' } and select with --grep / --grep-invert.',
-        'Fast feedback on PRs, full coverage on main/nightly.',
+        'Tag with { tag: \'@smoke\' } and pick tests with --grep / --grep-invert.',
+        'Fast feedback on PRs. Full coverage on main and nightly.',
         '--only-changed needs Git history (fetch-depth: 0).',
       ],
       source: 'Playwright docs — Annotations (tag tests); Command line; GitHub Docs — Events that trigger workflows (schedule)',
@@ -594,8 +666,8 @@ jobs:
       id: 'pw-git-ci-cc-1',
       title: 'Fix the broken GitHub Actions workflow',
       context:
-        'A teammate added this workflow. Every run fails with "browserType.launch: Executable doesn\'t exist", when tests do fail nobody can see a report, a forgotten `test.only` once made CI run a single test for a week, and flaky failures block every PR.',
-      task: 'Rewrite the workflow (and the matching lines of `playwright.config.ts`) so CI installs what it needs, keeps evidence on failure, tolerates rare flakes while reporting them, and cannot be fooled by `test.only`.',
+        'A teammate added this workflow. Every run fails with "browserType.launch: Executable doesn\'t exist". When tests do fail, nobody can see a report. A forgotten `test.only` once made CI run a single test for a week. Flaky failures block every PR.',
+      task: 'Rewrite the workflow and the matching lines of `playwright.config.ts`. CI must install what it needs and keep evidence on failure. It must get past rare flaky failures but still report them. A `test.only` must not fool it.',
       starter: {
         language: 'yaml',
         code: `name: e2e
@@ -623,9 +695,9 @@ jobs:
 #   use: { trace: 'on' },`,
       },
       hints: [
-        'A brand-new runner has Node and your code, but no browsers. Which command installs them plus their Linux dependencies?',
-        'What is the default `if:` condition for a step, and what happens to the upload step when tests fail?',
-        'Which config options handle `test.only`, retries and trace only on CI? Where should the password live?',
+        'A brand-new CI machine has Node and your code, but no browsers. Which command installs them plus their Linux libraries?',
+        'What is the default `if:` condition for a step? What happens to the upload step when tests fail?',
+        'Which config options handle `test.only`, retries and traces only on CI? Where should the password live?',
       ],
       solution: {
         language: 'yaml',
@@ -665,22 +737,22 @@ jobs:
 #   use: { trace: 'on-first-retry' },`,
       },
       explanation: `**Fixes:**
-- **Browsers installed:** \`npx playwright install --with-deps\` downloads the browser builds for the project's Playwright version and their system libraries. Missing it caused "Executable doesn't exist".
-- **Node version:** Node 14 is long unsupported by current Playwright; \`lts/*\` picks the current LTS.
-- **\`npm ci\` instead of \`npm install\`:** reproducible installs from the lock file; fails fast if \`package.json\` and the lock file disagree.
-- **Report upload with \`if: \${{ !cancelled() }}\`:** the default condition is \`success()\`, so the upload was skipped exactly on failing runs. Retention set explicitly.
-- **Secret moved out of the YAML** into GitHub secrets; the old password was committed in plain text and must be rotated.
-- **Triggers:** PRs now run the suite too, not just pushes.
-- **Config:** \`forbidOnly\` fails CI on a committed \`test.only\`; \`retries: 2\` on CI only absorbs rare flakes and labels them; \`trace: 'on-first-retry'\` replaces tracing every test; \`workers: 8\` on a small runner caused CPU starvation, so start at 1 and tune.
-- **\`timeout-minutes\`** stops a hung job from burning CI minutes.`,
+- **Browsers installed.** \`npx playwright install --with-deps\` downloads the browsers for the project's Playwright version and their system libraries. Without it, you get "Executable doesn't exist".
+- **Node version.** Current Playwright does not support Node 14. \`lts/*\` picks the current long-term-support version.
+- **\`npm ci\`, not \`npm install\`.** It installs the exact versions from the lock file. It fails fast if \`package.json\` and the lock file disagree.
+- **Report upload with \`if: \${{ !cancelled() }}\`.** The default condition is \`success()\`. So the upload was skipped exactly on failing runs. The retention time is now set clearly.
+- **Secret moved out of the YAML** into GitHub secrets. The old password was committed in plain text, so it must be changed.
+- **Triggers.** PRs now run the suite too, not just pushes.
+- **Config.** \`forbidOnly\` fails CI if \`test.only\` was committed. \`retries: 2\` on CI only gets past rare flaky failures and marks them. \`trace: 'on-first-retry'\` replaces tracing every test. \`workers: 8\` overloaded the small CPU, so start at 1 and tune.
+- **\`timeout-minutes\`** stops a stuck job from wasting CI minutes.`,
       followUps: [
         {
           q: 'How would you speed up the browser install step?',
-          a: 'Options: use the official Docker image as a container job (browsers pre-installed), install only the browsers you test (`npx playwright install --with-deps chromium`), or cache `~/.cache/ms-playwright` keyed on the Playwright version (still run `install-deps` for system libraries). The Playwright docs note caching browsers often saves little versus download time, so measure first.',
+          a: 'Use the official Docker image as a container job, with browsers already installed. Or install only the browsers you test: `npx playwright install --with-deps chromium`. Or cache `~/.cache/ms-playwright`, keyed on the Playwright version, and still run `install-deps` for system libraries. The Playwright docs say caching browsers often saves little time, so measure first.',
         },
         {
-          q: 'Why not keep `trace: \'on\'` for maximum evidence?',
-          a: 'Recording a trace for every test slows the whole suite and creates large artifacts, yet green tests\' traces are almost never opened. With `on-first-retry` you get a trace for every failure that matters at nearly zero cost for passing tests.',
+          q: 'Why not keep `trace: \'on\'` for the most evidence?',
+          a: 'Recording a trace for every test slows the whole suite and makes big artifacts. But people almost never open traces of passing tests. With `on-first-retry` you get a trace for every failure that matters, at almost no cost for passing tests.',
         },
       ],
     },
@@ -688,8 +760,8 @@ jobs:
       id: 'pw-git-ci-cc-2',
       title: 'Sharding that actually produces one report',
       context:
-        'To cut a 40-minute run, someone split the suite into 3 shards. Now the second and third shards fail at the upload step, nobody gets a complete report, one failing shard cancels the others, and shard 1 takes 3× longer than shard 3.',
-      task: 'Fix the workflow and config so shards are balanced, all of them finish, and a single merged HTML report is produced.',
+        'To cut a 40-minute run, someone split the suite into 3 shards. Now shards 2 and 3 fail at the upload step. Nobody gets a full report. One failing shard cancels the others. Shard 1 takes 3× longer than shard 3.',
+      task: 'Fix the workflow and config. Shards must be balanced, all of them must finish, and one merged HTML report must be made.',
       starter: {
         language: 'yaml',
         code: `jobs:
@@ -716,8 +788,8 @@ jobs:
 #   reporter: 'html',`,
       },
       hints: [
-        'Artifact names must be unique within a run in upload-artifact v4. What changes per matrix job?',
-        'An HTML report from one shard only contains that shard\'s tests. Which reporter is designed to be merged later?',
+        'In upload-artifact v4, artifact names must be unique in one run. What changes for each matrix job?',
+        'An HTML report from one shard only has that shard\'s tests. Which reporter is made to be merged later?',
         'How are tests split among shards when `fullyParallel` is false? What does `fail-fast` do in a matrix?',
       ],
       solution: {
@@ -764,20 +836,20 @@ jobs:
 #   reporter: process.env.CI ? 'blob' : 'html',`,
       },
       explanation: `**Fixes:**
-- **Unique artifact names** (\`blob-report-<index>\`): with \`upload-artifact@v4\`, a second upload with the same name in one run fails, which is why shards 2 and 3 errored.
-- **Blob reporter + merge job:** each shard writes a mergeable \`blob-report/\`; the \`merge-reports\` job downloads all of them (\`pattern\` + \`merge-multiple\`) and produces one HTML report covering the whole run.
-- **\`fail-fast: false\`:** by default a failing matrix job cancels its siblings, so you lost the other shards' results.
-- **\`fullyParallel: true\`:** without it, sharding happens per file, so a shard that gets a few huge spec files runs far longer. Per-test splitting evens shards out (tests must be independent).
-- **\`if: \${{ !cancelled() }}\`** instead of \`always()\`: still uploads after failures but respects a manual cancel.
-- **Explicit \`shardTotal\`** in the matrix avoids a hard-coded "3" drifting out of sync with the matrix.`,
+- **Unique artifact names** (\`blob-report-<index>\`). With \`upload-artifact@v4\`, a second upload with the same name in one run fails. That is why shards 2 and 3 failed.
+- **Blob reporter + merge job.** Each shard writes a \`blob-report/\` that can be merged. The \`merge-reports\` job downloads all of them (\`pattern\` + \`merge-multiple\`). It makes one HTML report for the whole run.
+- **\`fail-fast: false\`.** By default, a failing matrix job cancels the others. So you lost the other shards' results.
+- **\`fullyParallel: true\`.** Without it, shards split per file. A shard that gets a few huge files runs much longer. Splitting per test evens the shards out. The tests must be independent.
+- **\`if: \${{ !cancelled() }}\`** instead of \`always()\`. It still uploads after failures, but it respects a manual cancel.
+- **\`shardTotal\` in the matrix.** It stops a hard-coded "3" from getting out of sync with the matrix.`,
       followUps: [
         {
-          q: 'Each shard repeats npm ci and browser install. When does adding shards stop paying off?',
-          a: 'When per-shard fixed cost (checkout, npm ci, browser install, often 1–3 minutes) is comparable to the test time per shard. For example, 12 minutes of tests across 6 shards is 2 minutes each plus ~2 minutes setup, so going to 12 shards barely helps while doubling runner usage. Use a Docker image or fewer, larger shards.',
+          q: 'Each shard repeats npm ci and the browser install. When does adding shards stop helping?',
+          a: 'When the fixed cost per shard (checkout, npm ci, browser install — often 1–3 minutes) is close to the test time per shard. For example, 12 minutes of tests on 6 shards is 2 minutes each, plus about 2 minutes of setup. Going to 12 shards barely helps, but it doubles machine use. Use a Docker image, or fewer, larger shards.',
         },
         {
           q: 'How would you also get a JUnit file for the whole run?',
-          a: 'Merge into several formats at once: `npx playwright merge-reports --reporter=html,junit ./all-blob-reports` (JUnit output path configured via a merge config or the PLAYWRIGHT_JUNIT_OUTPUT_NAME env var), then upload or publish the XML in the merge job.',
+          a: 'Merge into several formats at once: `npx playwright merge-reports --reporter=html,junit ./all-blob-reports`. Set the JUnit output path with a merge config or the PLAYWRIGHT_JUNIT_OUTPUT_NAME environment variable. Then upload or publish the XML in the merge job.',
         },
       ],
     },
@@ -788,81 +860,89 @@ jobs:
       difficulty: 'medium',
       question: 'Walk me through how you set up your Playwright tests to run on every pull request in GitHub Actions.',
       whatInterviewerLooksFor: [
-        'Correct sequence of steps including browser install',
-        'Artifact upload that survives failures',
-        'CI-aware config (forbidOnly, retries, trace, workers)',
-        'Secrets handling and branch protection',
+        'Right order of steps, including the browser install',
+        'A report upload that still happens when tests fail',
+        'Config that changes on CI (forbidOnly, retries, trace, workers)',
+        'Handling secrets, and branch protection',
       ],
-      modelAnswer: `**Workflow file** in \`.github/workflows/playwright.yml\`, triggered on \`pull_request\` and \`push\` to main.
+      modelAnswer: `**Example:** \`npx playwright install --with-deps\` → the CI machine downloads the browsers and the Linux libraries they need. Without this step, every test fails at launch.
+
+**Workflow file:** \`.github/workflows/playwright.yml\`. It runs on \`pull_request\` and on \`push\` to main.
 
 **Steps on \`ubuntu-latest\`:**
-1. \`actions/checkout\` to get the code.
-2. \`actions/setup-node\` with an LTS version and npm caching.
-3. \`npm ci\` for exact dependency versions from the lock file.
-4. \`npx playwright install --with-deps\` for browsers and their OS libraries (or run inside the official Playwright Docker image instead).
-5. \`npx playwright test\`.
-6. \`actions/upload-artifact\` for \`playwright-report/\` with \`if: \${{ !cancelled() }}\`, so failed runs keep the report, traces and screenshots.
+1. \`actions/checkout\` gets the code.
+2. \`actions/setup-node\` installs an LTS Node version, with npm caching.
+3. \`npm ci\` installs exact versions from the lock file.
+4. \`npx playwright install --with-deps\` installs browsers and their OS libraries. (Or run inside the official Playwright Docker image instead.)
+5. \`npx playwright test\` runs the tests.
+6. \`actions/upload-artifact\` uploads \`playwright-report/\` with \`if: \${{ !cancelled() }}\`. So failed runs keep the report, traces and screenshots.
 
-**Config switches on \`process.env.CI\`:** \`forbidOnly\` so a committed \`test.only\` fails the build, \`retries: 2\` with \`trace: 'on-first-retry'\` so rare flakes don't block PRs but always leave a trace, a conservative worker count for the runner size, and reporters \`github\` (PR annotations) plus \`html\` with \`open: 'never'\`.
+**Config switches on \`process.env.CI\`:**
+- \`forbidOnly\`, so a committed \`test.only\` fails the build.
+- \`retries: 2\` with \`trace: 'on-first-retry'\`. Rare flaky failures do not block PRs, but they always leave a trace.
+- A small worker count that fits the machine.
+- The \`github\` reporter (notes on the PR) plus \`html\` with \`open: 'never'\`.
 
-**Secrets:** test credentials and URLs live in GitHub secrets/variables, mapped into \`env\` and read via \`process.env\`. Nothing sensitive in the repo.
+**Secrets:** test logins and URLs live in GitHub secrets and variables. The workflow passes them into \`env\`. Tests read them with \`process.env\`. Nothing secret is in the repo.
 
-**Gate:** branch protection on \`main\` requires the Playwright check to pass before merge.
+**Gate:** branch protection on \`main\` requires the Playwright check to pass before merging.
 
-**As the suite grows:** tag \`@smoke\` tests for PRs and run the full suite on main and nightly, then shard with blob reports and a merge job when the run gets long.`,
+**As the suite grows:** tag \`@smoke\` tests for PRs. Run the full suite on main and nightly. When runs get long, add shards with blob reports and a merge job.`,
       followUps: [
         {
           q: 'The job fails with "Executable doesn\'t exist at /home/runner/.cache/ms-playwright/...". Why?',
-          a: 'Browsers were not installed on the runner, or were installed for a different Playwright version than the one in package-lock. Add `npx playwright install --with-deps` after `npm ci` (so it uses the project\'s version), or use the Docker image whose tag matches the installed @playwright/test version.',
+          a: 'The browsers were not installed on the CI machine. Or they were installed for a different Playwright version than the one in package-lock. Add `npx playwright install --with-deps` after `npm ci`, so it uses the project\'s version. Or use the Docker image whose tag matches the installed @playwright/test version.',
         },
         {
           q: 'How do you see what failed after the run?',
-          a: 'Download the playwright-report artifact from the run summary, unzip it and run `npx playwright show-report <folder>`. Each failed test has its error, screenshot, video and trace; I open the trace to see the DOM, network and timing of the failing step. The `github` reporter also annotates failures on the PR.',
+          a: 'Download the playwright-report artifact from the run summary. Unzip it and run `npx playwright show-report <folder>`. Each failed test has its error, screenshot, video and trace. I open the trace to see the page, network calls and timing of the failing step. The `github` reporter also marks failures on the PR.',
         },
       ],
       pitfalls: [
         'Forgetting the browser install step.',
-        'Uploading the report only on success.',
-        'Hard-coding credentials in the YAML.',
+        'Uploading the report only when tests pass.',
+        'Writing passwords in the YAML file.',
       ],
     },
     {
       id: 'pw-git-ci-iq-02',
       difficulty: 'medium',
-      question: 'Workers, fullyParallel and sharding all speed up a Playwright run. How do they differ, and how do you pick between them?',
+      question: 'Workers, fullyParallel and sharding all make a Playwright run faster. How are they different, and how do you choose?',
       whatInterviewerLooksFor: [
-        'Workers = processes on one machine; default 50% cores',
-        'fullyParallel = test-level vs file-level parallelism',
-        'Sharding = across machines, with merge-reports',
-        'Trade-offs: CPU contention, setup overhead, independence',
+        'Workers = processes on one machine; default 50% of CPU cores',
+        'fullyParallel = single tests run at the same time, not just files',
+        'Sharding = split across machines, with merge-reports',
+        'Trade-offs: overloaded CPU, setup time, test independence',
       ],
-      modelAnswer: `**Workers:** worker processes on **one machine**, each with its own browser. Playwright defaults to half the logical CPU cores; set \`workers\` in config or \`--workers=N\`. More workers help until the CPU is saturated, after which tests slow down and flake.
+      modelAnswer: `**Example:** \`npx playwright test --shard=1/4 --workers=2\` → this machine runs a quarter of the suite, two tests at a time.
 
-**fullyParallel:** controls the **granularity**. By default files are distributed across workers but tests inside a file run sequentially in one worker. With \`fullyParallel: true\`, individual tests from the same file can run in different workers at the same time. It requires independent tests (no shared state, no order dependence). It also changes sharding: shards are split per test instead of per file, giving much better balance.
+**Workers:** separate processes on **one machine**. Each has its own browser. Playwright uses half the CPU cores by default. Set \`workers\` in the config or use \`--workers=N\`. More workers help until the CPU is full. After that, tests slow down and fail at random.
 
-**Sharding:** splits the suite across **several machines**: \`--shard=1/4\` … \`--shard=4/4\`, usually via a CI matrix. Each machine still uses its own workers. Because each shard has only part of the results, configure the \`blob\` reporter, upload each shard's blob report, and run \`npx playwright merge-reports\` in a final job.
+**fullyParallel:** decides **what** is spread out. By default, files are shared across workers. But tests inside one file run one after another in one worker. With \`fullyParallel: true\`, tests from the same file can run at the same time in different workers. The tests must be independent: no shared state and no fixed order. It also changes sharding. Shards split per test instead of per file, so they are much better balanced.
 
-**When:**
-- Small suite: just workers on one runner.
-- Suite slow and the runner is maxed out: add shards.
-- Shards unbalanced (one finishes much later): enable \`fullyParallel\` or split big files.
-- Each shard has fixed overhead (checkout, npm ci, browsers, 1–3 min), so very many tiny shards are wasteful.
+**Sharding:** splits the suite across **several machines**: \`--shard=1/4\` … \`--shard=4/4\`, usually with a CI matrix. Each machine still uses its own workers. Each shard has only part of the results. So use the \`blob\` reporter, upload each shard's blob report and run \`npx playwright merge-reports\` in a final job.
 
-**Rough math:** wall time ≈ total test time ÷ (shards × workers) + setup per shard + retries + merge.`,
+**When to use what:**
+- Small suite: just workers on one machine.
+- Slow suite and the machine is maxed out: add shards.
+- One shard finishes much later: turn on \`fullyParallel\` or split big files.
+- Each shard has a fixed setup cost (checkout, npm ci, browsers: 1–3 min). So many tiny shards waste time.
+
+**Rough math:** total time ≈ total test time ÷ (shards × workers) + setup per shard + retries + merge.`,
       followUps: [
         {
           q: 'Why do the Playwright docs suggest workers: 1 on CI?',
-          a: 'For stability and reproducibility on small shared runners: fewer CPU-starvation timeouts and no collisions between parallel tests. Once tests are proven independent and the runner has enough cores, you can raise workers, and use sharding to scale further.',
+          a: 'For stability and repeatable results on small shared CI machines. You get fewer timeouts from an overloaded CPU, and parallel tests cannot clash. Once tests are proven independent and the machine has enough cores, raise the workers. Use sharding to scale further.',
         },
         {
-          q: 'Your tests share one admin account. What breaks when you enable fullyParallel?',
-          a: 'Tests running at the same time change the same user\'s data: one empties the cart while another asserts its count, or a logout in one test invalidates another\'s session. Fix with per-worker accounts (testInfo.workerIndex), API-created unique data, and storageState per worker or role.',
+          q: 'Your tests share one admin account. What breaks when you turn on fullyParallel?',
+          a: 'Tests running at the same time change the same user\'s data. One empties the cart while another checks its count. Or a logout in one test ends another test\'s session. Fix it with one account per worker (testInfo.workerIndex), unique data made through the API, and storageState per worker or role.',
         },
       ],
       pitfalls: [
         'Saying shards and workers are the same thing.',
         'Thinking more workers always means faster.',
-        'Forgetting that shard reports need merging.',
+        'Forgetting that shard reports must be merged.',
       ],
     },
     {
@@ -871,209 +951,219 @@ jobs:
       question: 'Your Playwright pipeline takes 50 minutes. The team wants PR feedback in under 10. What would you do?',
       whatInterviewerLooksFor: [
         'Measures first (slowest tests, setup time, retries)',
-        'Fixes test design before adding hardware',
-        'Uses sharding/workers with numbers',
-        'Splits PR vs nightly scope with tags',
+        'Fixes test design before adding machines',
+        'Uses sharding and workers, with numbers',
+        'Splits what runs on PRs and nightly, using tags',
       ],
-      modelAnswer: `**1. Measure.** From the HTML/JSON report: total test time, the slowest files, retry count, and the fixed setup time (npm ci, browser install). Often 10% of tests take half the time, and retries of flaky tests add a lot.
+      modelAnswer: `**Example:** 40 minutes of test time ÷ 4 shards ≈ 10 minutes, plus about 2 minutes of setup per shard.
+
+**1. Measure.** From the HTML or JSON report, find the total test time, the slowest files, the retry count and the fixed setup time (npm ci, browser install). Often 10% of tests take half the time. Retries of flaky tests also add a lot.
 
 **2. Make tests cheaper (biggest wins):**
-- Replace UI setup with **API setup** and reuse login via **storageState**. Login and data setup through the UI is commonly the majority of runtime.
+- Replace UI setup with **API setup**. Reuse login with **storageState**. UI login and data setup are often most of the run time.
 - Remove every \`waitForTimeout\`.
-- Fix flaky tests so retries stop adding minutes.
+- Fix flaky tests, so retries stop adding minutes.
 - Block or mock third-party scripts with \`page.route\`.
 
-**3. Parallelise properly:**
-- \`fullyParallel: true\` once tests are independent.
-- Workers matched to the runner's cores.
-- **Shard** across e.g. 4 machines with blob reports and a merge job. 40 minutes of test time ÷ 4 shards ≈ 10 min, plus ~2 min setup.
-- Use the Playwright Docker image (or install only the browsers needed) to cut setup.
+**3. Run more at the same time:**
+- \`fullyParallel: true\`, once tests are independent.
+- Workers that match the machine's cores.
+- **Shard** across, say, 4 machines, with blob reports and a merge job.
+- Use the Playwright Docker image, or install only the needed browsers, to cut setup.
 
 **4. Run less on PRs:**
-- PR: \`@smoke\` + \`--only-changed=origin/main\` on chromium only (often 5–8 minutes).
+- PR: \`@smoke\` + \`--only-changed=origin/main\`, on chromium only (often 5–8 minutes).
 - Merge to main: full suite on chromium, sharded.
 - Nightly: all browsers, including slow and quarantined tests.
 
-**5. Fail fast:** \`--max-failures\` to stop when the environment is down instead of timing out 300 tests.
+**5. Stop early:** \`--max-failures\` stops the run when the environment is down. Otherwise 300 tests each wait for their timeout.
 
-Then re-measure; I'd present before/after numbers rather than a feeling.`,
+Then measure again. I would show before and after numbers, not a feeling.`,
       followUps: [
         {
           q: 'Why not just run only chromium on PRs forever?',
-          a: 'Cross-browser bugs (WebKit date pickers, Firefox layout) would only be found nightly, after merge. That is usually acceptable if nightly failures are triaged the next morning and cross-browser risky areas (CSS-heavy pages) are tagged to run on all browsers in PRs. It\'s a risk trade-off to agree with the team.',
+          a: 'Cross-browser bugs, like WebKit date pickers or Firefox layout, would only be found nightly, after the merge. That is usually fine if someone checks nightly failures the next morning. Risky cross-browser areas (CSS-heavy pages) can be tagged to run on all browsers in PRs. It is a risk trade-off to agree with the team.',
         },
         {
           q: 'What does --only-changed miss?',
-          a: 'It selects test files changed relative to a Git ref, plus test files that import changed files. It cannot know that a change in application code or a backend endpoint affects a test, since it looks at the test project\'s import graph. So it complements smoke tests on PRs; it doesn\'t replace the full run on main.',
+          a: 'It picks test files changed since a Git ref, plus test files that import changed files. It looks only at the test project\'s imports. So it cannot know that a change in app code or a backend endpoint affects a test. It adds to smoke tests on PRs. It does not replace the full run on main.',
         },
       ],
       pitfalls: [
         'Jumping straight to "add more machines".',
-        'Deleting slow tests without checking coverage.',
-        'Increasing workers on a 2-core runner.',
+        'Deleting slow tests without checking what they cover.',
+        'Adding workers on a 2-core machine.',
       ],
     },
     {
       id: 'pw-git-ci-iq-04',
       difficulty: 'easy',
-      question: 'What is the difference between git merge and git rebase, and how do you resolve a merge conflict?',
+      question: 'What is the difference between git merge and git rebase? How do you fix a merge conflict?',
       whatInterviewerLooksFor: [
-        'Clear history difference (merge commit vs linear replay)',
+        'Clear history difference (merge commit vs straight line)',
         'Knows not to rebase shared branches',
-        'Concrete conflict resolution steps including re-running tests',
-        'Knows abort commands',
+        'Real steps to fix a conflict, including running tests again',
+        'Knows the abort commands',
       ],
-      modelAnswer: `**Merge** combines two branches by creating a **merge commit** with two parents. History stays exactly as it happened, and it's safe on shared branches.
+      modelAnswer: `**Merge** joins two branches by making a **merge commit** with two parents. History stays exactly as it happened. It is safe on shared branches.
 
-**Rebase** takes my branch's commits and **replays them on top of** the target branch, giving a straight-line history. Because it creates new commit hashes, I only rebase **my own** feature branch, and push afterwards with \`--force-with-lease\`. Never rebase \`main\` or a branch others build on.
+**Rebase** takes my branch's commits and **replays them on top of** the target branch. History becomes a straight line. It makes new commit ids. So I only rebase **my own** feature branch, and push afterwards with \`--force-with-lease\`. I never rebase \`main\` or a branch others build on.
 
-**Resolving a conflict (e.g. after \`git merge origin/main\`):**
-1. \`git status\` lists files as "both modified".
+**Example:** \`git merge origin/main\` → Git says "CONFLICT in playwright.config.ts" → I fix the file, run the tests, then \`git add\` and \`git commit\`.
+
+**Fixing a conflict (for example after \`git merge origin/main\`):**
+1. \`git status\` shows files as "both modified".
 2. In each file, find the markers: \`<<<<<<< HEAD\` (mine), \`=======\`, \`>>>>>>> origin/main\` (theirs).
-3. Decide the correct result by **intent**: often both changes are needed (e.g. they added a firefox project, I changed retries, so keep both). If unclear, ask the other author.
-4. Remove the markers, then **run the affected tests**. A conflict in \`playwright.config.ts\` or a page object can break many tests.
+3. Decide the right result by **meaning**. Often both changes are needed. For example, they added a firefox project and I changed retries, so I keep both. If it is unclear, I ask the other author.
+4. Remove the markers. Then **run the affected tests**. A conflict in \`playwright.config.ts\` or a page object can break many tests.
 5. \`git add <file>\` → \`git commit\` (for a merge) or \`git rebase --continue\` (for a rebase).
-6. If it goes wrong: \`git merge --abort\` or \`git rebase --abort\` returns to the state before.
+6. If it goes wrong, \`git merge --abort\` or \`git rebase --abort\` goes back to the state before.
 
-**Prevent conflicts:** small PRs, merge or rebase from main often, and avoid long-lived branches.`,
+**Prevent conflicts:** keep PRs small, bring in main often and avoid long-lived branches.`,
       followUps: [
         {
           q: 'What is the difference between git fetch and git pull?',
-          a: '`git fetch` downloads new commits and updates remote-tracking branches like origin/main, without touching your working files or current branch. `git pull` does a fetch and then merges (or rebases, with --rebase) into your current branch. Fetch first when you want to inspect incoming changes before integrating them.',
+          a: '`git fetch` downloads new commits and updates remote branches like origin/main. It does not touch your files or your current branch. `git pull` does a fetch and then merges (or rebases, with --rebase) into your current branch. Fetch first when you want to look at incoming changes before you bring them in.',
         },
         {
           q: 'You pushed a commit to main that broke CI. How do you undo it?',
-          a: 'Use `git revert <hash>` to create a new commit that reverses it, and push that. It keeps history intact for everyone else. Avoid `git reset` plus force-push on a shared branch, because it rewrites history others may already have pulled.',
+          a: 'Use `git revert <hash>`. It makes a new commit that reverses the change. Push that. History stays the same for everyone else. Do not reset and force-push a shared branch. That rewrites history that others may already have pulled.',
         },
       ],
       pitfalls: [
         'Saying rebase is always better.',
-        'Resolving by blindly picking "mine" or "theirs".',
-        'Not re-running tests after resolving.',
+        'Fixing conflicts by blindly picking "mine" or "theirs".',
+        'Not running the tests again after fixing.',
       ],
     },
     {
       id: 'pw-git-ci-iq-05',
       difficulty: 'medium',
-      question: 'How do you manage credentials and environment URLs for your tests across local runs and CI?',
+      question: 'How do you manage passwords and environment URLs for your tests, both locally and in CI?',
       whatInterviewerLooksFor: [
-        'Env vars + dotenv locally, CI secrets in pipeline',
+        'Environment variables + dotenv locally, CI secrets in the pipeline',
         '.gitignore for .env and .auth',
-        'Different environments via config/env',
-        'Awareness of leaks via logs, traces, forks',
+        'Different environments through config and environment variables',
+        'Knows secrets can leak through logs, traces and forks',
       ],
-      modelAnswer: `**Principle:** code reads configuration from environment variables; values come from different places per environment, and secrets never enter Git.
+      modelAnswer: `**Principle:** the code reads settings from environment variables. The values come from different places in each environment. Secrets never go into Git.
 
-**Locally:** a \`.env\` file (git-ignored) loaded with \`dotenv\` at the top of \`playwright.config.ts\`; a committed \`.env.example\` lists the variable names with fake values so newcomers know what to set.
+**Example:** \`baseURL: process.env.BASE_URL ?? 'http://localhost:3000'\` → locally the tests use localhost. In CI, the workflow sets \`BASE_URL\` to staging.
 
-**In CI (GitHub Actions):** repository or environment **secrets** (passwords, tokens) and **variables** (URLs), mapped in the workflow: \`env: { BASE_URL: \${{ vars.STAGING_URL }}, BOOKER_PASS: \${{ secrets.BOOKER_PASS }} }\`. GitHub masks secret values in logs. Jenkins uses its credentials store with \`credentials('id')\`.
+**Locally:** a \`.env\` file, ignored by Git, loaded with \`dotenv\` at the top of \`playwright.config.ts\`. A committed \`.env.example\` lists the variable names with fake values. Then new team members know what to set.
 
-**Multiple environments:** \`baseURL: process.env.BASE_URL ?? 'http://localhost:3000'\`, or a \`TEST_ENV\` variable that picks \`.env.staging\` / \`.env.qa\`. GitHub "environments" can scope secrets per stage and require approvals for production.
+**In CI (GitHub Actions):** repository or environment **secrets** (passwords, tokens) and **variables** (URLs). The workflow passes them in: \`env: { BASE_URL: \${{ vars.STAGING_URL }}, BOOKER_PASS: \${{ secrets.BOOKER_PASS }} }\`. GitHub hides secret values in logs. Jenkins uses its credentials store with \`credentials('id')\`.
 
-**Things that leak secrets anyway:**
-- \`console.log\` of tokens in tests;
-- traces and HAR files (they record headers and bodies), so keep artifact retention short;
-- \`playwright/.auth/*.json\` storageState files, so git-ignore them;
-- pull requests from forks don't get secrets, by design, so plan for tests that need them to skip or run only on internal branches.
+**Several environments:** use \`BASE_URL\` as above. Or use a \`TEST_ENV\` variable that picks \`.env.staging\` or \`.env.qa\`. GitHub "environments" can limit secrets to one stage and require approval for production.
 
-If a secret is ever committed, **rotate it** first, then clean it up; deleting the line doesn't remove it from history.`,
+**Things that still leak secrets:**
+- \`console.log\` of tokens in tests.
+- Traces and HAR files, which record headers and bodies. Keep artifacts for a short time.
+- \`playwright/.auth/*.json\` storageState files. Git must ignore them.
+- Pull requests from forks get no secrets, on purpose. Tests that need secrets must skip there, or run only on internal branches.
+
+If a secret is ever committed, **change it (rotate it)** first. Then clean up. Deleting the line does not remove it from history.`,
       followUps: [
         {
           q: 'Should tests run against production?',
-          a: 'Only a small read-only or carefully designed smoke set with dedicated test accounts, flagged data that is cleaned up, and agreement from the team. Full regression with data creation belongs in test/staging environments.',
+          a: 'Only a small smoke set that is read-only or carefully designed. It needs special test accounts, marked data that gets cleaned up, and the team\'s agreement. Full regression suites with data changes belong in test environments.',
         },
         {
-          q: 'How do you stop someone from accidentally committing .env?',
-          a: 'It is in .gitignore from day one, there is a pre-commit hook or secret scanner (e.g. GitHub secret scanning/push protection), and code review checks for credentials. Education matters too: the .env.example pattern shows where values belong.',
+          q: 'How do you stop someone from committing .env by mistake?',
+          a: 'Put it in .gitignore from day one. Add a pre-commit hook or a secret scanner, like GitHub secret scanning and push protection. Code review also checks for passwords. Teaching helps too: the .env.example file shows where values belong.',
         },
       ],
       pitfalls: [
-        'Hard-coding passwords "because it\'s only a test account".',
+        'Writing passwords in code "because it\'s only a test account".',
         'Committing storageState files.',
-        'Printing tokens in logs for debugging and leaving it.',
+        'Printing tokens in logs for debugging and leaving them there.',
       ],
     },
     {
       id: 'pw-git-ci-iq-06',
       difficulty: 'hard',
-      question: 'Why would you run Playwright tests inside the official Docker image, and what can go wrong?',
+      question: 'Why would you run Playwright tests inside the official Docker image? What can go wrong?',
       whatInterviewerLooksFor: [
-        'Reproducible environment argument',
-        'Version pinning rule',
-        '--ipc=host / --init flags',
-        'Root/sandbox and image size considerations',
+        'Same environment everywhere',
+        'Image version must match the Playwright version',
+        'The --ipc=host and --init flags',
+        'Root user, sandbox and image size',
       ],
-      modelAnswer: `**Why:** the image (\`mcr.microsoft.com/playwright:v<version>-noble\`) bundles the OS, Node, all three browsers and every system library they need. Every developer and every CI system that uses it gets an identical environment:
-- no "browser missing" or "libXYZ not found" failures;
-- no slow \`playwright install --with-deps\` step;
-- the same fonts and rendering, which matters a lot for **screenshot comparisons** (\`toHaveScreenshot\`), where OS differences cause pixel diffs;
-- easy reuse across GitHub Actions (\`container:\`), GitLab, Jenkins Docker agents and Azure.
+      modelAnswer: `**Example:** \`container: { image: mcr.microsoft.com/playwright:v1.64.0-noble }\` in a GitHub Actions job → the tests run with Linux, Node and all browsers already installed.
+
+**Why:** the image (\`mcr.microsoft.com/playwright:v<version>-noble\`) holds the OS, Node, all three browsers and every system library they need. Every developer and every CI system that uses it gets the same environment:
+- No "browser missing" or "libXYZ not found" failures.
+- No slow \`playwright install --with-deps\` step.
+- The same fonts and rendering. This matters a lot for **screenshot comparisons** (\`toHaveScreenshot\`). Different operating systems give different pixels.
+- Easy reuse in GitHub Actions (\`container:\`), GitLab, Jenkins Docker agents and Azure.
 
 **What can go wrong:**
-- **Version mismatch:** the image tag must equal the \`@playwright/test\` version in the lock file. If you upgrade Playwright but not the image, it looks for browser builds that aren't there.
-- **Chromium crashes / out of memory:** run with \`--ipc=host\` (Chromium uses shared memory) and \`--init\` to avoid zombie processes.
-- **Root user:** the image runs as root by default, which disables the Chromium sandbox. That's acceptable for testing your own app, but not for crawling untrusted sites; then use a non-root user (\`pwuser\`) and the seccomp profile. In GitHub Actions container jobs, the docs use \`options: --user 1001\`.
-- **Size:** the image is large; the first pull is slow unless cached on the runner.
-- **Local apps:** inside a container, \`localhost\` is the container itself; to reach an app on the host you need host networking or the host's address.
+- **Version mismatch.** The image tag must equal the \`@playwright/test\` version in the lock file. If you upgrade Playwright but not the image, it looks for browsers that are not there.
+- **Chromium crashes or runs out of memory.** Run with \`--ipc=host\`, because Chromium uses shared memory. Add \`--init\` to avoid leftover "zombie" processes.
+- **Root user.** The image runs as root by default. That turns off the Chromium sandbox. It is fine for testing your own app, but not for visiting untrusted sites. Then use a non-root user (\`pwuser\`) and the seccomp profile. In GitHub Actions container jobs, the docs use \`options: --user 1001\`.
+- **Size.** The image is large. The first download is slow unless the machine has it cached.
+- **Local apps.** Inside a container, \`localhost\` is the container itself. To reach an app on the host, you need host networking or the host's address.
 
-I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker tag and the snapshot baselines together.`,
+I add one rule to the upgrade checklist: update \`@playwright/test\`, the Docker tag and the screenshot baselines together.`,
       followUps: [
         {
           q: 'Your screenshot tests pass on macOS but fail in CI. How does Docker help?',
-          a: 'Screenshots depend on OS fonts, anti-aliasing and GPU settings, so baselines generated on macOS will differ from Linux CI. Generate and update baselines inside the same Docker image that CI uses (e.g. run `npx playwright test --update-snapshots` in the container), so both sides render identically.',
+          a: 'Screenshots depend on OS fonts, smoothing and GPU settings. So baselines made on macOS differ from Linux CI. Make and update baselines inside the same Docker image CI uses. For example, run `npx playwright test --update-snapshots` in the container. Then both sides draw the page the same way.',
         },
         {
           q: 'Do you still need `npx playwright install` inside the image?',
-          a: 'No; browsers for that version are pre-installed. You still need `npm ci` to install your project dependencies, including @playwright/test at the same version as the image.',
+          a: 'No. Browsers for that version are already installed. You still need `npm ci` to install your project\'s packages, including @playwright/test at the same version as the image.',
         },
       ],
       pitfalls: [
-        'Using the `latest` tag and drifting from the project\'s version.',
+        'Using the `latest` tag and drifting away from the project\'s version.',
         'Forgetting --ipc=host and blaming Playwright for random Chromium crashes.',
-        'Thinking Docker makes flaky tests stable.',
+        'Thinking Docker fixes flaky tests.',
       ],
     },
     {
       id: 'pw-git-ci-iq-07',
       difficulty: 'medium',
-      question: 'How do you decide which tests run on each pull request and which run nightly? How do you implement it in Playwright?',
+      question: 'Some tests should run on every PR and others only at night. How do you choose, and how do you set that up in Playwright?',
       whatInterviewerLooksFor: [
-        'Risk- and time-based selection',
+        'Picks tests by risk and time',
         'Tags with --grep / --grep-invert',
         'Projects and --only-changed',
-        'Feedback loop for nightly failures',
+        'Someone follows up on nightly failures',
       ],
-      modelAnswer: `**Principle:** PRs need **fast, trustworthy** feedback on the most important risks; the full suite still runs often enough that nothing hides for long.
+      modelAnswer: `**Principle:** PRs need **fast, trustworthy** feedback on the biggest risks. The full suite still runs often enough that nothing stays hidden for long.
 
-**Selection criteria:**
-- **Business-critical flows** (login, search, add to cart, checkout, payment) → \`@smoke\`, run on every PR.
-- **Tests related to the change** → \`--only-changed=origin/main\` picks test files changed in the PR and those importing changed files.
+**Example:** \`npx playwright test --grep @smoke --project=chromium\` → only smoke tests run, in one browser, in a few minutes.
+
+**How to choose:**
+- **Business-critical flows** (login, search, add to cart, checkout, payment) → tag \`@smoke\`. Run on every PR.
+- **Tests linked to the change** → \`--only-changed=origin/main\` picks test files changed in the PR, plus files that import changed files.
 - **Long, cross-browser, visual and quarantined tests** → nightly.
 
-**Implementation:**
+**How to set it up:**
 - Tag tests: \`test('pay with saved card', { tag: ['@smoke', '@payments'] }, ...)\` or \`test.describe('Checkout', { tag: '@smoke' }, ...)\`.
-- PR job: \`npx playwright test --grep @smoke --project=chromium\` plus the \`--only-changed\` run.
+- PR job: \`npx playwright test --grep @smoke --project=chromium\`, plus the \`--only-changed\` run.
 - Main: full suite on chromium, sharded.
 - Nightly (\`schedule: cron\`): \`npx playwright test\` on all projects, including \`@quarantine\` and \`@slow\`.
-- Exclusions: \`--grep-invert "@quarantine|@slow"\` on PRs.
+- Leave some out: \`--grep-invert "@quarantine|@slow"\` on PRs.
 
-**Feedback loop:** nightly failures post to the team channel, someone triages them first thing in the morning, and if a nightly-only bug escapes often, that test is promoted into \`@smoke\`.
+**Follow-up:** nightly failures post to the team channel. Someone checks them first thing in the morning. If a bug often slips past to nightly, move that test into \`@smoke\`.
 
-**Keep the smoke set honest:** it should stay under ~10 minutes; if it grows, review it like a product backlog.`,
+**Keep the smoke set small:** it should stay under about 10 minutes. If it grows, review it like a product backlog.`,
       followUps: [
         {
           q: 'A bug reached main because its test only ran nightly. What do you change?',
-          a: 'Analyse why: was the area business-critical but untagged, or did the change touch shared code that --only-changed could not see? Then tag the test (or a lighter version of it) @smoke, or add a path-based rule in the workflow that runs the related folder when certain app directories change.',
+          a: 'Find out why. Was the area business-critical but not tagged? Or did the change touch shared code that --only-changed could not see? Then tag the test (or a lighter version of it) @smoke. Or add a rule in the workflow that runs a test folder when certain app folders change.',
         },
         {
           q: 'How do you tag a whole file or group?',
-          a: 'Use `test.describe(\'Checkout\', { tag: \'@checkout\' }, () => { ... })`; all tests inside inherit the tag. Tags must start with @ and can be filtered with --grep, --grep-invert, or shown in the HTML report filters.',
+          a: 'Use `test.describe(\'Checkout\', { tag: \'@checkout\' }, () => { ... })`. Every test inside gets the tag. Tags must start with @. You can filter them with --grep and --grep-invert, or in the HTML report filters.',
         },
       ],
       pitfalls: [
         'Running the full multi-browser suite on every PR and accepting 60-minute waits.',
-        'Running only smoke tests ever, never the full suite.',
-        'No owner for nightly failures.',
+        'Only ever running smoke tests, never the full suite.',
+        'Nobody owns the nightly failures.',
       ],
     },
   ],
@@ -1081,12 +1171,12 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
     {
       id: 'pw-git-ci-drill-1',
       question:
-        'Estimate the wall-clock time of a CI run: 200 tests, 12 s average, `fullyParallel: true`, 4 workers per machine, 2 shards, about 10% of tests fail once and are retried (they pass on retry). Each shard job spends 2 minutes on checkout, `npm ci` and browser install, and the merge-reports job takes 1 minute.',
+        'Estimate how long a CI run takes from start to finish. 200 tests, 12 s each on average. `fullyParallel: true`, 4 workers per machine, 2 shards. About 10% of tests fail once and pass on retry. Each shard job spends 2 minutes on checkout, `npm ci` and browser install. The merge-reports job takes 1 minute.',
       assumptions: [
-        'Runners have at least 4 vCPUs, so 4 workers run at full speed.',
+        'Each machine has at least 4 CPUs, so 4 workers run at full speed.',
         'fullyParallel splits tests evenly: 100 per shard, 25 per worker.',
-        'A retry costs the test duration plus ~3 s for a new worker/browser.',
-        'Shards run at the same time; the merge job starts after the slowest shard.',
+        'A retry costs the test time plus about 3 s for a new worker and browser.',
+        'Shards run at the same time. The merge job starts after the slowest shard.',
       ],
       steps: [
         { label: 'Total test work', calc: '200 × 12 s = 2,400 s' },
@@ -1097,23 +1187,23 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
         { label: 'Whole pipeline', calc: '7.6 min (slowest shard) + 1 min merge ≈ 8.6 min, call it 9 min' },
         { label: 'Comparison', calc: 'No sharding, 4 workers: 2 + 10 + 1.2 ≈ 13 min; 1 worker, no shards: 2 + 40 + 5 ≈ 47 min' },
       ],
-      answer: `About **9 minutes** end to end. Test execution is only ~5 of those minutes per shard; fixed setup (2 min) and the merge job (1 min) are now a third of the total.`,
-      insight: 'Once shards are in place, fixed costs dominate: more shards give diminishing returns. Cutting setup (Docker image, install only needed browsers) or fixing flaky retries can be worth as much as another shard.',
+      answer: `About **9 minutes** from start to finish. Running tests takes only about 5 of those minutes per shard. Fixed setup (2 min) and the merge job (1 min) are now a third of the total.`,
+      insight: 'Once you have shards, fixed costs take over, so more shards help less and less. Cutting setup (Docker image, only the needed browsers) or fixing flaky retries can help as much as another shard.',
       followUps: [
         {
           q: 'What would 4 shards give?',
-          a: '2,400 s ÷ 4 shards ÷ 4 workers = 150 s = 2.5 min of tests, about 0.3 min of retries, plus 2 min setup ≈ 4.8 min per shard, plus 1 min merge ≈ 6 min. Doubling the machines saved only ~3 minutes because setup and merge did not shrink.',
+          a: '2,400 s ÷ 4 shards ÷ 4 workers = 150 s = 2.5 min of tests. Add about 0.3 min of retries and 2 min of setup ≈ 4.8 min per shard. Add 1 min to merge ≈ 6 min. Doubling the machines saved only about 3 minutes, because setup and merge did not get shorter.',
         },
       ],
     },
     {
       id: 'pw-git-ci-drill-2',
       question:
-        'Your suite has 5 spec files with 60, 10, 10, 10 and 10 tests (all ~10 s each) and you run `--shard=1/2` and `--shard=2/2` with `fullyParallel: false`. Estimate the imbalance, then the result with `fullyParallel: true`.',
+        'Your suite has 5 spec files with 60, 10, 10, 10 and 10 tests, each about 10 s. You run `--shard=1/2` and `--shard=2/2` with `fullyParallel: false`. Estimate how uneven the shards are. Then estimate the result with `fullyParallel: true`.',
       assumptions: [
-        'Without fullyParallel, a whole file is the smallest unit a shard can receive.',
-        'Playwright tries to give shards equal test counts given that constraint.',
-        '2 workers per shard; ignore setup time.',
+        'Without fullyParallel, a whole file is the smallest piece a shard can get.',
+        'Playwright tries to give each shard the same number of tests, within that limit.',
+        '2 workers per shard. Ignore setup time.',
       ],
       steps: [
         { label: 'Total', calc: '100 tests × 10 s = 1,000 s' },
@@ -1123,22 +1213,22 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
         { label: 'Shard B time', calc: '4 files over 2 workers → 2 files each → 20 tests × 10 s = 200 s' },
         { label: 'fullyParallel: true', calc: '50 tests per shard, spread over 2 workers → 25 × 10 s = 250 s per shard' },
       ],
-      answer: `With file-level sharding the run takes **~600 s** (one shard grinding through the 60-test file on a single worker while the other finishes in 200 s). With \`fullyParallel: true\`, each shard gets 50 tests split over both workers: **~250 s**, about 2.4× faster with the same machines.`,
-      insight: 'Big spec files are the enemy of parallelism. Either enable fullyParallel (tests must be independent) or split large files.',
+      answer: `With file-level sharding, the run takes **~600 s**. One shard works through the 60-test file on a single worker. The other finishes in 200 s. With \`fullyParallel: true\`, each shard gets 50 tests spread over both workers: **~250 s**. That is about 2.4× faster on the same machines.`,
+      insight: 'Big spec files block parallel runs. Either turn on fullyParallel (tests must be independent) or split large files.',
       followUps: [
         {
-          q: 'Your tests in the big file depend on each other, so you cannot enable fullyParallel. What now?',
-          a: 'Split the file into several smaller files by feature so the file-level split balances better, and work toward independence (API setup per test). Meanwhile, `test.describe.configure({ mode: \'parallel\' })` can be applied only to groups that are already independent.',
+          q: 'The tests in the big file depend on each other, so you cannot turn on fullyParallel. What now?',
+          a: 'Split the file into several smaller files by feature, so the file-level split is more even. Work toward independence, for example with API setup per test. Meanwhile, use `test.describe.configure({ mode: \'parallel\' })` only on groups that are already independent.',
         },
       ],
     },
     {
       id: 'pw-git-ci-drill-3',
       question:
-        'You are on branch `test/coupon` with two new commits. Your PR shows "This branch has conflicts that must be resolved" in `playwright.config.ts`, because `main` added a `webkit` project while you changed `retries`. Write the exact sequence of Git commands and actions to resolve it with a merge, and say what you check before pushing.',
+        'You are on branch `test/coupon` with two new commits. Your PR says "This branch has conflicts that must be resolved" in `playwright.config.ts`. `main` added a `webkit` project, and you changed `retries`. Write the exact Git commands and actions to fix it with a merge. Say what you check before pushing.',
       assumptions: [
-        'Your working directory is clean.',
-        'The remote is called origin; the team prefers merge commits over rebasing shared branches.',
+        'You have no uncommitted changes.',
+        'The remote is called origin. The team prefers merge commits over rebasing shared branches.',
         'Both changes should be kept.',
       ],
       steps: [
@@ -1150,12 +1240,12 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
         { label: '6. Complete the merge', calc: 'git add playwright.config.ts && git commit (default merge message)' },
         { label: '7. Publish', calc: 'git push (no force needed: a merge only adds commits)' },
       ],
-      answer: `\`git fetch origin\` → \`git merge origin/main\` → edit \`playwright.config.ts\` to keep both changes and remove markers → \`npx playwright test --list\` and run the affected tests → \`git add playwright.config.ts\` → \`git commit\` → \`git push\`. The PR updates and CI re-runs on the merged result.`,
-      insight: 'A conflict in shared config is a test-infrastructure change: always prove the config still loads and the suite still lists every project before pushing.',
+      answer: `\`git fetch origin\` → \`git merge origin/main\` → edit \`playwright.config.ts\` to keep both changes and remove the markers → \`npx playwright test --list\` and run the affected tests → \`git add playwright.config.ts\` → \`git commit\` → \`git push\`. The PR updates, and CI runs again on the merged result.`,
+      insight: 'A conflict in shared config changes the test setup. Before pushing, always prove the config still loads and the suite still lists every project.',
       followUps: [
         {
           q: 'How would the steps differ with a rebase?',
-          a: 'Run `git rebase origin/main`; Git replays each of your commits and stops at the conflicting one. Resolve, `git add`, then `git rebase --continue` (repeat if more commits conflict). Because commit hashes change, push with `git push --force-with-lease`, which is only acceptable because the branch is yours.',
+          a: 'Run `git rebase origin/main`. Git replays each of your commits and stops at the one with the conflict. Fix it, run `git add`, then `git rebase --continue`. Repeat if more commits conflict. Commit ids change, so push with `--force-with-lease`. That is only OK because the branch is yours.',
         },
       ],
     },
@@ -1164,7 +1254,7 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
     {
       id: 'pw-git-ci-mcq-01',
       difficulty: 'easy',
-      question: 'You edited `tests/cart.spec.ts`. Which sequence publishes the change to your feature branch on GitHub?',
+      question: 'You edited `tests/cart.spec.ts`. Which order of commands sends the change to your feature branch on GitHub?',
       options: [
         'git add tests/cart.spec.ts → git commit -m "test: cart badge" → git push',
         'git commit -m "test: cart badge" → git add tests/cart.spec.ts → git push',
@@ -1173,26 +1263,26 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
       ],
       correct: [0],
       explanation:
-        'Changes go working directory → staging (`add`) → local commit (`commit`) → remote (`push`). Committing before adding commits nothing new; pushing first sends nothing new; fetch and pull bring changes down, they do not publish yours.',
+        'Changes move from the working directory → staging (`add`) → a local commit (`commit`) → the remote (`push`). Committing before adding commits nothing new. Pushing first sends nothing new. Fetch and pull bring changes down. They do not send yours up.',
       followUps: [
         {
-          q: 'What does `git add -p` do and why is it useful?',
-          a: 'It lets you stage individual hunks interactively, so you can split unrelated edits (e.g. a test change and a debug console.log) into separate commits or leave the debug line out.',
+          q: 'What does `git add -p` do, and why is it useful?',
+          a: 'It lets you stage parts of a file, one piece at a time. So you can split unrelated edits into separate commits. For example, keep a test change and leave out a debug console.log.',
         },
       ],
     },
     {
       id: 'pw-git-ci-mcq-02',
       difficulty: 'easy',
-      question: 'Which folders or files should be listed in `.gitignore` for a Playwright project? Select ALL that apply.',
+      question: 'Which of these paths should Git ignore in a Playwright repo? Select ALL that apply.',
       options: ['playwright-report/', 'playwright/.auth/', 'package-lock.json', 'test-results/', 'playwright.config.ts'],
       correct: [0, 1, 3],
       explanation:
-        'Reports and test-results are generated per run, and `.auth` holds storageState files with live session cookies. `package-lock.json` must be committed so `npm ci` installs exact versions (including Playwright), and the config file is source code.',
+        'Reports and test-results are made fresh on each run. `.auth` holds storageState files with live login cookies. `package-lock.json` must be committed, so `npm ci` installs exact versions, Playwright included. The config file is source code, so it is committed too.',
       followUps: [
         {
-          q: 'Why does committing the lock file matter for Playwright specifically?',
-          a: 'Browser builds are tied to the Playwright version. A lock file pins @playwright/test, so `npx playwright install` and the Docker image tag match what tests run with on every machine.',
+          q: 'Why does committing the lock file matter for Playwright in particular?',
+          a: 'Browser builds are tied to the Playwright version. The lock file fixes the @playwright/test version. So `npx playwright install` and the Docker image tag match what the tests run with, on every machine.',
         },
       ],
     },
@@ -1217,18 +1307,18 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
       ],
       correct: [0],
       explanation:
-        'A fresh runner has no browser binaries; `npx playwright install --with-deps` downloads the builds for the project\'s Playwright version plus required OS libraries. A global install does not fetch matching browsers for the project, codegen is the recorder, and show-report only serves an existing report.',
+        'A fresh CI machine has no browsers. `npx playwright install --with-deps` downloads the browsers for the project\'s Playwright version, plus the OS libraries they need. A global install does not fetch matching browsers for the project. codegen is the test recorder. show-report only opens an existing report.',
       followUps: [
         {
           q: 'What does --with-deps add?',
-          a: 'It also installs the operating-system packages the browsers depend on (fonts, graphics and media libraries) using the system package manager, which a minimal Linux runner may not have.',
+          a: 'It also installs the operating-system packages the browsers need, like fonts, graphics and media libraries. It uses the system package manager. A minimal Linux machine may not have these.',
         },
       ],
     },
     {
       id: 'pw-git-ci-mcq-04',
       difficulty: 'medium',
-      question: 'Tests fail in CI, but no report artifact is available to download. What is the most likely cause?',
+      question: 'Tests fail in CI, but there is no report to download. What is the most likely cause?',
       code: {
         language: 'yaml',
         code: `  - run: npx playwright test
@@ -1245,11 +1335,11 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
       ],
       correct: [0],
       explanation:
-        'Without an `if:`, a step runs only when previous steps succeeded, so a failing test step skips the upload. Add `if: ${{ !cancelled() }}` (or `always()`). Folders upload fine, the HTML reporter is not disabled by CI, and artifacts from failed runs are kept.',
+        'Without an `if:`, a step runs only when the earlier steps passed. So a failing test step skips the upload. Add `if: ${{ !cancelled() }}` (or `always()`). Folders upload fine. CI does not turn off the HTML reporter. Artifacts from failed runs are kept.',
       followUps: [
         {
-          q: 'Why do the docs use !cancelled() rather than always()?',
-          a: '`!cancelled()` uploads after both success and failure but skips work when someone deliberately cancels the run, whereas `always()` would run even then.',
+          q: 'Why do the docs use !cancelled() and not always()?',
+          a: '`!cancelled()` uploads after both success and failure. But it skips the work when someone cancels the run on purpose. `always()` would run even then.',
         },
       ],
     },
@@ -1265,11 +1355,11 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
       ],
       correct: [0],
       explanation:
-        'With `forbidOnly` true on CI, any `test.only` or `describe.only` fails the run, so a debugging leftover cannot hide the rest of the suite. It has nothing to do with parallelism or retries, and locally (CI unset) `.only` still works for focused debugging.',
+        'With `forbidOnly` true on CI, any `test.only` or `describe.only` fails the run. So a leftover from debugging cannot hide the rest of the suite. It has nothing to do with parallel runs or retries. Locally, CI is not set, so `.only` still works for debugging one test.',
       followUps: [
         {
           q: 'What else would you add to catch it before CI?',
-          a: 'A lint rule (e.g. eslint-plugin-playwright\'s no-focused-test) and code review checklists, so it is caught in the editor or PR before it ever reaches CI.',
+          a: 'A lint rule, like no-focused-test from eslint-plugin-playwright, and a code review checklist. Then it is caught in the editor or the PR, before it ever reaches CI.',
         },
       ],
     },
@@ -1285,18 +1375,18 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
       ],
       correct: [0, 1, 3],
       explanation:
-        'Workers run on one machine (default 50% of cores), each with its own browser, and shards spread work across machines. A shard only knows its own tests; a combined report requires the blob reporter and `merge-reports`.',
+        'Workers run on one machine (default: 50% of cores), each with its own browser. Shards spread the work across machines. A shard only knows its own tests. One combined report needs the blob reporter and `merge-reports`.',
       followUps: [
         {
           q: 'Can you use both at once?',
-          a: 'Yes, and it is normal: each shard machine runs its share with several workers. Wall time ≈ test work ÷ (shards × workers) plus per-shard setup.',
+          a: 'Yes, and it is normal. Each shard machine runs its share with several workers. Total time ≈ test work ÷ (shards × workers), plus setup per shard.',
         },
       ],
     },
     {
       id: 'pw-git-ci-mcq-07',
       difficulty: 'hard',
-      question: 'A suite has one spec file with 80 tests and five small files. With 4 shards, one shard takes far longer than the others. What is the best fix?',
+      question: 'A suite has one spec file with 80 tests and five small files. With 4 shards, one shard takes much longer than the others. What is the best fix?',
       options: [
         'Enable `fullyParallel: true` so shards are split per test instead of per file',
         'Increase `retries` to 3',
@@ -1305,11 +1395,11 @@ I add a check in the upgrade checklist: bump \`@playwright/test\`, the Docker ta
       ],
       correct: [0],
       explanation:
-        'Without fullyParallel, sharding works at file granularity, so the 80-test file lands entirely in one shard and runs in one worker. Per-test splitting balances the shards (tests must be independent). Retries, max-failures and fewer workers do not change the distribution and would only slow things down or stop early.',
+        'Without fullyParallel, shards split by file. So the 80-test file goes to one shard and runs in one worker. Splitting per test balances the shards, but the tests must be independent. Retries, max-failures and fewer workers do not change how tests are split. They only slow things down or stop early.',
       followUps: [
         {
-          q: 'What must be true of the tests before you enable it?',
-          a: 'They must be independent: no shared module state, no reliance on test order, and their own data, because tests from the same file may run at the same time on different workers or shards.',
+          q: 'What must be true of the tests before you turn it on?',
+          a: 'They must be independent: no shared module state, no fixed test order, and their own data. Tests from the same file may run at the same time on different workers or shards.',
         },
       ],
     },
@@ -1339,11 +1429,11 @@ steps:
       ],
       correct: [0],
       explanation:
-        'With v4 artifacts are immutable and names must be unique per run, so the second and third uploads named `blob-report` conflict. Name them `blob-report-${{ matrix.shardIndex }}`. Blob reports are meant to be uploaded, matrix jobs can upload, and the blob reporter writes to `blob-report` by default.',
+        'In v4, artifacts cannot be changed and names must be unique in each run. So the second and third uploads named `blob-report` clash. Name them `blob-report-${{ matrix.shardIndex }}`. Blob reports are meant to be uploaded. Matrix jobs can upload. The blob reporter writes to `blob-report` by default.',
       followUps: [
         {
           q: 'How does the merge job collect them?',
-          a: 'actions/download-artifact with `pattern: blob-report-*` and `merge-multiple: true` puts all shards\' files into one folder, then `npx playwright merge-reports --reporter html ./all-blob-reports` creates the combined report.',
+          a: 'actions/download-artifact with `pattern: blob-report-*` and `merge-multiple: true` puts all shards\' files into one folder. Then `npx playwright merge-reports --reporter html ./all-blob-reports` makes the combined report.',
         },
       ],
     },
@@ -1373,11 +1463,11 @@ on: [pull_request, cron]`,
       options: ['A', 'B', 'C', 'D'],
       correct: [0],
       explanation:
-        'Cron fields are minute, hour, day-of-month, month, day-of-week, so `30 1 * * *` is 01:30 UTC daily; GitHub schedules run in UTC. B swaps minute and hour (hour 30 is invalid). `nightly` is not a workflow event, and `cron` is not an event name; schedules go under `schedule:`.',
+        'Cron fields are minute, hour, day of month, month, day of week. So `30 1 * * *` means 01:30 UTC every day. GitHub schedules use UTC. B swaps minute and hour, and hour 30 does not exist. `nightly` is not a workflow event. `cron` is not an event name either. Schedules go under `schedule:`.',
       followUps: [
         {
           q: 'How would the nightly run differ from the PR run in the same workflow?',
-          a: 'Use `if: github.event_name == \'schedule\'` on a step that runs the full suite on all projects, and `if: github.event_name == \'pull_request\'` on a step that runs only `--grep @smoke` on chromium.',
+          a: 'Use `if: github.event_name == \'schedule\'` on a step that runs the full suite on all projects. Use `if: github.event_name == \'pull_request\'` on a step that runs only `--grep @smoke` on chromium.',
         },
       ],
     },
@@ -1393,11 +1483,11 @@ on: [pull_request, cron]`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'A version mismatch means Playwright looks for browser builds the image lacks; without `--ipc=host` Chromium can run out of shared memory and crash; and Mac-generated baselines differ from Linux rendering, so visual comparisons fail. Running `npm ci` is correct and still required to install project dependencies.',
+        'A version mismatch means Playwright looks for browsers the image does not have. Without `--ipc=host`, Chromium can run out of shared memory and crash. Baselines made on a Mac differ from Linux rendering, so screenshot comparisons fail. Running `npm ci` is correct. It is still needed to install the project\'s packages.',
       followUps: [
         {
-          q: 'How do you generate baselines that match CI?',
-          a: 'Run `npx playwright test --update-snapshots` inside the same Docker image (locally via docker run, or in a dedicated CI job), then commit the generated Linux baselines.',
+          q: 'How do you make screenshot baselines that match CI?',
+          a: 'Run `npx playwright test --update-snapshots` inside the same Docker image, either locally with docker run or in a special CI job. Then commit the new Linux baselines.',
         },
       ],
     },
@@ -1413,18 +1503,18 @@ on: [pull_request, cron]`,
       ],
       correct: [0],
       explanation:
-        '`fetch` updates remote-tracking refs like origin/main and leaves your work untouched; `pull` integrates those changes into the current branch. Uploading is `push`, the commands are not aliases, and pull works on any branch with an upstream.',
+        '`fetch` updates remote branches like origin/main and leaves your work alone. `pull` brings those changes into your current branch. Uploading is `push`. The two commands are not the same. pull works on any branch that has an upstream.',
       followUps: [
         {
-          q: 'When would you prefer fetch?',
-          a: 'When you want to review incoming changes first (`git log HEAD..origin/main`) or choose between merging and rebasing yourself, without risking an unexpected merge in the middle of your work.',
+          q: 'When would you use fetch instead?',
+          a: 'When you want to look at incoming changes first (`git log HEAD..origin/main`). Or when you want to choose between merge and rebase yourself, without a surprise merge in the middle of your work.',
         },
       ],
     },
     {
       id: 'pw-git-ci-mcq-12',
       difficulty: 'hard',
-      question: 'Which items does this generated-style config enable only on CI? Select ALL that apply.',
+      question: 'Which settings in this config are turned on only on CI? Select ALL that apply.',
       code: {
         language: 'typescript',
         code: `export default defineConfig({
@@ -1444,11 +1534,11 @@ on: [pull_request, cron]`,
       ],
       correct: [0, 1],
       explanation:
-        'Only `forbidOnly` and `retries` depend on `process.env.CI` here (workers too, but that limits rather than enables). `fullyParallel` and `trace` are unconditional, although traces in practice only appear on CI because retries are 0 locally, so no first retry ever happens.',
+        'Only `forbidOnly` and `retries` depend on `process.env.CI` here. Workers do too, but that limits something rather than turning it on. `fullyParallel` and `trace` apply everywhere. In practice, traces only appear on CI. Locally retries are 0, so a first retry never happens.',
       followUps: [
         {
           q: 'Locally a test fails. Will a trace be recorded?',
-          a: 'No. Locally retries are 0, so there is no first retry and `on-first-retry` never triggers. Use `--trace on` for that run, or `retain-on-failure` locally if you want traces of local failures.',
+          a: 'No. Locally retries are 0, so there is no first retry, and `on-first-retry` never runs. Use `--trace on` for that run. Or use `retain-on-failure` locally if you want traces of local failures.',
         },
       ],
     },
@@ -1465,18 +1555,18 @@ on: [pull_request, cron]`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'The merge job only combines results: download the blobs, merge them into an HTML report, upload it. It does not re-run tests, so it needs `npm ci` for the Playwright CLI but no browser installation.',
+        'The merge job only combines results. It downloads the blobs, merges them into an HTML report and uploads it. It does not run tests again. So it needs `npm ci` for the Playwright command line, but no browser install.',
       followUps: [
         {
           q: 'Why does the merge job use `if: ${{ !cancelled() }}`?',
-          a: 'Because the report is most needed when some shards failed. Without it, `needs:` would skip the merge job whenever any shard job failed, leaving you with only raw blob artifacts.',
+          a: 'Because you need the report most when some shards failed. Without it, `needs:` would skip the merge job whenever any shard failed. Then you would have only raw blob artifacts.',
         },
       ],
     },
     {
       id: 'pw-git-ci-mcq-14',
       difficulty: 'expert',
-      question: 'A pushed commit on shared `main` broke CI. Which is the safest way to undo it?',
+      question: 'A pushed commit on shared `main` broke CI. What is the safest way to undo it?',
       options: [
         'git revert <hash> and push the new commit',
         'git reset --hard HEAD~1 and git push --force',
@@ -1485,18 +1575,18 @@ on: [pull_request, cron]`,
       ],
       correct: [0],
       explanation:
-        '`git revert` adds a new commit that reverses the change, keeping history consistent for everyone who already pulled. Resetting and force-pushing, amending, or recreating the branch all rewrite shared history and break other people\'s clones and open PRs.',
+        '`git revert` adds a new commit that reverses the change. History stays the same for everyone who already pulled. Resetting with a force push, amending, or recreating the branch all rewrite shared history. That breaks other people\'s copies and open PRs.',
       followUps: [
         {
-          q: 'When is force-pushing acceptable?',
-          a: 'On your own feature branch after a rebase or amend, using `--force-with-lease` so you do not overwrite commits someone else pushed in the meantime. Protected branches like main should block force pushes entirely.',
+          q: 'When is force-pushing OK?',
+          a: 'On your own feature branch after a rebase or amend. Use `--force-with-lease`, so you do not overwrite commits someone else pushed meanwhile. Protected branches like main should block force pushes completely.',
         },
       ],
     },
     {
       id: 'pw-git-ci-mcq-15',
       difficulty: 'hard',
-      question: 'A PR job should run fast. Which choices reduce PR feedback time without losing the full regression? Select ALL that apply.',
+      question: 'A PR job should run fast. Which choices cut PR feedback time without losing the full regression? Select ALL that apply.',
       options: [
         'Run `@smoke` tests on chromium in the PR job and the full suite on a nightly schedule',
         'Run test files changed in the PR with `--only-changed=origin/main`',
@@ -1505,11 +1595,11 @@ on: [pull_request, cron]`,
       ],
       correct: [0, 1],
       explanation:
-        'Smoke on PRs plus a full nightly run, and running changed tests, shorten feedback while full coverage still runs regularly. Tracing every test makes runs slower, not faster, and deleting slow tests loses regression coverage.',
+        'Smoke tests on PRs plus a full nightly run, and running changed tests, give faster feedback. Full coverage still runs regularly. Tracing every test makes runs slower, not faster. Deleting slow tests loses regression coverage.',
       followUps: [
         {
           q: 'What does --only-changed need in GitHub Actions?',
-          a: 'Enough Git history to compare against the base ref, e.g. `actions/checkout` with `fetch-depth: 0`, because the default shallow clone has only the latest commit.',
+          a: 'Enough Git history to compare with the base branch. For example, `actions/checkout` with `fetch-depth: 0`. The default shallow clone has only the latest commit.',
         },
       ],
     },

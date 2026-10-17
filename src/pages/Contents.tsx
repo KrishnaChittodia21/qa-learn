@@ -245,7 +245,7 @@ export default function ContentsPage() {
               aria-expanded={open}
               onClick={() => setCollapsed((c) => ({ ...c, [ph.id]: open }))}
             >
-              <span className="contents-phase-num">{ph.number}</span>
+              <span className="contents-phase-num">{String(ph.number).padStart(2, '0')}</span>
               <span className="contents-phase-title">
                 <strong>
                   <Hl text={ph.title} q={q} />

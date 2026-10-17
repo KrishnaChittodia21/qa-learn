@@ -48,7 +48,7 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
   const groups = useMemo(() => {
     const go = (href: string) => () => nav(href);
     const pages: Item[] = [
-      { id: 'page:/', label: 'Dashboard', icon: LayoutDashboard, run: go('/') },
+      { id: 'page:/', label: 'Today (dashboard)', icon: LayoutDashboard, run: go('/') },
       { id: 'page:/contents', label: 'Contents: everything in the course', icon: ListTree, words: 'index toc', run: go('/contents') },
       { id: 'page:/weak-areas', label: 'Weak Areas', icon: Target, words: 'mistakes revise', run: go('/weak-areas') },
       { id: 'page:/coding', label: 'JS Coding Practice', icon: Code2, words: 'javascript problems', run: go('/coding') },

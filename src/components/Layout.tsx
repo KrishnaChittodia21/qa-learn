@@ -1,11 +1,10 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Building2,
   ChevronDown,
   Code2,
-  Compass,
   FlaskConical,
   LayoutDashboard,
   ListTree,
@@ -13,13 +12,13 @@ import {
   Menu,
   Moon,
   Settings as SettingsIcon,
-  ShieldCheck,
   Sun,
   Target,
   Terminal,
 } from 'lucide-react';
 import { Toaster } from './Toaster';
 import { SiteFooter } from './SiteFooter';
+import { BrandMark } from './BrandMark';
 import { on, openGuide } from '../lib/appEvents';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, PHASES, TOPICS } from '../content';
 import { setSettings, useProgress } from '../lib/progress';
@@ -42,28 +41,8 @@ function typingInField(e: KeyboardEvent) {
 
 const STATUS_LABEL = { new: 'not started', 'in-progress': 'in progress', passed: 'passed' } as const;
 
-/** Sidebar link with the shared active pill that slides between items (motion layoutId). */
-function SideLink({ to, end, className = '', children }: { to: string; end?: boolean; className?: string; children: ReactNode }) {
-  return (
-    <NavLink to={to} end={end} className={`side-link ${className}`}>
-      {({ isActive }) => (
-        <>
-          {isActive && (
-            <motion.span
-              layoutId="side-active"
-              className="side-active"
-              aria-hidden="true"
-              transition={{ type: 'spring', stiffness: 520, damping: 42 }}
-            />
-          )}
-          {children}
-        </>
-      )}
-    </NavLink>
-  );
-}
-
-const isMobile = () => window.matchMedia('(max-width: 900px)').matches;
+/** below this width the main nav and the syllabus live in a drawer */
+const isCompact = () => window.matchMedia('(max-width: 1099px)').matches;
 
 export default function Layout() {
   const p = useProgress();
@@ -163,7 +142,7 @@ export default function Layout() {
   }, [location.pathname]);
 
   const toggleNav = () => {
-    if (isMobile()) setNavOpen((o) => !o);
+    if (isCompact() || !syllabusPage) setNavOpen((o) => !o);
     else setSidebarCollapsed((c) => !c);
   };
 
@@ -181,36 +160,64 @@ export default function Layout() {
   const weakCount = Object.values(p.mcq).filter((r) => !r.lastCorrect).length;
   const passedCount = TOPICS.filter((t) => topicStatus(p, t) === 'passed').length;
 
+  // the syllabus sits beside lessons, not beside a running exam
+  const syllabusPage = location.pathname.startsWith('/topic/') && !location.pathname.endsWith('/exam');
+  const codeSolved = Object.keys(p.code).length;
+  const practiceNav = [
+    { to: '/coding', label: 'JS coding', long: `JS coding practice (${codeSolved}/${CODING_PROBLEMS.length})`, icon: Code2 },
+    { to: '/pw-lab', label: 'Playwright Lab', long: 'Playwright Lab (auto-judged)', icon: FlaskConical },
+    { to: '/companies', label: 'Company Qs', long: `Company questions (${COMPANY_QUESTIONS.length})`, icon: Building2 },
+    { to: '/playground', label: 'Playground', long: 'JS Playground', icon: Terminal },
+    { to: '/roadmap', label: '12-week plan', long: '12-week roadmap & projects', icon: MapIcon },
+  ];
+
   return (
-    <div className={`shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`shell ${syllabusPage ? 'has-syllabus' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
       <header className="topbar">
         <button
-          className="btn-ghost nav-toggle"
+          className={`btn-ghost nav-toggle ${syllabusPage ? 'nav-toggle-syllabus' : ''}`}
           onClick={toggleNav}
-          aria-label="Toggle topic sidebar"
-          title={sidebarCollapsed ? 'Show topics' : 'Hide topics'}
+          aria-label={syllabusPage ? 'Toggle the syllabus' : 'Open the menu'}
+          aria-expanded={navOpen}
+          title={syllabusPage ? (sidebarCollapsed ? 'Show syllabus' : 'Hide syllabus') : 'Menu'}
           type="button"
         >
           <Menu size={20} aria-hidden="true" />
         </button>
-        <NavLink to="/" className="brand">
-          <span className="brand-tile" aria-hidden="true">
-            <ShieldCheck size={16} strokeWidth={2.4} />
-          </span>
+        <NavLink to="/" className="brand" aria-label="QA Learn, today">
+          <BrandMark />
           <span className="brand-name">QA Learn</span>
-          <span className="brand-sub">Manual · JS · Playwright</span>
         </NavLink>
+        <nav className="topnav" aria-label="Main">
+          <NavLink to="/" end className="topnav-link">
+            Today
+          </NavLink>
+          <NavLink to="/contents" className="topnav-link">
+            Contents
+          </NavLink>
+          <NavLink to="/weak-areas" className="topnav-link">
+            Weak areas{weakCount > 0 && <span className="count-tag fail" aria-label={`, ${weakCount} wrong answers`}>{weakCount}</span>}
+          </NavLink>
+          <span className="topnav-sep" aria-hidden="true" />
+          {practiceNav.map((n) => (
+            <NavLink key={n.to} to={n.to} className="topnav-link">
+              {n.label}
+            </NavLink>
+          ))}
+        </nav>
         <div className="topbar-right">
-          <button type="button" className="btn-ghost guide-btn" onClick={openGuide} aria-label="Open the guide" title="Guide (press ?)">
-            <Compass size={18} aria-hidden="true" />
-            <span className="guide-btn-text">Guide</span>
-          </button>
-          <span className="pill topbar-pill">
-            {passedCount}/{TOPICS.length} passed
+          <span className="topbar-report" title="Topics whose full exam you have passed">
+            <span className="report-pass">{passedCount}</span>/{TOPICS.length} passed
           </span>
+          <button type="button" className="btn-ghost guide-btn" onClick={openGuide} title="Open the guide (press ?)">
+            Guide me
+          </button>
           <button
             type="button"
-            className="btn-ghost theme-toggle"
+            className="btn-ghost icon-btn theme-toggle"
             onClick={() => setSettings({ theme: isDark ? 'light' : 'dark' })}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -223,7 +230,33 @@ export default function Layout() {
         </div>
       </header>
 
-      <motion.aside ref={sidebarRef} layoutScroll className={`sidebar ${navOpen ? 'open' : ''}`}>
+      <motion.aside ref={sidebarRef} layoutScroll className={`sidebar ${navOpen ? 'open' : ''}`} aria-label="Syllabus">
+        <nav className="drawer-nav" aria-label="Main">
+          <NavLink to="/" end className="drawer-link">
+            <LayoutDashboard size={16} aria-hidden="true" /> Today
+          </NavLink>
+          <NavLink to="/contents" className="drawer-link">
+            <ListTree size={16} aria-hidden="true" /> Contents
+          </NavLink>
+          <NavLink to="/weak-areas" className="drawer-link">
+            <Target size={16} aria-hidden="true" /> Weak areas{weakCount > 0 && <span className="count-tag fail">{weakCount}</span>}
+          </NavLink>
+          <div className="drawer-label">Practice</div>
+          {practiceNav.map((n) => (
+            <NavLink key={n.to} to={n.to} className="drawer-link">
+              <n.icon size={16} aria-hidden="true" /> {n.long}
+            </NavLink>
+          ))}
+          <NavLink to="/settings" className="drawer-link">
+            <SettingsIcon size={16} aria-hidden="true" /> Settings
+          </NavLink>
+        </nav>
+        <div className="syllabus-head">
+          <span className="syllabus-title">Syllabus</span>
+          <span className="syllabus-legend" aria-hidden="true">
+            <span className="mark mark-passed" /> passed <span className="mark mark-in-progress" /> started <span className="mark mark-new" /> not run
+          </span>
+        </div>
         <input
           className="search"
           placeholder="Filter topics, tags…"
@@ -231,23 +264,12 @@ export default function Layout() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <nav>
-          <SideLink to="/" end>
-            <LayoutDashboard size={16} aria-hidden="true" className="side-icon" />
-            Dashboard
-          </SideLink>
-          <SideLink to="/contents">
-            <ListTree size={16} aria-hidden="true" className="side-icon" />
-            Contents
-          </SideLink>
-          <SideLink to="/weak-areas">
-            <Target size={16} aria-hidden="true" className="side-icon" />
-            Weak Areas{weakCount > 0 && <span className="side-badge">{weakCount}</span>}
-          </SideLink>
+        <nav aria-label="Topics by phase">
           {PHASES.map((ph) => {
             const topics = filtered.filter((t) => t.phase === ph.id);
             if (!topics.length) return null;
             const isCollapsed = collapsed[ph.id] && !query;
+            const phPassed = topics.filter((t) => topicStatus(p, t) === 'passed').length;
             return (
               <div key={ph.id} className="side-phase">
                 <button
@@ -256,9 +278,10 @@ export default function Layout() {
                   type="button"
                   aria-expanded={!isCollapsed}
                 >
-                  <span className="side-phase-name">
-                    <span className="side-phase-num">{ph.number}</span>
-                    {ph.title}
+                  <span className="side-phase-num">{String(ph.number).padStart(2, '0')}</span>
+                  <span className="side-phase-name">{ph.title}</span>
+                  <span className="side-phase-count">
+                    {phPassed}/{topics.length}
                   </span>
                   <ChevronDown size={14} aria-hidden="true" className={`chev-icon ${isCollapsed ? 'closed' : ''}`} />
                 </button>
@@ -269,16 +292,16 @@ export default function Layout() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
                     >
                       {topics.map((t) => {
                         const st = topicStatus(p, t);
                         return (
-                          <SideLink key={t.id} to={`/topic/${t.id}`} className="side-topic">
-                            <span className={`dot dot-${st}`} aria-hidden="true" />
-                            {t.title}
+                          <NavLink key={t.id} to={`/topic/${t.id}`} className="side-link side-topic">
+                            <span className={`mark mark-${st}`} aria-hidden="true" />
+                            <span className="side-topic-title">{t.title}</span>
                             <span className="sr-only">, {STATUS_LABEL[st]}</span>
-                          </SideLink>
+                          </NavLink>
                         );
                       })}
                     </motion.div>
@@ -287,34 +310,11 @@ export default function Layout() {
               </div>
             );
           })}
-          <div className="side-phase">
-            <div className="side-phase-title static">Practice</div>
-            <SideLink to="/coding" className="side-topic">
-              <Code2 size={16} aria-hidden="true" className="side-icon" />
-              JS Coding Practice ({Object.keys(p.code).length}/{CODING_PROBLEMS.length})
-            </SideLink>
-            <SideLink to="/pw-lab" className="side-topic">
-              <FlaskConical size={16} aria-hidden="true" className="side-icon" />
-              Playwright Lab (Judge)
-            </SideLink>
-            <SideLink to="/companies" className="side-topic">
-              <Building2 size={16} aria-hidden="true" className="side-icon" />
-              Company Questions ({COMPANY_QUESTIONS.length})
-            </SideLink>
-            <SideLink to="/playground" className="side-topic">
-              <Terminal size={16} aria-hidden="true" className="side-icon" />
-              JS Playground
-            </SideLink>
-            <SideLink to="/roadmap" className="side-topic">
-              <MapIcon size={16} aria-hidden="true" className="side-icon" />
-              12-Week Roadmap &amp; Projects
-            </SideLink>
-          </div>
         </nav>
       </motion.aside>
       {navOpen && <div className="scrim" onClick={() => setNavOpen(false)} />}
 
-      <main className="main">
+      <main className="main" id="main" tabIndex={-1}>
         <AnimatePresence initial={false}>
           <motion.div
             key={location.pathname}

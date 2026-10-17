@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 6,
   title: 'Asynchronous JavaScript: Promises, async/await & the Event Loop',
   subtitle:
-    'Why almost every Playwright line starts with await. Callbacks, the event loop (call stack, microtasks, macrotasks), promises, async/await, error handling, Promise.all and friends, and the async mistakes that make tests pass when they should fail.',
+    'Why almost every Playwright line starts with await. Learn what runs now, what runs next and what runs after a timer (the event loop), plus promises, async/await, error handling, Promise.all and friends, and the async mistakes that make tests pass when they should fail.',
   estimatedMinutes: 120,
   sources: [
     'javascript.info — Introduction: callbacks, Promise, Promises chaining, Error handling with promises, Promise API, Microtasks, Async/await, Event loop: microtasks and macrotasks',
@@ -20,32 +20,41 @@ const topic: Topic = {
   ],
   tags: ['async', 'promises', 'async-await', 'event-loop', 'microtasks', 'promise-all', 'floating-promises', 'playwright-await'],
   cheatSheet: [
-    'JavaScript runs on ONE thread: slow work (network, timers, browser actions) is started, and its result is handled later via callbacks/promises, so nothing blocks.',
-    'Event loop: run all synchronous code (call stack) → drain ALL microtasks (promise .then, await continuations, queueMicrotask) → run ONE macrotask (setTimeout, I/O, events) → drain microtasks again → repeat.',
-    'Classic order: `console.log(1); setTimeout(→2); Promise.resolve().then(→3); console.log(4)` prints 1 4 3 2. setTimeout(fn, 0) means "not before 0 ms", never "now".',
-    'A promise is pending, then settles once: fulfilled (value) or rejected (reason). `.then` returns a NEW promise; return a value to pass it on, throw to reject.',
-    'async functions always return a promise; await pauses only that function until the promise settles, then resumes it as a microtask. Code after an un-awaited call keeps running.',
-    'Errors: `try { await x } catch (e) {}`, or `.catch()`. try/catch WITHOUT await catches nothing. `return await` inside try if you want that try to catch the rejection.',
-    'Promise.all: all fulfil → array in input order; first rejection rejects (fail fast). allSettled: never rejects, gives {status, value|reason}. race: first to settle. any: first to fulfil, AggregateError if all reject.',
-    'Sequential `await a(); await b();` = sum of times. Parallel `await Promise.all([a(), b()])` = slowest time. Parallelise only independent work.',
-    '`arr.forEach(async x => await ...)` does not wait: use `for...of` + await (sequential) or `await Promise.all(arr.map(async x => ...))` (parallel).',
-    'In Playwright: actions (click, fill, goto), web-first assertions (`await expect(locator).toBeVisible()`) and data reads (textContent, allTextContents) return promises: AWAIT them. `page.locator()`/`getByRole()` are synchronous: no await.',
-    'Missing await = floating promise: the test can finish before the action/assertion runs, passing falsely or failing later with "Target page, context or browser has been closed". Turn on @typescript-eslint/no-floating-promises.',
-    'Wait for a response/popup by starting the wait BEFORE the click: `const resP = page.waitForResponse(url); await click; const res = await resP;` (or Promise.all of both).',
+    'JavaScript does ONE thing at a time. Slow work (network, timers, browser actions) is started now, and the result is handled later through callbacks or promises. Nothing blocks.',
+    'Event loop: 1) run all normal code (runs now); 2) run ALL promise jobs: .then, code after await, queueMicrotask (runs after the current code; "microtasks"); 3) run ONE timer or event (runs after a timer; "macrotask"); back to 2.',
+    'Classic order: `console.log(1); setTimeout(→2); Promise.resolve().then(→3); console.log(4)` prints 1 4 3 2. setTimeout(fn, 0) means "after everything else", never "now".',
+    'A promise is pending, then settles once: fulfilled (a value) or rejected (an error). `.then` returns a NEW promise: return a value to pass it on, throw to reject.',
+    'An async function always returns a promise. await pauses only that function; the rest of it runs after the current code. Code after an un-awaited call keeps running at once.',
+    'Errors: `try { await x } catch (e) {}`, or `.catch()`. try/catch WITHOUT await catches nothing. Inside try, write `return await`, so that try can catch the error.',
+    'Promise.all: all succeed → values in input order; first failure → fails at once. allSettled: never fails, gives {status, value|reason}. race: first to finish. any: first to succeed, AggregateError if all fail.',
+    'One after another: `await a(); await b();` = sum of the times. Together: `await Promise.all([a(), b()])` = the slowest time. Run together only work that does not depend on each other.',
+    '`arr.forEach(async x => await ...)` does not wait. Use `for...of` + await (one after another) or `await Promise.all(arr.map(async x => ...))` (together).',
+    'In Playwright, await actions (click, fill, goto), web-first assertions (`await expect(locator).toBeVisible()`) and reads (textContent, allTextContents). `page.locator()` and `getByRole()` only describe: no await.',
+    'Missing await = "floating promise": the test can end before the action or check runs. It passes falsely, or fails later with "Target page, context or browser has been closed". Turn on @typescript-eslint/no-floating-promises.',
+    'Wait for a response or popup by starting the wait BEFORE the click: `const resP = page.waitForResponse(url); await click; const res = await resP;` (or Promise.all of both).',
   ],
   sections: [
     {
       heading: 'Sync vs async: why JavaScript waits without blocking',
-      body: `**Intuition:** a restaurant with **one waiter**. A *synchronous* waiter takes your order, walks into the kitchen and stands there until the food is ready, ignoring every other table. An *asynchronous* waiter hands the order to the kitchen, serves other tables, and comes back when the kitchen rings the bell. JavaScript is the second waiter.
+      body: `**Example:** \`console.log('order taken'); setTimeout(() => console.log('food ready'), 1000); console.log('serving other tables');\`
+
+- It prints \`order taken\`, then \`serving other tables\`.
+- One second later, it prints \`food ready\`.
+
+JavaScript did not stop and wait for the timer. It started the timer and moved on.
+
+Think of a restaurant with **one waiter**. A slow waiter takes your order, then stands in the kitchen until the food is ready. A smart waiter gives the order to the kitchen and serves other tables. When the kitchen rings the bell, he comes back. JavaScript is the smart waiter.
 
 **The facts:**
 
-- JavaScript runs your code on **one thread**: it does one thing at a time.
-- Slow things (HTTP requests, timers, reading files, and every browser action Playwright performs) are handed to the **environment** (the browser, Node, or the Playwright driver). JavaScript keeps going and handles the result later.
-- **Synchronous** code runs line by line, top to bottom, each line finishing before the next starts.
-- **Asynchronous** code *starts* work now and *finishes* it later. The "later" part is delivered through a **callback** or a **promise**.
+- JavaScript does **one thing at a time**. (It has one "thread".)
+- Slow jobs are handed to someone else: network calls, timers, files, and every browser action in Playwright. JavaScript keeps going and handles the result later.
+- **Synchronous** code runs now, line by line. Each line finishes before the next one starts.
+- **Asynchronous** code *starts* a job now and *finishes* it later. You get the result through a **callback** or a **promise**. Both are explained below.
 
-**Why a tester must care:** every Playwright action talks to a real browser through a separate process. \`page.click()\` cannot return the result instantly, so it returns a **promise**. If you do not \`await\` it, your test races ahead of the browser. Understanding async is the difference between reliable tests and tests that "pass" without checking anything.`,
+**Watch out:** a long loop blocks everything. While it runs, no timer, click or page update can happen.
+
+**Why testers care:** \`page.click()\` talks to a real browser, so it cannot finish at once. It returns a promise. If you do not \`await\` it, your test runs ahead of the browser.`,
       code: [
         {
           language: 'javascript',
@@ -54,46 +63,54 @@ const topic: Topic = {
 
 setTimeout(() => {
   console.log('3. food ready (after 1 second)');
-}, 1000);                                // hand work to the environment, keep going
+}, 1000);                                // hand the job to the timer, keep going
 
 console.log('2. serving other tables');
+
+// A long loop freezes EVERYTHING (timers, clicks, page updates) until it finishes
+const start = Date.now();
+while (Date.now() - start < 200) { /* busy-wait 200 ms: never do this */ }
+console.log('blocked for ~200 ms');
 
 // Output:
 // → 1. order taken
 // → 2. serving other tables
-// → 3. food ready (after 1 second)
-
-// A blocking loop freezes EVERYTHING (timers, clicks, rendering) until it finishes
-const start = Date.now();
-while (Date.now() - start < 200) { /* busy-wait 200 ms: never do this */ }
-console.log('blocked for ~200 ms');`,
+// → blocked for ~200 ms
+// → 3. food ready (after 1 second)`,
         },
       ],
       keyPoints: [
-        'One thread: long synchronous work blocks everything else.',
-        'Async work is started now and finished later via callbacks or promises.',
-        'Every Playwright action is async because it talks to a separate browser process.',
+        'JavaScript does one thing at a time, so a long loop blocks everything else.',
+        'Async work starts now and finishes later, through a callback or a promise.',
+        'Every Playwright action is async, because it talks to a separate browser program.',
       ],
       source: 'javascript.info — Introduction: callbacks; Eloquent JavaScript Ch 11',
     },
     {
       heading: 'Callbacks and callback hell',
-      body: `**Intuition:** a callback is leaving your phone number with the kitchen: "call me when it is ready". You pass a **function** that the other code will call later.
+      body: `**Example:** \`setTimeout(() => console.log('done'), 500);\`
 
-\`setTimeout(fn, ms)\`, \`addEventListener('click', fn)\` and Node's older \`fs.readFile(path, (err, data) => ...)\` all take callbacks. Node's convention is **error-first**: the first argument is an error (or \`null\`), the second the result.
+- The arrow function \`() => console.log('done')\` is a **callback**.
+- \`setTimeout\` calls it back after 500 ms, and it prints \`done\`.
 
-**The problem: callback hell.** When step 2 needs step 1's result and step 3 needs step 2's, the callbacks nest deeper and deeper (the "pyramid of doom"). Every level must check its own error, and it is easy to forget one. Errors thrown inside a callback cannot be caught by a \`try/catch\` around the outer call, because the callback runs later.
+A **callback** is a function you give to other code, so that code can call it later. It is like leaving your phone number: "call me when it is ready".
 
-**The solution was promises**, and then \`async/await\` built on promises. You will still meet callbacks in event handlers (\`page.on('dialog', ...)\` in Playwright) and old libraries. Wrapping a callback API in a promise is a classic interview task: see the \`sleep\` and \`readFileAsync\` examples.`,
+\`setTimeout(fn, ms)\`, \`addEventListener('click', fn)\` and Node's older \`fs.readFile(path, (err, data) => ...)\` all take callbacks. In Node's style, the first argument is the error (or \`null\`). The second is the result. This is called **error-first**.
+
+**The problem: callback hell.** Step 2 needs the result of step 1. Step 3 needs the result of step 2. So the callbacks sit inside each other, deeper and deeper. People call this the "pyramid of doom". Every level must check its own error. And a \`try/catch\` around the outer call cannot catch errors inside the callback, because the callback runs later.
+
+**The fix was promises**, and then \`async/await\` on top of promises. You still see callbacks in event handlers, like \`page.on('dialog', ...)\` in Playwright. Turning a callback function into a promise is a classic interview task. See the \`sleep\` example below.
+
+**Why testers care:** Playwright events such as \`page.on('dialog', ...)\` use callbacks, and many old test helpers do too.`,
       code: [
         {
           language: 'javascript',
           title: 'Nested callbacks vs a promise wrapper',
-          code: `// Fake async API in callback style (error-first)
+          code: `// Fake slow functions in callback style (the error comes first)
 function getUser(id, cb) { setTimeout(() => cb(null, { id, name: 'Asha' }), 10); }
 function getOrders(user, cb) { setTimeout(() => cb(null, ['A1', 'B2']), 10); }
 
-// Callback pyramid: every level handles its own error
+// Callbacks inside callbacks: every level handles its own error
 getUser(7, (err, user) => {
   if (err) return console.error(err);
   getOrders(user, (err2, orders) => {
@@ -102,7 +119,7 @@ getUser(7, (err, user) => {
   });
 });
 
-// Wrapping callbacks in promises (what util.promisify does)
+// Turning callback functions into promises (what util.promisify does)
 const getUserP = (id) =>
   new Promise((resolve, reject) => getUser(id, (err, u) => (err ? reject(err) : resolve(u))));
 const getOrdersP = (u) =>
@@ -122,58 +139,63 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));`,
       ],
       keyPoints: [
         'A callback is a function passed to be called later.',
-        'Nested callbacks are hard to read and error handling is repeated at each level.',
-        'Wrap callback APIs in new Promise(...) once, then use await.',
+        'Callbacks inside callbacks are hard to read, and each level must handle its own error.',
+        'Wrap a callback function in new Promise(...) once, then use await.',
       ],
       source: 'javascript.info — Introduction: callbacks; Node.js docs — util.promisify',
     },
     {
-      heading: 'The event loop: call stack, microtasks and macrotasks',
-      body: `**Intuition:** picture one chef (the **call stack**), a **VIP ticket rail** (the **microtask queue**) and a **normal ticket rail** (the **macrotask / task queue**). The chef finishes the current dish completely. Then they clear **every** VIP ticket, including VIP tickets added while clearing. Only then do they take **one** normal ticket, and the cycle repeats.
+      heading: 'The event loop: runs now, runs next, runs after a timer',
+      body: `**Example:** \`console.log('A'); setTimeout(() => console.log('B'), 0); Promise.resolve().then(() => console.log('C')); console.log('D');\`
 
-**The pieces:**
+- It prints \`A\`, \`D\`, \`C\`, \`B\`.
+- \`A\` and \`D\` **run now**.
+- \`C\` **runs after the current code finishes**.
+- \`B\` **runs after a timer**, so it comes last, even with 0 ms.
 
-| Piece | What lives there | Examples |
+The **event loop** is the rule that decides what runs next. JavaScript puts every piece of code into one of three groups:
+
+| Group | What is in it | Interview name |
 |---|---|---|
-| Call stack | the function running right now | your synchronous code |
-| Environment (Web APIs / Node / libuv) | timers counting, network in flight | setTimeout, fetch, file reads |
-| Microtask queue | promise reactions, run ASAP | \`.then/.catch/.finally\`, code after \`await\`, \`queueMicrotask\` |
-| Macrotask (task) queue | callbacks from the environment | \`setTimeout\`, \`setInterval\`, I/O, UI events, \`setImmediate\` (Node) |
+| **Runs now** | normal lines of code, top to bottom | synchronous code (on the **call stack**) |
+| **Runs after the current code finishes** | \`.then\`, \`.catch\`, \`.finally\`, the code after \`await\`, \`queueMicrotask\` | **microtasks** |
+| **Runs after a timer** | \`setTimeout\`, \`setInterval\`, clicks and other events, network callbacks | **macrotasks** (or tasks) |
 
-**The algorithm (one "tick"):**
+**The rule, step by step:**
 
-1. Run the current script / task until the call stack is empty.
-2. Run **all** microtasks, including any queued by those microtasks.
-3. (In browsers) maybe render.
-4. Take the **next** macrotask and go back to step 1.
+1. Run all the "runs now" code, until nothing is left.
+2. Run **every** "after the current code" job. If one of them adds a new one, run that too.
+3. Run **one** timer job. Then go back to step 2.
 
-**Consequences you must be able to explain:**
+**Things you must be able to explain:**
 
-- \`setTimeout(fn, 0)\` runs **after** all current synchronous code **and** all pending promise callbacks.
-- Promise callbacks are always async, even for an already-resolved promise: \`Promise.resolve().then(fn)\` never runs \`fn\` immediately.
-- The executor of \`new Promise(executor)\` runs **synchronously**; only the \`.then\` handlers are deferred.
-- After \`await\`, the rest of the async function continues as a **microtask**.
-- An endless chain of microtasks starves timers and rendering, just like an infinite loop.
+- \`setTimeout(fn, 0)\` does not mean "now". It means "after all current code and all promise jobs".
+- A \`.then\` callback never runs at once, even if the promise is already done.
+- The function inside \`new Promise(...)\` **runs now**. Only the \`.then\` part waits.
+- After \`await\`, the rest of the function **runs after the current code finishes**.
 
-**In interviews say this:** "Synchronous code first, then all microtasks (promises, await continuations), then one macrotask such as a timer, then microtasks again." Jake Archibald's article and Philip Roberts' talk are the classic references.`,
-      diagram: `   +-------------+      starts timers / I/O       +--------------------+
-   | CALL STACK  | -----------------------------> | ENVIRONMENT        |
-   | (1 thing at |                                | timers, network,   |
-   |  a time)    |                                | browser driver     |
-   +------^------+                                +---------+----------+
-          |                                                 | when done
-          | 2) drain ALL                                    v
-   +------+---------------+                      +---------------------+
-   | MICROTASK QUEUE      |                      | MACROTASK QUEUE     |
-   | .then  await  qMT    |                      | setTimeout  I/O     |
-   +----------------------+                      +----------+----------+
-          ^                                                 |
-          +---------- 3) then take ONE macrotask -----------+`,
+**In an interview, say:** "First all normal code. Then all promise jobs, called microtasks. Then one timer, called a macrotask. Then promise jobs again."
+
+**Why testers care:** this explains why \`setTimeout(fn, 0)\` is not instant, and why code after a missing \`await\` runs too early.`,
+      diagram: `  +------------------+     starts timers, network    +-------------------+
+  | RUNS NOW         | ----------------------------> | THE ENVIRONMENT   |
+  | one line at a    |                               | timers, network,  |
+  | time             |                               | the browser       |
+  +--------^---------+                               +---------+---------+
+           |                                                   | when done
+           | 2) run ALL of these                               v
+  +--------+-------------------+            +-----------------------------+
+  | AFTER THE CURRENT CODE     |            | AFTER A TIMER               |
+  | .then  await (microtasks)  |            | setTimeout (macrotasks)     |
+  +----------------------------+            +--------------+--------------+
+           ^                                               |
+           +----------- 3) then take ONE of these ---------+`,
       code: [
         {
           language: 'javascript',
           title: 'The ordering rules in one snippet',
-          code: `console.log('A: sync');
+          code: `// microtask = runs after the current code finishes; macrotask = runs after a timer
+console.log('A: sync');
 
 setTimeout(() => console.log('B: macrotask (timer)'), 0);
 
@@ -198,26 +220,39 @@ console.log('G: sync');
         },
       ],
       keyPoints: [
-        'Order: synchronous code → all microtasks → one macrotask → all microtasks → ...',
-        'Promise reactions and await continuations are microtasks; timers are macrotasks.',
-        'The Promise executor is synchronous; only its handlers are deferred.',
+        'Order: runs now → all promise jobs (microtasks) → one timer (macrotask) → all promise jobs → ...',
+        '.then callbacks and code after await run after the current code; timers run later.',
+        'The function inside new Promise(...) runs now; only .then waits.',
       ],
       source: 'Jake Archibald — Tasks, microtasks, queues and schedules; javascript.info — Event loop: microtasks and macrotasks; Philip Roberts — JSConf EU 2014',
     },
     {
       heading: 'Promises: pending, fulfilled, rejected',
-      body: `**Intuition:** a promise is a **delivery tracking number**. Right now the parcel is *in transit* (pending). Later it is either *delivered* (fulfilled, with the parcel as its **value**) or *failed* (rejected, with a **reason**). It changes state only once, and you can register what to do in either case.
+      body: `**Example:** \`Promise.resolve(5).then((n) => console.log(n * 2));\`
 
-**Mechanics:**
+- It prints \`10\`.
+- \`.then\` runs once the promise has its value.
 
-- States: \`pending\` → \`fulfilled\` **or** \`rejected\` (together called *settled*). Calling \`resolve\` a second time is ignored.
-- \`promise.then(onFulfilled, onRejected?)\`, \`.catch(onRejected)\`, \`.finally(onSettled)\` register reactions.
-- **\`.then\` returns a new promise.** Whatever you **return** from the handler becomes the next value; whatever you **throw** becomes the next rejection; returning a promise makes the chain wait for it. This is what makes chains flat.
-- Forgetting to \`return\` inside a \`.then\` breaks the chain: the next step gets \`undefined\` and does not wait.
-- A rejection skips the following \`.then\` handlers until it reaches a \`.catch\`.
-- \`Promise.resolve(v)\` and \`Promise.reject(err)\` create already-settled promises (handy in tests and mocks).
+A **promise** is like a parcel tracking number. Right now the parcel is on its way. This state is called **pending**. Later, one of two things happens:
 
-**You will mostly write async/await**, but Playwright returns promises everywhere, and output-ordering questions are about \`.then\`, so you must read both styles.`,
+- It arrives. The promise is **fulfilled**, and you get a **value**.
+- It is lost. The promise is **rejected**, and you get a **reason** (an error).
+
+A promise changes state only once. "Fulfilled or rejected" together is called **settled**.
+
+**How to use a promise:**
+
+- \`.then(fn)\` runs \`fn\` with the value.
+- \`.catch(fn)\` runs \`fn\` with the error.
+- \`.finally(fn)\` runs \`fn\` in both cases.
+- **\`.then\` gives back a new promise.** What you **return** goes to the next \`.then\`. What you **throw** goes to the next \`.catch\`. This is how you build a chain.
+- **Watch out:** if you forget \`return\` inside \`.then\`, the next step gets \`undefined\` and does not wait.
+- An error skips the next \`.then\` steps until it reaches a \`.catch\`.
+- \`Promise.resolve(v)\` and \`Promise.reject(err)\` make a promise that is already settled. They are handy for test mocks.
+
+You will mostly write \`async/await\`. But Playwright returns promises everywhere, and puzzle questions use \`.then\`. So you need to read both styles.
+
+**Why testers care:** every Playwright action returns a promise. A promise that nobody awaits can fail without anyone noticing.`,
       code: [
         {
           language: 'javascript',
@@ -252,31 +287,38 @@ new Promise((resolve) => { resolve(1); resolve(2); }).then(console.log); // → 
         },
       ],
       keyPoints: [
-        'A promise settles once: fulfilled with a value or rejected with a reason.',
-        'then returns a new promise: return to pass values on, throw to reject.',
-        'A single catch at the end handles a rejection from any earlier step.',
+        'A promise settles once: fulfilled with a value, or rejected with an error.',
+        'then returns a new promise: return to pass a value on, throw to reject.',
+        'One catch at the end handles an error from any earlier step.',
       ],
       source: 'javascript.info — Promise, Promises chaining; MDN Web Docs — Using promises',
     },
     {
       heading: 'async/await',
-      body: `**Intuition:** \`await\` is "pause this recipe until the oven beeps, and let the kitchen do other things meanwhile". It makes async code read like a normal top-to-bottom script, which is why every Playwright test is written with it.
+      body: `**Example:** \`async function getPrice() { return 42; }\`
+
+- \`getPrice()\` gives a **promise**, not \`42\`.
+- \`await getPrice()\` gives \`42\`.
+
+\`await\` means "pause this function until the promise is done". Other code can run in the meantime. It makes async code read like a normal script, top to bottom. That is why every Playwright test uses it.
 
 **Rules:**
 
-- \`async function\` **always returns a promise**. \`return 5\` becomes a promise fulfilled with 5; a \`throw\` becomes a rejected promise.
-- \`await promise\` pauses **only the current async function** until the promise settles, then gives you the value (or throws the rejection reason). The rest of the program keeps running.
-- \`await\` on a non-promise just wraps it (\`await 5\` is 5), still yielding once.
-- You can use \`await\` inside async functions and at the top level of ES modules.
-- Arrow functions can be async too: \`async ({ page }) => { ... }\` is exactly what a Playwright test body is.
+- An \`async\` function **always returns a promise**. \`return 5\` gives a promise of 5. A \`throw\` gives a rejected promise.
+- \`await\` pauses **only the current async function**. The rest of the program keeps running.
+- \`await 5\` (a plain value) just gives \`5\`, but the function still pauses for a moment.
+- You can use \`await\` inside an \`async\` function. You can also use it at the top level of an ES module (a file that uses \`import\`).
+- Arrow functions can be async too. \`async ({ page }) => { ... }\` is exactly what a Playwright test body is.
 
-**Reading the order:** everything before the first \`await\` runs synchronously when you call the function. Everything after it runs later, as a microtask. That is why calling an async function without \`await\` lets the caller continue immediately.
+**What runs when:** when you call an async function, the code before its first \`await\` **runs now**. The code after the \`await\` **runs later**, once the promise is done. So if you call an async function without \`await\`, the caller moves on at once.
 
 | \`.then\` style | async/await style |
 |---|---|
 | \`getUser().then(u => getOrders(u)).then(o => show(o))\` | \`const u = await getUser(); const o = await getOrders(u); show(o);\` |
 | \`.catch(handle)\` | \`try { ... } catch (e) { handle(e) }\` |
-| \`.finally(cleanup)\` | \`finally { cleanup() }\` |`,
+| \`.finally(cleanup)\` | \`finally { cleanup() }\` |
+
+**Why testers care:** every Playwright test is an async function. Each \`await\` makes the test wait for the browser before the next step.`,
       code: [
         {
           language: 'javascript',
@@ -291,13 +333,14 @@ async function login() {
 }
 
 console.log('1: before');
-const p = login();                             // runs until the first await
+const p = login();                             // runs now, until the first await
 console.log('3: after calling login, p is a', p.constructor.name); // → Promise
 p.then((t) => console.log('5: caller sees', t));
 
 // → 1: before
 // → 2: login starts (sync part)
 // → 3: after calling login, p is a Promise
+// → true   (printed by the five() line below, which also runs now)
 // → 4: got token tok-123
 // → 5: caller sees tok-123
 
@@ -307,25 +350,32 @@ console.log(five() instanceof Promise);        // → true`,
       ],
       keyPoints: [
         'async functions always return promises.',
-        'await pauses only the current function; callers continue unless they await too.',
-        'Code before the first await runs synchronously.',
+        'await pauses only the current function. The caller keeps going unless it awaits too.',
+        'Code before the first await runs now.',
       ],
       source: 'javascript.info — Async/await; MDN Web Docs — async function, await',
     },
     {
       heading: 'Async error handling',
-      body: `**Intuition:** a rejected promise is an error that arrives **later**. You can only catch it if someone is still listening when it arrives: an \`await\` inside a \`try\`, or a \`.catch()\` attached to the chain.
+      body: `**Example:** \`try { await Promise.reject(new Error('503')); } catch (e) { console.log('caught', e.message); }\`
+
+- It prints \`caught 503\`.
+- Without the \`await\`, the \`catch\` would never run.
+
+A rejected promise is an error that arrives **later**. You can only catch it if someone is still listening when it arrives. That means an \`await\` inside a \`try\`, or a \`.catch()\` on the promise.
 
 **Rules:**
 
-- \`try { await risky(); } catch (e) { ... }\` catches rejections because \`await\` turns the rejection into a thrown error **at that line**.
-- \`try { risky(); } catch (e) {}\` **without await** catches nothing: the function returns a pending promise, the try block ends, and the rejection happens afterwards.
-- Inside an async function, \`return promise\` from a \`try\` does **not** let that \`try\` catch the rejection; \`return await promise\` does.
-- \`.catch()\` at the end of a chain is the promise-style equivalent.
-- An **unhandled rejection** (nobody awaited it or attached \`.catch\`) crashes Node by default since Node 15. In a Playwright run it can fail an unrelated test or the worker, which is very confusing to debug.
-- \`Promise.all\` rejects with the **first** error; the other promises keep running and their later errors are ignored by \`all\` (attach handlers or use \`allSettled\` if they matter).
+- \`try { await risky(); } catch (e) { ... }\` works. \`await\` turns the rejection into a normal error **at that line**.
+- \`try { risky(); } catch (e) {}\` **without await** catches nothing. The try block ends at once, and the error comes later.
+- Inside a \`try\`, write \`return await promise\`, not \`return promise\`. Only the first one lets that \`catch\` see the error.
+- \`.catch()\` at the end of a chain does the same job in \`.then\` style.
+- A rejection that nobody handles is an **unhandled rejection**. Since Node 15 it crashes Node. In Playwright it can fail a different test, which is very confusing.
+- \`Promise.all\` rejects with the **first** error. The other promises keep running. Their later errors are ignored by \`all\`.
 
-**In tests:** do not catch to hide failures (see the loops/errors topic). Catch to add context, to clean up, or when the error is the expected result: \`await expect(promise).rejects.toThrow('not found')\`.`,
+**In tests:** do not catch errors just to hide them. Catch them to add a clear message, to clean up, or when the error is what you expect: \`await expect(promise).rejects.toThrow('not found')\`.
+
+**Why testers care:** with a missing \`await\` inside \`try\`, a failed setup step looks like a success.`,
       code: [
         {
           language: 'javascript',
@@ -371,28 +421,40 @@ console.log(await returnWithAwait());       // → recovered
       ],
       keyPoints: [
         'try/catch only catches what you await inside it.',
-        'Use return await inside try when that try should handle the rejection.',
-        'Unhandled rejections crash Node and confuse Playwright reports: always await or .catch.',
+        'Inside try, write return await, so that try can catch the error.',
+        'Unhandled rejections crash Node and confuse Playwright reports. Always await, or add .catch.',
       ],
       source: 'javascript.info — Error handling with promises; Node.js docs — unhandled rejections',
     },
     {
       heading: 'Promise.all, allSettled, race and any',
-      body: `**Intuition:** you are waiting for several parcels. **all**: "tell me when every parcel arrives; if one is lost, tell me immediately". **allSettled**: "tell me when every parcel has either arrived or been lost, with a report for each". **race**: "tell me about the first parcel that arrives *or* gets lost". **any**: "tell me about the first parcel that actually arrives; only tell me it failed if every one was lost".
+      body: `**Example:** \`const results = await Promise.all([Promise.resolve('login'), Promise.resolve('cart')]);\`
 
-| Combinator | Fulfils when | Rejects when | Result | Testing use |
+- \`results\` is \`['login', 'cart']\`.
+- \`Promise.all\` waits for **all** the promises, and keeps their order.
+
+Imagine you are waiting for several parcels:
+
+- **all:** tell me when every parcel arrives. If one is lost, tell me at once.
+- **allSettled:** tell me when every parcel has arrived or been lost. Give me a report for each one.
+- **race:** tell me about the first parcel that arrives *or* gets lost.
+- **any:** tell me about the first parcel that arrives. Only report a failure if every parcel was lost.
+
+| Method | Succeeds when | Fails when | Result | Testing use |
 |---|---|---|---|---|
-| \`Promise.all\` | all fulfil | the **first** rejection | values in **input order** | create 5 bookings in parallel; wait for click + response |
-| \`Promise.allSettled\` | all settle | never | \`[{status:'fulfilled', value}, {status:'rejected', reason}]\` | health-check several services and report every failure |
-| \`Promise.race\` | first settles (fulfil) | first settles (reject) | that one value/reason | add a timeout to a promise |
-| \`Promise.any\` | first **fulfils** | **all** reject | first value; \`AggregateError\` with \`.errors\` | try mirrors, use the fastest that works |
+| \`Promise.all\` | all succeed | the **first** one fails | values in **input order** | create 5 bookings in parallel; wait for click + response |
+| \`Promise.allSettled\` | all are done | never | \`[{status:'fulfilled', value}, {status:'rejected', reason}]\` | health-check several services and report every failure |
+| \`Promise.race\` | the first one to finish succeeds | the first one to finish fails | that one value or error | add a timeout to a promise |
+| \`Promise.any\` | the first one **succeeds** | **all** fail | first value; \`AggregateError\` with \`.errors\` | try mirrors, use the fastest that works |
 
-**Details interviewers probe:**
+**Details interviewers ask about:**
 
-- Results of \`all\` are in **input** order, not completion order.
-- \`Promise.all([])\` fulfils immediately with \`[]\`; \`Promise.any([])\` rejects with an AggregateError.
-- \`all\` does not cancel the other promises when one rejects; they keep running.
-- Non-promise values in the array are treated as already fulfilled.`,
+- \`all\` gives results in the order you passed them in, not the order they finished.
+- \`Promise.all([])\` succeeds at once with \`[]\`. \`Promise.any([])\` fails with an \`AggregateError\` (one error that holds a list of errors).
+- \`all\` does not stop the other promises when one fails. They keep running.
+- Plain values in the list count as already done.
+
+**Why testers care:** \`Promise.all\` creates test data in parallel. \`allSettled\` reports every broken service, not just the first.`,
       code: [
         {
           language: 'javascript',
@@ -431,31 +493,39 @@ try { await withTimeout(wait(100, 'x'), 20); } catch (e) { console.log(e.message
         },
       ],
       keyPoints: [
-        'all: everything or the first error; results in input order.',
-        'allSettled: never rejects; use it to report every outcome.',
-        'race: first settled (even a rejection); any: first success.',
+        'all: every value, or the first error. Results come in input order.',
+        'allSettled: never fails. Use it to report every result.',
+        'race: the first to finish (even a failure). any: the first success.',
       ],
       source: 'MDN Web Docs — Promise.all, Promise.allSettled, Promise.race, Promise.any; javascript.info — Promise API',
     },
     {
       heading: 'Sequential vs parallel',
-      body: `**Intuition:** making tea and toast. Sequential: boil the kettle, wait, *then* start the toaster. Parallel: start both, then wait for both. Same work, half the waiting, as long as the two jobs do not depend on each other.
+      body: `**Example:**
+
+- \`for (const id of ids) await getUser(id);\` runs the calls **one after another**.
+- \`await Promise.all(ids.map((id) => getUser(id)));\` runs them **at the same time**.
+- With 3 calls of 100 ms each, the first takes about 300 ms. The second takes about 100 ms.
+
+Think of making tea and toast. One after another: boil the kettle, wait, *then* start the toaster. At the same time: start both, then wait for both. It is the same work with half the waiting. But it only works when the jobs do not depend on each other.
 
 | Pattern | Code | Total time for 3 × 100 ms calls |
 |---|---|---|
-| Sequential | \`for (const id of ids) results.push(await get(id))\` | ~300 ms |
-| Parallel | \`await Promise.all(ids.map((id) => get(id)))\` | ~100 ms |
+| One after another (sequential) | \`for (const id of ids) results.push(await get(id))\` | ~300 ms |
+| At the same time (parallel) | \`await Promise.all(ids.map((id) => get(id)))\` | ~100 ms |
 | Start early, await later | \`const a = get(1); const b = get(2); await a; await b;\` | ~100 ms (but see the warning) |
 
 **When to choose which:**
 
-- **Sequential** when each step depends on the previous one (log in → get token → create booking with token), when order matters, or when the target cannot handle load (rate limits).
-- **Parallel** for independent work: creating 10 test users through the API, checking 5 endpoints, reading several files.
-- **Limited concurrency** for big batches: process in chunks of, say, 5 with \`Promise.all\` per chunk, so you do not hammer a shared test environment.
+- **One after another** when each step needs the one before it. Example: log in → get a token → create a booking with that token. Also when order matters, or when the server has a rate limit.
+- **At the same time** for independent work. Examples: create 10 test users through the API, or check 5 endpoints.
+- **In small groups** for big batches. Run 5 at a time with \`Promise.all\`, so you do not overload a shared test server.
 
-**Warning about "start early, await later":** if \`a\` rejects while you are still awaiting \`b\`, \`a\`'s rejection has no handler yet and Node may report it as unhandled. \`Promise.all\` attaches handlers to every promise at once, so prefer it.
+**Watch out ("start early, await later"):** \`a\` may fail while you still wait for \`b\`. Then nobody is listening to \`a\` yet. Node may report an unhandled rejection. \`Promise.all\` listens to all of them at once, so prefer it.
 
-**UI actions in Playwright stay sequential.** One page is one user; firing clicks in parallel causes races. Parallelism in Playwright comes from **workers** running different tests, not from \`Promise.all\` over clicks.`,
+**UI steps in Playwright stay one after another.** One page is one user. Clicking in parallel causes races. Playwright runs tests in parallel with **workers** (separate processes), not with \`Promise.all\` over clicks.
+
+**Why testers care:** parallel API setup can make a slow test suite several times faster.`,
       code: [
         {
           language: 'javascript',
@@ -487,27 +557,34 @@ console.log('chunked', Math.round((Date.now() - t) / 100) * 100, 'ms');     // �
         },
       ],
       keyPoints: [
-        'await in a loop = sequential; Promise.all over map = parallel.',
-        'Parallelise only independent work; respect rate limits with chunks.',
-        'In Playwright, keep UI steps sequential; scale with workers instead.',
+        'await in a loop = one after another. Promise.all over map = all at the same time.',
+        'Run together only independent work. Use small groups to respect rate limits.',
+        'In Playwright, keep UI steps one after another. Use workers for parallel tests.',
       ],
       source: 'javascript.info — Async/await, Promise API; MDN Web Docs — Promise.all',
     },
     {
       heading: 'Common async mistakes: missing await, forEach + async, floating promises',
-      body: `**Intuition:** an un-awaited promise is a colleague you sent on an errand and then forgot about. If they fail, nobody hears about it. If you leave the building (the test ends), their errand is cut short.
+      body: `**Example:** \`[30, 10].forEach(async (ms) => { await sleep(ms); console.log(ms); }); console.log('done');\`
 
-**Mistake 1: missing \`await\`.** \`page.getByRole('button', { name: 'Login' }).click();\` without await starts the click and moves on. The next line may run before the click, and if it is the last line, the test **ends**, Playwright closes the page, and the click fails with "Target page, context or browser has been closed", sometimes attributed to the wrong place, sometimes not at all. An un-awaited \`expect(locator).toHaveText(...)\` may never get the chance to fail: the test **passes falsely**.
+- It prints \`done\` first, then \`10\`, then \`30\`.
+- \`forEach\` did not wait for the async functions. (\`sleep(ms)\` waits \`ms\` milliseconds.)
 
-**Mistake 2: \`forEach\` with an async callback.** \`forEach\` ignores the promises its callback returns. All callbacks start, \`forEach\` returns immediately, and nothing waits for them. Use \`for...of\` + \`await\` (sequential) or \`await Promise.all(arr.map(async ...))\` (parallel). The same applies to \`map\` without \`Promise.all\`: you get an array of pending promises.
+A promise nobody waits for is like a colleague you sent on an errand and then forgot. If they fail, nobody hears about it. If you leave the building (the test ends), the errand is cut short.
 
-**Mistake 3: floating promises in helpers.** A helper that calls an async function without returning or awaiting it hides the work from its caller, so even an \`await helper()\` does not wait.
+**Mistake 1: missing \`await\`.** \`page.getByRole('button', { name: 'Login' }).click();\` without \`await\` starts the click and moves on. If it is the last line, the test **ends** and Playwright closes the page. Then the click fails with "Target page, context or browser has been closed". The error may point to the wrong place, or not show at all. An un-awaited \`expect(locator).toHaveText(...)\` may never get the chance to fail. The test **passes when it should fail**.
 
-**Mistake 4: async callbacks in \`filter\`/\`find\`/\`some\`.** An async predicate returns a promise, which is truthy, so \`filter\` keeps everything.
+**Mistake 2: \`forEach\` with an async function.** \`forEach\` ignores the promises. All the calls start, \`forEach\` returns at once, and nothing waits. Use \`for...of\` with \`await\` (one after another). Or use \`await Promise.all(arr.map(async ...))\` (at the same time). \`map\` alone has the same problem: you get a list of unfinished promises.
 
-**Mistake 5: \`await\` on synchronous Playwright APIs** (\`await page.locator(...)\`). Harmless but a sign of confusion; linters flag it.
+**Mistake 3: a helper that hides its promise.** If a helper calls an async function without \`return\` or \`await\`, even \`await helper()\` does not wait for that work. A promise that nobody awaits is called a **floating promise**.
 
-**Prevention:** enable \`@typescript-eslint/no-floating-promises\` (recommended by the Playwright docs) and/or \`eslint-plugin-playwright\`'s \`missing-playwright-await\`; use TypeScript; review every Playwright call for \`await\`. Newer Playwright versions may also warn about some un-awaited calls, but do not rely on that.`,
+**Mistake 4: async functions in \`filter\`, \`find\` or \`some\`.** An async function returns a promise. A promise counts as true, so \`filter\` keeps everything.
+
+**Mistake 5: \`await\` on code that is not async**, like \`await page.locator(...)\`. It does no harm, but it shows confusion. Linters flag it.
+
+**Prevention:** turn on the \`@typescript-eslint/no-floating-promises\` lint rule (the Playwright docs recommend it). \`eslint-plugin-playwright\` also has a \`missing-playwright-await\` rule. Use TypeScript. In code review, check every Playwright call for \`await\`.
+
+**Why testers care:** a missing \`await\` is the most common reason a Playwright test passes while the feature is broken.`,
       code: [
         {
           language: 'javascript',
@@ -550,33 +627,40 @@ console.log(kept);                             // → [1, 2, 3]`,
       ],
       keyPoints: [
         'Every promise must be awaited, returned, or given a .catch.',
-        'forEach/filter/find never await async callbacks.',
-        'Turn on no-floating-promises: let the linter find missing awaits.',
+        'forEach, filter and find never wait for async functions.',
+        'Turn on no-floating-promises, so the linter finds missing awaits.',
       ],
       source: 'Playwright docs — Best practices (lint your tests); dev.to Playwright — Catch missing await calls with ESLint; javascript.info — Async/await',
     },
     {
       heading: 'Why every Playwright call is awaited',
-      body: `**Intuition:** your test script and the browser are two separate programs talking over a connection. Every command (\`click\`, \`fill\`, \`goto\`) is a message and a wait for the reply. \`await\` is "wait for the browser to confirm before the next step".
+      body: `**Example:**
+
+- \`const button = page.getByRole('button', { name: 'Login' });\` needs **no** \`await\`. It only describes the button.
+- \`await button.click();\` **needs** \`await\`. It talks to the browser.
+
+Your test script and the browser are two separate programs. They talk over a connection. Every command (\`click\`, \`fill\`, \`goto\`) is a message, and then a wait for the reply. \`await\` means "wait until the browser says it is done, then go to the next step".
 
 **What needs await and what does not:**
 
-| Needs \`await\` (returns a Promise) | No \`await\` (synchronous) |
+| Needs \`await\` (returns a Promise) | No \`await\` (runs at once) |
 |---|---|
-| Actions: \`goto\`, \`click\`, \`fill\`, \`check\`, \`selectOption\`, \`press\` | Creating locators: \`page.locator()\`, \`getByRole()\`, \`getByTestId()\`, \`.filter()\`, \`.nth()\` |
-| Web-first assertions: \`await expect(locator).toBeVisible()\`, \`toHaveText\`, \`toHaveURL\` | Generic assertions on plain values: \`expect(prices.length).toBe(6)\` |
+| Actions: \`goto\`, \`click\`, \`fill\`, \`check\`, \`selectOption\`, \`press\` | Making locators: \`page.locator()\`, \`getByRole()\`, \`getByTestId()\`, \`.filter()\`, \`.nth()\` |
+| Web-first assertions: \`await expect(locator).toBeVisible()\`, \`toHaveText\`, \`toHaveURL\` | Plain checks on normal values: \`expect(prices.length).toBe(6)\` |
 | Reads: \`textContent\`, \`allTextContents\`, \`count\`, \`isVisible\`, \`inputValue\` | \`test.info()\`, building strings and arrays |
 | Waits: \`waitForResponse\`, \`waitForEvent\`, \`waitForURL\` | |
 | API: \`request.get/post\`, \`response.json()\` | |
 
-Locators are **lazy descriptions**: creating one does not touch the browser, so it is synchronous. Using one (acting, asserting, reading) touches the browser, so it is async.
+A locator is only a **description** of where to find something. Making one does not touch the browser, so it needs no \`await\`. Using a locator (click, check, read) does touch the browser, so it needs \`await\`.
 
-**Waiting for something a click triggers:** start the wait **before** the click, otherwise the response or popup may arrive before you begin listening and the wait times out:
+**Waiting for something a click causes:** start the wait **before** the click. Otherwise the response or popup may arrive before you start listening, and the wait times out.
 
-- \`const responsePromise = page.waitForResponse('**/api/cart'); await addButton.click(); const response = await responsePromise;\` (the pattern the Playwright docs use), or
+- \`const responsePromise = page.waitForResponse('**/api/cart'); await addButton.click(); const response = await responsePromise;\` (the pattern in the Playwright docs), or
 - \`const [response] = await Promise.all([page.waitForResponse('**/api/cart'), addButton.click()]);\`
 
-**Do not** replace waits with \`page.waitForTimeout(3000)\` or a home-made \`sleep\`: actions auto-wait for actionability and web-first assertions retry (5 s default for \`expect\`, 30 s per test), so fixed sleeps only add time and flakiness.`,
+**Do not** use \`page.waitForTimeout(3000)\` or your own \`sleep\` as a wait. Actions already wait until the element is ready. Web-first assertions (the \`await expect(locator)...\` checks) retry, for 5 s by default. Each test gets 30 s. Fixed sleeps only add time and flakiness.
+
+**Why testers care:** knowing which calls need \`await\` stops both false passes and "page has been closed" errors.`,
       code: [
         {
           language: 'typescript',
@@ -621,54 +705,61 @@ test('handle a popup', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Locator creation is synchronous; actions, reads and web-first assertions are async.',
-        'Start waitForResponse/waitForEvent before the click that triggers it.',
-        'Never use fixed sleeps; rely on auto-waiting and retrying assertions.',
+        'Making a locator needs no await. Actions, reads and web-first assertions need await.',
+        'Start waitForResponse or waitForEvent before the click that causes it.',
+        'Never use fixed sleeps. Trust auto-waiting and retrying assertions.',
       ],
       source: 'Playwright docs — Writing tests, Auto-waiting, page.waitForResponse, page.waitForEvent, Pages (handling popups)',
     },
     {
       heading: 'Output-ordering puzzles: a method that always works',
-      body: `**Intuition:** these puzzles look like trick questions, but they are mechanical. Simulate the chef: run the synchronous code, write down what goes into each queue, then empty the queues by the rules.
+      body: `**Example:** \`console.log('s'); setTimeout(() => console.log('t'), 0); Promise.resolve().then(() => console.log('p')); console.log('e');\`
 
-**The method (draw three columns: Output, Microtasks, Macrotasks):**
+- Answer: \`s\`, \`e\`, \`p\`, \`t\`.
+- Runs now: \`s\` and \`e\`. Runs after the current code: \`p\`. Runs after a timer: \`t\`.
 
-1. Go through the code top to bottom. Print synchronous \`console.log\`s immediately. Remember that the **Promise executor** and the part of an async function **before its first await** are synchronous.
-2. \`setTimeout\` → append its callback to **Macrotasks**.
-3. \`.then\` on a settled promise, \`queueMicrotask\`, or reaching an \`await\` → append the continuation to **Microtasks**.
-4. When the script ends, run Microtasks **one by one from the front until the queue is empty**, adding new ones to the end as they appear.
-5. Take the **first** macrotask, run it, then drain Microtasks again. Repeat.
+These puzzles look like tricks, but you can solve them step by step. Draw three columns: **Output**, **After current code** (microtasks) and **After a timer** (macrotasks).
+
+**The method:**
+
+1. Read the code from top to bottom. Print every normal \`console.log\` at once. Remember: the function inside \`new Promise(...)\` runs now. So does an async function, up to its first \`await\`.
+2. \`setTimeout\` → add its callback to the **After a timer** column.
+3. \`.then\` on a finished promise, \`queueMicrotask\`, or the code after an \`await\` → add it to the **After current code** column.
+4. When the script ends, run the **After current code** column from the top until it is empty. New jobs go to the bottom.
+5. Take the **first** timer job and run it. Then empty the **After current code** column again. Repeat.
 
 **Patterns to recognise:**
 
 | Pattern | Result |
 |---|---|
-| sync logs vs everything else | sync logs always come first |
+| normal logs vs everything else | normal logs always come first |
 | \`then\` vs \`setTimeout(0)\` | \`then\` first |
-| two chains \`.then(a1).then(a2)\` and \`.then(b1).then(b2)\` | interleave: a1 b1 a2 b2 |
-| \`await\` inside an async function called from the script | the code after \`await\` waits for the script to finish, then runs as a microtask |
-| \`setTimeout\` scheduled inside a \`then\` | goes to the back of the macrotask queue |
-| microtask scheduled inside a \`setTimeout\` | runs right after that timer, before the next timer |
+| two chains \`.then(a1).then(a2)\` and \`.then(b1).then(b2)\` | they take turns: a1 b1 a2 b2 |
+| \`await\` inside an async function called from the script | the code after \`await\` waits for the script to end, then runs before any timer |
+| \`setTimeout\` added inside a \`then\` | goes to the back of the timer line |
+| a \`then\` added inside a \`setTimeout\` | runs right after that timer, before the next timer |
 
-**Exam tip:** say the method aloud while solving. Interviewers care more about the reasoning (queues and their priority) than the final string.`,
+**Exam tip:** say the steps out loud while you solve. Interviewers care more about the reasoning than the final answer.
+
+**Why testers care:** these puzzles are common in SDET interviews. The same reasoning explains many flaky async tests.`,
       code: [
         {
           language: 'javascript',
           title: 'A full puzzle with the trace',
           code: `async function a1() {
   console.log('a1 start');
-  await a2();                 // a2 runs synchronously; the rest of a1 becomes a microtask
+  await a2();                 // a2 runs now; the rest of a1 waits for the current code to finish
   console.log('a1 end');
 }
 async function a2() { console.log('a2'); }
 
 console.log('script start');
-setTimeout(() => console.log('timeout'), 0);   // Macro: [timeout]
-a1();                                          // logs a1 start, a2; Micro: [a1 end]
+setTimeout(() => console.log('timeout'), 0);   // After a timer: [timeout]
+a1();                                          // logs a1 start, a2; After current code: [a1 end]
 new Promise((resolve) => {
-  console.log('executor');                     // sync
+  console.log('executor');                     // runs now
   resolve();
-}).then(() => console.log('then'));            // Micro: [a1 end, then]
+}).then(() => console.log('then'));            // After current code: [a1 end, then]
 console.log('script end');
 
 // → script start
@@ -682,9 +773,9 @@ console.log('script end');
         },
       ],
       keyPoints: [
-        'Track three columns: output, microtasks, macrotasks.',
-        'Drain all microtasks before each macrotask.',
-        'Code before the first await is synchronous; after it, a microtask.',
+        'Track three columns: output, after current code (microtasks), after a timer (macrotasks).',
+        'Run all promise jobs before each timer job.',
+        'Code before the first await runs now; code after it runs after the current code.',
       ],
       source: 'Jake Archibald — Tasks, microtasks, queues and schedules; javascript.info — Event loop',
     },
@@ -694,8 +785,8 @@ console.log('script end');
       id: 'js-async-cc-1',
       title: 'The Playwright test that always passes',
       context:
-        'This checkout test has been green for weeks. A developer then broke the "Add to cart" buttons and it stayed green. In CI it occasionally fails with "Target page, context or browser has been closed" on a different line each time.',
-      task: 'Fix every async problem in `cartTest(page, names)` so the test really checks the cart and fails when it should. Keep the same scenario. The lab uses a tiny fake of Playwright\'s `page` (small delays, no browser) plus two web-first assertions, `expectBadge(page, text)` and `expectCartItems(page, names)`, that retry briefly and reject on mismatch. The tests call `runCartTest(names, brokenButtons)`, which runs your test like Playwright does (the page is closed as soon as the test function returns) and resolves with `{ result, cart }`: `\'passed\'` or `\'failed: <message>\'`, and the cart in click order. With `brokenButtons` the Add to cart buttons do nothing, so your test must fail on the badge check. Press Run to check your fix.',
+        'This checkout test has been green for weeks. Then a developer broke the "Add to cart" buttons, and it stayed green. In CI it sometimes fails with "Target page, context or browser has been closed", on a different line each time.',
+      task: 'Fix every async problem in `cartTest(page, names)`, so the test really checks the cart and fails when it should. Keep the same steps. The lab uses a tiny fake of Playwright\'s `page` (small delays, no browser). It also has two web-first assertions, `expectBadge(page, text)` and `expectCartItems(page, names)`. They retry for a short time and reject if the value is wrong. The tests call `runCartTest(names, brokenButtons)`. It runs your test like Playwright does: the page is closed as soon as the test function returns. It resolves with `{ result, cart }`: `\'passed\'` or `\'failed: <message>\'`, and the cart in click order. With `brokenButtons`, the Add to cart buttons do nothing, so your test must fail on the badge check. Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'cart-test.js',
@@ -780,7 +871,7 @@ async function runCartTest(names, brokenButtons) {
       },
       hints: [
         'Go line by line: which calls return a promise that nobody awaits?',
-        'What does forEach do with the promises its async callback returns? What replaced the missing waiting?',
+        'What does forEach do with the promises its async function returns? What line was hiding the missing waits?',
         'Is isVisible() an assertion? What does the test do if the badge is missing?',
       ],
       solution: {
@@ -875,16 +966,16 @@ async function runCartTest(names, brokenButtons) {
       },
       explanation: `**Fixes:**
 
-1. **\`fill\` without \`await\`** (twice): the login click could run before the fields were filled. Every action returns a promise; await it.
-2. **\`names.forEach(async ...)\`** started both clicks and returned immediately; nothing waited for them, and a failure became an unhandled rejection instead of a test failure. \`for...of\` with \`await\` performs them in order and propagates errors.
-3. **\`waitForTimeout(2000)\`** was papering over the missing waits: slow in the good case, flaky in the bad case. Replaced by a web-first assertion on the cart badge, which retries until it shows "2" (up to the 5 s expect timeout).
+1. **\`fill\` without \`await\`** (twice): the login click could run before the fields were filled. Every action returns a promise, so await it.
+2. **\`names.forEach(async ...)\`** started both clicks and returned at once. Nothing waited for them, and a failure became an unhandled rejection instead of a test failure. \`for...of\` with \`await\` does the clicks in order and passes errors up to the test.
+3. **\`waitForTimeout(2000)\`** was hiding the missing waits: slow when things go well, flaky when they do not. It is replaced by a web-first assertion on the cart badge. That retries until the badge shows "2" (up to the 5 s expect timeout).
 4. **Cart link click without \`await\`.**
-5. **\`expect(locator).toHaveText(...)\` without \`await\`**: the last statement of the test. The test function returned, Playwright tore down the page, and the assertion never got to fail: the false pass. Web-first assertions must be awaited.
-6. **\`isVisible()\` + \`console.log\` is not an assertion**: it returns a boolean immediately (no retry) and the test passes whether the badge exists or not. Use \`await expect(...).toHaveText('2')\` / \`toBeVisible()\`.
+5. **\`expect(locator).toHaveText(...)\` without \`await\`**: the last line of the test. The test function returned, Playwright closed the page, and the assertion never got to fail. That is the false pass. Web-first assertions must be awaited.
+6. **\`isVisible()\` + \`console.log\` is not an assertion.** It returns true or false at once (no retry), and the test passes whether the badge exists or not. Use \`await expect(...).toHaveText('2')\` or \`toBeVisible()\`.
 
 Turning on \`@typescript-eslint/no-floating-promises\` would have flagged findings 1, 4 and 5 automatically.
 
-In the lab, the un-awaited fills make the login click run before the fields are filled, and \`forEach\` lets a slower click finish after a faster one, so the cart order no longer matches the click order.`,
+In the lab, the un-awaited fills make the login click run before the fields are filled. And \`forEach\` lets a slow click finish after a fast one, so the cart order no longer matches the click order.`,
       fnName: 'runCartTest',
       tests: [
         { args: [['Sauce Labs Backpack', 'Sauce Labs Bike Light'], false], expected: { result: 'passed', cart: ['Sauce Labs Backpack', 'Sauce Labs Bike Light'] } },
@@ -904,11 +995,11 @@ In the lab, the un-awaited fills make the login click run before the fields are 
       followUps: [
         {
           q: 'Why did CI show "Target page, context or browser has been closed" on random lines?',
-          a: 'Un-awaited actions were still running when the test function finished. Playwright then closed the context, and whichever pending action was in flight failed with that message. Which one depended on timing, so the line changed between runs. Once every action is awaited, the test cannot finish while work is pending.',
+          a: 'Un-awaited actions were still running when the test function finished. Playwright then closed the browser context, and whichever action was still running failed with that message. Which one depended on timing, so the line changed between runs. Once every action is awaited, the test cannot finish while work is still running.',
         },
         {
           q: 'Could you add both items in parallel with Promise.all?',
-          a: 'Technically yes, but it does not model a real user and the two clicks race with the re-rendering of the inventory page (each button changes to "Remove"). Sequential for...of is clearer and gives a precise failure location. Use Promise.all for independent API setup calls instead.',
+          a: 'Yes, but a real user does not click two things at once, and the page redraws between clicks (each button changes to "Remove"). The clicks would race with that redraw. One-by-one for...of is clearer and shows exactly where a failure happens. Use Promise.all for independent API setup calls instead.',
         },
       ],
     },
@@ -916,8 +1007,8 @@ In the lab, the un-awaited fills make the login click run before the fields are 
       id: 'js-async-cc-2',
       title: 'Slow, fragile test-data seeding',
       context:
-        'A global-setup script creates 20 bookings on Restful Booker before the suite runs. It takes far too long, sometimes crashes Node with an unhandled rejection, and when one booking fails nobody knows which.',
-      task: 'Make `seed(count)` faster without overloading the server (at most 5 requests at a time), report every failure clearly, and remove the async anti-patterns. The lab replaces `fetch` with a fake server (3 ms per request, no network). The tests call `async runSeed(count, failing)`, where the server answers HTTP 500 for the booking indexes in `failing`, and get `{ ids }` (booking ids 1000 + i, in order) or `{ error }` (`\'N bookings failed:\'` followed by one `Booking i failed: HTTP 500` line per failure), plus `requests` (POSTs made by the time `seed` settled) and `maxInFlight` (most requests at the same time). Press Run to check your fix.',
+        'A global-setup script creates 20 bookings on Restful Booker before the tests run. It takes far too long. It sometimes crashes Node with an unhandled rejection. And when one booking fails, nobody knows which one.',
+      task: 'Make `seed(count)` faster without overloading the server (at most 5 requests at a time). Report every failure clearly, and remove the bad async patterns. The lab replaces `fetch` with a fake server (3 ms per request, no network). The tests call `async runSeed(count, failing)`. The server answers HTTP 500 for the booking indexes in `failing`. The result is `{ ids }` (booking ids 1000 + i, in order) or `{ error }` (`\'N bookings failed:\'` and then one `Booking i failed: HTTP 500` line per failure). It also has `requests` (POSTs made by the time `seed` finished) and `maxInFlight` (the most requests running at the same time). Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'seed.js',
@@ -976,9 +1067,9 @@ async function runSeed(count, failing) {
 }`,
       },
       hints: [
-        'What happens to an error thrown inside an async Promise executor? Do you need new Promise at all?',
-        'Are the 20 bookings dependent on each other? How could you run them in groups?',
-        'Which combinator reports every success and failure without stopping at the first?',
+        'What happens to an error thrown inside an async function passed to new Promise(...)? Do you need new Promise at all?',
+        'Do the 20 bookings depend on each other? How could you run them in groups?',
+        'Which Promise method reports every success and failure, without stopping at the first?',
       ],
       solution: {
         language: 'javascript',
@@ -1049,12 +1140,12 @@ async function runSeed(count, failing) {
       },
       explanation: `**Fixes:**
 
-1. **\`new Promise(async (resolve) => ...)\` anti-pattern.** If \`fetch\` or \`res.json()\` throws inside an async executor, the error rejects the executor's own (ignored) promise, the outer promise never settles, and the script hangs or crashes with an unhandled rejection. An \`async function\` already returns a promise and propagates errors.
-2. **Never rejected on HTTP errors.** \`fetch\` only rejects on network failure; a 500 or 418 resolves normally. Check \`res.ok\` and throw a descriptive error.
-3. **20 sequential awaits** = 20 × round-trip time. The bookings are independent, so run them in batches of 5 with \`Promise.all/allSettled\`: about 4 round-trips instead of 20, without flooding a shared demo server.
-4. **\`Promise.allSettled\`** collects every outcome, so one failure does not hide the others and the error lists exactly which bookings failed. (Use \`Promise.all\` instead if you want to stop on the first failure.)
-5. **Floating \`createBooking(99).then(...)\`** was not awaited: \`seed\` returned before it finished, so the count was wrong, and its failure would be unhandled. Removed (or it must be awaited / included in the batch).
-6. **The top-level call had no error handling.** Top-level \`await\` in a module plus \`try/catch\` sets a non-zero exit code so CI fails visibly.`,
+1. **The \`new Promise(async (resolve) => ...)\` pattern is a bug.** If \`fetch\` or \`res.json()\` throws inside that async function, the error goes to a promise nobody watches. The outer promise never finishes, and the script hangs or crashes with an unhandled rejection. An \`async function\` already returns a promise and passes errors on.
+2. **It never failed on HTTP errors.** \`fetch\` only rejects when the network fails; a 500 or 418 resolves normally. Check \`res.ok\` and throw a clear error.
+3. **20 awaits one after another** = 20 × the request time. The bookings do not depend on each other, so run them in groups of 5 with \`Promise.all\` or \`allSettled\`. That is about 4 request times instead of 20, without flooding a shared demo server.
+4. **\`Promise.allSettled\`** collects every result. So one failure does not hide the others, and the error lists exactly which bookings failed. (Use \`Promise.all\` instead if you want to stop at the first failure.)
+5. **The floating \`createBooking(99).then(...)\`** was not awaited. \`seed\` returned before it finished, so the count was wrong, and its failure would be unhandled. It is removed (or it must be awaited, or added to a group).
+6. **The top-level call had no error handling.** Top-level \`await\` in a module plus \`try/catch\` sets a non-zero exit code, so CI fails where everyone can see it.`,
       fnName: 'runSeed',
       tests: [
         { args: [20, []], expected: { ids: [1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019], requests: 20, maxInFlight: 5 } },
@@ -1071,11 +1162,11 @@ async function runSeed(count, failing) {
       followUps: [
         {
           q: 'Why not just Promise.all all 20 at once?',
-          a: 'It would be fastest, but 20 simultaneous POSTs can trigger rate limits or overload a shared test environment, causing failures that have nothing to do with the code under test. Batching (or a small concurrency limit) gives most of the speed with predictable load. On your own dedicated environment, a higher limit is fine.',
+          a: 'It would be fastest. But 20 POSTs at the same moment can hit rate limits or overload a shared test server. That causes failures that have nothing to do with the code you are testing. Groups (or a small limit on requests at once) give most of the speed with a safe load. On your own private server, a higher limit is fine.',
         },
         {
           q: 'How would you add a retry for transient 503 errors?',
-          a: 'Wrap createBooking in a retry helper: loop up to N attempts, return on success, and on failure await a growing delay (for example 200 ms, 400 ms, 800 ms) before trying again; rethrow the last error with { cause } when attempts run out. Only retry transient errors (503, network resets), never 400-level validation errors.',
+          a: 'Wrap createBooking in a retry helper. Loop up to N attempts and return on success. On failure, await a growing wait (for example 200 ms, 400 ms, 800 ms) before trying again. When attempts run out, throw the last error with { cause }. Only retry temporary errors (503, network resets), never 400-level validation errors.',
         },
       ],
     },
@@ -1086,52 +1177,52 @@ async function runSeed(count, failing) {
       difficulty: 'medium',
       question: 'Explain the JavaScript event loop. What is the difference between microtasks and macrotasks? What does this print: `console.log(1); setTimeout(() => console.log(2), 0); Promise.resolve().then(() => console.log(3)); console.log(4);`',
       whatInterviewerLooksFor: [
-        'Single thread + call stack + queues, explained simply',
-        'Correct priority: sync → all microtasks → one macrotask',
-        'Examples of each queue (then/await/queueMicrotask vs setTimeout/I/O/events)',
-        'Correct answer 1 4 3 2 with reasoning, not memorisation',
+        'One thread, the call stack and the waiting lines (queues), explained simply',
+        'Correct order: normal code → all microtasks → one macrotask',
+        'Examples of each (then, await, queueMicrotask vs setTimeout, network, events)',
+        'Correct answer 1 4 3 2, with reasons, not just memory',
       ],
-      modelAnswer: `**Simple picture:** JavaScript has one call stack, so it runs one thing at a time. Slow work (timers, network, browser commands) is handed to the environment. When that work finishes, its callback is queued. The **event loop** decides what runs next whenever the stack is empty.
+      modelAnswer: `**Simple picture:** JavaScript runs one thing at a time. The code running right now sits on the **call stack**. Slow work (timers, network, browser commands) is handed to the environment. When that work is done, its callback waits in a line (a **queue**). The **event loop** picks what runs next whenever the current code has finished.
 
-**Two queues with different priority:**
+**Two waiting lines, with different priority:**
 
-| | Microtasks | Macrotasks (tasks) |
+| | Microtasks (run after the current code finishes) | Macrotasks (run after a timer or event) |
 |---|---|---|
 | Examples | \`.then/.catch/.finally\`, code after \`await\`, \`queueMicrotask\` | \`setTimeout\`, \`setInterval\`, I/O, UI events, \`setImmediate\` (Node) |
-| When they run | after the current task, **all of them**, including newly added ones | **one** per loop turn |
+| When they run | right after the current code, **all of them**, even new ones added meanwhile | **one** per round of the loop |
 
-**The loop:** run the current script/task until the stack is empty → drain all microtasks → (browser may render) → take one macrotask → drain microtasks → repeat.
+**The loop:** run the current code until it ends → run all microtasks → (the browser may redraw the page) → take one macrotask → run all microtasks → repeat.
 
 **The snippet:**
 
-1. \`console.log(1)\` is sync → **1**.
-2. \`setTimeout\` → callback to the macrotask queue.
-3. \`Promise.resolve().then\` → callback to the microtask queue.
+1. \`console.log(1)\` runs now → **1**.
+2. \`setTimeout\` → its callback waits for the timer (macrotask).
+3. \`Promise.resolve().then\` → its callback waits for the current code to finish (microtask).
 4. \`console.log(4)\` → **4**.
-5. Script done → drain microtasks → **3**.
+5. The script is done → run the microtasks → **3**.
 6. Next macrotask → **2**.
 
 **Answer: 1, 4, 3, 2.**
 
-**Why a QA engineer should care:** it explains why \`setTimeout(fn, 0)\` is not "immediately", why code after an un-awaited call runs first, and why a test can finish before a floating promise does. It also helps me read Playwright traces: my test code and the browser are separate, and every \`await\` is a point where other queued work can run.`,
+**Why a QA engineer should care:** it explains why \`setTimeout(fn, 0)\` is not "now". It explains why code after an un-awaited call runs first, and why a test can end before a forgotten promise does. It also helps me read Playwright traces: my test code and the browser are separate, and every \`await\` is a point where other waiting work can run.`,
       followUps: [
         {
           q: 'Where does the code after an await go?',
-          a: 'When an async function hits await, it returns control to the caller. Once the awaited promise settles, the rest of the function is scheduled as a microtask. So in the same tick it runs after the remaining synchronous code but before any setTimeout callback that is already queued.',
+          a: 'When an async function reaches await, it gives control back to the caller. Once the awaited promise is done, the rest of the function becomes a microtask: it runs after the current code finishes. So it runs after the remaining normal code, but before any setTimeout callback that is already waiting.',
         },
         {
           q: 'Can microtasks starve the page?',
-          a: 'Yes. Because the loop drains the microtask queue completely before rendering or running timers, a microtask that keeps scheduling another microtask (for example a recursive promise chain) blocks timers, input and rendering just like an infinite loop. setTimeout-based recursion does not, because each round goes back through the macrotask queue.',
+          a: 'Yes. The loop runs every microtask before it redraws the page or runs a timer. So a microtask that keeps adding another microtask (for example, a promise chain that calls itself) blocks timers, clicks and page updates, just like an endless loop. Repeating with setTimeout does not, because each round waits in the timer line.',
         },
         {
           q: 'Is setTimeout(fn, 0) really 0 ms?',
-          a: 'No. It means "no earlier than 0 ms": the callback still waits for the current task and all microtasks, plus any timers queued earlier. Browsers also clamp nested timers to at least about 4 ms after several levels of nesting. That is why fixed small timeouts are never a reliable synchronisation tool in tests.',
+          a: 'No. It means "not earlier than 0 ms". The callback still waits for the current code, all microtasks, and any timers added earlier. Browsers also make timers inside timers wait at least about 4 ms after a few levels. That is why small fixed timeouts are never a reliable way to wait in tests.',
         },
       ],
       pitfalls: [
-        'Saying setTimeout 0 runs before promises "because 0 is immediate".',
-        'Claiming JavaScript is multi-threaded because the browser does work in parallel.',
-        'Reciting the order without explaining the queues.',
+        'Saying setTimeout 0 runs before promises "because 0 means now".',
+        'Saying JavaScript does many things at once because the browser works in parallel.',
+        'Saying the order without explaining the waiting lines.',
       ],
     },
     {
@@ -1139,12 +1230,12 @@ async function runSeed(count, failing) {
       difficulty: 'easy',
       question: 'What is a Promise? Compare .then chains with async/await and show how errors are handled in each.',
       whatInterviewerLooksFor: [
-        'States pending/fulfilled/rejected and settle-once',
-        'Knows then returns a new promise (return/throw semantics)',
-        'Equivalent async/await with try/catch/finally',
+        'Names pending, fulfilled and rejected, and says a promise settles only once',
+        'Knows then returns a new promise (return passes a value on, throw rejects)',
+        'Writes the same logic with async/await and try/catch/finally',
         'Mentions that async functions return promises',
       ],
-      modelAnswer: `**A promise is an object representing a value that will be available later**, like a tracking number. It starts **pending** and settles exactly once: **fulfilled** with a value or **rejected** with a reason.
+      modelAnswer: `**A promise is an object for a value that will arrive later**, like a parcel tracking number. It starts **pending**. It settles exactly once: **fulfilled** with a value, or **rejected** with an error.
 
 **.then style:**
 
@@ -1154,7 +1245,7 @@ async function runSeed(count, failing) {
       .catch((err) => console.error('setup failed', err))
       .finally(() => console.log('done'));
 
-Each \`.then\` returns a **new** promise. Returning a value passes it on; returning a promise makes the chain wait; throwing (or a rejected promise) skips to the next \`.catch\`. Forgetting \`return\` is the classic bug: the next step gets \`undefined\` and does not wait.
+Each \`.then\` returns a **new** promise. Returning a value passes it on. Returning a promise makes the chain wait for it. Throwing (or a rejected promise) jumps to the next \`.catch\`. Forgetting \`return\` is the classic bug: the next step gets \`undefined\` and does not wait.
 
 **async/await style (same logic):**
 
@@ -1170,23 +1261,23 @@ Each \`.then\` returns a **new** promise. Returning a value passes it on; return
       }
     }
 
-\`await\` unwraps the value or throws the rejection at that line, so ordinary \`try/catch/finally\` works. An \`async\` function itself always returns a promise.
+\`await\` gives you the value, or throws the error at that line. So a normal \`try/catch/finally\` works. An \`async\` function itself always returns a promise.
 
-**Which I use:** async/await for test code, because it reads top to bottom like test steps and is what Playwright uses. I still use promise methods for combinators (\`Promise.all\`) and when a short \`.then\` is clearer, e.g. \`const data = await res.json().catch(() => null)\`.`,
+**Which I use:** async/await for test code. It reads top to bottom like test steps, and Playwright uses it. I still use promise methods like \`Promise.all\`, and a short \`.then\` or \`.catch\` when it is clearer, e.g. \`const data = await res.json().catch(() => null)\`.`,
       followUps: [
         {
           q: 'What happens if you never handle a rejected promise?',
-          a: 'It becomes an unhandled rejection. Node (15+) treats it as an uncaught exception and exits the process with an error; browsers log it in the console. In a Playwright run it can fail the current test, a different test, or the worker, which makes the root cause hard to find. Always await promises or attach .catch.',
+          a: 'It becomes an unhandled rejection. Node (15+) treats it like an uncaught error and stops the process. Browsers log it in the console. In a Playwright run it can fail the current test, a different test, or the whole worker, so the real cause is hard to find. Always await promises, or add .catch.',
         },
         {
           q: 'Is .then(success, failure) the same as .then(success).catch(failure)?',
-          a: 'Not quite. With .then(success, failure), an error thrown inside success is NOT caught by failure, because both are handlers on the same promise. With .then(success).catch(failure), the catch is attached to the promise returned by then, so it catches errors from the original promise and from success. The second form is usually what you want.',
+          a: 'Not quite. With .then(success, failure), an error thrown inside success is NOT caught by failure, because both belong to the same promise. With .then(success).catch(failure), the catch belongs to the new promise that then returns. So it catches errors from the first promise and from success. The second form is usually what you want.',
         },
       ],
       pitfalls: [
         'Thinking a promise can be resolved multiple times.',
         'Forgetting return inside .then.',
-        'Believing await blocks the whole program.',
+        'Thinking await stops the whole program.',
       ],
     },
     {
@@ -1194,40 +1285,40 @@ Each \`.then\` returns a **new** promise. Returning a value passes it on; return
       difficulty: 'medium',
       question: 'Compare Promise.all, Promise.allSettled, Promise.race and Promise.any. Give a test-automation use case for each.',
       whatInterviewerLooksFor: [
-        'Accurate fulfil/reject rules and result shapes',
-        'Input-order results for all; fail-fast semantics',
-        'AggregateError for any; race settles on rejection too',
+        'Correct rules for when each one succeeds or fails, and what it returns',
+        'all keeps input order and fails at the first error',
+        'any fails with an AggregateError; race also finishes on a failure',
         'Practical, specific QA use cases',
       ],
       modelAnswer: `| | Resolves | Rejects | Result |
 |---|---|---|---|
-| **all** | every promise fulfils | first rejection (fail fast) | values in input order |
-| **allSettled** | every promise settles | never | \`{status, value}\` / \`{status, reason}\` per input |
-| **race** | first to settle, if it fulfilled | first to settle, if it rejected | that single outcome |
-| **any** | first to fulfil | only if all reject | first value; \`AggregateError\` with \`.errors\` |
+| **all** | every promise succeeds | at the first failure | values in input order |
+| **allSettled** | every promise is done | never | \`{status, value}\` / \`{status, reason}\` for each |
+| **race** | the first to finish succeeded | the first to finish failed | that one result |
+| **any** | the first one succeeds | only if all fail | first value; \`AggregateError\` with \`.errors\` |
 
 **Use cases:**
 
-- **all:** parallel API setup before a UI test, e.g. create three products and a user, then use all the IDs: \`const [p1, p2, user] = await Promise.all([...])\`. Also the Playwright idiom \`await Promise.all([page.waitForResponse(...), button.click()])\`. If any setup call fails, there is no point continuing, so fail fast is right.
+- **all:** parallel API setup before a UI test, e.g. create three products and a user, then use all the IDs: \`const [p1, p2, user] = await Promise.all([...])\`. Also the Playwright idiom \`await Promise.all([page.waitForResponse(...), button.click()])\`. If any setup call fails, there is no point going on, so stopping at the first error is right.
 - **allSettled:** a smoke "health check" of several services, or cleanup of many records, where I want a report of **every** failure rather than stopping at the first.
-- **race:** wrapping a promise with my own timeout in a Node script: \`Promise.race([task, timeoutReject(10_000)])\`. Remember race also settles on a fast **rejection**.
+- **race:** wrapping a promise with my own timeout in a Node script: \`Promise.race([task, timeoutReject(10_000)])\`. Remember: race also finishes on a fast **failure**.
 - **any:** use the first environment or mirror that responds successfully (e.g. a test-data service with a fallback). It only fails if all fail.
 
-**Details:** \`all\` does not cancel the other promises after a rejection; they keep running. \`Promise.all([])\` resolves to \`[]\` immediately, while \`Promise.any([])\` rejects. Non-promise values are treated as already fulfilled.
+**Details:** \`all\` does not stop the other promises after a failure; they keep running. \`Promise.all([])\` gives \`[]\` at once, while \`Promise.any([])\` fails. Plain values count as already done.
 
-**In Playwright tests** I mostly use \`all\` for response/popup waits and API setup; UI actions on one page stay sequential.`,
+**In Playwright tests** I mostly use \`all\` for response or popup waits and API setup. UI actions on one page stay one after another.`,
       followUps: [
         {
           q: 'Promise.all rejected because one request failed. Do the other requests stop?',
-          a: 'No. Promises are not cancellable by default, so the other requests keep running and may still create data on the server. That matters for cleanup: you might leave orphan test data. Use allSettled to learn about every outcome, or use AbortController with fetch if you need real cancellation.',
+          a: 'No. You cannot cancel a promise by default, so the other requests keep running and may still create data on the server. That matters for cleanup: you might leave test data behind. Use allSettled to learn about every result, or use AbortController with fetch if you really need to cancel.',
         },
         {
           q: 'How would you implement a simple Promise.all yourself?',
-          a: 'Return a new Promise; keep a results array and a counter. For each input (wrapped with Promise.resolve), on fulfilment store the value at its index and increment the counter, resolving when the counter equals the length; on rejection call reject immediately. Handle the empty array by resolving [] straight away. Storing by index is what keeps input order.',
+          a: 'Return a new Promise, with a results array and a counter. For each input (wrapped in Promise.resolve): on success, store the value at its index and add 1 to the counter; when the counter equals the length, resolve. On failure, call reject at once. For an empty array, resolve [] straight away. Storing by index is what keeps the input order.',
         },
       ],
       pitfalls: [
-        'Saying all returns results in completion order.',
+        'Saying all returns results in the order they finished.',
         'Confusing race and any.',
         'Thinking allSettled can reject.',
       ],
@@ -1238,49 +1329,49 @@ Each \`.then\` returns a **new** promise. Returning a value passes it on; return
       question: 'Why does this not wait: `ids.forEach(async (id) => { await deleteBooking(id); }); console.log(\'cleanup done\');`? Fix it two ways.',
       context: 'A widely discussed JavaScript pitfall that shows up in QA automation code reviews and interviews.',
       whatInterviewerLooksFor: [
-        'Explains that forEach ignores returned promises',
-        'Sequential fix with for...of + await',
-        'Parallel fix with Promise.all + map',
+        'Explains that forEach ignores the promises it gets back',
+        'One-after-another fix with for...of + await',
+        'All-at-once fix with Promise.all + map',
         'Discusses error handling and which fix suits which situation',
       ],
-      modelAnswer: `**Why:** \`forEach\` calls the callback for each item and **ignores the return value**. An async callback returns a promise, so \`forEach\` starts every deletion, throws all the promises away and returns immediately. "cleanup done" is logged while deletions are still in flight, and if one fails the error is an **unhandled rejection** that nobody awaited.
+      modelAnswer: `**Why:** \`forEach\` calls the function for each item and **ignores what it returns**. An async function returns a promise. So \`forEach\` starts every deletion, throws all the promises away, and returns at once. "cleanup done" is logged while the deletions are still running. If one fails, the error is an **unhandled rejection** that nobody waited for.
 
-**Fix 1: sequential with for...of**
+**Fix 1: one after another, with for...of**
 
     for (const id of ids) {
       await deleteBooking(id);
     }
     console.log('cleanup done');
 
-Each deletion completes before the next starts. The first failure throws and stops the loop. Time = sum of all calls. Use it when order matters, the server is rate-limited, or each step depends on the previous.
+Each deletion finishes before the next starts. The first failure throws and stops the loop. Time = the sum of all calls. Use it when order matters, when the server has a rate limit, or when each step needs the one before.
 
-**Fix 2: parallel with Promise.all**
+**Fix 2: all at once, with Promise.all**
 
     await Promise.all(ids.map((id) => deleteBooking(id)));
     console.log('cleanup done');
 
-All deletions run at once and we wait for all of them. Time ≈ the slowest call. The first failure rejects \`Promise.all\` (the others keep running).
+All deletions run at the same time, and we wait for all of them. Time ≈ the slowest call. The first failure makes \`Promise.all\` fail (the others keep running).
 
 **For cleanup specifically** I'd often use \`Promise.allSettled\`, so one failed delete does not hide the others, and then report the failures:
 
     const results = await Promise.allSettled(ids.map(deleteBooking));
     const failed = results.filter((r) => r.status === 'rejected');
 
-**Same trap elsewhere:** \`map\` with an async callback returns an array of promises (need \`Promise.all\`); \`filter\`, \`some\`, \`find\` with async predicates treat every promise as truthy. In Playwright, iterate locators with \`for (const row of await rows.all()) { await ... }\`.`,
+**Same trap elsewhere:** \`map\` with an async function returns an array of promises, so you need \`Promise.all\`. \`filter\`, \`some\` and \`find\` with async functions treat every promise as true. In Playwright, loop over locators with \`for (const row of await rows.all()) { await ... }\`.`,
       followUps: [
         {
           q: 'What about for await...of? Is it the same as for...of with await?',
-          a: 'for await...of is for async iterables (like streams) and also awaits each element of an array of promises. With an array of already-started promises (ids.map(deleteBooking)) it awaits them in order, but they all started at once, so it behaves like parallel work consumed sequentially. For readability, prefer for...of + await or Promise.all and use for await...of for real async iterables.',
+          a: 'for await...of is made for async streams of data, and it also awaits each item of an array of promises. With ids.map(deleteBooking), all the deletions already started at once; for await...of only reads the results in order. So the work runs in parallel. For clear code, use for...of + await or Promise.all, and keep for await...of for real async streams.',
         },
         {
           q: 'How would you limit concurrency to 5 at a time?',
-          a: 'Process the array in chunks: for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(deleteBooking)). Each chunk runs in parallel and chunks run one after another. Libraries like p-limit offer a sliding window that keeps exactly five in flight, which is a bit faster when durations vary.',
+          a: 'Work in groups of 5: for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(deleteBooking)). Inside a group the calls run together; the groups run one after another. Libraries like p-limit always keep exactly five running, which is a bit faster when calls take different times.',
         },
       ],
       pitfalls: [
         'Adding await before forEach (forEach returns undefined, so it waits for nothing).',
         'Using Promise.all for UI clicks on one page.',
-        'Ignoring error handling in the parallel version.',
+        'Forgetting error handling in the all-at-once version.',
       ],
     },
     {
@@ -1288,12 +1379,12 @@ All deletions run at once and we wait for all of them. Time ≈ the slowest call
       difficulty: 'hard',
       question: 'A Playwright test passes but a teammate shows that the feature is broken. You find `expect(page.getByText(\'Order placed\')).toBeVisible();` without await on the last line. Explain exactly why it passed and how you would prevent this across the suite.',
       whatInterviewerLooksFor: [
-        'Understands web-first assertions return promises and retry',
-        'Explains the test function finishing before the assertion settles',
+        'Knows web-first assertions return promises and retry',
+        'Explains that the test function ends before the assertion is done',
         'Prevention: lint rule, TypeScript, code review, verifying tests can fail',
-        'Distinguishes sync expect on values from async expect on locators',
+        'Knows expect on plain values needs no await, but expect on locators does',
       ],
-      modelAnswer: `**Why it passed:** \`expect(locator).toBeVisible()\` is a **web-first assertion**. It returns a promise and keeps retrying until the element is visible or the expect timeout (5 s by default) runs out. Without \`await\`, the test function reaches its end immediately and returns. Playwright considers the test done, tears down the page and context, and the pending assertion either never rejects in time to be attributed to the test or fails against a closed page. Result: **green test, broken feature**. Mid-test, the same mistake lets later steps run before the condition holds, causing flakiness instead.
+      modelAnswer: `**Why it passed:** \`expect(locator).toBeVisible()\` is a **web-first assertion**. It returns a promise and keeps retrying until the element is visible, or until the timeout (5 s by default) runs out. Without \`await\`, the test function reaches its end at once and returns. Playwright thinks the test is done and closes the page. The unfinished assertion never gets to fail the test in time. Result: **green test, broken feature**. In the middle of a test, the same mistake lets later steps run too early, which causes flaky tests instead.
 
 **Which expects need await:**
 
@@ -1305,19 +1396,19 @@ All deletions run at once and we wait for all of them. Time ≈ the slowest call
 
 **Prevention across the suite:**
 
-1. **Lint:** \`@typescript-eslint/no-floating-promises\` (recommended in Playwright's best-practices docs) flags any un-awaited promise; \`eslint-plugin-playwright\` has \`missing-playwright-await\` specifically for expects. Run lint in CI and block merges.
+1. **Lint:** \`@typescript-eslint/no-floating-promises\` (recommended in Playwright's best-practices docs) flags any promise that is not awaited. \`eslint-plugin-playwright\` has \`missing-playwright-await\`, made for expects. Run lint in CI and block merges that fail it.
 2. **TypeScript** with type-aware linting, so the rule knows which calls return promises.
-3. **Prove tests can fail:** for each new test, break the condition once (wrong expected text) and confirm it goes red. A test that cannot fail is worse than no test.
-4. **Code review checklist:** every action and web-first assertion awaited; no \`isVisible()\` used as an assertion.
+3. **Prove tests can fail:** for each new test, break the check once (use a wrong expected text) and make sure it goes red. A test that cannot fail is worse than no test.
+4. **Code review checklist:** every action and web-first assertion has \`await\`; \`isVisible()\` is never used as an assertion.
 5. Newer Playwright versions may warn about some un-awaited calls, but the linter is the reliable guard.`,
       followUps: [
         {
           q: 'Why is isVisible() a similar trap even when awaited?',
-          a: 'await locator.isVisible() returns a boolean immediately, without retrying, so it reflects the page at one instant. Used in an if, the test silently takes a different path; used in expect(await x.isVisible()).toBe(true), it fails on slow pages. await expect(locator).toBeVisible() retries until the timeout, which is the correct assertion.',
+          a: 'await locator.isVisible() returns true or false at once, without retrying, so it shows the page at one moment only. Inside an if, the test quietly takes a different path. Inside expect(await x.isVisible()).toBe(true), it fails on slow pages. await expect(locator).toBeVisible() retries until the timeout, which is the correct assertion.',
         },
         {
           q: 'How do you find all existing missing awaits in a large legacy suite?',
-          a: 'Enable the no-floating-promises rule (it needs parserOptions with the TypeScript project for type information), run eslint over the tests folder and fix the reported lines; many editors can then show violations inline. Also search for "expect(page" and "expect(locator" lines not starting with await as a quick first pass.',
+          a: 'Turn on the no-floating-promises rule (it needs parserOptions pointing at the TypeScript project, for type information). Run eslint on the tests folder and fix the lines it reports; many editors then show problems as you type. As a quick first pass, also search for "expect(page" and "expect(locator" lines that do not start with await.',
         },
       ],
       pitfalls: [
@@ -1331,12 +1422,12 @@ All deletions run at once and we wait for all of them. Time ≈ the slowest call
       difficulty: 'hard',
       question: 'You need to assert on the API response that a button click triggers. Why does `await button.click(); const res = await page.waitForResponse(\'**/api/cart\');` time out sometimes, and how do you fix it?',
       whatInterviewerLooksFor: [
-        'Race condition: response can arrive before the listener starts',
-        'Start the wait first, then click, then await',
+        'Timing problem: the response can arrive before the wait starts listening',
+        'Start the wait first, then click, then await the wait',
         'Promise.all alternative and why it works',
-        'Uses a precise URL/predicate and asserts on status/body',
+        'Matches the request precisely and checks the status and body',
       ],
-      modelAnswer: `**The race:** \`waitForResponse\` only sees responses that arrive **after** it starts listening. In the broken version the click is awaited first; by the time the click resolves, a fast API may already have responded. The listener then waits for a response that has already gone by and times out (30 s test timeout, or the action timeout you set). It passes on a slow environment and fails on a fast one: classic flakiness.
+      modelAnswer: `**The timing problem:** \`waitForResponse\` only sees responses that arrive **after** it starts listening. In the broken version, the click is awaited first. By the time the click is done, a fast API may have already answered. The wait then looks for a response that has already gone by, and times out (the 30 s test timeout, or a timeout you set). It passes on a slow server and fails on a fast one: classic flakiness.
 
 **Fix 1 (the pattern in the Playwright docs): create the promise first, await it later.**
 
@@ -1348,7 +1439,7 @@ All deletions run at once and we wait for all of them. Time ≈ the slowest call
     expect(response.status()).toBe(201);
     expect(await response.json()).toMatchObject({ items: 1 });
 
-Calling \`waitForResponse\` without \`await\` starts listening immediately and gives back a promise; the click then triggers the request; finally we await the already-listening promise.
+Calling \`waitForResponse\` without \`await\` starts listening at once and gives back a promise. The click then sends the request. Finally we await the promise that was already listening.
 
 **Fix 2: Promise.all.**
 
@@ -1357,34 +1448,34 @@ Calling \`waitForResponse\` without \`await\` starts listening immediately and g
       page.getByRole('button', { name: 'Add to cart' }).click(),
     ]);
 
-Both start in the same tick, so the listener is active before the request can complete.
+Both start at the same moment, so the wait is listening before the request can finish.
 
-**Good habits:** match precisely (URL **and** method, maybe \`r.ok()\`) so an unrelated request does not satisfy the wait; assert the response **and** the UI result (web-first) because users see the UI; the same pattern applies to \`waitForEvent('popup')\`, \`waitForEvent('download')\` and \`waitForURL\`.`,
+**Good habits:** match precisely (URL **and** method, maybe \`r.ok()\`), so another request does not end the wait. Check the response **and** the result on the page, because users see the page. The same pattern works for \`waitForEvent('popup')\`, \`waitForEvent('download')\` and \`waitForURL\`.`,
       followUps: [
         {
           q: 'When would you mock the response instead of waiting for it?',
-          a: 'When the test is about the UI behaviour, not the backend: error states (500, timeouts), empty lists or very large data. page.route can fulfil the request with fixed JSON so the test is fast and deterministic. Keep a smaller set of end-to-end tests that hit the real API to cover integration.',
+          a: 'When the test is about how the page behaves, not about the server: error states (500, timeouts), empty lists or very large data. page.route can answer the request with fixed JSON, so the test is fast and gives the same result every time. Keep a smaller set of end-to-end tests that call the real API.',
         },
         {
           q: 'Is the first fix safe if the click throws?',
-          a: 'If the click fails, the test fails at the click line, and the pending responsePromise is left behind; Playwright cleans it up when the page closes, so it does not hide the failure. Promise.all handles both promises together, which some teams prefer for that reason. Either pattern is acceptable; the key is that listening starts before the action.',
+          a: 'If the click fails, the test fails at the click line. The unfinished responsePromise is left behind, and Playwright cleans it up when the page closes, so it does not hide the failure. Promise.all handles both promises together, which some teams prefer. Either pattern is fine; the key is that listening starts before the action.',
         },
       ],
       pitfalls: [
         'Adding waitForTimeout before waitForResponse.',
-        'Using a URL glob that also matches other requests.',
-        'Asserting only the network response, never the UI.',
+        'Using a URL pattern that also matches other requests.',
+        'Checking only the network response, never the page.',
       ],
     },
     {
       id: 'js-async-iq-07',
       difficulty: 'hard',
-      question: 'Write an async utility that retries an operation with exponential backoff. When would you use it in test code, and when would you use Playwright\'s built-in retrying instead?',
+      question: 'Write an async helper that retries an operation, waiting longer after each failure (exponential backoff). When would you use it in test code, and when would you use Playwright\'s built-in retrying instead?',
       whatInterviewerLooksFor: [
-        'Correct loop with await, try/catch and growing delay',
-        'Rethrows the last error with context after the final attempt',
-        'Retries only transient errors',
-        'Knows expect.poll / toPass / web-first assertions cover UI waiting',
+        'A correct loop with await, try/catch and a growing wait',
+        'Throws the last error, with context, after the final attempt',
+        'Retries only temporary errors',
+        'Knows expect.poll, toPass and web-first assertions already handle UI waiting',
       ],
       modelAnswer: `**The utility:**
 
@@ -1408,30 +1499,30 @@ Both start in the same tick, so the listener is active before the request can co
       isRetryable: (e) => e.status === 503 || e.code === 'ECONNRESET',
     });
 
-Points to say aloud: \`return await\` inside \`try\` (otherwise rejections skip the catch); the delay doubles; only **transient** errors are retried (a 400 validation error will fail every time); the final error keeps the original as \`cause\`. Production versions add **jitter** (a random part of the delay) to avoid many clients retrying in lockstep.
+Points to say out loud: use \`return await\` inside \`try\` (otherwise errors skip the catch). The wait doubles each time. Only **temporary** errors are retried; a 400 validation error will fail every time. The final error keeps the original one as \`cause\`. Real-world versions add **jitter** (a small random extra wait), so many clients do not all retry at the same moment.
 
-**When I use it:** API setup and teardown against a shaky shared environment, global setup scripts, polling a back-office job outside the browser.
+**When I use it:** API setup and cleanup against a shaky shared test server, global setup scripts, and checking a background job outside the browser.
 
 **When I use Playwright instead:**
 
 - Waiting for UI state: web-first assertions already retry (\`await expect(locator).toHaveText(...)\`).
 - Polling a value: \`await expect.poll(async () => (await request.get(url)).status(), { timeout: 30_000 }).toBe(200)\`.
 - Retrying a block of steps until it passes: \`await expect(async () => { ... }).toPass({ timeout: 15_000 })\`.
-- Whole-test retries for flakiness: the \`retries\` config, which also labels the test "flaky" so problems stay visible.
+- Re-running a whole flaky test: the \`retries\` config. It also marks the test "flaky", so problems stay visible.
 
-**Warning:** retries can hide real bugs. If an operation needs retries regularly, log it and raise it with the team instead of quietly retrying forever.`,
+**Warning:** retries can hide real bugs. If an operation needs retries often, log it and tell the team. Do not quietly retry forever.`,
       followUps: [
         {
           q: 'Why add jitter to the backoff?',
-          a: 'If many test workers fail at the same moment (say the service restarts), pure exponential backoff makes them all retry at exactly 200, 400, 800 ms, hitting the recovering service in synchronized waves. Random jitter, for example sleep(random(0, base * 2^i)), spreads the retries out. In a small test suite it matters less, but mentioning it shows you understand the pattern.',
+          a: 'If many test workers fail at the same moment (say the service restarts), plain backoff makes them all retry at exactly 200, 400 and 800 ms. They hit the recovering service in waves, all together. A random extra wait, for example sleep(random(0, base * 2^i)), spreads the retries out. In a small suite it matters less, but mentioning it shows you understand the idea.',
         },
         {
           q: 'How is test.retries different from your retry helper?',
-          a: 'test.retries re-runs the entire test from scratch in a fresh context and marks the test as flaky if a retry passes, which keeps flakiness visible in reports. A retry helper repeats one operation inside a single test run and hides the transient failure. Use the helper for known-transient infrastructure calls, and config retries as a CI safety net, not as a fix.',
+          a: 'test.retries runs the whole test again from the start, in a fresh browser context. If a retry passes, it marks the test as flaky, so the problem stays visible in reports. A retry helper repeats one operation inside one test run and hides the temporary failure. Use the helper for calls you know are sometimes shaky, and config retries as a CI safety net, not as a fix.',
         },
       ],
       pitfalls: [
-        'Retrying every error, including 4xx validation errors.',
+        'Retrying every error, even 4xx validation errors.',
         'Using return without await inside try.',
         'Wrapping UI assertions in a custom retry loop with sleeps.',
       ],
@@ -1441,14 +1532,14 @@ Points to say aloud: \`return await\` inside \`try\` (otherwise rejections skip 
       difficulty: 'expert',
       question: 'Predict the output and explain each step: an async function a1 logs "a1 start", awaits a2 (which logs "a2"), then logs "a1 end". The script logs "script start", schedules setTimeout("timeout"), calls a1(), creates a new Promise whose executor logs "executor" and resolves, attaches .then("then"), and logs "script end".',
       whatInterviewerLooksFor: [
-        'Knows the async function body runs synchronously until its first await',
-        'Knows the Promise executor is synchronous',
-        'Orders microtasks by the time they were queued',
+        'Knows an async function body runs now, up to its first await',
+        'Knows the function inside new Promise(...) runs now',
+        'Runs microtasks in the order they were added',
         'Places the timer last and explains why',
       ],
       modelAnswer: `**Answer:** script start, a1 start, a2, executor, script end, a1 end, then, timeout.
 
-**Trace (Output | Microtasks | Macrotasks):**
+**Trace (Output | After current code = microtasks | After a timer = macrotasks):**
 
 | Step | Output | Micro queue | Macro queue |
 |---|---|---|---|
@@ -1460,32 +1551,32 @@ Points to say aloud: \`return await\` inside \`try\` (otherwise rejections skip 
 | new Promise: executor runs now | executor | a1 end | timeout |
 | resolve() + .then → handler queued | | a1 end, then | timeout |
 | log "script end" | script end | a1 end, then | timeout |
-| stack empty → drain micro | a1 end, then | | timeout |
+| script done → run all micro | a1 end, then | | timeout |
 | next macrotask | timeout | | |
 
 **Key ideas:**
 
-1. Calling an async function runs its body **synchronously up to the first await**, so "a1 start" and "a2" print before anything else in the script that follows.
-2. \`await\` suspends a1 and queues its continuation as a microtask once the awaited promise is fulfilled (a2's promise already is).
-3. The \`new Promise\` **executor is synchronous**; only \`.then\` is deferred.
-4. Microtasks run in the order they were queued: "a1 end" was queued before "then".
-5. The timer is a macrotask, so it runs after all microtasks, despite its 0 ms delay.
+1. Calling an async function runs its body **now, up to the first await**. So "a1 start" and "a2" print before the rest of the script.
+2. \`await\` pauses a1. The rest of a1 becomes a microtask once the awaited promise is fulfilled (a2's promise already is).
+3. The function inside \`new Promise\` **runs now**. Only \`.then\` waits.
+4. Microtasks run in the order they were added: "a1 end" was added before "then".
+5. The timer is a macrotask, so it runs after all microtasks, even with a 0 ms delay.
 
-**Why this matters in test code:** when a test calls an async helper without await, the helper's first part runs immediately and the rest runs later, after the test has moved on. That is exactly the shape of a floating-promise bug.`,
+**Why this matters in test code:** when a test calls an async helper without await, the first part of the helper runs now. The rest runs later, after the test has moved on. That is exactly how a forgotten-await bug looks.`,
       followUps: [
         {
           q: 'What if a2 itself awaited something before logging?',
-          a: 'Suppose a2 is async () => { await null; console.log("a2"); }. Then calling a2 queues a2\'s continuation first, a1 awaits a2\'s still-pending promise, the executor and "script end" print, then microtasks run: "a2", which fulfils a2\'s promise and queues "a1 end" behind "then". So the output becomes script start, a1 start, executor, script end, a2, then, a1 end, timeout.',
+          a: 'Suppose a2 is async () => { await null; console.log("a2"); }. Calling a2 now adds the rest of a2 as a microtask first. a1 then waits for a2\'s unfinished promise. "executor" and "script end" print. Then the microtasks run: "a2" prints, which finishes a2\'s promise and adds "a1 end" behind "then". So the output becomes script start, a1 start, executor, script end, a2, then, a1 end, timeout.',
         },
         {
           q: 'Would the output change in Node vs the browser?',
-          a: 'Not for this snippet: both implement promise jobs as microtasks drained before the next macrotask. Differences appear with Node-specific APIs like process.nextTick (which runs before promise microtasks) and setImmediate vs setTimeout(0) ordering in the main module, which can vary. Browser and Node agree on the then/await/setTimeout rules used here.',
+          a: 'Not for this snippet. Both run all promise jobs (microtasks) before the next timer (macrotask). Differences appear only with Node-only functions: process.nextTick runs even before promise jobs, and the order of setImmediate vs setTimeout(0) in the main file can vary. Browser and Node agree on the then/await/setTimeout rules used here.',
         },
       ],
       pitfalls: [
         'Putting "a1 start" after "script end".',
-        'Thinking the Promise executor is asynchronous.',
-        'Placing "timeout" before the microtasks.',
+        'Thinking the function inside new Promise(...) runs later.',
+        'Putting "timeout" before the microtasks.',
       ],
     },
   ],
@@ -1495,25 +1586,25 @@ Points to say aloud: \`return await\` inside \`try\` (otherwise rejections skip 
       question:
         'Predict the output line by line: `console.log(\'A\'); setTimeout(() => console.log(\'B\'), 0); Promise.resolve().then(() => console.log(\'C\')); queueMicrotask(() => console.log(\'D\')); console.log(\'E\');`',
       assumptions: [
-        'Synchronous code runs first, top to bottom.',
-        'Promise reactions and queueMicrotask callbacks are microtasks, queued in call order.',
-        'setTimeout callbacks are macrotasks, run after all microtasks.',
+        'Normal code runs first, top to bottom.',
+        '.then and queueMicrotask callbacks run after the current code finishes (microtasks), in the order they were added.',
+        'setTimeout callbacks run after a timer (macrotasks), only after all microtasks.',
       ],
       steps: [
-        { label: 'Line 1', calc: 'sync → output: A' },
-        { label: 'Line 2', calc: 'setTimeout → Macro: [B]' },
-        { label: 'Line 3', calc: 'then on a resolved promise → Micro: [C]' },
-        { label: 'Line 4', calc: 'queueMicrotask → Micro: [C, D]' },
-        { label: 'Line 5', calc: 'sync → output: A E' },
-        { label: 'Drain microtasks', calc: 'output: A E C D' },
-        { label: 'Next macrotask', calc: 'output: A E C D B' },
+        { label: 'Line 1', calc: 'runs now → output: A' },
+        { label: 'Line 2', calc: 'setTimeout → After a timer: [B]' },
+        { label: 'Line 3', calc: 'then on a finished promise → After current code: [C]' },
+        { label: 'Line 4', calc: 'queueMicrotask → After current code: [C, D]' },
+        { label: 'Line 5', calc: 'runs now → output: A E' },
+        { label: 'Run all microtasks', calc: 'output: A E C D' },
+        { label: 'Next timer (macrotask)', calc: 'output: A E C D B' },
       ],
       answer: '`A`, `E`, `C`, `D`, `B`',
-      insight: 'Three columns (output, micro, macro) solve every ordering puzzle. Microtasks keep FIFO order among themselves, and the 0 ms timer still waits for all of them.',
+      insight: 'Three columns (output, after current code, after a timer) solve every ordering puzzle. Microtasks run in the order they were added, and the 0 ms timer still waits for all of them.',
       followUps: [
         {
           q: 'What if the then callback itself scheduled setTimeout(() => console.log("F"), 0)?',
-          a: 'When C runs it adds F to the macrotask queue behind B. After D, the loop takes B, drains microtasks (none), then takes F. Output: A E C D B F. A timer scheduled later goes to the back of the line even with the same 0 ms delay.',
+          a: 'When C runs, it adds F to the timer line, behind B. After D, the loop takes B, runs any microtasks (none), then takes F. Output: A E C D B F. A timer added later goes to the back of the line, even with the same 0 ms delay.',
         },
       ],
     },
@@ -1522,47 +1613,47 @@ Points to say aloud: \`return await\` inside \`try\` (otherwise rejections skip 
       question:
         'A timer callback schedules its own microtask. Trace the order of five labels: two zero-delay timers are registered (the first logs t1 and queues a promise reaction that logs m-in-t1; the second logs t2), then a resolved-promise reaction logs m1 and registers a third zero-delay timer that logs t3.',
       assumptions: [
-        'After every macrotask, all microtasks are drained before the next macrotask.',
-        'Timers with equal delay run in the order they were scheduled.',
+        'After every timer job (macrotask), all microtasks run before the next timer job.',
+        'Timers with the same delay run in the order they were added.',
       ],
       steps: [
-        { label: 'Script', calc: 'Macro: [t1, t2]; Micro: [m1]; no sync output' },
-        { label: 'Drain micro', calc: 'm1 runs → output m1; schedules t3 → Macro: [t1, t2, t3]' },
-        { label: 'Macro t1', calc: 'output t1; queues m-in-t1 → Micro: [m-in-t1]' },
-        { label: 'Drain micro', calc: 'output m-in-t1 (before t2!)' },
-        { label: 'Macro t2', calc: 'output t2' },
-        { label: 'Macro t3', calc: 'output t3' },
+        { label: 'Script', calc: 'After a timer: [t1, t2]; After current code: [m1]; nothing prints yet' },
+        { label: 'Run micro', calc: 'm1 runs → output m1; adds t3 → After a timer: [t1, t2, t3]' },
+        { label: 'Timer t1', calc: 'output t1; adds m-in-t1 → After current code: [m-in-t1]' },
+        { label: 'Run micro', calc: 'output m-in-t1 (before t2!)' },
+        { label: 'Timer t2', calc: 'output t2' },
+        { label: 'Timer t3', calc: 'output t3' },
       ],
       answer: '`m1`, `t1`, `m-in-t1`, `t2`, `t3`',
-      insight: 'A microtask queued inside a timer callback runs immediately after that timer, before the next timer. "One macrotask, then all microtasks" is the whole rule.',
+      insight: 'A microtask added inside a timer callback runs right after that timer, before the next timer. "One timer job, then all microtasks" is the whole rule.',
       followUps: [
         {
           q: 'Which would print first if t2 were scheduled with 10 ms and t3 with 0 ms from inside m1?',
-          a: 'm1, t1, m-in-t1, then t3 (0 ms, ready almost immediately), then t2 once its 10 ms have elapsed: m1, t1, m-in-t1, t3, t2. Timers run when they are due, in due-time order, so a longer delay can let a later-scheduled timer overtake it.',
+          a: 'm1, t1, m-in-t1, then t3 (0 ms, ready almost at once), then t2 once its 10 ms have passed: m1, t1, m-in-t1, t3, t2. Timers run when their time is up, so a timer added later with a shorter delay can overtake one with a longer delay.',
         },
       ],
     },
     {
       id: 'js-async-drill-3',
       question:
-        'Estimate wall-clock time. A setup script creates 12 users via an API that takes 250 ms per call, then logs in as each user (150 ms per call, needs that user\'s ID). Compare (a) fully sequential, (b) `Promise.all` for all creates, then `Promise.all` for all logins, (c) the same as (b) but in chunks of 4.',
+        'Estimate the real time it takes. A setup script creates 12 users via an API that takes 250 ms per call, then logs in as each user (150 ms per call, needs that user\'s ID). Compare (a) fully sequential, (b) `Promise.all` for all creates, then `Promise.all` for all logins, (c) the same as (b) but in chunks of 4.',
       assumptions: [
-        'Each call takes a fixed time and the server handles concurrent calls without slowing down.',
+        'Each call takes a fixed time, and the server handles calls at the same time without slowing down.',
         'Logins for a user can only start after that user exists.',
-        'Ignore JavaScript overhead (milliseconds).',
+        'Ignore the tiny time JavaScript itself takes (a few milliseconds).',
       ],
       steps: [
-        { label: '(a) sequential', calc: '12 × 250 + 12 × 150 = 3000 + 1800 = 4800 ms' },
-        { label: '(b) parallel phases', calc: 'creates ≈ 250 ms (slowest of 12) + logins ≈ 150 ms = 400 ms' },
+        { label: '(a) one after another', calc: '12 × 250 + 12 × 150 = 3000 + 1800 = 4800 ms' },
+        { label: '(b) all at once, in two phases', calc: 'creates ≈ 250 ms (slowest of 12) + logins ≈ 150 ms = 400 ms' },
         { label: '(c) chunks of 4', calc: '12 / 4 = 3 chunks; creates 3 × 250 = 750 ms, logins 3 × 150 = 450 ms → 1200 ms' },
-        { label: 'Better (c)', calc: 'per chunk do create then login for those 4 users: 3 × (250 + 150) = 1200 ms (same total, earlier first ready user)' },
+        { label: 'Better (c)', calc: 'per group, create then log in those 4 users: 3 × (250 + 150) = 1200 ms (same total, but the first users are ready sooner)' },
       ],
-      answer: '(a) ~4.8 s, (b) ~0.4 s, (c) ~1.2 s. Parallelism gives a 12× speed-up here; chunking trades some speed for a bounded load of at most 4 concurrent requests.',
-      insight: 'Sequential await time is the SUM of the calls; Promise.all time is the MAX. Real servers slow down under load, so the real (b) number is higher than 400 ms. Chunking keeps the shared test environment healthy and your results stable.',
+      answer: '(a) ~4.8 s, (b) ~0.4 s, (c) ~1.2 s. Running calls at the same time is 12× faster here. Groups of 4 give up some speed, but never send more than 4 requests at once.',
+      insight: 'One-after-another time is the SUM of the calls; Promise.all time is the SLOWEST call. Real servers slow down under load, so the real (b) number is higher than 400 ms. Small groups keep the shared test server healthy and your results stable.',
       followUps: [
         {
           q: 'How would the numbers change if the server could only process 2 requests at a time?',
-          a: 'Requests beyond 2 queue on the server, so (b) behaves like chunks of 2: creates 6 × 250 = 1500 ms, logins 6 × 150 = 900 ms, about 2.4 s. Sending more concurrency than the server can handle does not help and may cause timeouts, which is why measuring the environment before choosing a concurrency limit matters.',
+          a: 'Requests beyond 2 wait in line on the server, so (b) acts like groups of 2: creates 6 × 250 = 1500 ms, logins 6 × 150 = 900 ms, about 2.4 s. Sending more requests than the server can handle does not help and may cause timeouts. That is why you measure the server before choosing how many to run at once.',
         },
       ],
     },
@@ -1582,9 +1673,9 @@ console.log(4);`,
       options: ['1 2 3 4', '1 4 2 3', '1 4 3 2', '1 3 4 2'],
       correct: [2],
       explanation:
-        'Synchronous logs run first (1, 4). Then all microtasks run (the promise reaction, 3). Only then does the event loop take the next macrotask, the timer (2). "1 4 2 3" assumes a 0 ms timer runs before promises, which is the most common misconception.',
+        'Normal logs run first (1, 4). Then everything that runs after the current code finishes: the .then callback (3). Only then does the timer run (2). "1 4 2 3" assumes a 0 ms timer runs before promises, which is the most common mistake.',
       followUps: [
-        { q: 'Where would code after an await go in this ordering?', a: 'It is a microtask, so it would run in the same group as the then callback (in the order it was queued), after all synchronous code and before the setTimeout callback.' },
+        { q: 'Where would code after an await go in this ordering?', a: 'It runs after the current code finishes (a microtask), in the same group as the then callback, in the order it was added. So it comes after all normal code and before the setTimeout callback.' },
       ],
     },
     {
@@ -1600,9 +1691,9 @@ console.log(4);`,
       ],
       correct: [1, 2, 4],
       explanation:
-        'Actions (click), web-first assertions on locators (toBeVisible) and reads (allTextContents) talk to the browser and return promises. Creating a locator is synchronous: it is only a description. expect on a plain number is a generic, synchronous assertion.',
+        'Actions (click), web-first assertions on locators (toBeVisible) and reads (allTextContents) talk to the browser and return promises. Making a locator does not: it is only a description. expect on a plain number is a normal check that finishes at once.',
       followUps: [
-        { q: 'Is it harmful to write await page.locator(...)?', a: 'It does not break anything, because awaiting a non-promise just returns it, but it shows a misunderstanding and adds noise. Linters such as Biome\'s noPlaywrightUselessAwait or eslint-plugin-playwright flag it.' },
+        { q: 'Is it harmful to write await page.locator(...)?', a: 'It does not break anything, because awaiting something that is not a promise just gives it back. But it shows confusion and adds noise. Linters such as Biome\'s noPlaywrightUselessAwait or eslint-plugin-playwright flag it.' },
       ],
     },
     {
@@ -1612,9 +1703,9 @@ console.log(4);`,
       options: ['The number 42', 'A Promise that fulfils with 42', 'undefined until awaited', 'A callback function'],
       correct: [1],
       explanation:
-        'An async function always returns a promise. Returning a value fulfils that promise with the value; throwing rejects it. To get 42 itself, the caller must await the call or use .then.',
+        'An async function always returns a promise. Returning a value fulfils that promise with the value; throwing rejects it. To get 42 itself, the caller must await the call, or use .then.',
       followUps: [
-        { q: 'What does an async function return if it throws?', a: 'It returns a rejected promise instead of throwing synchronously. The caller sees the error only through await (inside try/catch) or .catch, which is why calling it without either produces an unhandled rejection.' },
+        { q: 'What does an async function return if it throws?', a: 'It returns a rejected promise instead of throwing at once. The caller sees the error only through await (inside try/catch) or .catch. That is why calling it with neither gives an unhandled rejection.' },
       ],
     },
     {
@@ -1637,9 +1728,9 @@ run();`,
       options: ['[3, 1, 2]', '[1, 2, 3]', '[]', 'A TypeError'],
       correct: [2],
       explanation:
-        'forEach does not await the promises its async callback returns, so all three waits start and console.log runs immediately with an empty array. Later the pushes happen in completion order ([1, 2, 3]), but nobody logs it. [3, 1, 2] is what a for...of + await loop would produce.',
+        'forEach does not wait for the promises its async function returns. All three waits start, and console.log runs at once with an empty array. Later the pushes happen in the order they finish ([1, 2, 3]), but nobody logs that. [3, 1, 2] is what a for...of + await loop would give.',
       followUps: [
-        { q: 'Which change makes it log [3, 1, 2]?', a: 'Use for (const n of [3, 1, 2]) { await wait(n * 10); done.push(n); } before the log. Promise.all over map would also log [3, 1, 2] if you return n from each callback and use the returned array, because Promise.all preserves input order.' },
+        { q: 'Which change makes it log [3, 1, 2]?', a: 'Use for (const n of [3, 1, 2]) { await wait(n * 10); done.push(n); } before the log. Promise.all over map would also give [3, 1, 2] if you return n from each function and use the returned array, because Promise.all keeps the input order.' },
       ],
     },
     {
@@ -1654,9 +1745,9 @@ run();`,
       ],
       correct: [1],
       explanation:
-        'Promise.all runs the independent calls in parallel and rejects on the first failure. The for...of loop is correct but sequential (about three times slower). forEach does not wait at all and hides failures. race settles as soon as ONE call finishes, leaving the others unchecked.',
+        'Promise.all runs the independent calls at the same time and fails at the first failure. The for...of loop is correct but runs one call after another (about three times slower). forEach does not wait at all and hides failures. race finishes as soon as ONE call finishes, and leaves the others unchecked.',
       followUps: [
-        { q: 'What if you need a report of every failure instead of stopping at the first?', a: 'Use Promise.allSettled and then filter the results with status "rejected". It never rejects, so you see every outcome and can fail with a message listing all the failed users.' },
+        { q: 'What if you need a report of every failure instead of stopping at the first?', a: 'Use Promise.allSettled, then keep the results with status "rejected". allSettled never fails, so you see every result. Then fail with one message that lists all the failed users.' },
       ],
     },
     {
@@ -1671,9 +1762,9 @@ run();`,
       ],
       correct: [0, 2, 3],
       explanation:
-        'all keeps input order regardless of completion order. race adopts the outcome of the first promise to settle, success or failure. any ignores rejections until one fulfils and only rejects (with AggregateError.errors) when all fail. allSettled never rejects; it reports each outcome.',
+        'all keeps the input order, whatever order the promises finish in. race takes the result of the first promise to finish, success or failure. any ignores failures until one succeeds, and only fails (with AggregateError.errors) when all fail. allSettled never fails; it reports each result.',
       followUps: [
-        { q: 'What does Promise.all([]) return?', a: 'A promise that fulfils immediately with an empty array. In a test that builds the array from scraped data, that means "nothing to check" silently passes, so guard the length first.' },
+        { q: 'What does Promise.all([]) return?', a: 'A promise that fulfils at once with an empty array. In a test that builds the array from page data, "nothing to check" then quietly passes. So check the length first.' },
       ],
     },
     {
@@ -1698,9 +1789,9 @@ run();`,
       ],
       correct: [1],
       explanation:
-        'Without await the try block finishes as soon as createBooking returns its pending promise, so the catch can never see the later rejection. setup resolves successfully, and the rejected promise has no handler: an unhandled rejection that can crash Node or fail an unrelated test. Adding await makes the catch work.',
+        'Without await, the try block ends as soon as createBooking returns its unfinished promise. So the catch can never see the error that comes later. setup succeeds, and the rejected promise has no handler: an unhandled rejection that can crash Node or fail a different test. Adding await makes the catch work.',
       followUps: [
-        { q: 'What is the fix if setup should fail when the API fails?', a: 'Simply await createBooking() without try/catch, or catch, add context and rethrow: catch (e) { throw new Error("setup failed", { cause: e }); }. Logging and continuing would hide the failure.' },
+        { q: 'What is the fix if setup should fail when the API fails?', a: 'Simply await createBooking() without try/catch. Or catch it, add a clear message and throw again: catch (e) { throw new Error("setup failed", { cause: e }); }. Logging and going on would hide the failure.' },
       ],
     },
     {
@@ -1715,9 +1806,9 @@ Promise.resolve().then(() => console.log('y1')).then(() => console.log('y2'));`,
       options: ['x1 x2 y1 y2', 'x1 y1 x2 y2', 'y1 y2 x1 x2', 'x1 y1 y2 x2'],
       correct: [1],
       explanation:
-        'Only the first then of each chain is queued during the script (x1, y1). Running x1 fulfils its promise and queues x2 at the end of the microtask queue, behind y1. So the chains interleave: x1, y1, x2, y2. "x1 x2 y1 y2" assumes a whole chain runs at once.',
+        'During the script, only the first then of each chain is added to the after-current-code line (x1, y1). Running x1 finishes its promise and adds x2 at the end of that line, behind y1. So the chains take turns: x1, y1, x2, y2. "x1 x2 y1 y2" assumes a whole chain runs at once.',
       followUps: [
-        { q: 'Why does this interleaving matter in real code?', a: 'Two independent async flows advance step by step in turn, so shared state (a global counter, a shared array of test data) can be read and modified by both between steps. That is a race condition even on a single thread, and why tests should not share mutable state.' },
+        { q: 'Why does this interleaving matter in real code?', a: 'Two separate async flows move forward step by step, taking turns. So shared data (a global counter, a shared array of test data) can be read and changed by both between steps. That is a race condition, even with one thread. It is why tests should not share data they change.' },
       ],
     },
     {
@@ -1732,9 +1823,9 @@ Promise.resolve().then(() => console.log('y1')).then(() => console.log('y2'));`,
       ],
       correct: [1, 2],
       explanation:
-        'Both correct options start listening before the click, so even a very fast response is captured. Option 1 starts listening only after the click completes, so the response may already have arrived and the wait times out. The fixed sleep does not capture the response at all and only adds time.',
+        'Both correct options start listening before the click, so even a very fast response is caught. Option 1 starts listening only after the click is done, so the response may have already arrived, and the wait times out. The fixed sleep does not catch the response at all; it only adds time.',
       followUps: [
-        { q: 'How do you avoid matching the wrong request?', a: 'Pass a predicate instead of a glob, for example (r) => r.url().endsWith("/api/save") && r.request().method() === "POST" && r.ok(). This avoids catching an earlier GET or a preflight request on the same URL.' },
+        { q: 'How do you avoid matching the wrong request?', a: 'Pass a function instead of a URL pattern, for example (r) => r.url().endsWith("/api/save") && r.request().method() === "POST" && r.ok(). This avoids catching an earlier GET, or a CORS preflight request, on the same URL.' },
       ],
     },
     {
@@ -1757,9 +1848,9 @@ Promise.resolve().then(() => console.log('y1')).then(() => console.log('y2'));`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'expect(locator).toBeVisible() is async and retries up to the expect timeout. Without await, the test body returns immediately, Playwright treats the test as finished and tears the page down, so the failure is never attributed to the test. The floating-promise lint rule catches it. toBeVisible is not synchronous and does not always pass.',
+        'expect(locator).toBeVisible() is async and retries until the expect timeout. Without await, the test body returns at once. Playwright treats the test as finished and closes the page, so the failure never reaches the test. The no-floating-promises lint rule catches it. toBeVisible is async, and it does not always pass.',
       followUps: [
-        { q: 'How do you check that a new test can actually fail?', a: 'Temporarily break it: change the expected text, or point it at a state where the condition is false, and confirm it goes red with a clear message. If it stays green, the test is not checking what you think.' },
+        { q: 'How do you check that a new test can actually fail?', a: 'Break it on purpose for a moment: change the expected text, or use a state where the check is false. Make sure it goes red with a clear message. If it stays green, the test is not checking what you think.' },
       ],
     },
     {
@@ -1778,9 +1869,9 @@ Promise.resolve().then(() => console.log('m1'));`,
       options: ['m1 t1 t2 m-in-t1', 't1 t2 m1 m-in-t1', 'm1 t1 m-in-t1 t2', 't1 m-in-t1 t2 m1'],
       correct: [2],
       explanation:
-        'm1 is a microtask from the script, so it runs before any timer. After the t1 timer runs, the event loop drains microtasks again, so m-in-t1 runs before the t2 timer. "m1 t1 t2 m-in-t1" wrongly assumes all timers run before any newly queued microtask.',
+        'm1 runs after the script finishes (a microtask), so it comes before any timer. After the t1 timer runs, the loop runs all microtasks again, so m-in-t1 comes before the t2 timer. "m1 t1 t2 m-in-t1" wrongly assumes all timers run before any newly added microtask.',
       followUps: [
-        { q: 'What is the general rule this demonstrates?', a: 'After each single macrotask (one timer callback, one event), all microtasks are drained before the next macrotask. Timers never run back to back if microtasks are queued between them.' },
+        { q: 'What is the general rule this demonstrates?', a: 'After each single timer job or event (a macrotask), all microtasks run before the next one. Two timers never run back to back if microtasks were added in between.' },
       ],
     },
     {
@@ -1795,9 +1886,9 @@ Promise.resolve().then(() => console.log('m1'));`,
       ],
       correct: [0, 2],
       explanation:
-        'An async executor inside new Promise hides errors: if fetchToken rejects, the outer promise never settles. filter with an async predicate keeps every item because a Promise is truthy. Promise.all over map is a correct parallel pattern, and awaiting an API call then asserting on the response is ordinary, correct test code.',
+        'An async function inside new Promise(...) hides errors: if fetchToken fails, the outer promise never finishes. filter with an async function keeps every item, because a promise counts as true. Promise.all over map is a correct way to run calls together. Awaiting an API call and then checking the response is normal, correct test code.',
       followUps: [
-        { q: 'How do you correctly filter with an async check?', a: 'First compute the results: const flags = await Promise.all(items.map(isActive)); then filter synchronously: items.filter((_, i) => flags[i]). Or loop with for...of and await, pushing matching items into a new array.' },
+        { q: 'How do you correctly filter with an async check?', a: 'First get all the answers: const flags = await Promise.all(items.map(isActive)); then filter normally: items.filter((_, i) => flags[i]). Or loop with for...of and await, and push matching items into a new array.' },
       ],
     },
     {
@@ -1820,9 +1911,9 @@ b().then(console.log, (e) => console.log('b rejected:', e.message));`,
       ],
       correct: [1],
       explanation:
-        'In a, the rejected promise is returned without being awaited inside try, so the try/catch is already finished when it rejects; a adopts the rejection. In b, return await makes the rejection throw inside try, so the catch returns "caught". This is why "return await" inside try blocks is recommended.',
+        'In a, the rejected promise is returned without await, so the try/catch is already over when it fails. a simply takes on that failure. In b, return await makes the error happen inside try, so the catch returns "caught". That is why "return await" is recommended inside try blocks.',
       followUps: [
-        { q: 'Outside a try block, is return await still useful?', a: 'Functionally the result is the same, but return await keeps the async function in the stack trace, which can make errors easier to trace. Many style guides now prefer return await consistently for that reason; inside try/catch it is required for correct behaviour.' },
+        { q: 'Outside a try block, is return await still useful?', a: 'The result is the same, but return await keeps the async function in the error\'s stack trace, so errors are easier to follow. Many style guides now prefer return await everywhere for that reason. Inside try/catch it is required for correct behaviour.' },
       ],
     },
     {
@@ -1837,9 +1928,9 @@ b().then(console.log, (e) => console.log('b rejected:', e.message));`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Sequential awaits add up (300 + 100 + 200 = 600 ms). Promise.all waits for the slowest (about 300 ms). race settles with the fastest (about 100 ms). Promise.all results follow INPUT order, not finish order, so the third statement is false.',
+        'Awaits one after another add up (300 + 100 + 200 = 600 ms). Promise.all waits for the slowest (about 300 ms). race finishes with the fastest (about 100 ms). Promise.all results follow the INPUT order, not the finish order, so the third statement is false.',
       followUps: [
-        { q: 'Why might the real parallel time be more than 300 ms?', a: 'The server, network or rate limiter may handle concurrent requests more slowly than isolated ones, and Node limits sockets per host in some setups. Estimates assume independent calls; measure in the real environment before tuning concurrency.' },
+        { q: 'Why might the real parallel time be more than 300 ms?', a: 'The server, network or rate limiter may handle many requests at once more slowly than single ones. Some Node setups also limit connections per host. The estimate assumes the calls do not affect each other, so measure on the real server before choosing how many to run at once.' },
       ],
     },
     {
@@ -1862,9 +1953,9 @@ Promise.resolve().then(() => console.log('then'));`,
       options: ['s f1 f2 e then t', 's f1 e f2 then t', 's e f1 f2 then t', 's f1 e then f2 t'],
       correct: [1],
       explanation:
-        'Calling f runs it synchronously until the await, so f1 prints right after s. The rest of f (f2) is queued as a microtask, then e prints. f2 was queued before the then callback, so it runs first; the timer runs last. Option 1 forgets that await always yields, even for null.',
+        'Calling f runs it now, up to the await, so f1 prints right after s. The rest of f (f2) waits until the current code finishes, so e prints next. f2 was added before the then callback, so it runs first. The timer runs last. Option 1 forgets that await always pauses, even for null.',
       followUps: [
-        { q: 'What would change if the caller wrote await f() instead of f()?', a: 'The caller would pause until f finished, so e would print after f2: s, f1, f2, e. The timer and the then callback are then scheduled after that point, giving then before t at the end.' },
+        { q: 'What would change if the caller wrote await f() instead of f()?', a: 'The caller would pause until f finished, so e would print after f2: s, f1, f2, e. The timer and the then callback are added after that point, so then comes before t at the end.' },
       ],
     },
     {
@@ -1874,9 +1965,9 @@ Promise.resolve().then(() => console.log('then'));`,
       options: ['Promise.all', 'Promise.allSettled', 'Promise.race', 'Promise.any'],
       correct: [1],
       explanation:
-        'allSettled waits for every promise and returns a status/value or status/reason object for each, so you can report all healthy and unhealthy services. all stops at the first rejection, race reports only the first to settle, and any reports only the first success.',
+        'allSettled waits for every promise and returns a status/value or status/reason object for each. So you can report all healthy and broken services. all stops at the first failure, race reports only the first to finish, and any reports only the first success.',
       followUps: [
-        { q: 'How would you make the script exit non-zero if any service is down?', a: 'After allSettled, filter the rejected results; if there are any, print them and set process.exitCode = 1 (or throw an Error listing them). CI then marks the step failed while the log still shows every failing service.' },
+        { q: 'How would you make the script exit non-zero if any service is down?', a: 'After allSettled, keep the rejected results. If there are any, print them and set process.exitCode = 1 (or throw an Error that lists them). CI then marks the step as failed, and the log still shows every broken service.' },
       ],
     },
   ],

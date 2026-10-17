@@ -203,7 +203,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
         <div className="card form">
           <label>
             <span>Time limit (minutes)</span>
-            <div className="row gap-s">
+            <div className="row gap-s wrap">
               <input type="number" min={1} max={240} value={minutes} onChange={(e) => setMinutes(Number(e.target.value) || 1)} />
               {[5, 10, 15, 20, 30].map((m) => (
                 <button key={m} type="button" className={`chip ${minutes === m ? 'on' : ''}`} onClick={() => setMinutes(m)}>
@@ -467,7 +467,7 @@ function AttemptAnalysis({ items, missed }: { items: MCQ[]; missed: MCQ[] }) {
   const multiTopic = byTopic.size > 1;
   return (
     <div className="card weak-card">
-      <h2>{missed.length ? 'Where you lost marks' : 'No weak spots in this attempt 🎯'}</h2>
+      <h2>{missed.length ? 'Where you lost marks' : 'No weak spots in this attempt'}</h2>
       <div className="diff-row">
         {levels.map((d) => {
           const qs = items.filter((q) => q.difficulty === d);

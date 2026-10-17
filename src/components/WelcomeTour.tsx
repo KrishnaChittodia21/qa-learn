@@ -105,7 +105,7 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.05 * i, duration: 0.2 }}
                       >
-                        <span className="tour-phase-num">{ph.number}</span>
+                        <span className="tour-phase-num">{String(ph.number).padStart(2, '0')}</span>
                         <span>{ph.title}</span>
                       </motion.li>
                     ))}
@@ -150,7 +150,7 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
                     <li>
                       <Menu size={18} aria-hidden="true" />
                       <span>
-                        <strong>Sidebar</strong>: every topic by phase, with a dot for its status. Hide it with the menu button.
+                        <strong>Top bar &amp; syllabus</strong>: the main pages sit along the top. Beside each lesson, the syllabus lists every topic by phase with a tick box for its status (hide it with the menu button; on small screens both live in the menu).
                       </span>
                     </li>
                     <li>

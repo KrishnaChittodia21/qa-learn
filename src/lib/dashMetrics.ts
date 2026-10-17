@@ -3,7 +3,7 @@ import type { CodingProblem, Difficulty, Topic } from '../types';
 import type { Phase } from '../content/phases';
 import { localDay, type Progress } from './progress';
 import { topicCompletion, topicStatus } from './stats';
-import { accuracyBreakdown, weakTopics, type TopicWeakness } from './weak';
+import { accuracyBreakdown, currentlyWrong, weakTopics, type TopicWeakness } from './weak';
 
 export interface StatusCounts {
   passed: number;
@@ -31,17 +31,28 @@ export interface PhaseProgress {
   /** average topic completion, 0–100 */
   pct: number;
   passed: number;
+  inProgress: number;
+  notStarted: number;
   total: number;
 }
 
-/** completion per phase, in course order; phases without topics are skipped */
+/** completion and topic status mix per phase, in course order; phases without topics are skipped */
 export function phaseProgress(p: Progress, topics: Topic[], phases: Phase[]): PhaseProgress[] {
   return phases
     .map((ph) => {
       const ts = topics.filter((t) => t.phase === ph.id);
       const pct = ts.length ? Math.round(ts.reduce((a, t) => a + topicCompletion(p, t), 0) / ts.length) : 0;
-      const passed = ts.filter((t) => topicStatus(p, t) === 'passed').length;
-      return { id: ph.id, number: ph.number, title: ph.title, pct, passed, total: ts.length };
+      const c = statusCounts(p, ts);
+      return {
+        id: ph.id,
+        number: ph.number,
+        title: ph.title,
+        pct,
+        passed: c.passed,
+        inProgress: c.inProgress,
+        notStarted: c.notStarted,
+        total: ts.length,
+      };
     })
     .filter((x) => x.total > 0);
 }
@@ -96,7 +107,10 @@ export interface Kpis {
 export function kpis(p: Progress, topics: Topic[]): Kpis {
   const scores = examScores(p, topics);
   const { byDifficulty } = accuracyBreakdown(p, topics);
-  const all = Object.values(byDifficulty).reduce((a, x) => ({ seen: a.seen + x.seen, correct: a.correct + x.correct }), { seen: 0, correct: 0 });
+  const all = Object.values(byDifficulty).reduce((a, x) => ({ seen: a.seen + x.seen, correct: a.correct + x.correct }), {
+    seen: 0,
+    correct: 0,
+  });
   const iqIds = new Set(topics.flatMap((t) => t.interviewQuestions.map((q) => q.id)));
   return {
     examsPassed: { done: scores.filter((s) => s.passed).length, total: topics.length },
@@ -119,7 +133,11 @@ export interface DifficultyAccuracy {
 export function difficultyAccuracy(p: Progress, topics: Topic[]): DifficultyAccuracy[] {
   const { byDifficulty } = accuracyBreakdown(p, topics);
   return (['easy', 'medium', 'hard', 'expert'] as Difficulty[])
-    .map((level) => ({ level, ...byDifficulty[level], pct: byDifficulty[level].seen ? Math.round((byDifficulty[level].correct / byDifficulty[level].seen) * 100) : 0 }))
+    .map((level) => ({
+      level,
+      ...byDifficulty[level],
+      pct: byDifficulty[level].seen ? Math.round((byDifficulty[level].correct / byDifficulty[level].seen) * 100) : 0,
+    }))
     .filter((x) => x.seen > 0);
 }
 
@@ -212,4 +230,45 @@ export function weakForChart(p: Progress, topics: Topic[], limit = 6): TopicWeak
     .sort((a, b) => b.w.wrong.length - a.w.wrong.length || a.i - b.i)
     .slice(0, limit)
     .map((x) => x.w);
+}
+
+export interface PracticeFigures {
+  /** Learn sections ticked “Read” (only indices that still exist) */
+  sections: Ratio;
+  /** “Improve This” labs (and the behavioural topic's Answer Lab) marked done */
+  labs: Ratio;
+  /** JavaScript coding problems solved */
+  coding: Ratio;
+  /** Practice Drills worked through */
+  drills: Ratio;
+}
+
+/** practice totals across the course, from real progress */
+export function practiceFigures(p: Progress, topics: Topic[], problems: CodingProblem[]): PracticeFigures {
+  let read = 0;
+  let sections = 0;
+  for (const t of topics) {
+    sections += t.sections.length;
+    read += new Set((p.sections[t.id] ?? []).filter((i) => i >= 0 && i < t.sections.length)).size;
+  }
+  return {
+    sections: { done: read, total: sections },
+    labs: flagged(
+      p.cc,
+      topics.flatMap((t) => t.codeChallenges.map((c) => c.id)),
+    ),
+    coding: flagged(
+      p.code,
+      problems.map((q) => q.id),
+    ),
+    drills: flagged(
+      p.boe,
+      topics.flatMap((t) => t.envelopeQuestions.map((q) => q.id)),
+    ),
+  };
+}
+
+/** exam questions whose latest answer is wrong, across the course (what the mistakes drill asks) */
+export function mistakesToDrill(p: Progress, topics: Topic[]): number {
+  return topics.reduce((n, t) => n + currentlyWrong(p, t).length, 0);
 }

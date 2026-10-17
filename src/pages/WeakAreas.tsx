@@ -85,7 +85,7 @@ export function WeakAreasPage() {
           </Link>
         )}
       </div>
-      {!weak.length && <div className="card info">No weak topics right now. Every question you&apos;ve attempted is currently correct. 🎯</div>}
+      {!weak.length && <div className="card info">No weak topics right now. Every question you&apos;ve attempted is currently correct.</div>}
 
       {weak.map((w) => (
         <article key={w.topic.id} className="card weak-topic-card">

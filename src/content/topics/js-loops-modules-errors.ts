@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 5,
   title: 'Loops, Modules, npm & Error Handling',
   subtitle:
-    'Repeat work with the right loop, split test code into modules, understand package.json and npm, and handle errors with try/catch/finally and custom errors: the plumbing every Playwright project is built on.',
+    'Repeat work with the right loop, split test code into files (modules), understand package.json and npm, and handle errors with try/catch/finally and custom errors. Every Playwright project is built on these basics.',
   estimatedMinutes: 105,
   sources: [
     'javascript.info — Loops: while and for, Iterables, Modules (introduction, export and import), Error handling (try...catch, custom errors)',
@@ -20,40 +20,44 @@ const topic: Topic = {
   ],
   tags: ['loops', 'for-of', 'for-in', 'modules', 'esm', 'commonjs', 'npm', 'package-json', 'try-catch', 'custom-errors', 'debugging', 'dates'],
   cheatSheet: [
-    'for (init; condition; step) when you need the index; `i < arr.length`, never `<=` (off-by-one reads undefined).',
-    'while = "repeat until a condition changes" (unknown count); do...while runs the body at least once. Always make sure the condition can become false.',
-    'for...of → VALUES of iterables (arrays, strings, Sets, Maps, locator.all() results). for...in → KEYS (as strings) of objects; avoid for...in on arrays.',
-    'break exits the loop, continue skips to the next round, labels (`outer:`) break out of nested loops; forEach supports none of these.',
-    'Objects are not iterable: use Object.keys / values / entries, e.g. `for (const [k, v] of Object.entries(obj))`.',
-    'ES modules: `export function x`, `export default class LoginPage`, `import LoginPage, { x } from \'./file\'`. Named imports must match names; default imports can be renamed.',
-    'CommonJS = require / module.exports (old Node default). ESM = import / export (browser + modern Node; .mjs or "type": "module"). Playwright TS tests are written with import.',
-    'package.json: scripts ("test": "playwright test"), dependencies vs devDependencies (@playwright/test is a dev dependency), package-lock.json pins exact versions; CI uses `npm ci`.',
-    'try { risky } catch (err) { handle } finally { always cleanup }. finally runs even after return or throw. Never swallow an error you cannot handle: rethrow it.',
-    'Throw Error objects (not strings) so you get a stack trace; subclass Error for custom errors, set this.name, and pass `{ cause }` to keep the original error.',
-    'Debug: `debugger;` + VS Code JavaScript Debug Terminal, `node --inspect-brk file.js`, console.table for arrays; in Playwright use --debug or page.pause().',
-    'Dates: months are 0-based (0 = January); `toISOString().slice(0, 10)` → "YYYY-MM-DD" in UTC; `Date.now()` makes unique test data; setDate overflow rolls into the next month.',
+    '`for (start; condition; step)` when you need the index. Use `i < arr.length`, never `<=` (that reads one item past the end).',
+    '`while` = "repeat until something changes" (unknown number of rounds). `do...while` runs at least once. Always make sure the loop can stop.',
+    '`for...of` gives VALUES of arrays, strings, Sets, Maps and `locator.all()` results. `for...in` gives KEYS of objects, as strings. Do not use `for...in` on arrays.',
+    '`break` leaves the loop. `continue` skips to the next round. A label (`outer:`) lets you break out of two loops. `forEach` supports none of these.',
+    'Plain objects are not iterable. Use `Object.keys`, `values` or `entries`: `for (const [k, v] of Object.entries(obj))`.',
+    'ES modules: `export function x`, `export default class LoginPage`, `import LoginPage, { x } from \'./file\'`. Named imports must match the name. A default import can use any name.',
+    'CommonJS = `require` / `module.exports` (older Node). ESM = `import` / `export` (browsers and modern Node; `.mjs` or `"type": "module"`). Playwright tests use `import`.',
+    'package.json: `scripts` (`"test": "playwright test"`), dependencies vs devDependencies (`@playwright/test` is a dev dependency). package-lock.json pins exact versions. CI runs `npm ci`.',
+    '`try { risky } catch (err) { handle } finally { always clean up }`. `finally` runs even after `return` or an error. If you cannot handle an error, rethrow it.',
+    'Throw Error objects, not strings, so you get a stack trace. For a custom error, extend `Error`, set `this.name`, and pass `{ cause }` to keep the original error.',
+    'Debug: `debugger;` plus the VS Code JavaScript Debug Terminal, `node --inspect-brk file.js`, `console.table` for arrays. In Playwright, use `--debug` or `page.pause()`.',
+    'Dates: months start at 0 (0 = January). `toISOString().slice(0, 10)` gives "YYYY-MM-DD" in UTC. `Date.now()` makes unique test data. Going past a month end rolls into the next month.',
   ],
   sections: [
     {
       heading: 'The classic for loop',
-      body: `**Intuition:** a loop is a manual tester's "repeat these steps for each row of the test data sheet". Instead of copy-pasting the same code 50 times, you write it once and let the loop run it 50 times.
+      body: `    for (let i = 1; i <= 3; i++) {
+      console.log('Row ' + i);
+    }
+    // → Row 1
+    // → Row 2
+    // → Row 3
 
-**Anatomy of \`for (init; condition; step)\`:**
+A **loop** repeats the same steps. Think of "do these steps for each row of the test data sheet". You write the code once, and the loop runs it many times.
 
-1. **init** runs once (\`let i = 0\`).
-2. **condition** is checked before every round (\`i < 5\`); when it is false the loop stops.
-3. The **body** runs.
-4. **step** runs after each round (\`i++\`), then back to 2.
+\`for (let i = 1; i <= 3; i++)\` has three parts, split by semicolons:
+1. **Start:** \`let i = 1\` runs once, at the beginning.
+2. **Condition:** \`i <= 3\` is checked before each round. When it is false, the loop stops.
+3. **Step:** \`i++\` adds 1 after each round.
 
-Use the classic \`for\` when you need the **index** (row number, "every 3rd item", walking two arrays side by side) or need to count up or down.
+Use this loop when you need the **index** (the position number). For example: "every 3rd item", or counting down.
 
-**Common mistakes:**
+**Common mistakes**
+- **Off by one:** array positions start at 0. So \`i <= arr.length\` reads one item past the end. That item is \`undefined\`, and a sum becomes \`NaN\`. Use \`i < arr.length\`.
+- **\`var\` instead of \`let\`:** with \`var\`, the whole loop shares one \`i\`. Code that runs later, like \`setTimeout\`, sees only the last value. \`let\` gives a fresh \`i\` in each round. Always use \`let\`.
+- **Endless loop:** you forget \`i++\`, so the condition never becomes false. Press Ctrl+C to stop Node.
 
-- **Off-by-one:** \`i <= arr.length\` reads one item past the end (\`undefined\`), which turns a sum into \`NaN\`.
-- **\`var\` instead of \`let\`:** \`var\` has one variable for the whole loop; callbacks created inside (like \`setTimeout\`) all see the final value. \`let\` creates a fresh \`i\` per round. Always use \`let\` (or \`const\` in for...of).
-- **Infinite loops:** forgetting the step (\`i++\`), or changing the wrong variable. In Node, press Ctrl+C to stop.
-
-**Worked example:** generate 5 test users with unique emails and alternating roles, the kind of data a data-driven Playwright test consumes.`,
+**Why testers care:** loops create test data for data-driven tests, like 5 users with unique emails.`,
       code: [
         {
           language: 'javascript',
@@ -80,26 +84,39 @@ for (let i = 0; i <= prices.length; i++) broken += prices[i];
 console.log(broken);                     // → NaN
 
 // Counting down, stepping by 2
-for (let i = 6; i > 0; i -= 2) console.log(i); // → 6, 4, 2`,
+for (let i = 6; i > 0; i -= 2) console.log(i);
+// → 6
+// → 4
+// → 2`,
         },
       ],
       keyPoints: [
-        'Indexing an array: start at 0, stop at i < length.',
-        'Always declare the counter with let, never var.',
-        'Make sure the condition will eventually become false.',
+        'To walk an array: start at 0 and stop at `i < length`.',
+        'Declare the counter with `let`, never `var`.',
+        'Make sure the condition can become false.',
       ],
       source: 'javascript.info — Loops: while and for',
     },
     {
       heading: 'while and do...while',
-      body: `**Intuition:** use \`while\` when you do not know in advance how many rounds you need: "keep pressing *Next* **while** the Next button is enabled", "retry **while** the status is still *pending*, but at most 10 times".
+      body: `    let attempts = 0;
+    let status = 'pending';
+    while (status === 'pending' && attempts < 10) {
+      attempts++;
+      if (attempts === 3) status = 'done';
+    }
+    console.log(status, attempts); // → done 3
 
-- \`while (condition) { body }\` checks first; the body may run **zero** times.
-- \`do { body } while (condition)\` runs the body **at least once**, then checks.
+Use \`while\` when you do not know how many rounds you need. For example: "keep checking while the status is pending".
 
-**Always add a safety limit.** A real system can stay "pending" forever; a loop without a maximum then hangs your test run. A counter (\`attempts < 10\`) or a time limit turns a hang into a clear failure.
+- \`while (condition) { ... }\` checks first. The body may run **zero** times.
+- \`do { ... } while (condition)\` runs the body first, then checks. So it runs **at least once**.
 
-**Playwright note:** do not hand-write polling loops with \`waitForTimeout\` inside Playwright tests. Web-first assertions (\`await expect(locator).toHaveText(...)\`) and \`expect.poll\` / \`expect(...).toPass()\` already retry with timeouts. Plain \`while\` loops are still useful in data scripts and when paging through API results.`,
+**Always add a limit.** A real system can stay "pending" forever. Then a loop without a limit hangs your test run. A counter like \`attempts < 10\` turns a hang into a clear failure.
+
+**Playwright note:** do not write your own waiting loops in Playwright tests. An assertion like \`await expect(locator).toHaveText('Done')\` already retries until it times out. For other checks, use \`expect.poll()\` or \`expect(...).toPass()\`. Plain \`while\` loops are still useful in data scripts, or to read every page of API results.
+
+**Why testers care:** a retry loop without a limit can hang the whole test run.`,
       code: [
         {
           language: 'javascript',
@@ -112,7 +129,7 @@ while (pages[page]) {                    // stop when a page does not exist
   all.push(...pages[page]);
   page++;
 }
-console.log(all);                        // → ['a', 'b', 'c', 'd', 'e']
+console.log(all);                        // → [ 'a', 'b', 'c', 'd', 'e' ]
 
 // Bounded retry: never loop forever
 const statuses = ['pending', 'pending', 'done'];
@@ -122,83 +139,119 @@ do {
   status = statuses[attempt];            // pretend this is a status check
   attempt++;
 } while (status !== 'done' && attempt < 10);
-console.log(status, attempt);            // → 'done' 3
+console.log(status, attempt);            // → done 3
 
 // do...while runs the body once even if the condition is false
 let n = 10;
-do { console.log('ran with', n); } while (n < 5); // → 'ran with' 10`,
+do { console.log('ran with', n); } while (n < 5); // → ran with 10`,
         },
       ],
       keyPoints: [
-        'while: unknown number of rounds, may run zero times.',
-        'do...while: at least one round.',
-        'Every polling loop needs a maximum (attempts or time).',
+        '`while`: unknown number of rounds. It may run zero times.',
+        '`do...while`: always runs at least once.',
+        'Every retry loop needs a limit (attempts or time).',
       ],
       source: 'javascript.info — Loops: while and for; MDN — do...while',
     },
     {
       heading: 'for...of vs for...in',
-      body: `**Intuition:** **for...of** gives you the **things in the box** (values). **for...in** gives you the **labels on the drawers** (property names). Mixing them up is one of the most common beginner bugs and a favourite interview question.
+      body: `    const browsers = ['chromium', 'firefox'];
+    for (const b of browsers) console.log(b);
+    // → chromium
+    // → firefox
+    for (const k in browsers) console.log(k);
+    // → 0
+    // → 1
+
+\`for...of\` gives you the **values**: the things in the boxes. \`for...in\` gives you the **keys**: the labels on the boxes. For an array, the keys are the positions, and they are strings: '0', '1'.
 
 | | for...of | for...in |
 |---|---|---|
-| Gives you | values | keys (always strings) |
-| Works on | iterables: arrays, strings, Sets, Maps, arguments, NodeLists | any object's enumerable properties |
-| On an array \`['a','b']\` | \`'a'\`, \`'b'\` | \`'0'\`, \`'1'\` (strings!) plus any extra/inherited properties |
+| Gives you | values | keys, always as strings |
+| Works on | arrays, strings, Sets, Maps | plain objects |
+| On \`['a', 'b']\` | \`'a'\`, \`'b'\` | \`'0'\`, \`'1'\` (strings!) |
 | On a plain object | TypeError: not iterable | \`'name'\`, \`'role'\` |
-| \`break\` / \`continue\` / \`await\` | yes | yes |
-| Use it for | arrays and lists (the default choice) | rarely; prefer Object.entries |
+| Use it for | arrays and lists (your default) | rarely; prefer \`Object.entries\` |
 
-**And forEach?** \`arr.forEach(fn)\` is fine for simple side effects, but it cannot \`break\`, and \`await\` inside its callback does not pause the loop. In Playwright, iterate locators with \`for (const item of await list.all()) { await ... }\`.
+Things that \`for...of\` can walk through are called **iterable**. Arrays, strings, Sets and Maps are iterable. Plain objects are not.
 
-**In interviews say this:** "for...of iterates values of iterables; for...in enumerates string keys of objects, including inherited ones, so I don't use it on arrays. For objects I use Object.entries with for...of."`,
+**Watch out:** \`for...in\` keys are strings. So \`i + 1\` gives \`'01'\`, not \`1\`.
+
+**What about forEach?** \`arr.forEach(fn)\` is fine for simple jobs. But you cannot \`break\` out of it. Also, \`await\` inside it does not pause the loop. In Playwright, write \`for (const item of await list.all()) { await ... }\`.
+
+**In an interview, say:** "for...of gives the values of an array or string. for...in gives the keys of an object as strings, so I don't use it on arrays. For objects I use Object.entries with for...of."
+
+**Why testers care:** \`for...of\` with \`await\` is the safe way to loop over elements in a Playwright test.`,
       code: [
         {
           language: 'javascript',
           title: 'Values vs keys',
           code: `const browsers = ['chromium', 'firefox', 'webkit'];
-browsers.extra = 'oops';                 // arrays are objects; extra props happen (libraries, polyfills)
+browsers.extra = 'oops';                 // an array is an object, so it can get extra keys
 
 for (const b of browsers) console.log(b);
-// → chromium, firefox, webkit          (values only)
+// → chromium
+// → firefox
+// → webkit
 
 for (const k in browsers) console.log(k, typeof k);
-// → '0' string, '1' string, '2' string, 'extra' string
+// → 0 string
+// → 1 string
+// → 2 string
+// → extra string
 
-// The string index trap
-for (const i in [10, 20]) console.log(i + 1);   // → '01', '11'  (string concatenation!)
+// Trap: the keys are strings, so + joins text
+for (const i in [10, 20]) console.log(i + 1);
+// → 01
+// → 11
 
 // for...of works on strings, Sets and Maps too
-for (const ch of 'QA') console.log(ch);          // → 'Q', 'A'
+for (const ch of 'QA') console.log(ch);
+// → Q
+// → A
 for (const [name, ms] of new Map([['login', 1200], ['cart', 800]])) {
-  console.log(name, ms);                         // → login 1200, cart 800
+  console.log(name, ms);
 }
+// → login 1200
+// → cart 800
 
 // Plain objects are not iterable
 try {
   for (const x of { a: 1 }) console.log(x);
 } catch (e) {
-  console.log(e.name);                           // → 'TypeError'
+  console.log(e.name);                           // → TypeError
 }`,
         },
       ],
       keyPoints: [
-        'for...of = values; for...in = string keys.',
-        'Never use for...in on arrays: string indexes and extra properties.',
-        'In async test code, for...of + await is the safe loop.',
+        '`for...of` gives values. `for...in` gives keys, as strings.',
+        'Do not use `for...in` on arrays.',
+        'In async test code, `for...of` with `await` is the safe loop.',
       ],
       source: 'MDN Web Docs — for...of, for...in; javascript.info — Iterables',
     },
     {
       heading: 'break, continue and labels',
-      body: `**Intuition:** \`break\` = "stop testing, I found the blocker". \`continue\` = "skip this row, move to the next one". A **label** names an outer loop so you can break out of two loops at once.
+      body: `    const results = ['pass', 'skip', 'fail', 'pass'];
+    for (const r of results) {
+      if (r === 'skip') continue;
+      if (r === 'fail') break;
+      console.log('checked', r);
+    }
+    // → checked pass
 
-- \`break\` leaves the innermost loop (or \`switch\`) immediately.
-- \`continue\` ends the current round and goes to the next one (the \`for\` step still runs).
-- \`outer: for (...) { for (...) { break outer; } }\` leaves both loops. Labels are rare in app code but handy for "search a grid": find the first table cell with an error and stop.
-- **forEach, map, filter** cannot \`break\`. If you need "stop at the first match", use \`for...of\` with \`break\`, or \`find\` / \`some\` / \`findIndex\`, which stop early by design.
+- \`continue\` skips the rest of this round and moves to the next one.
+- \`break\` stops the loop completely.
 
-**Common mistake:** writing \`return\` inside a \`forEach\` callback expecting the loop to stop. It only returns from that one callback; the loop continues with the next item.`,
+Here, 'skip' was skipped, and 'fail' stopped the loop. So the last 'pass' was never checked.
+
+**Labels** give an outer loop a name. Inside two loops, \`break rows\` leaves both loops at once. You will rarely need this. It is handy for "find the first empty cell in a table".
+
+**forEach, map and filter cannot break.** To stop at the first match, use \`for...of\` with \`break\`. Or use \`find\`, \`some\` or \`findIndex\`. They stop early on their own.
+
+**Watch out:** \`return\` inside a \`forEach\` callback does not stop the loop. It only ends that one call. The loop goes on with the next item.
+
+**Why testers care:** you can stop at the first failure to save time, or skip rows that do not apply.`,
       code: [
         {
           language: 'javascript',
@@ -210,7 +263,9 @@ for (const r of results) {
   if (r === 'fail') { console.log('stop: first failure'); break; }
   console.log('checked', r);
 }
-// → checked pass, checked pass, stop: first failure
+// → checked pass
+// → checked pass
+// → stop: first failure
 
 // return inside forEach does NOT stop the loop
 results.forEach((r) => {
@@ -230,34 +285,42 @@ rows: for (let r = 0; r < table.length; r++) {
     if (table[r][c] === '') { found = [r, c]; break rows; }
   }
 }
-console.log(found);                      // → [1, 1]`,
+console.log(found);                      // → [ 1, 1 ]`,
         },
       ],
       keyPoints: [
-        'continue skips one round; break ends the loop.',
-        'A labelled break exits nested loops in one step.',
-        'Use find/some or for...of when you need to stop early.',
+        '`continue` skips one round. `break` ends the loop.',
+        'A labelled break leaves nested loops in one step.',
+        'Use `find`, `some` or `for...of` with `break` to stop early.',
       ],
       source: 'MDN Web Docs — break, continue, label',
     },
     {
-      heading: 'Iterating objects',
-      body: `**Intuition:** an object is a form with labelled fields (\`name\`, \`role\`, \`email\`). To walk through it, first turn it into a list: of field names, of values, or of [name, value] pairs.
+      heading: 'Looping over objects',
+      body: `    const user = { name: 'Asha', role: 'admin' };
+    for (const [key, value] of Object.entries(user)) {
+      console.log(key + ' = ' + value);
+    }
+    // → name = Asha
+    // → role = admin
 
-| Need | Use | Returns |
+A plain object is not iterable. So \`for...of\` cannot walk it directly. First, turn it into a list.
+
+| Need | Use | Gives |
 |---|---|---|
 | field names | \`Object.keys(obj)\` | \`['name', 'role']\` |
 | field values | \`Object.values(obj)\` | \`['Asha', 'admin']\` |
 | both | \`Object.entries(obj)\` | \`[['name', 'Asha'], ['role', 'admin']]\` |
 | back to an object | \`Object.fromEntries(pairs)\` | \`{ name: 'Asha', role: 'admin' }\` |
 
-\`for (const [key, value] of Object.entries(obj))\` is the modern, readable loop for objects. It only includes the object's **own** properties, unlike \`for...in\`, which also walks inherited ones.
+\`Object.entries\` plus \`for...of\` is the clearest way to loop over an object. \`[key, value]\` unpacks each pair into two variables.
 
-**Testing uses:**
+**Testing uses**
+- Fill a form from a data object. Loop over the pairs and fill each field by its label.
+- Compare an API response with the expected values, field by field. Collect every mismatch, instead of stopping at the first one.
+- Count the keys: \`Object.keys(obj).length\`.
 
-- Fill a form from a data object: loop over entries and \`fill\` each field by its label.
-- Compare an API response with expected values field by field, collecting all mismatches instead of stopping at the first.
-- Count properties: \`Object.keys(obj).length\`.`,
+**Why testers care:** one report that lists every wrong field is more useful than a test that stops at the first.`,
       code: [
         {
           language: 'javascript',
@@ -271,9 +334,9 @@ for (const [field, want] of Object.entries(expected)) {
   if (got !== want) mismatches.push(field + ': expected ' + JSON.stringify(want) + ', got ' + JSON.stringify(got));
 }
 console.log(mismatches);
-// → ['lastname: expected "Rao", got "Roa"', 'totalprice: expected 150, got "150"']
+// → [ 'lastname: expected "Rao", got "Roa"', 'totalprice: expected 150, got "150"' ]
 
-console.log(Object.keys(expected));       // → ['firstname', 'lastname', 'totalprice', 'depositpaid']
+console.log(Object.keys(expected));       // → [ 'firstname', 'lastname', 'totalprice', 'depositpaid' ]
 console.log(Object.values(expected).length); // → 4
 
 // Transform an object: uppercase every string value
@@ -289,33 +352,46 @@ console.log(shout);                       // → { a: 'X', b: 'Y' }
         },
       ],
       keyPoints: [
-        'Objects are not iterable; convert with keys/values/entries.',
-        'Object.entries + for...of + destructuring is the idiomatic object loop.',
-        'Collect all mismatches before failing to get a more useful report.',
+        'Plain objects are not iterable. Use `Object.keys`, `Object.values` or `Object.entries`.',
+        '`for (const [key, value] of Object.entries(obj))` is the clearest object loop.',
+        'Collect all mismatches before failing, for a more useful report.',
       ],
       source: 'javascript.info — Object.keys, values, entries',
     },
     {
       heading: 'ES modules: export and import',
-      body: `**Intuition:** a module is one file that **exports** what other files may use and **imports** what it needs, like departments sharing documents through an official outbox and inbox. Every Playwright project is a set of modules: test files import \`test\` and \`expect\` from \`@playwright/test\`, page objects, fixtures and helpers.
+      body: `    // file: helpers.js
+    export const BASE_URL = 'https://www.saucedemo.com';
+    export function add(a, b) { return a + b; }
 
-**Two kinds of export:**
+    // file: login.spec.js
+    import { BASE_URL, add } from './helpers.js';
+    console.log(add(2, 3)); // → 5
+
+A **module** is one JavaScript file that shares code with other files.
+- \`export\` marks what other files may use.
+- \`import\` brings it into another file.
+
+Every Playwright project works like this. Test files import \`test\` and \`expect\` from \`@playwright/test\`. They also import your page objects and helpers.
+
+**Two kinds of export**
 
 | | Named export | Default export |
 |---|---|---|
-| Write | \`export function login() {}\` / \`export const BASE = '...'\` | \`export default class LoginPage {}\` |
-| Import | \`import { login, BASE } from './helpers'\` | \`import LoginPage from './LoginPage'\` |
-| How many per file | any number | at most one |
-| Name when importing | must match (rename with \`as\`) | you choose any name |
+| Write | \`export function login() {}\` | \`export default class LoginPage {}\` |
+| Import | \`import { login } from './helpers'\` | \`import LoginPage from './LoginPage'\` |
+| How many per file | any number | one at most |
+| Name when importing | must match (rename with \`as\`) | any name you like |
 
-**Rules worth knowing:**
+**Rules worth knowing**
+- Put imports at the top of the file. The path is a plain string.
+- A module's code runs **once**, the first time it is imported. Every file that imports it shares the same exported objects. So if a helper module keeps data that tests change, tests in the same worker see each other's changes.
+- Modules always use **strict mode**, which has stricter rules. For example, using a variable you never declared throws a ReferenceError.
+- In plain Node, a relative import needs the file extension: \`'./utils.js'\`. Playwright's TypeScript tests let you leave it out.
 
-- Imports are **static**: they live at the top of the file and paths are plain strings. For conditional loading there is \`await import('./x.js')\` (dynamic import).
-- Module code runs **once**, the first time it is imported, and every importer shares the same exported objects. Mutable shared state in a helper module leaks between tests in the same worker.
-- Modules are always in **strict mode**: assigning to an undeclared variable throws a ReferenceError instead of creating a global.
-- In plain Node ESM, relative imports need the file extension (\`'./utils.js'\`). Playwright's TypeScript loader lets you omit it in \`.ts\` tests.
+**Team habit:** many teams prefer named exports. The editor then checks the name and auto-imports it correctly.
 
-**Team convention:** many teams prefer **named exports** for helpers and page objects, because the name is checked at import time and editors auto-import reliably.`,
+**Why testers care:** page objects, fixtures and helpers all live in separate modules, so you import and export all day.`,
       code: [
         {
           language: 'typescript',
@@ -350,35 +426,60 @@ test('standard user lands on inventory', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Named exports: many per file, imported with { } and the exact name.',
-        'Default export: one per file, imported without { } under any name.',
-        'Module-level state is shared by everything that imports it.',
+        'Named exports: many per file, imported with `{ }` and the exact name.',
+        'Default export: one per file, imported without `{ }`, under any name.',
+        'A module runs once, so its data is shared by every file that imports it.',
       ],
       source: 'javascript.info — Modules: export and import; Playwright docs — TypeScript',
     },
     {
       heading: 'CommonJS vs ES modules, npm and package.json',
-      body: `**Intuition:** Node grew up with its own module system, **CommonJS** (\`require\`), years before JavaScript got an official one, **ES modules** (\`import\`). Both still exist, and the error messages when you mix them are a rite of passage.
+      body: `    // math.cjs (CommonJS, the older style)
+    function add(a, b) { return a + b; }
+    module.exports = { add };
+    // app.cjs
+    const { add } = require('./math.cjs');
+    console.log(add(2, 3)); // → 5
 
-| | CommonJS (CJS) | ES modules (ESM) |
+    // math.mjs (ES module, the modern style)
+    export function add(a, b) { return a + b; }
+    // app.mjs
+    import { add } from './math.mjs';
+    console.log(add(2, 3)); // → 5
+
+Node has two ways to share code between files.
+- **CommonJS** is the older one. It uses \`require\` and \`module.exports\`.
+- **ES modules** (ESM) are the official modern one. They use \`import\` and \`export\`.
+
+Both still exist, and mixing them gives confusing errors.
+
+| | CommonJS | ES modules |
 |---|---|---|
-| Import | \`const fs = require('fs')\` | \`import fs from 'fs'\` |
-| Export | \`module.exports = {...}\` / \`exports.x = ...\` | \`export\` / \`export default\` |
-| Loading | synchronous, at run time, anywhere in the code | static, analysed before running; \`await import()\` for dynamic |
-| Node decides by | \`.cjs\`, or \`.js\` without \`"type": "module"\` | \`.mjs\`, or \`.js\` with \`"type": "module"\` in package.json |
-| Top-level await | no | yes |
-| \`__dirname\` | available | not defined; use \`import.meta.dirname\` (Node 20.11+) |
+| Import | \`require('x')\` | \`import x from 'x'\` |
+| Export | \`module.exports = {...}\` | \`export\` / \`export default\` |
+| Node uses it for | \`.cjs\` files, or \`.js\` without \`"type": "module"\` | \`.mjs\` files, or \`.js\` with \`"type": "module"\` in package.json |
+| \`await\` at the top of a file | no | yes |
+| \`__dirname\` | yes | no; use \`import.meta.dirname\` (Node 20.11+) |
 
-**Errors you will meet:** "require is not defined in ES module scope" (you used \`require\` in an ESM file) and "Cannot use import statement outside a module" (you used \`import\` in a CommonJS file). The fix is to pick one style per project and set \`"type"\` (or the file extension) to match.
+**Two errors you will meet**
+- "require is not defined in ES module scope": you used \`require\` in an ESM file.
+- "Cannot use import statement outside a module": you used \`import\` in a CommonJS file.
 
-**npm and package.json, the shopping list of your project:**
+The fix: pick one style for the project. Then set \`"type"\` in package.json, or the file extension, to match.
 
-- \`npm init -y\` creates **package.json**; \`npm init playwright@latest\` scaffolds a Playwright project.
-- \`dependencies\` are needed at run time by the app; \`devDependencies\` are tools for development and testing. \`@playwright/test\` belongs in **devDependencies** (\`npm i -D @playwright/test\`).
-- \`"scripts"\`: \`"test": "playwright test"\` lets anyone run \`npm test\`; other scripts run with \`npm run <name>\`.
-- Versions use **semver** (\`major.minor.patch\`); \`^1.48.0\` allows newer 1.x versions. **package-lock.json** records the exact versions installed: commit it.
-- \`npm install\` may update the lock file; **\`npm ci\`** installs exactly what the lock file says and is what CI pipelines should run.
-- \`npx playwright test\` runs a package's command without a global install. \`node_modules\` is never committed (it goes in .gitignore).`,
+**npm and package.json**
+
+**package.json** is the shopping list of your project. **npm** is the tool that installs what is on the list.
+- \`npm init playwright@latest\` creates a new Playwright project.
+- \`dependencies\` are needed by the app when it runs. \`devDependencies\` are tools for building and testing. \`@playwright/test\` is a dev dependency: \`npm i -D @playwright/test\`.
+- \`"scripts"\`: with \`"test": "playwright test"\`, anyone can run \`npm test\`. Run other scripts with \`npm run <name>\`.
+- Versions look like \`1.48.0\`: major.minor.patch. This system is called **semver**. \`^1.48.0\` allows any newer 1.x version.
+- **package-lock.json** records the exact versions that were installed. Commit it to git.
+- \`npm install\` may update the lock file. **\`npm ci\`** installs exactly what the lock file says. CI pipelines should use \`npm ci\`.
+- \`npx playwright test\` runs a tool from your project without a global install.
+- Never commit \`node_modules\`. List it in \`.gitignore\`.
+
+**Why testers care:** \`npm ci\` gives your laptop and the CI server the same versions. So a test that passes for you also passes in CI.`,
       code: [
         {
           language: 'json',
@@ -418,29 +519,45 @@ export function multiply(a, b) { return a * b; }
 // ---- app.mjs ----
 import { multiply } from './math.mjs';   // extension required in plain Node ESM
 console.log(multiply(2, 3));             // → 6
-console.log(typeof require);             // → 'undefined' (no require in ESM)`,
+console.log(typeof require);             // → undefined (no require in ESM)`,
         },
       ],
       keyPoints: [
-        'CJS: require/module.exports. ESM: import/export. Pick one per project.',
-        '"type": "module" in package.json makes .js files ESM.',
-        'Commit package-lock.json; CI runs npm ci; @playwright/test is a devDependency.',
+        'CommonJS: `require` and `module.exports`. ESM: `import` and `export`. Pick one per project.',
+        '`"type": "module"` in package.json makes `.js` files ES modules.',
+        'Commit package-lock.json. CI runs `npm ci`. `@playwright/test` is a dev dependency.',
       ],
       source: 'Node.js docs — Modules: ECMAScript modules, packages ("type"); npm Docs — package.json, npm ci',
     },
     {
       heading: 'try, catch and finally',
-      body: `**Intuition:** \`try\` is "attempt this risky step", \`catch\` is "plan B if it blows up", \`finally\` is "clean the test environment no matter what happened", like logging out and deleting the test booking whether the test passed or failed.
+      body: `    try {
+      console.log('start');
+      JSON.parse('{bad');
+      console.log('never runs');
+    } catch (err) {
+      console.log('caught', err.name);
+    } finally {
+      console.log('cleanup');
+    }
+    // → start
+    // → caught SyntaxError
+    // → cleanup
 
-- Code in \`try\` runs until something **throws**. Execution then jumps straight to \`catch (err)\`; the rest of \`try\` is skipped.
-- \`finally\` runs **always**: after success, after a caught error, after an uncaught error, even after a \`return\` inside \`try\`.
-- A \`return\` inside \`finally\` overrides earlier returns and even swallows thrown errors. Never return from \`finally\`.
-- \`try/catch\` only catches errors thrown **while the try block is running**. A callback that throws later (e.g. inside \`setTimeout\`) is not caught, and a promise is only caught if you \`await\` it inside the try (see the async topic).
-- \`catch\` without a parameter (\`catch { ... }\`) is allowed when you do not need the error.
+- \`try\` holds the risky code. It runs until something **throws** an error.
+- JavaScript then jumps straight to \`catch (err)\`. The rest of \`try\` is skipped. That is why "never runs" did not print.
+- \`finally\` **always** runs: after success, after an error, and even after a \`return\` inside \`try\`. Use it for cleanup, like logging out or deleting test data.
+- If you do not need the error, you can write \`catch { ... }\` without \`(err)\`.
 
-**The tester's golden rule:** do **not** wrap assertions in try/catch and just log. \`expect\` fails a test by **throwing**; if you catch that error and carry on, the test reports **passed**. Catch only when you can genuinely handle the error (retry, convert it to a clearer error, clean up) and otherwise **rethrow**.
+**Watch out**
+- Never \`return\` from \`finally\`. It replaces the earlier return value, and it even hides errors.
+- \`try/catch\` only catches errors thrown **while the try block runs**. An error thrown later, for example inside \`setTimeout\`, is not caught. A promise is caught only if you \`await\` it inside the \`try\`. The async topic explains this.
 
-**Cleanup in Playwright:** the preferred place is a fixture (code after \`use()\`) or \`afterEach\`, but \`try/finally\` inside a test is a clear way to guarantee one-off cleanup, such as deleting a booking created through the API.`,
+**The tester's golden rule:** do not wrap assertions in try/catch just to log them. \`expect\` fails a test by throwing an error. If you catch it and carry on, the test is reported as **passed**. Catch an error only when you can really handle it: retry, add a clearer message, or clean up. Otherwise **rethrow** it, which means throw it again.
+
+**Cleanup in Playwright:** the usual place is a fixture (the code after \`use()\`) or \`afterEach\`. Inside one test, \`try/finally\` is a clear way to delete a booking you created through the API.
+
+**Why testers care:** a caught and ignored assertion error turns a failing test into a passing one.`,
       diagram: `  try { step1; step2 (throws!); step3 }   catch (e) { ... }   finally { ... }
         |        |                   ^           |                    |
         ok       +--- jumps ---------+           +-------> always ----+
@@ -463,16 +580,22 @@ console.log(typeof require);             // → 'undefined' (no require in ESM)`
   }
 }
 console.log(parsePrice('$9.99'));
-// → try start, parsed, finally, 9.99
+// → try start
+// → parsed
+// → finally
+// → 9.99
 console.log(parsePrice(null));
-// → try start, caught: TypeError, finally, null
+// → try start
+// → caught: TypeError
+// → finally
+// → null
 
 // BUG: swallowing an assertion error makes a failing check "pass"
 function assertEqual(a, b) { if (a !== b) throw new Error(a + ' !== ' + b); }
 try {
   assertEqual(2, 3);
 } catch (e) {
-  console.log('logged and ignored:', e.message);  // the test runner never sees it
+  console.log('logged and ignored:', e.message);  // → logged and ignored: 2 !== 3 (the test runner never sees it)
 }
 // Fix: catch only to add context, then rethrow
 try {
@@ -483,37 +606,62 @@ try {
         },
       ],
       keyPoints: [
-        'finally always runs; use it for cleanup, never for return.',
+        '`finally` always runs. Use it for cleanup, never for `return`.',
         'Catching an assertion error without rethrowing turns a failure into a pass.',
-        'try/catch only catches what happens while try is executing (await promises inside it).',
+        '`try/catch` only catches errors thrown while `try` runs, so `await` promises inside it.',
       ],
       source: 'javascript.info — Error handling, "try...catch"; MDN — try...catch',
     },
     {
       heading: 'throw, Error types and custom errors',
-      body: `**Intuition:** \`throw\` is pulling the emergency cord. The error object is the incident report: **name** (what kind), **message** (what happened) and **stack** (where).
+      body: `    try {
+      throw new Error('Cart is empty');
+    } catch (err) {
+      console.log(err.name);    // → Error
+      console.log(err.message); // → Cart is empty
+    }
 
-**Built-in error types you will see:**
+\`throw\` stops the code and reports a problem. The error object has three useful parts:
+- **name**: what kind of error it is.
+- **message**: what happened.
+- **stack**: where it happened (file and line).
 
-| Error | Typical cause | Example |
+**Built-in error types you will see**
+
+| Error | Usual cause | Example |
 |---|---|---|
-| \`TypeError\` | using a value the wrong way | \`null.length\`, calling a non-function |
-| \`ReferenceError\` | variable does not exist | typo: \`pagee.goto()\` |
-| \`SyntaxError\` | invalid code or invalid JSON | \`JSON.parse('{bad')\` |
-| \`RangeError\` | number out of allowed range | \`new Array(-1)\`, \`toFixed(200)\` |
-| \`AggregateError\` | several errors at once | \`Promise.any\` when all reject |
-| Playwright \`TimeoutError\` | an action or wait exceeded its timeout | element never became visible |
+| \`TypeError\` | using a value the wrong way | \`null.length\`, or calling something that is not a function |
+| \`ReferenceError\` | the variable does not exist | a typo: \`pagee.goto()\` |
+| \`SyntaxError\` | broken code or broken JSON | \`JSON.parse('{bad')\` |
+| \`RangeError\` | a number outside the allowed range | \`new Array(-1)\` |
+| \`AggregateError\` | several errors at once | \`Promise.any\` when every promise fails |
+| Playwright \`TimeoutError\` | an action or wait took too long | the element never became visible |
 
-**Always throw Error objects**, not strings: \`throw 'failed'\` has no stack trace and no \`name\`, so reports become useless.
+**Always throw Error objects, not strings.** \`throw 'failed'\` has no stack and no name, so reports become useless.
 
-**Custom errors** make failures self-explanatory and let callers react by type with \`instanceof\`:
+**Custom errors** make failures easy to read. Callers can also check the type with \`instanceof\`.
 
-1. \`class ApiError extends Error\`.
-2. Call \`super(message, { cause })\` first.
-3. Set \`this.name = 'ApiError'\` (otherwise it shows as plain "Error").
-4. Add useful fields (\`status\`, \`url\`, \`body\`).
+    class ApiError extends Error {
+      constructor(message, status) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+      }
+    }
+    const e = new ApiError('Not found', 404);
+    console.log(e.name, e.status, e instanceof Error); // → ApiError 404 true
 
-\`{ cause }\` (ES2022) chains the original error so you add context without losing the root problem. Playwright exports \`errors.TimeoutError\` from \`@playwright/test\` so you can check \`err instanceof errors.TimeoutError\` when a timeout is an expected outcome.`,
+The steps are:
+1. Extend \`Error\`.
+2. Call \`super(message)\` first.
+3. Set \`this.name\`. Without it, the error shows as plain "Error".
+4. Add useful fields, like \`status\` and \`url\`.
+
+**Keep the original error with \`cause\`:** \`new Error('Login step failed', { cause: err })\` adds context. The original \`err\` stays available as \`.cause\`.
+
+Playwright exports \`errors.TimeoutError\` from \`@playwright/test\`. So you can check \`err instanceof errors.TimeoutError\` when a timeout is an expected result.
+
+**Why testers care:** a clear error like "ApiError 404 on /booking/999" saves debugging time when a test fails in CI.`,
       code: [
         {
           language: 'javascript',
@@ -538,43 +686,51 @@ try {
   checkResponse({ status: 404, url: '/booking/999' });
 } catch (err) {
   console.log(err instanceof ApiError, err instanceof Error); // → true true
-  console.log(err.name, err.status, err.url);   // → 'ApiError' 404 '/booking/999'
-  console.log(String(err));                     // → 'ApiError: Request failed with 404'
+  console.log(err.name, err.status, err.url);   // → ApiError 404 /booking/999
+  console.log(String(err));                     // → ApiError: Request failed with 404
 }
 
 // Built-in types
-try { JSON.parse('{bad'); } catch (e) { console.log(e.name); }  // → 'SyntaxError'
-try { null.length; } catch (e) { console.log(e.name); }         // → 'TypeError'
-try { undefinedVar; } catch (e) { console.log(e.name); }        // → 'ReferenceError'
+try { JSON.parse('{bad'); } catch (e) { console.log(e.name); }  // → SyntaxError
+try { null.length; } catch (e) { console.log(e.name); }         // → TypeError
+try { undefinedVar; } catch (e) { console.log(e.name); }        // → ReferenceError
 
 // Wrapping with cause keeps the root problem
 const wrapped = new Error('Login step failed', { cause: new Error('401 Unauthorized') });
-console.log(wrapped.cause.message);             // → '401 Unauthorized'`,
+console.log(wrapped.cause.message);             // → 401 Unauthorized`,
         },
       ],
       keyPoints: [
-        'throw new Error(...) (never a string) to keep name, message and stack.',
-        'Custom errors: extend Error, call super, set this.name, add fields.',
-        'Use { cause } to add context without losing the original error.',
+        '`throw new Error(...)`, never a string, to keep the name, message and stack.',
+        'Custom errors: extend `Error`, call `super`, set `this.name`, add fields.',
+        'Use `{ cause }` to add context without losing the original error.',
       ],
       source: 'javascript.info — Custom errors, extending Error; MDN — Error.prototype.cause; Playwright docs — errors.TimeoutError',
     },
     {
       heading: 'Debugging in VS Code and Node',
-      body: `**Intuition:** \`console.log\` is shouting questions into a dark room. A **debugger** turns on the lights: it pauses the program on a line and lets you look at every variable, then step forward one line at a time.
+      body: `    function totalOf(prices) {
+      let sum = 0;
+      for (const p of prices) sum += p;
+      return sum;
+    }
+    console.log(totalOf([1, 2, '3'])); // → 33
 
-**A practical toolkit, from quick to powerful:**
+The answer should be 6, but it is 33. Why? \`1 + 2\` is 3. Then \`3 + '3'\` joins two pieces of text and gives '33'. A **debugger** helps you find bugs like this. It pauses the program on a line. Then you can look at every variable and move forward one line at a time.
 
-1. **Read the error properly.** The first line is the type and message; the stack trace below shows file:line, top frame first. Click the first frame that is **your** code.
-2. **console helpers:** \`console.log('label', value)\` (always label!), \`console.table(arrayOfObjects)\` for test data, \`console.dir(obj, { depth: null })\` for nested JSON, \`console.time('x')\` / \`console.timeEnd('x')\` for durations.
-3. **Breakpoints in VS Code:** click left of a line number (red dot). Open a **JavaScript Debug Terminal** (Command Palette → "JavaScript Debug Terminal") and run \`node script.js\` or \`npx playwright test\` there; execution pauses at your breakpoints.
-4. **\`debugger;\` statement:** pauses there whenever a debugger is attached.
-5. **Node inspector:** \`node --inspect-brk script.js\` pauses on the first line; attach from VS Code or chrome://inspect.
-6. **Playwright tools:** \`npx playwright test --debug\` opens the Inspector and steps through actions; \`await page.pause()\` pauses at a specific point; the VS Code Playwright extension runs a single test with breakpoints.
+**A toolkit, from quick to powerful**
+1. **Read the error.** The first line gives the error type and message. Below it, the **stack trace** lists file:line places, newest first. Click the first line that points to **your** code.
+2. **console helpers:** \`console.log('label', value)\` (always add a label!), \`console.table(list)\` for arrays of objects, \`console.dir(obj, { depth: null })\` for nested JSON, and \`console.time('x')\` with \`console.timeEnd('x')\` to measure time.
+3. **Breakpoints in VS Code:** click left of a line number to add a red dot. Open a **JavaScript Debug Terminal** (Command Palette → "JavaScript Debug Terminal"). Run \`node script.js\` or \`npx playwright test\` there. The code pauses at your red dots.
+4. **\`debugger;\`** written in the code pauses there when a debugger is attached.
+5. **Node inspector:** \`node --inspect-brk script.js\` pauses on the first line. Attach from VS Code or chrome://inspect.
+6. **Playwright tools:** \`npx playwright test --debug\` opens the Inspector and steps through actions. \`await page.pause()\` pauses at one point. The VS Code Playwright extension runs one test with breakpoints.
 
-**While paused:** hover variables, use the **Watch** panel, the **Call Stack**, and **Step Over** (F10), **Step Into** (F11), **Continue** (F5).
+**While paused:** hover over variables. Use the **Watch** panel and the **Call Stack**. Step Over (F10), Step Into (F11) and Continue (F5).
 
-**Habit that impresses interviewers:** reproduce with the smallest input, form a hypothesis, prove it in the debugger, fix, then add a test (or an assertion) that would have caught it.`,
+**In an interview, describe your habit:** make the bug happen with the smallest input. Guess the cause. Prove it in the debugger. Fix it. Then add a test that would have caught it.
+
+**Why testers care:** reading the stack trace and pausing on the right line finds a bug much faster than guessing.`,
       code: [
         {
           language: 'javascript',
@@ -601,48 +757,53 @@ function totalOf(prices) {
 }
 
 console.time('sum');
-console.log(totalOf([1, 2, '3']));  // → '33' : the debugger shows sum becomes the string '33'
-console.timeEnd('sum');             // → sum: 0.05ms (varies)
+console.log(totalOf([1, 2, '3']));  // → 33 (the debugger shows sum turning into the string '33')
+console.timeEnd('sum');             // prints the time taken, e.g. sum: 0.05ms
 
 // Run with:  node --inspect-brk debug-me.js   (then attach from VS Code)
 // Playwright: npx playwright test login.spec.ts --debug`,
         },
       ],
       keyPoints: [
-        'Read the stack trace top-down and jump to the first frame in your own code.',
-        'JavaScript Debug Terminal + breakpoints works for node and npx playwright test.',
-        'Label every console.log; use console.table for arrays of objects.',
+        'Read the stack trace from the top, and jump to the first line in your own code.',
+        'A JavaScript Debug Terminal plus breakpoints works for `node` and `npx playwright test`.',
+        'Label every `console.log`. Use `console.table` for arrays of objects.',
       ],
       source: 'VS Code docs — Node.js debugging; Node.js docs — Debugging guide; Playwright docs — Debugging tests',
     },
     {
       heading: 'Dates for test data',
-      body: `**Intuition:** dates are the most common source of "works on my machine" test data bugs: time zones, 0-based months and end-of-month overflow. Learn a few safe recipes and reuse them.
+      body: `    const d = new Date('2026-10-14T00:00:00Z');
+    console.log(d.toISOString().slice(0, 10));     // → 2026-10-14
+    console.log(new Date(2026, 0, 31).getMonth()); // → 0
+    console.log(typeof Date.now());                // → number
 
-**Facts to remember:**
+Dates cause many "works on my machine" bugs. The usual causes are time zones, months that start at 0, and month-end surprises. Learn a few safe recipes.
 
-- \`new Date()\` is "now"; \`Date.now()\` is the current time as milliseconds since 1 Jan 1970 UTC (a number, great for unique IDs).
-- **Months are 0-based**: \`new Date(2026, 0, 31)\` is 31 January. Days of the month are 1-based.
-- \`toISOString()\` gives \`'2026-10-14T09:30:00.000Z'\` in **UTC**; \`.slice(0, 10)\` gives \`'YYYY-MM-DD'\`, the format many APIs (e.g. Restful Booker check-in/check-out dates) expect.
-- Setters **overflow**: \`setDate(32)\` or "31 January + 1 month" rolls into March. Useful for "add N days", dangerous for "add a month".
-- Local vs UTC: \`getDate()\` uses the machine's time zone, \`getUTCDate()\` uses UTC. A CI server in UTC and a laptop in India (UTC+5:30) can disagree about "today" around midnight. Pick UTC for data you send to APIs.
-- For heavy date work, teams use libraries like date-fns or Day.js; for test data the built-ins are usually enough.
+- \`new Date()\` is "now". \`Date.now()\` is now as a number: milliseconds since 1 January 1970. It is great for unique test data.
+- **Months start at 0.** \`new Date(2026, 0, 31)\` is 31 January. Days of the month start at 1.
+- \`toISOString()\` gives text like '2026-10-14T09:30:00.000Z' in **UTC** (world standard time). \`.slice(0, 10)\` keeps 'YYYY-MM-DD'. Many APIs want this format, like Restful Booker check-in dates.
+- Dates **roll over**. \`setDate(32)\` moves into the next month. "31 January + 1 month" becomes 3 March. This helps for "add N days", but it is risky for "add a month".
+- **Local time vs UTC:** \`getDate()\` uses your computer's time zone. \`getUTCDate()\` uses UTC. A CI server in UTC and a laptop in India (UTC+5:30) can disagree about "today" near midnight. Use UTC for dates you send to APIs.
+- Setters like \`setDate\` change the Date object itself. Copy it first: \`new Date(base)\`.
 
-**Recipes:** unique email \`'qa+' + Date.now() + '@example.com'\`; "tomorrow" and "in 3 days" for a booking; a date-of-birth exactly 18 years ago for an age-gate boundary test.`,
+**Recipes:** a unique email, \`'qa+' + Date.now() + '@example.com'\`. "Tomorrow" and "in 3 days" for a booking. A birth date exactly 18 years ago for an age-limit test.
+
+**Why testers care:** fixed dates expire, and time zones can shift a date by one day. Both make tests fail only on some days or machines.`,
       code: [
         {
           language: 'javascript',
           title: 'Booking dates and unique data',
           code: `// YYYY-MM-DD in UTC, N days from a base date
 function isoDatePlus(days, base = new Date()) {
-  const d = new Date(base);                // copy: setters mutate
+  const d = new Date(base);                // copy first: setters change the date
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
 const base = new Date('2026-10-14T00:00:00Z');
-console.log(isoDatePlus(1, base));         // → '2026-10-15'
-console.log(isoDatePlus(30, base));        // → '2026-11-13'  (rolls into November)
+console.log(isoDatePlus(1, base));         // → 2026-10-15
+console.log(isoDatePlus(30, base));        // → 2026-11-13  (rolls into November)
 
 const booking = {
   firstname: 'Asha',
@@ -660,17 +821,17 @@ console.log(new Date(2026, 0, 31).getMonth()); // → 0  (January)
 // Overflow surprise: 31 Jan + 1 month
 const d = new Date(2026, 0, 31);
 d.setMonth(1);                             // "February 31st" does not exist...
-console.log(d.toDateString());             // → 'Tue Mar 03 2026'
+console.log(d.toDateString());             // → Tue Mar 03 2026
 
 // Unique per run
-console.log(typeof Date.now());            // → 'number'
+console.log(typeof Date.now());            // → number
 const email = 'qa+' + Date.now() + '@example.com';  // e.g. 'qa+1791963000000@example.com'`,
         },
       ],
       keyPoints: [
-        'Month index 0 = January; toISOString is UTC.',
-        'Copy a Date before calling setters; they mutate.',
-        'Use UTC-based helpers for API dates so CI and laptops agree.',
+        'Month 0 is January. `toISOString` uses UTC.',
+        'Copy a Date before calling setters, because they change it.',
+        'Use UTC helpers for API dates, so CI and laptops agree.',
       ],
       source: 'MDN Web Docs — Date; javascript.info — Date and time; Restful Booker API docs',
     },
@@ -680,8 +841,8 @@ const email = 'qa+' + Date.now() + '@example.com';  // e.g. 'qa+1791963000000@ex
       id: 'js-loops-modules-errors-cc-1',
       title: 'The test-data script that lies',
       context:
-        'A script builds users for a data-driven signup test and validates an exported list of order IDs. It "works" but the test data is subtly wrong and validation never reports problems.',
-      task: 'Fix the loop and validation bugs in `makeData(roles, orderIds)`. It returns `{ users, problems }`: exactly one user per role (`{ email: \'user1@example.com\', role }`, numbered from 1) and one message per invalid order ID, in the form `row N: invalid id "<id>"` with a 1-based row number. Valid IDs look like `A-123`. Press Run to check your fix.',
+        'A script builds users for a data-driven signup test. It also checks a list of order IDs. It seems to work, but the test data is slightly wrong, and the check never reports problems.',
+      task: 'Fix the loop and checking bugs in `makeData(roles, orderIds)`. It returns `{ users, problems }`. `users` has exactly one user per role, like `{ email: \'user1@example.com\', role }`, numbered from 1. `problems` has one message per bad order ID, in the form `row N: invalid id "<id>"`, where N starts at 1. Good IDs look like `A-123`. Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'make-data.js',
@@ -711,8 +872,8 @@ const email = 'qa+' + Date.now() + '@example.com';  // e.g. 'qa+1791963000000@ex
       },
       hints: [
         'How many times does the first loop run for 3 roles? What is roles[3]?',
-        'What type is `index` in a for...in loop, and what does "row " + index + 1 produce?',
-        'Should validation stop at the first bad ID? What does returning from a forEach callback do?',
+        'What type is `index` in a for...in loop? What does "row " + index + 1 give?',
+        'Should the check stop at the first bad ID? What does a return inside a forEach callback do?',
       ],
       solution: {
         language: 'javascript',
@@ -743,11 +904,11 @@ function makeData(roles, orderIds) {
       },
       explanation: `**Fixes:**
 
-1. **\`i <= roles.length\`** ran 4 times; the 4th user had \`role: undefined\`. Use \`< length\`, or better, \`map\` over the roles so the count always matches.
-2. **\`var i\`** leaks out of the loop and is shared by any callbacks created inside it. Use \`let\` (or no counter at all with \`map\`).
-3. **for...in gives string keys**, so \`'row ' + index + 1\` printed "row 21" instead of "row 3". Use \`for...of\` with \`entries()\` to get a numeric index, and wrap arithmetic in parentheses before concatenating.
-4. **\`break\` after the first problem** hid the second bad ID. A validator should collect all problems so one run shows the full picture.
-5. **Returning a value from a forEach callback does nothing**: it neither stops the loop nor reports anything. Collect results and \`throw\` an Error so the script (or test) fails with a clear message (in the lab, \`makeData\` returns the collected problems and the caller throws).`,
+1. **\`i <= roles.length\`** ran 4 times, so the 4th user had \`role: undefined\`. Use \`< length\`. Even better, use \`map\` over the roles, so the count always matches.
+2. **\`var i\`** is shared by the whole loop and leaks out of it. Use \`let\`, or no counter at all with \`map\`.
+3. **for...in gives string keys.** So \`'row ' + index + 1\` printed "row 21" instead of "row 3". Use \`for...of\` with \`entries()\` to get a number index. Also put the maths in brackets before joining text: \`(i + 1)\`.
+4. **\`break\` after the first problem** hid the second bad ID. A checker should collect all problems, so one run shows the full picture.
+5. **Returning a value from a forEach callback does nothing.** It does not stop the loop, and nobody sees the value. Collect the problems, then \`throw\` an Error so the script or test fails with a clear message. (In the lab, \`makeData\` returns the problems and the caller throws.)`,
       fnName: 'makeData',
       tests: [
         {
@@ -782,11 +943,11 @@ function makeData(roles, orderIds) {
       followUps: [
         {
           q: 'Why use a regex with ^ and $ for the ID check?',
-          a: 'Without the anchors, /A-\\d{3}/ would accept "XA-1000Y" because it only needs to find the pattern somewhere inside the string. ^ and $ force the whole value to match. The regex also catches the letter-O-instead-of-zero typo, which a simple startsWith("A-") check would miss.',
+          a: 'Without ^ and $, /A-\\d{3}/ would accept "XA-1000Y", because it only needs to find the pattern somewhere inside the text. ^ and $ make the whole value match. The regex also catches the letter O typed instead of a zero, which a simple startsWith("A-") check would miss.',
         },
         {
           q: 'How would you turn this into a Playwright data-driven test?',
-          a: 'Export the users array from a data module, then loop at the top level of the spec: for (const user of users) { test("signup as " + user.role, async ({ page }) => { ... }); }. Each iteration registers a separate test with a unique title, so reports show which role failed, and the tests can run in parallel.',
+          a: 'Export the users array from a data file. Then loop at the top level of the spec: for (const user of users) { test("signup as " + user.role, async ({ page }) => { ... }); }. Each round adds a separate test with its own name, so the report shows which role failed, and the tests can run in parallel.',
         },
       ],
     },
@@ -794,8 +955,8 @@ function makeData(roles, orderIds) {
       id: 'js-loops-modules-errors-cc-2',
       title: 'A booking helper that hides failures',
       context:
-        'This helper module is imported by several Playwright specs to create and delete Restful Booker bookings. When the API is down, tests fail much later with confusing "Cannot read properties of undefined" errors, and test bookings pile up on the server.',
-      task: 'Fix `createBooking` and `withBooking` so failures are reported immediately with a clear, typed error (`ApiError` with message `POST /booking failed: <status> <response text>`), any 2xx status counts as success, and cleanup always runs and sends the auth token. The tests call `async runScenario(createStatus, testFails)`, which runs one "spec" through `withBooking` against a fake `request` (no network) and resolves with `{ outcome, calls }`: `\'passed\'` or `\'<ErrorName>: <message>\'`, plus the list of requests and test steps in order. The lab harness at the bottom does not need changes. Press Run to check your fix.',
+        'Several Playwright specs import this helper file to create and delete Restful Booker bookings. When the API is down, tests fail much later with confusing "Cannot read properties of undefined" errors. Also, test bookings pile up on the server.',
+      task: 'Fix `createBooking` and `withBooking`. Failures must be reported at once with a clear error of its own type: an `ApiError` with the message `POST /booking failed: <status> <response text>`. Any 2xx status counts as success. Cleanup must always run and must send the auth token. The tests call `async runScenario(createStatus, testFails)`. It runs one "spec" through `withBooking` against a fake `request` (no network). It returns `{ outcome, calls }`: `\'passed\'` or `\'<ErrorName>: <message>\'`, plus the list of requests and test steps, in order. You do not need to change the lab harness at the bottom. Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'bookingHelper.js (in a "type": "module" project)',
@@ -859,9 +1020,9 @@ async function runScenario(createStatus, testFails) {
 }`,
       },
       hints: [
-        'What does createBooking return when the POST fails, and where will that surface?',
-        'What is missing from a thrown string compared to an Error?',
-        'Which block runs even if testBody throws? And which export syntax matches "type": "module"?',
+        'What does createBooking return when the POST fails? Where will that problem show up?',
+        'What is missing from a thrown string, compared to an Error object?',
+        'Which block runs even if testBody throws? And which export style matches "type": "module"?',
       ],
       solution: {
         language: 'javascript',
@@ -941,12 +1102,12 @@ async function runScenario(createStatus, testFails) {
       },
       explanation: `**Fixes:**
 
-1. **The catch swallowed the error** and the function returned \`undefined\`; the failure surfaced later as an unrelated TypeError. Let it throw (no try/catch at all here), so the test fails at the real cause.
-2. **\`throw 'create failed'\`** had no stack, no type and no detail. A custom \`ApiError\` carries the status and response text and can be checked with \`instanceof\`.
-3. **\`!= 200\`** used loose equality and a single code; \`res.ok()\` covers the whole 2xx range clearly.
-4. **Cleanup was skipped** when \`testBody\` threw. \`try/finally\` guarantees the DELETE. Note there is **no catch**: the original test failure still propagates after cleanup.
-5. **Restful Booker's DELETE needs auth** (a token cookie or Basic auth), so the helper now takes a token; without it cleanup silently failed with 403.
-6. **\`module.exports\` in a \`"type": "module"\` project** throws "module is not defined in ES module scope". Use \`export\` consistently. (In a real suite, a Playwright fixture is an even better home for create/delete.) The lab code leaves the export lines out because it runs as a plain script.`,
+1. **The catch hid the error.** The function returned \`undefined\`, and the failure showed up later as an unrelated TypeError. Let it throw (no try/catch here at all), so the test fails at the real cause.
+2. **\`throw 'create failed'\`** had no stack, no type and no detail. A custom \`ApiError\` carries the status and the response text. Callers can check it with \`instanceof\`.
+3. **\`!= 200\`** used loose equality and accepted only one code. \`res.ok()\` accepts the whole 2xx range.
+4. **Cleanup was skipped** when \`testBody\` threw. \`try/finally\` makes sure the DELETE runs. Note there is **no catch**: the original test failure still goes up to the caller after cleanup.
+5. **Restful Booker's DELETE needs auth** (a token cookie or Basic auth). So the helper now takes a token. Without it, cleanup failed silently with a 403.
+6. **\`module.exports\` in a \`"type": "module"\` project** throws "module is not defined in ES module scope". Use \`export\` everywhere. (In a real suite, a Playwright fixture is an even better place for create and delete.) The lab code leaves out the export lines because it runs as a plain script.`,
       fnName: 'runScenario',
       tests: [
         { args: [200, false], expected: { outcome: 'passed', calls: ['POST /booking', 'test uses booking 42', 'DELETE /booking/42 (token=abc123)'] } },
@@ -960,11 +1121,11 @@ async function runScenario(createStatus, testFails) {
       followUps: [
         {
           q: 'What happens if both testBody and the DELETE in finally throw?',
-          a: 'The error thrown in finally replaces the original one, so you would see the cleanup failure and lose the real test failure. To be safe, wrap the cleanup in its own try/catch that logs (or attaches) the cleanup error but does not throw, so the original assertion error is the one reported. Playwright fixtures report teardown errors separately, which is another reason to move this into a fixture.',
+          a: 'The error thrown in finally replaces the first one. You would see the cleanup failure and lose the real test failure. To be safe, wrap the cleanup in its own try/catch that logs the cleanup error but does not throw it. Then the original assertion error is the one reported. Playwright fixtures report cleanup errors separately, which is another reason to use a fixture.',
         },
         {
           q: 'How would this look as a Playwright fixture?',
-          a: 'test.extend({ booking: async ({ request }, use) => { const id = await createBooking(request, data); await use(id); await deleteBooking(request, id); } }). Code after use() is teardown and runs even when the test fails, tests just declare ({ booking }) as a parameter, and there is no try/finally boilerplate in each spec.',
+          a: 'test.extend({ booking: async ({ request }, use) => { const id = await createBooking(request, data); await use(id); await deleteBooking(request, id); } }). The code after use() is the cleanup, and it runs even when the test fails. Tests just ask for ({ booking }) as a parameter, and no spec needs its own try/finally.',
         },
       ],
     },
@@ -975,43 +1136,45 @@ async function runScenario(createStatus, testFails) {
       difficulty: 'easy',
       question: 'What is the difference between for...of, for...in and forEach? Which do you use in Playwright tests and why?',
       whatInterviewerLooksFor: [
-        'for...of = values of iterables; for...in = string keys of objects',
-        'Knows forEach cannot break and ignores await',
-        'Chooses for...of with await for sequential Playwright actions',
+        'for...of gives values; for...in gives object keys as strings',
+        'Knows forEach cannot break and does not wait for await',
+        'Chooses for...of with await for Playwright actions in order',
         'Mentions Object.entries for objects',
       ],
-      modelAnswer: `**Short version:** for...of iterates **values**, for...in iterates **keys**, forEach is an **array method** that calls a function per item.
+      modelAnswer: `**Short version:** for...of gives **values**. for...in gives **keys**. forEach is an **array method** that calls a function once per item.
+
+\`for (const b of ['chromium', 'firefox']) console.log(b)\` prints chromium, then firefox.
 
 | | for...of | for...in | forEach |
 |---|---|---|---|
-| Gives | values | string keys (incl. inherited) | (value, index, array) |
-| Works on | arrays, strings, Sets, Maps | objects | arrays (and Set/Map/NodeList have their own) |
+| Gives | values | keys, as strings | (value, index, array) |
+| Works on | arrays, strings, Sets, Maps | objects | arrays |
 | break / continue | yes | yes | no |
 | await inside pauses the loop | yes | yes | **no** |
 
 **Why it matters in tests:**
 
-- for...in on an array gives \`'0'\`, \`'1'\` as **strings**, so \`i + 1\` becomes \`'01'\`, and any extra properties on the array show up too. I don't use it on arrays.
-- forEach with an async callback starts every callback and returns immediately. In a Playwright test the test can finish before the clicks happen, and failures become unhandled rejections instead of test failures.
+- for...in on an array gives \`'0'\`, \`'1'\` as **strings**. So \`i + 1\` becomes \`'01'\`. Extra keys on the array also show up. I don't use it on arrays.
+- forEach with an async callback starts every callback and returns at once. It does not wait. In a Playwright test, the test can finish before the clicks happen. Failures then show up as unhandled errors instead of test failures.
 
 **What I use:**
 
-- Acting on several elements in order: \`for (const row of await page.getByRole('row').all()) { await expect(row).toBeVisible(); }\`
-- Objects (e.g. form data): \`for (const [label, value] of Object.entries(formData)) await page.getByLabel(label).fill(value);\`
-- Pure transformations with no await: \`map\`/\`filter\`.
-- Data-driven tests: a top-level for...of that calls \`test(...)\` once per data row, giving each case its own name in the report.`,
+- To act on several elements in order: \`for (const row of await page.getByRole('row').all()) { await expect(row).toBeVisible(); }\`
+- For objects such as form data: \`for (const [label, value] of Object.entries(formData)) await page.getByLabel(label).fill(value);\`
+- For simple changes with no await: \`map\` and \`filter\`.
+- For data-driven tests: a top-level for...of that calls \`test(...)\` once per data row. Each case gets its own name in the report.`,
       followUps: [
         {
           q: 'How do you run the actions in parallel instead of one by one?',
-          a: 'Map the items to promises and await them together: await Promise.all(items.map((x) => doSomething(x))). That is fine for independent API calls, but for UI actions on a single page I keep them sequential because a user cannot click six things at once and re-renders between clicks can cause races.',
+          a: 'Turn the items into promises and wait for all of them together: await Promise.all(items.map((x) => doSomething(x))). That is fine for independent API calls. For clicks on one page I keep them one by one, because a user cannot click six things at once, and the page may redraw between clicks.',
         },
         {
           q: 'Is for...in ever the right choice?',
-          a: 'Rarely. It enumerates enumerable string keys of an object, including inherited ones, so it can surprise you. Object.keys/entries return only own properties and give you an array you can loop with for...of, sort or filter. I would only use for...in in old code or when I explicitly want inherited keys.',
+          a: 'Rarely. It lists the keys of an object, including keys the object gets from its parent, so it can surprise you. Object.keys and Object.entries return only the object\'s own keys, as an array you can loop with for...of, sort or filter. I would only use for...in in old code.',
         },
       ],
       pitfalls: [
-        'Saying for...in and for...of are interchangeable.',
+        'Saying for...in and for...of do the same thing.',
         'Using forEach with async callbacks in test code.',
         'Not knowing that for...in keys are strings.',
       ],
@@ -1021,43 +1184,43 @@ async function runScenario(createStatus, testFails) {
       difficulty: 'easy',
       question: 'How do you stop a loop as soon as you find what you are looking for? Show it with a list of test results where you need the first failure.',
       whatInterviewerLooksFor: [
-        'Uses break in for/for...of, or find/findIndex/some',
-        'Knows forEach cannot be stopped and return only skips one item',
+        'Uses break in for or for...of, or find / findIndex / some',
+        'Knows forEach cannot be stopped, and return only skips one item',
         'Handles the "not found" case',
-        'Mentions labelled break for nested loops',
+        'Mentions a labelled break for nested loops',
       ],
       modelAnswer: `**Three good options:**
 
-**1. for...of with break** (clear, works with await):
+**1. for...of with break** (clear, and works with await):
 
     let firstFail = null;
     for (const r of results) {
       if (r.status === 'failed') { firstFail = r; break; }
     }
 
-**2. Built-ins that stop early by design:** \`results.find((r) => r.status === 'failed')\` returns the item or \`undefined\`; \`findIndex\` gives the position or \`-1\`; \`some\` answers yes/no. These are the most readable when there is no \`await\` involved.
+**2. Built-in methods that stop early:** \`results.find((r) => r.status === 'failed')\` returns the item or \`undefined\`. \`findIndex\` gives the position or \`-1\`. \`some\` answers yes or no. These read best when there is no \`await\`.
 
 **3. Nested data with a label:** when results are grouped by spec file, \`files: for (const file of specs) { for (const t of file.tests) { if (t.status === 'failed') { hit = t; break files; } } }\` leaves both loops at once.
 
-**What does NOT work:** \`results.forEach(r => { if (r.status === 'failed') return; })\`. \`return\` ends only that callback call; the loop continues to the end. Throwing an exception to escape forEach "works" but is a misuse of errors.
+**What does NOT work:** \`results.forEach(r => { if (r.status === 'failed') return; })\`. \`return\` ends only that one call. The loop goes on to the end. Throwing an error to escape forEach "works", but it misuses errors.
 
-**Handle "not found":** decide what absence means. For "first failure" in a report, \`undefined\` probably means "all passed". For "find the user row in the table", absence is a test failure, so I'd assert it explicitly with a clear message rather than crash later on \`undefined.name\`.
+**Handle "not found":** decide what it means. For "first failure" in a report, \`undefined\` probably means "all passed". For "find the user row in the table", not finding it is a test failure. So I check it with a clear message, instead of crashing later on \`undefined.name\`.
 
-**Bonus:** \`continue\` is the sibling of \`break\`: skip this item (e.g. skipped tests) and go on to the next.`,
+**Bonus:** \`continue\` is the partner of \`break\`. It skips this item (for example, a skipped test) and goes on to the next.`,
       followUps: [
         {
           q: 'What if each check needs an await, like reading text from a locator?',
-          a: 'Use for...of with await and break: for (const row of await rows.all()) { if ((await row.textContent())?.includes("Asha")) { target = row; break; } }. find and some do not await their callbacks, so an async predicate returns a Promise, which is always truthy. In Playwright the even better tool is a filtered locator: page.getByRole("row").filter({ hasText: "Asha" }).',
+          a: 'Use for...of with await and break: for (const row of await rows.all()) { if ((await row.textContent())?.includes("Asha")) { target = row; break; } }. find and some do not wait for an async callback. It returns a Promise, and a Promise is always truthy. In Playwright, a filtered locator is even better: page.getByRole("row").filter({ hasText: "Asha" }).',
         },
         {
           q: 'What is the difference between break and return inside a loop in a function?',
-          a: 'break leaves only the loop and continues with the code after it in the same function. return leaves the whole function immediately, so it also stops the loop. Returning early from a helper (return r as soon as it matches) is often the cleanest way to write "find first" by hand.',
+          a: 'break leaves only the loop, and the function goes on with the code after it. return leaves the whole function at once, so it also stops the loop. Returning early from a helper (return r as soon as it matches) is often the cleanest way to write "find the first" by hand.',
         },
       ],
       pitfalls: [
-        'Believing return inside forEach stops the loop.',
-        'Using filter(...)[0], which scans the whole array.',
-        'Passing an async callback to find/some.',
+        'Believing that return inside forEach stops the loop.',
+        'Using filter(...)[0], which checks the whole array.',
+        'Passing an async callback to find or some.',
       ],
     },
     {
@@ -1067,23 +1230,23 @@ async function runScenario(createStatus, testFails) {
       whatInterviewerLooksFor: [
         'Correct import syntax for both kinds',
         'A sensible folder structure (pages, fixtures, utils, tests, data)',
-        'Awareness that module state is shared and evaluated once',
-        'A consistent team convention and its reasoning',
+        'Knows a module runs once and its data is shared',
+        'A consistent team rule, and the reason for it',
       ],
-      modelAnswer: `**Named exports:** any number per file; imported with braces and the exact name (rename with \`as\`).
+      modelAnswer: `**Named exports:** any number per file. You import them with braces and the exact name. You can rename with \`as\`.
 
     export const BASE_URL = 'https://www.saucedemo.com';
     export function uniqueEmail() { /* ... */ }
     // import { BASE_URL, uniqueEmail as email } from '../utils/data';
 
-**Default export:** one per file, imported without braces under any name.
+**Default export:** one per file. You import it without braces, under any name.
 
     export default class LoginPage { /* ... */ }
     // import LoginPage from '../pages/LoginPage';
 
-**Trade-off:** a default import can be renamed freely, which allows inconsistent names across the codebase; named imports are checked by name and editors auto-import them reliably. Many teams therefore use named exports everywhere, or default only for "one class per file" page objects. Consistency matters more than the choice.
+**Trade-off:** a default import can get any name, so names can drift across the codebase. Named imports are checked by name, and editors auto-import them correctly. So many teams use named exports everywhere, or a default export only for "one class per file" page objects. Being consistent matters more than the choice.
 
-**Structure I would propose:**
+**Structure I would suggest:**
 
 | Folder | Contents | Exports |
 |---|---|---|
@@ -1093,23 +1256,23 @@ async function runScenario(createStatus, testFails) {
 | \`data/\` | JSON test data | imported where needed |
 | \`tests/\` | \`*.spec.ts\` | nothing |
 
-Specs then import \`test\` and \`expect\` from \`../fixtures\` instead of \`@playwright/test\`, so every test gets the page objects injected.
+Specs then import \`test\` and \`expect\` from \`../fixtures\`, not from \`@playwright/test\`. So every test gets the page objects ready to use.
 
-**Two module facts that cause real bugs:** a module runs **once per process** and is shared; a mutable array exported from \`utils/data.ts\` and pushed to by one test leaks into the next test in the same worker. And modules are strict mode, so an accidental undeclared variable throws instead of silently becoming global.`,
+**Two module facts that cause real bugs:** a module runs **once per process**, and everyone shares it. If one test pushes into an array exported from \`utils/data.ts\`, the next test in the same worker sees it. Also, modules use strict mode, so a variable you forgot to declare throws an error instead of quietly becoming global.`,
       followUps: [
         {
           q: 'What is a barrel file, and is it a good idea?',
-          a: 'A barrel is an index.ts that re-exports from several files (export * from "./LoginPage"), so specs can import { LoginPage, CartPage } from "../pages". It shortens imports, but it can create circular imports and makes it harder to see where things come from. Fine for a small set of page objects; avoid deep chains of barrels.',
+          a: 'A barrel is an index.ts file that re-exports from several files (export * from "./LoginPage"). Specs can then write import { LoginPage, CartPage } from "../pages". It shortens imports. But it can create import loops, and it hides where things come from. It is fine for a small set of page objects. Avoid barrels that point to other barrels.',
         },
         {
           q: 'Why should specs import test from your fixtures file rather than from @playwright/test?',
-          a: 'Because the extended test object carries your custom fixtures (page objects, logged-in state, API helpers). Importing the base test would compile but those fixtures would be missing, and TypeScript would complain when a test asks for them. Re-exporting expect from the same file keeps a single import line per spec.',
+          a: 'Because the extended test object carries your custom fixtures: page objects, logged-in state, API helpers. If you import the base test, the code still compiles, but those fixtures are missing, and TypeScript complains when a test asks for them. Exporting expect from the same file keeps one import line per spec.',
         },
       ],
       pitfalls: [
-        'Putting curly braces around a default import (or forgetting them for a named one).',
-        'Exporting mutable shared arrays/objects as "global test data".',
-        'No consistent structure: helpers duplicated inside each spec.',
+        'Putting braces around a default import, or forgetting them for a named one.',
+        'Exporting shared arrays or objects that tests change, as "global test data".',
+        'No clear structure, so helpers are copied into each spec.',
       ],
     },
     {
@@ -1117,14 +1280,16 @@ Specs then import \`test\` and \`expect\` from \`../fixtures\` instead of \`@pla
       difficulty: 'medium',
       question: 'You run a script and get "require is not defined in ES module scope". What does it mean and how do you fix it? Explain CommonJS vs ES modules.',
       whatInterviewerLooksFor: [
-        'Recognises the CJS/ESM mismatch',
-        'Knows how Node chooses: "type" field and .mjs/.cjs extensions',
+        'Sees that CommonJS and ES module styles are mixed',
+        'Knows how Node decides: the "type" field and .mjs / .cjs extensions',
         'Offers fixes in both directions',
-        'Knows ESM details: static imports, top-level await, no __dirname',
+        'Knows ESM facts: imports at the top, top-level await, no __dirname',
       ],
-      modelAnswer: `**What it means:** Node is treating the file as an **ES module** (because package.json has \`"type": "module"\` or the file ends in \`.mjs\`), and ES modules do not have \`require\`, \`module.exports\`, \`__dirname\` or \`__filename\`.
+      modelAnswer: `**What it means:** Node is treating the file as an **ES module**. That happens because package.json has \`"type": "module"\`, or the file ends in \`.mjs\`. ES modules do not have \`require\`, \`module.exports\`, \`__dirname\` or \`__filename\`.
 
-**CommonJS vs ESM in one breath:** CommonJS is Node's original system (\`require\` / \`module.exports\`, loaded synchronously at run time). ES modules are the JavaScript standard (\`import\` / \`export\`, analysed before the code runs, used by browsers and modern Node, with top-level \`await\`).
+For example, \`const fs = require('fs');\` in such a file fails. \`import fs from 'fs';\` works.
+
+**CommonJS vs ESM in short:** CommonJS is Node's original system: \`require\` and \`module.exports\`. ES modules are the JavaScript standard: \`import\` and \`export\`. Browsers and modern Node use them, and they allow \`await\` at the top of a file.
 
 **How Node decides:**
 
@@ -1137,27 +1302,27 @@ Specs then import \`test\` and \`expect\` from \`../fixtures\` instead of \`@pla
 
 **Fixes:**
 
-1. **Go with ESM (recommended):** replace \`const x = require('x')\` with \`import x from 'x'\`, \`module.exports = {...}\` with \`export\`, and \`__dirname\` with \`import.meta.dirname\` (Node 20.11+). Add file extensions to relative imports.
-2. **Stay with CommonJS:** remove \`"type": "module"\` or rename the file to \`.cjs\`.
-3. **Need a CommonJS-only package from ESM?** \`import pkg from 'pkg'\` usually works (you get \`module.exports\` as the default), or use \`createRequire(import.meta.url)\` from \`node:module\`.
+1. **Move to ESM (recommended):** replace \`const x = require('x')\` with \`import x from 'x'\`. Replace \`module.exports = {...}\` with \`export\`. Replace \`__dirname\` with \`import.meta.dirname\` (Node 20.11+). Add file extensions to relative imports.
+2. **Stay with CommonJS:** remove \`"type": "module"\`, or rename the file to \`.cjs\`.
+3. **Need a CommonJS-only package from ESM?** \`import pkg from 'pkg'\` usually works (you get \`module.exports\` as the default). Or use \`createRequire(import.meta.url)\` from \`node:module\`.
 
-The reverse error, "Cannot use import statement outside a module", is the same mismatch the other way round.
+The opposite error, "Cannot use import statement outside a module", is the same mix-up the other way round.
 
-**Playwright context:** test files are usually TypeScript and always use \`import\`; Playwright transpiles them and supports projects with or without \`"type": "module"\`. The errors mostly appear in plain \`.js\` utility scripts (data seeding, report uploads) that live next to the tests.`,
+**Playwright context:** test files are usually TypeScript and always use \`import\`. Playwright handles them with or without \`"type": "module"\`. The errors mostly appear in plain \`.js\` helper scripts, like data seeding or report uploads, that live next to the tests.`,
       followUps: [
         {
           q: 'How do you get the current folder path in an ES module?',
-          a: 'Use import.meta.dirname (and import.meta.filename) on Node 20.11 or later. On older versions: import { fileURLToPath } from "node:url"; const __dirname = path.dirname(fileURLToPath(import.meta.url)). This matters for reading test data files relative to the spec instead of the current working directory, which differs between your laptop and CI.',
+          a: 'Use import.meta.dirname (and import.meta.filename) on Node 20.11 or later. On older versions: import { fileURLToPath } from "node:url"; const __dirname = path.dirname(fileURLToPath(import.meta.url)). This matters when you read test data files next to the spec, because the current folder differs between your laptop and CI.',
         },
         {
           q: 'What is dynamic import and when would you use it?',
-          a: 'await import("./module.js") loads a module at run time and returns a promise of its exports. It works in both CommonJS and ESM, so it is the bridge when CJS code needs an ESM-only package. It is also useful for loading environment-specific config or heavy tools only when needed.',
+          a: 'await import("./module.js") loads a module while the code runs, and gives back a promise of its exports. It works in both CommonJS and ESM, so CommonJS code can use it to load an ESM-only package. It is also handy for loading a config for one environment, or a heavy tool only when needed.',
         },
       ],
       pitfalls: [
         'Mixing require and import in the same file and hoping it works.',
-        'Deleting "type": "module" without understanding what else depends on it.',
-        'Not knowing that __dirname is missing in ESM.',
+        'Deleting "type": "module" without checking what else depends on it.',
+        'Not knowing that __dirname does not exist in ESM.',
       ],
     },
     {
@@ -1165,48 +1330,48 @@ The reverse error, "Cannot use import statement outside a module", is the same m
       difficulty: 'medium',
       question: 'Walk me through package.json in a Playwright project. What is the difference between dependencies and devDependencies, and between npm install and npm ci?',
       whatInterviewerLooksFor: [
-        'Explains scripts, devDependencies and semver ranges',
-        'Knows package-lock.json is committed and why',
-        'npm ci for CI: clean, exact, fails on mismatch',
-        'Knows npx and that node_modules is not committed',
+        'Explains scripts, devDependencies and version ranges',
+        'Knows package-lock.json is committed, and why',
+        'npm ci for CI: clean, exact, fails on a mismatch',
+        'Knows npx, and that node_modules is not committed',
       ],
-      modelAnswer: `**package.json is the project's manifest:** name, version, \`"type"\`, **scripts**, and the list of packages it needs.
+      modelAnswer: `**package.json describes the project:** its name, version, \`"type"\`, **scripts**, and the packages it needs.
 
-**scripts** give the team shared commands: \`"test": "playwright test"\` (run with \`npm test\`), \`"test:smoke": "playwright test --grep @smoke"\` (run with \`npm run test:smoke\`). CI calls the same scripts, so "how we run tests" is defined in one place.
+**scripts** give the team shared commands. \`"test": "playwright test"\` runs with \`npm test\`. \`"test:smoke": "playwright test --grep @smoke"\` runs with \`npm run test:smoke\`. CI calls the same scripts, so "how we run tests" lives in one place.
 
 **dependencies vs devDependencies:**
 
-- \`dependencies\`: needed when the **application** runs in production (express, react).
-- \`devDependencies\`: needed only to build, lint or **test**. A test project's packages, \`@playwright/test\`, \`@types/node\`, \`dotenv\`, \`@faker-js/faker\`, are devDependencies (\`npm i -D ...\`). \`npm install --omit=dev\` skips them for production images.
+- \`dependencies\`: needed when the **application** runs in production (for example express or react).
+- \`devDependencies\`: needed only to build, lint or **test**. In a test project, \`@playwright/test\`, \`@types/node\`, \`dotenv\` and \`@faker-js/faker\` are devDependencies (\`npm i -D ...\`). \`npm install --omit=dev\` skips them for production builds.
 
-**Versions (semver):** \`MAJOR.MINOR.PATCH\`. \`^1.48.0\` accepts any 1.x ≥ 1.48.0; \`~1.48.0\` accepts only patches; \`1.48.0\` is exact. Playwright updates also update browser builds, so many teams pin an exact version and upgrade deliberately.
+**Versions (semver):** \`MAJOR.MINOR.PATCH\`. \`^1.48.0\` accepts any 1.x from 1.48.0 up. \`~1.48.0\` accepts only patch updates. \`1.48.0\` is exact. A Playwright update also updates the browsers, so many teams pin an exact version and upgrade on purpose.
 
-**package-lock.json** records the exact resolved version of every package, including sub-dependencies. **Commit it**: it is what makes two machines install identical trees.
+**package-lock.json** records the exact version of every package, including the packages they use. **Commit it.** It makes two machines install exactly the same thing.
 
 **npm install vs npm ci:**
 
 | | npm install | npm ci |
 |---|---|---|
-| Reads | package.json (lock as a guide) | package-lock.json strictly |
-| Can modify lock | yes | never; errors if it disagrees with package.json |
-| node_modules | updates in place | deletes and reinstalls |
-| Use | local development, adding packages | CI pipelines |
+| Reads | package.json (the lock file as a guide) | package-lock.json, strictly |
+| Can change the lock file | yes | never; it fails if the lock file and package.json disagree |
+| node_modules | updated in place | deleted and installed fresh |
+| Use it for | local work, adding packages | CI pipelines |
 
-**Also:** after installing \`@playwright/test\` you run \`npx playwright install --with-deps\` to download browsers (and OS dependencies on Linux CI); \`npx\` runs a package's CLI without a global install; \`node_modules/\` goes in \`.gitignore\`.`,
+**Also:** after installing \`@playwright/test\`, run \`npx playwright install --with-deps\` to download the browsers (and the system libraries they need on Linux CI). \`npx\` runs a package's command without a global install. \`node_modules/\` goes in \`.gitignore\`.`,
       followUps: [
         {
           q: 'Tests pass locally but fail in CI right after a Playwright upgrade. What would you check first?',
-          a: 'Whether CI installed the same versions: is package-lock.json committed and does CI use npm ci? Then whether the browsers match the library version (npx playwright install --with-deps runs after npm ci, or the CI uses the matching mcr.microsoft.com/playwright Docker tag). Finally read the release notes for behaviour changes and compare traces from both environments.',
+          a: 'First, check that CI installed the same versions: is package-lock.json committed, and does CI use npm ci? Then check that the browsers match the library version: npx playwright install --with-deps must run after npm ci, or CI must use the matching Playwright Docker image. Finally, read the release notes for changes and compare traces from both machines.',
         },
         {
           q: 'What is the difference between npm i -D and npm i -g?',
-          a: '-D saves the package to devDependencies of this project, so every teammate and CI get it from package.json. -g installs it globally on your machine only, which is invisible to the project and causes "works on my machine" problems. For project tools prefer a local devDependency run with npx or an npm script.',
+          a: '-D saves the package in this project\'s devDependencies, so every teammate and CI get it from package.json. -g installs it globally on your machine only. The project cannot see that, which causes "works on my machine" problems. For project tools, prefer a local dev dependency run with npx or an npm script.',
         },
       ],
       pitfalls: [
         'Adding package-lock.json to .gitignore.',
         'Putting @playwright/test in dependencies "because tests need it".',
-        'Using npm install in CI and getting different versions per run.',
+        'Using npm install in CI and getting different versions on each run.',
       ],
     },
     {
@@ -1214,42 +1379,42 @@ The reverse error, "Cannot use import statement outside a module", is the same m
       difficulty: 'medium',
       question: 'When should you use try/catch inside a Playwright test, and when is it harmful? How do you guarantee cleanup of test data?',
       whatInterviewerLooksFor: [
-        'Knows expect throws and catching it hides failures',
-        'Uses try/finally (no catch) or fixtures/afterEach for cleanup',
-        'Catches only to add context, recover, or handle an expected condition, then rethrows',
-        'Mentions that try/catch needs await to catch async failures',
+        'Knows expect throws, and catching it hides failures',
+        'Uses try/finally (no catch), fixtures or afterEach for cleanup',
+        'Catches only to add context, recover or handle an expected case, then rethrows',
+        'Knows try/catch needs await to catch async failures',
       ],
-      modelAnswer: `**How failures work:** a Playwright assertion or action **throws** when it fails (or times out). The runner marks the test failed when an error escapes the test function. Anything that stops the error from escaping can turn a failure into a pass.
+      modelAnswer: `**How failures work:** a Playwright assertion or action **throws an error** when it fails or times out. The test runner marks the test failed when that error leaves the test function. Anything that stops the error from leaving can turn a failure into a pass.
 
 **Harmful uses:**
 
 - \`try { await expect(cartBadge).toHaveText('2'); } catch (e) { console.log(e); }\`: the test reports **passed**.
-- Wrapping a whole test in try/catch "to take a screenshot": Playwright already does that with \`screenshot: 'only-on-failure'\` and traces.
-- Using try/catch as control flow: \`try { await banner.click({ timeout: 2000 }); } catch {}\` to dismiss an optional popup. It hides real problems and adds a fixed delay. Prefer \`page.addLocatorHandler\` for overlays that appear unpredictably, or check state deterministically.
+- Wrapping a whole test in try/catch "to take a screenshot". Playwright already does that with \`screenshot: 'only-on-failure'\` and traces.
+- Using try/catch to steer the test: \`try { await banner.click({ timeout: 2000 }); } catch {}\` to close a popup that may or may not appear. It hides real problems and adds a fixed delay. For overlays that appear at random times, use \`page.addLocatorHandler\`, or check the page state directly.
 
 **Good uses:**
 
 1. **Add context and rethrow:** \`catch (e) { throw new Error('Checkout step failed for user ' + user, { cause: e }); }\`.
-2. **Expected failure is the test:** asserting that an API helper rejects (\`await expect(promise).rejects.toThrow(...)\` is often cleaner).
-3. **Cleanup with try/finally:** create data, run the steps inside \`try\`, delete in \`finally\`. No \`catch\`, so the original failure still propagates after cleanup.
+2. **The failure is what you test:** checking that an API helper fails. \`await expect(promise).rejects.toThrow(...)\` is often cleaner.
+3. **Cleanup with try/finally:** create the data, run the steps inside \`try\`, delete in \`finally\`. There is no \`catch\`, so the original failure still goes up after cleanup.
 
-**Where cleanup belongs in a real suite:** a fixture. Code after \`await use(booking)\` is teardown and runs even when the test fails; Playwright reports teardown errors separately. \`afterEach\` also works for per-test cleanup.
+**Where cleanup belongs in a real suite:** a fixture. The code after \`await use(booking)\` is the cleanup, and it runs even when the test fails. Playwright reports cleanup errors separately. \`afterEach\` also works for cleanup after each test.
 
-**Async detail:** \`try { page.click(...) } catch\` without \`await\` catches nothing, because the promise rejects after the try block has finished. Always \`await\` inside try.`,
+**Async detail:** \`try { page.click(...) } catch\` without \`await\` catches nothing. The promise fails after the try block has already finished. Always \`await\` inside try.`,
       followUps: [
         {
           q: 'How do you make a test continue after a failed check but still fail at the end?',
-          a: 'Use soft assertions: await expect.soft(locator).toHaveText("..."). The failure is recorded, the test keeps running so you see all problems in one run, and the test is marked failed at the end. That is the right tool instead of try/catch around each assertion.',
+          a: 'Use soft assertions: await expect.soft(locator).toHaveText("..."). The failure is recorded, the test keeps running so you see every problem in one run, and the test is marked failed at the end. That is the right tool, instead of try/catch around each check.',
         },
         {
           q: 'An error in finally hides the original test error. How do you avoid that?',
-          a: 'Keep cleanup code defensive: wrap it in its own try/catch and log or attach the cleanup error without rethrowing, so the original assertion error remains the reported one. Moving cleanup into a fixture avoids the problem because Playwright reports test errors and teardown errors separately.',
+          a: 'Make the cleanup code careful: wrap it in its own try/catch, and log or attach the cleanup error without throwing it again. Then the original assertion error is the one reported. Moving cleanup into a fixture avoids the problem, because Playwright reports test errors and cleanup errors separately.',
         },
       ],
       pitfalls: [
         'try/catch around expect with only a console.log.',
-        'Catching without await so nothing is caught.',
-        'Putting cleanup after the assertions where it is skipped on failure.',
+        'Catching without await, so nothing is caught.',
+        'Putting cleanup after the assertions, where it is skipped when a check fails.',
       ],
     },
     {
@@ -1257,29 +1422,29 @@ The reverse error, "Cannot use import statement outside a module", is the same m
       difficulty: 'hard',
       question: 'Design a custom error for API failures in your test framework. Why bother, and how would callers use it?',
       whatInterviewerLooksFor: [
-        'Correct subclassing: super, this.name, extra fields',
-        'Uses cause to preserve the original error',
-        'Callers branch with instanceof, not message string matching',
-        'Explains the payoff: faster triage in reports',
+        'Correct custom error class: super, this.name, extra fields',
+        'Uses cause to keep the original error',
+        'Callers check the type with instanceof, not by matching message text',
+        'Explains the payoff: faster understanding of failures in reports',
       ],
-      modelAnswer: `**Why:** a raw failure like "TypeError: Cannot read properties of undefined (reading 'bookingid')" tells you nothing. An \`ApiError: POST /booking returned 503 (Service Unavailable)\` with the URL and response body tells the person triaging the report exactly where to look, and lets code react by **type**.
+      modelAnswer: `**Why:** a raw failure like "TypeError: Cannot read properties of undefined (reading 'bookingid')" tells you nothing. Compare it with \`ApiError: POST /booking returned 503 (Service Unavailable)\`, plus the URL and the response body. That tells the person reading the report exactly where to look. It also lets code react to the **type** of error.
 
 **Design:**
 
     export class ApiError extends Error {
       constructor(message, { status, method, url, body, cause } = {}) {
-        super(message, { cause });          // cause keeps the root error (ES2022)
+        super(message, { cause });          // cause keeps the original error
         this.name = 'ApiError';             // shows in stack traces and reports
         this.status = status;
         this.method = method;
         this.url = url;
-        this.body = body;                   // truncated response text
+        this.body = body;                   // shortened response text
       }
     }
 
-Optionally subclasses: \`class AuthError extends ApiError\` (401/403), \`class NotFoundError extends ApiError\` (404).
+You can add child classes: \`class AuthError extends ApiError\` (401/403) and \`class NotFoundError extends ApiError\` (404).
 
-**Throwing it** in a central request helper:
+**Throwing it** in one shared request helper:
 
     if (!res.ok()) {
       throw new ApiError(method + ' ' + url + ' returned ' + res.status(), {
@@ -1289,25 +1454,25 @@ Optionally subclasses: \`class AuthError extends ApiError\` (401/403), \`class N
 
 **Using it:**
 
-- Most tests do nothing special: the error escapes, the test fails, the report shows a clear message.
-- A setup step can react by type: \`if (err instanceof AuthError) { await refreshToken(); retry once; } else throw err;\`.
-- A negative test asserts the type: \`await expect(getBooking(999)).rejects.toBeInstanceOf(NotFoundError)\`.
+- Most tests do nothing special. The error leaves the test, the test fails, and the report shows a clear message.
+- A setup step can react to the type: \`if (err instanceof AuthError) { await refreshToken(); retry once; } else throw err;\`.
+- A negative test checks the type: \`await expect(getBooking(999)).rejects.toBeInstanceOf(NotFoundError)\`.
 
-**Rules:** branch with \`instanceof\` or \`status\`, never by matching message text; always rethrow what you cannot handle; never put tokens or passwords into the message or body, because reports are shared.`,
+**Rules:** decide with \`instanceof\` or \`status\`, never by matching message text. Always rethrow what you cannot handle. Never put tokens or passwords in the message or body, because reports are shared.`,
       followUps: [
         {
           q: 'Why set this.name explicitly?',
-          a: 'Error subclasses inherit name = "Error" from the prototype, so without setting it the stack trace and String(err) start with "Error:" and you lose the type at a glance. Setting this.name = "ApiError" (or this.constructor.name) makes reports and logs show the real type. instanceof works either way because it checks the prototype chain.',
+          a: 'A child of Error gets name = "Error" from its parent. So without setting it, the stack trace and String(err) start with "Error:", and you lose the type at a glance. Setting this.name = "ApiError" makes reports and logs show the real type. instanceof works either way, because it checks the class, not the name.',
         },
         {
           q: 'What is the difference between wrapping with cause and just rethrowing?',
-          a: 'Rethrowing passes the same error up unchanged. Wrapping creates a new error with higher-level context ("Checkout setup failed for user Asha") and keeps the original in err.cause, so Node and most reporters print both. Use wrapping when the extra context helps triage, and plain rethrow when you have nothing to add.',
+          a: 'Rethrowing passes the same error up, unchanged. Wrapping creates a new error with more context ("Checkout setup failed for user Asha") and keeps the original in err.cause, so Node and most reporters print both. Wrap when the extra context helps the reader. Rethrow when you have nothing to add.',
         },
       ],
       pitfalls: [
-        'throw "API failed" (a string): no stack trace, no type.',
-        'Matching on error message text to decide what to do.',
-        'Logging secrets in error messages.',
+        'throw "API failed" (a string): no stack trace and no type.',
+        'Matching on the error message text to decide what to do.',
+        'Putting secrets in error messages.',
       ],
     },
     {
@@ -1315,40 +1480,40 @@ Optionally subclasses: \`class AuthError extends ApiError\` (401/403), \`class N
       difficulty: 'easy',
       question: 'A helper script crashes with "TypeError: Cannot read properties of undefined". Walk me through how you would debug it in VS Code.',
       whatInterviewerLooksFor: [
-        'Reads the message and stack trace to the exact line',
-        'Uses breakpoints / JavaScript Debug Terminal rather than random logs',
-        'Forms and verifies a hypothesis (which value is undefined and why)',
-        'Fixes the cause and adds a guard or test',
+        'Reads the message and stack trace to find the exact line',
+        'Uses breakpoints and the JavaScript Debug Terminal, not random logs',
+        'Makes a guess about the cause and proves it (which value is undefined, and why)',
+        'Fixes the cause and adds a guard or a test',
       ],
-      modelAnswer: `**1. Read the error.** "Cannot read properties of undefined (reading 'price')" means something before \`.price\` was \`undefined\`. The first stack frame in my own file gives the exact line, e.g. \`cart.js:14\`.
+      modelAnswer: `**1. Read the error.** "Cannot read properties of undefined (reading 'price')" means the thing before \`.price\` was \`undefined\`. The first stack trace line in my own file gives the exact line, for example \`cart.js:14\`.
 
-**2. Reproduce minimally.** Run just that script with the smallest input that fails. Intermittent? Note which data triggers it.
+**2. Make it happen with the smallest input.** Run just that script with the smallest data that fails. If it only fails sometimes, note which data causes it.
 
-**3. Pause at the line.** Set a breakpoint on line 14 (click the gutter), open a **JavaScript Debug Terminal** and run \`node cart.js\` (or \`npx playwright test cart.spec.ts\`). When it pauses, hover the variables or add them to **Watch**. A conditional breakpoint (\`item === undefined\`) helps inside loops.
+**3. Pause on the line.** Put a breakpoint on line 14 (click left of the line number). Open a **JavaScript Debug Terminal** and run \`node cart.js\` (or \`npx playwright test cart.spec.ts\`). When it pauses, hover over the variables or add them to **Watch**. Inside a loop, a conditional breakpoint (\`item === undefined\`) pauses only when it matters.
 
-**4. Walk back with the Call Stack** to see where the bad value came from: an array index past the end (\`items[items.length]\`), \`find\` returning \`undefined\`, a wrong property name in API JSON (\`booking.bookingId\` vs \`bookingid\`), or an un-awaited promise.
+**4. Walk back with the Call Stack** to see where the bad value came from. Common causes: an index past the end (\`items[items.length]\`), \`find\` returning \`undefined\`, a wrong key name in API JSON (\`booking.bookingId\` vs \`bookingid\`), or a promise without \`await\`.
 
-**5. Verify the hypothesis.** In the Debug Console evaluate \`items.length\` and \`i\`. If \`i === items.length\`, it is an off-by-one \`<=\`.
+**5. Prove the guess.** In the Debug Console, type \`items.length\` and \`i\`. If \`i === items.length\`, the loop has an off-by-one \`<=\`.
 
-**6. Fix the cause, not the symptom.** Change the loop condition rather than sprinkling \`?.\` everywhere. Optional chaining is right when the value is genuinely optional, wrong when it hides a bug.
+**6. Fix the cause, not the symptom.** Change the loop condition, instead of adding \`?.\` everywhere. Optional chaining (\`?.\`) is right when the value really is optional. It is wrong when it hides a bug.
 
-**7. Prevent recurrence.** Add a guard with a clear error ("No product named X in cart") or a unit test for the helper.
+**7. Stop it from coming back.** Add a check with a clear error ("No product named X in cart"), or a unit test for the helper.
 
-Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect, or a temporary labelled \`console.log\`. In a Playwright test, \`--debug\`, \`page.pause()\` and the trace viewer cover the browser side.`,
+Without VS Code: run \`node --inspect-brk cart.js\` and attach from chrome://inspect, or add a short labelled \`console.log\`. In a Playwright test, \`--debug\`, \`page.pause()\` and the trace viewer cover the browser side.`,
       followUps: [
         {
           q: 'When would you still use console.log instead of the debugger?',
-          a: 'For quick checks, for code that runs in CI where you cannot attach a debugger, and for timing-sensitive async issues where pausing changes the behaviour. I label every log (console.log("cart items", items)) and remove them before committing; for test runs, test.info().attach or annotations keep useful data in the report instead.',
+          a: 'For quick checks, for code that runs in CI where you cannot attach a debugger, and for timing problems where pausing changes what happens. I label every log (console.log("cart items", items)) and remove them before committing. In test runs, test.info().attach keeps useful data in the report instead.',
         },
         {
           q: 'What does optional chaining (?.) change here and why can it be dangerous?',
-          a: 'item?.price returns undefined instead of throwing when item is undefined. That is correct if a missing item is valid, but in tests it often hides the real bug: the sum becomes NaN or the assertion compares undefined, and the failure moves somewhere less obvious. Prefer an explicit check with a clear error when absence is unexpected.',
+          a: 'item?.price gives undefined instead of throwing when item is undefined. That is right if a missing item is allowed. In tests it often hides the real bug: the sum becomes NaN, or the check compares undefined, and the failure moves somewhere harder to find. When the value should never be missing, add a clear check with a clear error.',
         },
       ],
       pitfalls: [
         'Adding console.log everywhere without reading the stack trace.',
-        'Fixing with ?. without understanding why the value is undefined.',
-        'Not reproducing with a minimal input first.',
+        'Adding ?. without understanding why the value is undefined.',
+        'Not making the bug happen with a small input first.',
       ],
     },
     {
@@ -1356,51 +1521,51 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       difficulty: 'hard',
       question: 'Generate test data for a hotel booking: check-in tomorrow, check-out 3 nights later, both as YYYY-MM-DD. What can go wrong with dates in tests?',
       whatInterviewerLooksFor: [
-        'Correct add-days logic that handles month/year rollover',
-        'Knows months are 0-based and Date setters mutate',
-        'Understands UTC vs local time zone issues in CI',
-        'Mentions deterministic dates or clock control for stable tests',
+        'Correct "add days" logic that handles month and year changes',
+        'Knows months start at 0 and Date setters change the date',
+        'Understands UTC vs local time zone problems in CI',
+        'Mentions fixed dates or a controlled clock for stable tests',
       ],
       modelAnswer: `**Helper:**
 
     function isoDatePlus(days, base = new Date()) {
-      const d = new Date(base);                 // copy; setters mutate
-      d.setUTCDate(d.getUTCDate() + days);      // rollover handled by Date
+      const d = new Date(base);                 // copy first; setters change the date
+      d.setUTCDate(d.getUTCDate() + days);      // Date handles month and year changes
       return d.toISOString().slice(0, 10);      // 'YYYY-MM-DD' in UTC
     }
     const checkin = isoDatePlus(1);
     const checkout = isoDatePlus(4);            // 3 nights after check-in
 
-\`setUTCDate(32)\` rolls into the next month automatically, so 30 December + 3 days becomes 2 January of the next year without extra code.
+\`setUTCDate(32)\` moves into the next month by itself. So 30 December + 3 days becomes 2 January of the next year, with no extra code.
 
 **What goes wrong:**
 
 | Problem | Example | Prevention |
 |---|---|---|
-| 0-based months | \`new Date(2026, 1, 1)\` is **February** | use ISO strings or comments |
-| Time zones | laptop in IST, CI in UTC; between 00:00 and 05:30 IST the "today" differs | do date maths in UTC for API data |
-| Mixing local and UTC | \`getDate()\` with \`toISOString()\` can shift a day | use the UTC getters/setters consistently |
-| Month overflow | 31 Jan + 1 month = 3 March | add days, or clamp to the month's last day |
-| Mutation | \`base.setDate(...)\` changes the shared base | copy first |
-| Non-deterministic tests | "tomorrow" is a Saturday sometimes and pricing differs | fix the date or control the clock |
-| DST | a "day" is 23 or 25 hours locally | prefer UTC or whole-day helpers |
+| Months start at 0 | \`new Date(2026, 1, 1)\` is **February** | use ISO strings, or add comments |
+| Time zones | laptop in India, CI in UTC; between 00:00 and 05:30 in India, "today" differs | do date maths in UTC for API data |
+| Mixing local and UTC | \`getDate()\` with \`toISOString()\` can shift a day | use the UTC getters and setters everywhere |
+| Month overflow | 31 Jan + 1 month = 3 March | add days, or cap at the month's last day |
+| Changing a shared date | \`base.setDate(...)\` changes the shared base | copy first |
+| Tests that change by day | "tomorrow" is sometimes a Saturday, with different prices | fix the date, or control the clock |
+| Daylight saving | a local "day" can be 23 or 25 hours | prefer UTC, or whole-day helpers |
 
-**Deterministic tests:** for UI logic that depends on "today", Playwright's **Clock API** (\`await page.clock.setFixedTime(new Date('2026-10-14T10:00:00Z'))\`) fixes the browser's time so the test behaves the same every day. For API data, pass an explicit base date.
+**Stable tests:** when page behaviour depends on "today", Playwright's **Clock API** (\`await page.clock.setFixedTime(new Date('2026-10-14T10:00:00Z'))\`) fixes the browser's time. Then the test behaves the same every day. For API data, pass an explicit base date.
 
-**Boundary ideas to mention:** check-in today, check-out before check-in, same-day check-out, 29 February in a leap year, year end.`,
+**Edge cases to mention:** check-in today, check-out before check-in, same-day check-out, 29 February in a leap year, and the end of the year.`,
       followUps: [
         {
           q: 'How would you get the date exactly 18 years ago for an age-gate boundary test?',
-          a: 'Copy today and subtract 18 from the year: const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() - 18). Then also test one day less (just under 18) and one day more. Watch out for 29 February: subtracting years from 29 Feb 2028 lands on 1 March 2010, so decide the business rule and include a leap-day case.',
+          a: 'Copy today and subtract 18 from the year: const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() - 18). Also test one day less (just under 18) and one day more. Watch out for 29 February: 18 years before 29 Feb 2028 lands on 1 March 2010. Agree on the business rule, and include a leap-day case.',
         },
         {
           q: 'Why not just hard-code dates like 2026-10-15 in the test?',
-          a: 'Hard-coded dates rot: once that date is in the past, booking APIs reject it and the test fails for a reason unrelated to the code under test. Relative dates (tomorrow, +3 days) stay valid. Hard-coded dates are fine when you also control the clock, which makes the scenario fully deterministic.',
+          a: 'Fixed dates go stale. Once the date is in the past, booking APIs reject it, and the test fails for a reason that has nothing to do with the code. Relative dates (tomorrow, +3 days) stay valid. Fixed dates are fine when you also control the clock, because then the whole scenario stays the same every run.',
         },
       ],
       pitfalls: [
-        'Adding 1 to getMonth() inconsistently or forgetting months are 0-based.',
-        'Mixing local getters with toISOString (UTC) and getting off-by-one days.',
+        'Adding 1 to getMonth() in some places but not others, or forgetting months start at 0.',
+        'Mixing local getters with toISOString (UTC) and being off by one day.',
         'Hard-coding dates that will expire.',
       ],
     },
@@ -1411,9 +1576,9 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       question:
         'Predict the output line by line: `outer: for (let r = 0; r < 3; r++) { for (let c = 0; c < 3; c++) { if (c === 1) continue outer; if (r === 2) break outer; console.log(r, c); } }`',
       assumptions: [
-        '`continue outer` jumps to the next iteration of the OUTER loop (r++).',
-        '`break outer` leaves both loops entirely.',
-        'The inner loop restarts at c = 0 for each new r.',
+        '`continue outer` jumps to the next round of the OUTER loop (r++).',
+        '`break outer` leaves both loops completely.',
+        'The inner loop starts again at c = 0 for each new r.',
       ],
       steps: [
         { label: 'r = 0, c = 0', calc: 'c !== 1, r !== 2 → log "0 0"' },
@@ -1423,11 +1588,11 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
         { label: 'r = 2, c = 0', calc: 'c !== 1, but r === 2 → break outer: both loops end' },
       ],
       answer: 'Two lines: `0 0` and `1 0`.',
-      insight: 'Labels change which loop continue/break act on. Without the label, continue would only skip to c = 2 of the inner loop, and break would only end the inner loop. Trace loops as a table of (r, c, action) and you will never guess wrong.',
+      insight: 'Labels change which loop continue and break act on. Without the label, continue would only skip to c = 2 in the inner loop, and break would only end the inner loop. Trace loops as a table of (r, c, action) and you will never guess wrong.',
       followUps: [
         {
           q: 'What would print without the labels (plain continue and break)?',
-          a: 'r = 0: c = 0 logs "0 0", c = 1 continue, c = 2 logs "0 2". r = 1: logs "1 0" and "1 2". r = 2: c = 0 hits break (inner loop ends), then the outer loop also ends because r becomes 3. Output: 0 0, 0 2, 1 0, 1 2.',
+          a: 'r = 0: c = 0 logs "0 0", c = 1 continues, c = 2 logs "0 2". r = 1: logs "1 0" and "1 2". r = 2: c = 0 hits break, so the inner loop ends, and then the outer loop also ends because r becomes 3. Output: 0 0, 0 2, 1 0, 1 2.',
         },
       ],
     },
@@ -1437,22 +1602,22 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
         'Predict every log and the final return value: `function f() { try { console.log("A"); throw new Error("x"); console.log("B"); } catch (e) { console.log("C", e.message); return "from catch"; } finally { console.log("D"); } console.log("E"); } console.log(f());`',
       assumptions: [
         'A throw skips the rest of the try block.',
-        'finally runs before the function actually returns.',
+        'finally runs before the function really returns.',
         'finally has no return of its own here.',
       ],
       steps: [
         { label: 'try', calc: 'logs "A", then throw → "B" is skipped' },
-        { label: 'catch', calc: 'logs "C x"; return "from catch" is scheduled' },
+        { label: 'catch', calc: 'logs "C x"; the return of "from catch" waits for finally' },
         { label: 'finally', calc: 'runs before leaving: logs "D"' },
         { label: 'after the block', calc: '"E" never runs: the function already returned' },
         { label: 'caller', calc: 'console.log(f()) logs "from catch"' },
       ],
       answer: '`A`, `C x`, `D`, `from catch`. B and E are never printed.',
-      insight: 'finally always runs, even when try or catch returns, and it runs before the value reaches the caller. That is why cleanup goes in finally. If finally itself returned "from finally", it would override the catch result, so never return from finally.',
+      insight: 'finally always runs, even when try or catch returns. It runs before the value reaches the caller. That is why cleanup goes in finally. If finally itself returned "from finally", it would replace the catch result, so never return from finally.',
       followUps: [
         {
           q: 'What if the catch block rethrows instead of returning?',
-          a: 'Logs are A, C x, D, and then the error propagates out of f, so console.log(f()) never runs and the caller sees the Error("x") (uncaught unless the caller has its own try/catch). finally still runs before the error leaves the function, which is exactly why try/finally is safe for cleanup in tests.',
+          a: 'The logs are A, C x, D. Then the error leaves f, so console.log(f()) never runs, and the caller gets the Error("x"). It stays uncaught unless the caller has its own try/catch. finally still runs before the error leaves the function, which is exactly why try/finally is safe for cleanup in tests.',
         },
       ],
     },
@@ -1461,9 +1626,9 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       question:
         'A data script builds a booking for "31 January + 1 month". Trace: `const d = new Date(2026, 0, 31); d.setMonth(d.getMonth() + 1); console.log(d.getMonth(), d.getDate());` What prints, and how would you make "+1 month" safe?',
       assumptions: [
-        'Months are 0-based (0 = January, 1 = February, 2 = March).',
+        'Months start at 0 (0 = January, 1 = February, 2 = March).',
         'February 2026 has 28 days (2026 is not a leap year).',
-        'Date setters roll extra days over into the next month.',
+        'Extra days roll over into the next month.',
       ],
       steps: [
         { label: 'Start', calc: 'new Date(2026, 0, 31) → 31 January 2026; getMonth() = 0' },
@@ -1472,11 +1637,11 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
         { label: 'Result', calc: '3 March 2026 → getMonth() = 2, getDate() = 3' },
       ],
       answer: '`2 3` (3 March 2026), not the end of February the author expected.',
-      insight: 'Adding months is ambiguous at month ends; adding days is not. For "+1 month" clamp to the last day: set the date to 1, add the month, then set the date to Math.min(originalDay, daysInNewMonth), where daysInNewMonth = new Date(y, m + 1, 0).getDate().',
+      insight: 'Adding months is unclear at the end of a month. Adding days is not. For a safe "+1 month", cap the day: set the date to 1, add the month, then set the date to Math.min(originalDay, daysInNewMonth). Here daysInNewMonth = new Date(y, m + 1, 0).getDate().',
       followUps: [
         {
           q: 'Why does new Date(y, m + 1, 0) give the last day of month m?',
-          a: 'Day 0 of a month means "one day before the 1st", which is the last day of the previous month. So new Date(2026, 2, 0) is 28 February 2026 and getDate() returns 28. It is a well-known trick for days-in-month and works across leap years automatically.',
+          a: 'Day 0 of a month means "one day before the 1st", which is the last day of the month before. So new Date(2026, 2, 0) is 28 February 2026, and getDate() returns 28. It is a well-known trick to get the number of days in a month, and it handles leap years by itself.',
         },
       ],
     },
@@ -1489,21 +1654,21 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       options: ['for (const x in b) console.log(x)', 'for (const x of b) console.log(x)', 'for (const x of Object.keys(b)) console.log(x)', 'for (let x = 1; x <= b.length; x++) console.log(b[x])'],
       correct: [1],
       explanation:
-        'for...of iterates the values of an iterable. for...in and Object.keys both give the indexes as strings ("0", "1", "2"). The classic for loop starts at 1 and uses <=, so it skips "chromium" and prints undefined at the end.',
+        'for...of gives the values of an array. for...in and Object.keys both give the positions as strings ("0", "1", "2"). The classic for loop starts at 1 and uses <=, so it skips "chromium" and prints undefined at the end.',
       followUps: [
-        { q: 'How do you get both the index and the value in a for...of loop?', a: 'Use entries(): for (const [i, value] of b.entries()) gives the numeric index and the value, which avoids the string-index trap of for...in and keeps break/continue/await available.' },
+        { q: 'How do you get both the index and the value in a for...of loop?', a: 'Use entries(): for (const [i, value] of b.entries()) gives the number index and the value. This avoids the string keys of for...in, and you can still use break, continue and await.' },
       ],
     },
     {
       id: 'js-loops-modules-errors-mcq-02',
       difficulty: 'easy',
-      question: 'You want to stop iterating as soon as the first failed result is found. Which constructs can do that? Select ALL that apply.',
+      question: 'You want to stop looping as soon as the first failed result is found. Which constructs can do that? Select ALL that apply.',
       options: ['for...of with break', 'results.forEach with return', 'results.find(...)', 'results.some(...)'],
       correct: [0, 2, 3],
       explanation:
-        'break ends a for...of loop immediately; find and some stop at the first element whose callback returns truthy. In forEach, return only ends the current callback call and the loop continues with the next item, so it cannot stop early.',
+        'break ends a for...of loop at once. find and some stop at the first item where the callback returns a truthy value. In forEach, return only ends the current call, and the loop goes on with the next item. So forEach cannot stop early.',
       followUps: [
-        { q: 'Which of those three would you choose if each check needs await?', a: 'for...of with break. find and some do not await their callbacks: an async callback returns a Promise, which is always truthy, so find would return the first element regardless of the real result.' },
+        { q: 'Which of those three would you choose if each check needs await?', a: 'for...of with break. find and some do not wait for an async callback. It returns a Promise, and a Promise is always truthy, so find would return the first item no matter what the real result was.' },
       ],
     },
     {
@@ -1518,9 +1683,9 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       ],
       correct: [1],
       explanation:
-        'The default export is imported without braces (any name works) and named exports go inside braces with their exact names, combined as default first. Option 1 treats the default as a named export, option 3 omits braces for the named one, and option 4 is not valid syntax.',
+        'The default export is imported without braces, under any name. Named exports go inside braces, with their exact names. You can combine them, default first. Option 1 treats the default as a named export. Option 3 leaves out the braces for the named one. Option 4 is not valid code.',
       followUps: [
-        { q: 'How would you import LOGIN_URL under a different name?', a: 'Use as inside the braces: import LoginPage, { LOGIN_URL as LOGIN_PATH } from "./LoginPage". Renaming is only needed for named exports, since default imports can take any name directly.' },
+        { q: 'How would you import LOGIN_URL under a different name?', a: 'Use as inside the braces: import LoginPage, { LOGIN_URL as LOGIN_PATH } from "./LoginPage". You only need as for named exports, because a default import can take any name directly.' },
       ],
     },
     {
@@ -1537,9 +1702,9 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       options: ["'found', 21, 31", "'01', '11', '21'", "1, 'found', 3", "11, 21, 31"],
       correct: [1],
       explanation:
-        'for...in gives the keys as strings ("0", "1", "2"). "0" + 1 is string concatenation, giving "01", and "01" === 2 is never true. So it logs "01", "11", "21". Programmers expecting numeric indexes predict 1, "found", 3.',
+        'for...in gives the keys as strings ("0", "1", "2"). "0" + 1 joins text and gives "01", and "01" === 2 is never true. So it logs "01", "11", "21". People who expect number indexes guess 1, "found", 3.',
       followUps: [
-        { q: 'How would you fix the loop?', a: 'Use for (const [i, v] of arr.entries()) for numeric indexes, or a classic for (let i = 0; i < arr.length; i++). If you must convert a string key, Number(i) + 1 works, but avoiding for...in on arrays is the real fix.' },
+        { q: 'How would you fix the loop?', a: 'Use for (const [i, v] of arr.entries()) for number indexes, or a classic for (let i = 0; i < arr.length; i++). Number(i) + 1 also works, but the real fix is to not use for...in on arrays.' },
       ],
     },
     {
@@ -1565,9 +1730,9 @@ Without VS Code: \`node --inspect-brk cart.js\` and attach from chrome://inspect
       ],
       correct: [1],
       explanation:
-        'Playwright decides pass/fail by whether an error escapes the test function. expect throws after its 5-second retry, but the catch swallows it, so the test finishes normally and is reported as passed. Flaky only applies to tests that fail and then pass on retry; nothing here causes a skip.',
+        'Playwright marks a test failed when an error leaves the test function. expect throws after retrying for 5 seconds, but the catch swallows the error. So the test ends normally and is reported as passed. "Flaky" means a test failed and then passed on a retry, which is not the case here. Nothing here skips the test either.',
       followUps: [
-        { q: 'How should you keep going after a failed check but still fail the test?', a: 'Use expect.soft(...): the failure is recorded, execution continues, and the test is marked failed at the end. Or rethrow from catch after adding context: throw new Error("badge mismatch", { cause: e }).' },
+        { q: 'How should you keep going after a failed check but still fail the test?', a: 'Use expect.soft(...). The failure is recorded, the test keeps running, and it is marked failed at the end. Or add context in the catch and throw again: throw new Error("badge mismatch", { cause: e }).' },
       ],
     },
     {
@@ -1588,9 +1753,9 @@ console.log(check());`,
       options: ["'try' only", "'cleanup' then 'try'", "'try' then 'cleanup'", "'cleanup' only"],
       correct: [1],
       explanation:
-        'The return value "try" is computed, then finally runs before the function actually returns, logging "cleanup". Only then does the caller receive "try" and log it. finally is not skipped by return, which is what makes it reliable for cleanup.',
+        'The return value "try" is ready first. Then finally runs, before the function really returns, and logs "cleanup". Only then does the caller get "try" and log it. A return does not skip finally, which is what makes finally reliable for cleanup.',
       followUps: [
-        { q: 'What if finally also contained return "finally"?', a: 'The function would return "finally", overriding the try block\'s return (and it would even swallow an error thrown in try). That is why linters flag return inside finally (no-unsafe-finally).' },
+        { q: 'What if finally also contained return "finally"?', a: 'The function would return "finally", replacing the return from try. It would even hide an error thrown in try. That is why linters warn about a return inside finally (the no-unsafe-finally rule).' },
       ],
     },
     {
@@ -1606,9 +1771,9 @@ console.log(check());`,
       ],
       correct: [0, 1, 4],
       explanation:
-        'Test tooling is a dev dependency, the lock file is committed so every machine installs identical versions, and scripts define shared commands. npm ci never modifies the lock file; it fails if package.json and the lock disagree. node_modules is large, platform-specific and always ignored.',
+        'Test tools are dev dependencies. The lock file is committed, so every machine installs the same versions. Scripts define shared commands. npm ci never changes the lock file; it fails if package.json and the lock file disagree. node_modules is large, depends on the operating system, and is never committed.',
       followUps: [
-        { q: 'Why is npm ci preferred in CI pipelines?', a: 'It deletes node_modules and installs exactly what package-lock.json specifies, failing on any mismatch. That makes builds reproducible and usually faster than npm install, which may resolve newer versions within the allowed ranges.' },
+        { q: 'Why is npm ci preferred in CI pipelines?', a: 'It deletes node_modules and installs exactly what package-lock.json lists, and it fails on any mismatch. So builds are the same every time, and usually faster. npm install may pick newer versions within the allowed ranges.' },
       ],
     },
     {
@@ -1623,9 +1788,9 @@ console.log(check());`,
       ],
       correct: [0, 1],
       explanation:
-        'With "type": "module", .js files are ES modules where require does not exist. Converting to import fixes it, and so does renaming to .cjs, which tells Node to treat that one file as CommonJS. "use strict" changes nothing (modules are already strict), and --require preloads a module but does not change the file type.',
+        'With "type": "module", .js files are ES modules, and require does not exist there. Switching to import fixes it. Renaming the file to .cjs also works, because it tells Node to treat that one file as CommonJS. "use strict" changes nothing, since modules are already strict. --require loads a file early but does not change its type.',
       followUps: [
-        { q: 'What else must change when converting such a script to ESM?', a: 'module.exports becomes export, __dirname/__filename become import.meta.dirname/filename (Node 20.11+), relative imports need file extensions, and JSON files are read with fs or imported with an import attribute (with { type: "json" }).' },
+        { q: 'What else must change when converting such a script to ESM?', a: 'module.exports becomes export. __dirname and __filename become import.meta.dirname and import.meta.filename (Node 20.11+). Relative imports need file extensions. JSON files are read with fs, or imported with an import attribute: with { type: "json" }.' },
       ],
     },
     {
@@ -1635,9 +1800,9 @@ console.log(check());`,
       options: ['0', '1', '2', 'It throws a RangeError'],
       correct: [1],
       explanation:
-        'The constructor takes a 0-based month, so (2026, 1, 1) is 1 February 2026, and getMonth also returns the 0-based index: 1. Beginners often think the 1 means January (and answer 0) or that getMonth adds 1 (and answer 2).',
+        'The month you pass to new Date starts at 0, so (2026, 1, 1) is 1 February 2026. getMonth also counts from 0, so it returns 1. Beginners often think the 1 means January (and answer 0), or that getMonth adds 1 (and answer 2).',
       followUps: [
-        { q: 'How do you print the month as a human-friendly 2-digit string?', a: 'String(d.getMonth() + 1).padStart(2, "0") gives "02". Or take it from toISOString().slice(5, 7) when you want UTC, or use Intl.DateTimeFormat for locale formats like "Feb".' },
+        { q: 'How do you print the month as a human-friendly 2-digit string?', a: 'String(d.getMonth() + 1).padStart(2, "0") gives "02". Or take it from toISOString().slice(5, 7) when you want UTC. Use Intl.DateTimeFormat for names like "Feb".' },
       ],
     },
     {
@@ -1662,9 +1827,9 @@ const e = new ApiError('Not found', 404);`,
       ],
       correct: [0, 2, 3],
       explanation:
-        'Subclasses are instances of Error and get a stack trace from the Error constructor. name, however, is inherited from Error.prototype as "Error", so String(e) is "Error: Not found" until you set this.name = "ApiError". That missing line is the most common custom-error mistake.',
+        'A child of Error is also an Error, and it gets a stack trace from the Error constructor. But name comes from Error as "Error". So String(e) is "Error: Not found" until you set this.name = "ApiError". Forgetting that line is the most common custom-error mistake.',
       followUps: [
-        { q: 'How would you also keep the original low-level error?', a: 'Accept a cause and pass it to super: super(message, { cause }). Then err.cause holds the original error and Node prints it in the stack output, so you add context without losing the root problem.' },
+        { q: 'How would you also keep the original low-level error?', a: 'Accept a cause and pass it to super: super(message, { cause }). Then err.cause holds the original error, and Node prints it with the stack. You add context without losing the real cause.' },
       ],
     },
     {
@@ -1679,9 +1844,9 @@ const e = new ApiError('Not found', 404);`,
       ],
       correct: [1],
       explanation:
-        'Modules are cached: the first import evaluates the file, and every later import in the same worker process gets the same exported objects. So pushes from one spec are visible to the next. With several workers, each worker has its own copy, which makes the behaviour differ between local and CI runs: a classic flakiness source.',
+        'Modules are cached. The first import runs the file, and every later import in the same worker gets the same exported objects. So items pushed by one spec are visible to the next. With several workers, each worker has its own copy. So the behaviour differs between local and CI runs, a classic cause of flaky tests.',
       followUps: [
-        { q: 'How should per-test data be shared instead?', a: 'Create it inside the test or in a test-scoped fixture so each test gets a fresh value, and pass it explicitly. For data that must persist across workers (e.g. created IDs for cleanup) write to files or use the API, not module-level variables.' },
+        { q: 'How should per-test data be shared instead?', a: 'Create the data inside the test, or in a test-scoped fixture, so each test gets a fresh value, and pass it in directly. For data that must outlive a worker (for example IDs to clean up later), write to a file or use the API, not a variable in a module.' },
       ],
     },
     {
@@ -1696,9 +1861,9 @@ const e = new ApiError('Not found', 404);`,
       ],
       correct: [0],
       explanation:
-        'Invalid JSON throws SyntaxError at run time, reading a property of null throws TypeError, and using an undeclared identifier throws ReferenceError. Knowing these names lets you read failing CI logs quickly: ReferenceError is often a typo, TypeError usually means an unexpected undefined or null value.',
+        'Broken JSON throws a SyntaxError when the code runs. Reading a property of null throws a TypeError. Using a name that was never declared throws a ReferenceError. Knowing these names helps you read failing CI logs fast: a ReferenceError is often a typo, and a TypeError usually means an unexpected undefined or null.',
       followUps: [
-        { q: 'Which of these would TypeScript catch before running?', a: 'The undeclared pagee (ReferenceError) and usually null.length are compile-time errors in TypeScript. Invalid JSON content is data, so JSON.parse can only fail at run time, which is why parsing external data should be wrapped or validated.' },
+        { q: 'Which of these would TypeScript catch before running?', a: 'TypeScript catches the undeclared pagee (ReferenceError), and usually null.length too, before the code runs. Broken JSON is data, so JSON.parse can only fail while running. That is why you should check or wrap the parsing of outside data.' },
       ],
     },
     {
@@ -1713,9 +1878,9 @@ const e = new ApiError('Not found', 404);`,
       ],
       correct: [0, 2],
       explanation:
-        'try/finally runs cleanup and lets the original error continue upward. Catch-cleanup-rethrow also works (with cleanup duplicated on the success path). Option 2 cleans up but swallows the failure, so the test passes. Option 4 skips cleanup entirely when runSteps throws.',
+        'try/finally runs the cleanup and lets the original error keep going up. Catch, clean up, then rethrow also works (with the cleanup repeated for the success path). Option 2 cleans up but swallows the failure, so the test passes. Option 4 skips the cleanup completely when runSteps throws.',
       followUps: [
-        { q: 'Why is a Playwright fixture usually better than either working option?', a: 'Fixture teardown (code after await use(...)) always runs, even on failure or timeout, and Playwright reports teardown errors separately from test errors. The cleanup code lives in one place instead of being repeated in every test.' },
+        { q: 'Why is a Playwright fixture usually better than either working option?', a: 'The fixture cleanup (code after await use(...)) always runs, even on a failure or timeout, and Playwright reports cleanup errors separately from test errors. The cleanup code also lives in one place, instead of being repeated in every test.' },
       ],
     },
     {
@@ -1730,9 +1895,9 @@ const e = new ApiError('Not found', 404);`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Local setters add a day in IST, but toISOString converts back to UTC, which at 02:00 IST is 20:30 the previous day, so "tomorrow" in IST prints as today\'s date. Using UTC getters/setters with toISOString keeps everything in one zone. Machines in different time zones can produce different dates, which is why statement 3 is false.',
+        'The local setter adds a day in India time. But toISOString converts back to UTC. At 02:00 in India it is 20:30 of the day before in UTC, so "tomorrow" in India prints as today\'s date. Using UTC getters and setters with toISOString keeps everything in one time zone. Machines in different time zones can give different dates, so statement 3 is false.',
       followUps: [
-        { q: 'How do you make date-dependent UI tests deterministic?', a: 'Control the clock: Playwright\'s page.clock.setFixedTime (or install) fixes the browser time, and you can set the timezoneId option for the browser context so the page behaves as if it were in a specific time zone on every machine.' },
+        { q: 'How do you make date-dependent UI tests give the same result every day?', a: 'Control the clock. Playwright\'s page.clock.setFixedTime (or install) fixes the browser time. You can also set the timezoneId option for the browser context, so the page acts as if it were in one time zone on every machine.' },
       ],
     },
     {
@@ -1751,9 +1916,9 @@ console.log(attempt);`,
       options: ['3 times, attempt = 3', '2 times, attempt = 2', '4 times, attempt = 4', '0 times, attempt = 0'],
       correct: [1],
       explanation:
-        'The condition is checked before each round. With attempt 0 and 1 both parts are true, so the body runs twice; at attempt 2 the safety limit (attempt < 2) is false and the loop stops even though the status is still pending. The limit worked as designed: a bounded retry gives up instead of looping forever.',
+        'The condition is checked before each round. When attempt is 0 and then 1, both parts are true, so the body runs twice. When attempt is 2, the limit (attempt < 2) is false, so the loop stops, even though the status is still pending. The limit did its job: a limited retry gives up instead of looping forever.',
       followUps: [
-        { q: 'After this loop, how should the script react to still being "pending"?', a: 'Check the final state and throw a clear error, for example throw new Error("Order still pending after 2 checks"). A bounded loop that exits silently is almost as bad as an infinite one, because later steps run against the wrong state.' },
+        { q: 'After this loop, how should the script react to still being "pending"?', a: 'Check the final state and throw a clear error, for example throw new Error("Order still pending after 2 checks"). A limited loop that ends silently is almost as bad as an endless one, because the next steps run against the wrong state.' },
       ],
     },
   ],

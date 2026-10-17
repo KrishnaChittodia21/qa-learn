@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 2,
   title: 'Functions, Scope and Closures',
   subtitle:
-    'Declarations, expressions and arrows, parameters and return, scope, hoisting and the TDZ, closures, callbacks and higher-order functions, `this`, pure functions and recursion, all tied to writing reusable test helpers.',
+    'How to write and use functions: arrows, parameters, return, scope, hoisting, closures, callbacks, `this`, pure functions and recursion. All tied to writing reusable test helpers.',
   estimatedMinutes: 100,
   sources: [
     'javascript.info: Functions, Function expressions, Arrow functions basics, Variable scope and closure, The old "var", Object methods and "this", Recursion and stack, Rest parameters',
@@ -18,36 +18,44 @@ const topic: Topic = {
   ],
   tags: ['javascript', 'functions', 'arrow-functions', 'scope', 'hoisting', 'tdz', 'closures', 'callbacks', 'higher-order-functions', 'this', 'pure-functions', 'recursion'],
   cheatSheet: [
-    'Declaration `function f() {}` is hoisted whole (callable before its line); an expression/arrow assigned to `const` is in the TDZ until its line, and with `var` it is `undefined` (calling it gives "is not a function").',
-    'Arrow with braces needs an explicit `return`; `x => x * 2` returns implicitly; return an object as `() => ({ id: 1 })`.',
-    'Missing arguments are `undefined`; extras are ignored. Defaults apply only for `undefined` (not `null`). `...rest` collects extras into a real array.',
-    'A function without `return` returns `undefined`. Never put the returned value on the line after `return` (automatic semicolon).',
-    'Scope is lexical: a function sees variables where it was WRITTEN, not where it is called. let/const are block-scoped; var is function-scoped.',
-    'TDZ: let/const/class exist from the start of the block but throw ReferenceError until their declaration runs.',
-    'Closure = function + the variables around it when it was created; each call of the outer function makes a fresh, private set (counters, unique-ID generators, cached setup).',
-    '`for (var i...)` + callbacks all see the final i; `for (let i...)` gives each iteration its own i.',
-    'Higher-order function = takes and/or returns a function (map, filter, test(), retry wrappers). A callback is the function you pass in.',
-    '`this` is decided by HOW a regular function is called (obj.method() → obj); arrows have no own `this`, they use the surrounding one. Detached class methods lose `this` → TypeError.',
-    'Pure function: same input → same output, no side effects. Make data builders and parsers pure; keep side effects (browser, network, files) at the edges.',
-    'Recursion needs a base case; without one you get `RangeError: Maximum call stack size exceeded`.',
+    'A declaration `function f() {}` can be called before its line. An arrow or expression saved in `const` cannot: it throws until its line runs. With `var` it is `undefined`, so calling it gives "is not a function".',
+    'An arrow with `{ }` needs `return`. `x => x * 2` returns by itself. Return an object as `() => ({ id: 1 })`.',
+    'Missing arguments are `undefined`. Extra ones are ignored. Defaults are used only for `undefined`, not `null`. `...rest` collects the extras into an array.',
+    'A function without `return` gives `undefined`. Never put the value on the line after `return`.',
+    'Scope means where a variable is visible. A function sees the variables where it was WRITTEN, not where it is called. let/const live in their `{ }` block; var lives in the whole function.',
+    'Hoisting: JavaScript reads declarations first. TDZ (Temporal Dead Zone): a let/const exists from the start of its block, but using it before its line throws a ReferenceError.',
+    'Closure: a function remembers the variables around it, even after the outer function has finished. Each outer call makes a fresh, private set (counters, unique IDs, cached setup).',
+    '`for (var i...)` with callbacks: they all see the final i. `for (let i...)`: each loop round gets its own i.',
+    'A callback is a function you pass to another function. A higher-order function takes or returns a function (map, filter, test(), retry helpers).',
+    '`this` in a regular function depends on HOW it is called: in `obj.method()`, `this` is obj. Arrows have no own `this`; they use the outer one. A method passed around on its own loses `this` → TypeError.',
+    'Pure function: same input → same output, and it changes nothing outside. Keep data builders and parsers pure.',
+    'Recursion (a function calling itself) needs a base case (a stop rule). Without one you get `RangeError: Maximum call stack size exceeded`.',
   ],
   sections: [
     {
       heading: 'What a function is: a reusable test step',
-      body: `**Intuition:** a function is a named, reusable recipe. In manual testing you write "Login as standard_user" once in a test case and reuse it in 40 others; in code, that reusable step is a function.
+      body: `**Example:**
 
-**Anatomy**
+- \`function greet(name) { return 'Hello, ' + name; }\`
+- \`greet('tester')\` gives \`'Hello, tester'\`.
+
+A **function** is a reusable step. You write it once and run it many times. In manual testing you write "Login as standard_user" once and reuse it in 40 test cases. In code, that reusable step is a function.
+
+**The parts of a function**
+
 - **Name:** what the step does (\`loginAs\`, \`buildUser\`, \`toCents\`).
-- **Parameters:** placeholders listed in the definition (\`username\`, \`password\`).
-- **Arguments:** actual values passed at the call (\`'standard_user'\`, \`'secret_sauce'\`).
-- **Body:** the statements that run.
-- **Return value:** what the call evaluates to (\`undefined\` if there is no \`return\`).
+- **Parameters:** the input names in the definition (\`username\`, \`password\`).
+- **Arguments:** the real values you pass in when you call it (\`'standard_user'\`).
+- **Body:** the code inside \`{ }\` that runs.
+- **Return value:** the answer the function gives back. With no \`return\`, the answer is \`undefined\`.
 
-Defining a function does nothing visible; **calling** it (\`name(...)\`) runs it. Forgetting the parentheses gives you the function itself, not its result, a common beginner bug: \`console.log(getTitle)\` prints \`[Function: getTitle]\`.
+Writing a function does not run it. **Calling** it with \`name(...)\` runs it.
 
-**Why it matters for Playwright:** every test is a function you hand to \`test('name', async ({ page }) => { ... })\`. Page Object methods, fixtures, helpers and hooks are all functions. If you are comfortable writing small functions with clear inputs and outputs, a framework is just many of them arranged neatly.
+**Watch out:** if you forget the \`()\`, you get the function itself, not its answer. \`console.log(getTitle)\` prints \`[Function: getTitle]\`.
 
-**In interviews, say this:** "I extract repeated steps into small functions with clear parameters and return values, so a change in the login flow is fixed in one place, not in 40 tests."`,
+**In an interview, say:** "I move repeated steps into small functions with clear inputs and outputs. If the login flow changes, I fix it in one place, not in 40 tests."
+
+**Why testers care:** every Playwright test is a function you pass to \`test('name', async ({ page }) => { ... })\`. Page Object methods, fixtures and hooks are functions too.`,
       code: [
         {
           language: 'javascript',
@@ -64,7 +72,7 @@ console.log(payload.username); // → standard_user
 console.log(typeof buildLogin);    // → function
 console.log(typeof buildLogin('a', 'b')); // → object
 
-// No return statement → the call evaluates to undefined
+// No return statement → the call gives back undefined
 function logStep(step) {
   console.log(\`STEP: \${step}\`);
 }
@@ -73,31 +81,42 @@ console.log(result); // → undefined`,
         },
       ],
       keyPoints: [
-        'Parameters are in the definition; arguments are the values you pass.',
-        'No `return` → `undefined`.',
-        'Every Playwright test body, hook, fixture and page-object method is a function.',
+        'Parameters are the names in the definition. Arguments are the values you pass in.',
+        'No `return` means the call gives back `undefined`.',
+        'Every Playwright test body, hook, fixture and Page Object method is a function.',
       ],
       source: 'javascript.info: Functions; Marijn Haverbeke: Eloquent JavaScript, Ch 3',
     },
     {
       heading: 'Declarations vs expressions vs arrow functions',
-      body: `**Intuition:** three ways to write the same recipe card: a card pinned on the wall from the start (declaration), a card you write and then file under a label (expression), and a short sticky-note version (arrow).
+      body: `**Example:** the same function, written three ways.
 
-| Form | Syntax | Hoisted? | Own \`this\`? | Typical use in tests |
-|---|---|---|---|---|
-| Declaration | \`function login(u) { ... }\` | Yes, whole function | Yes | Top-level helpers |
-| Function expression | \`const login = function (u) { ... };\` | Only the variable (TDZ with const) | Yes | Rare today |
-| Arrow function | \`const login = (u) => { ... };\` | Only the variable (TDZ with const) | **No**, inherits | Callbacks, test bodies, short helpers |
+- Declaration: \`function double(n) { return n * 2; }\`
+- Expression: \`const double = function (n) { return n * 2; };\`
+- Arrow: \`const double = (n) => n * 2;\`
+
+All three give \`8\` for \`double(4)\`.
+
+| Form | Call it before its line? | Own \`this\`? | Typical use in tests |
+|---|---|---|---|
+| Declaration | Yes | Yes | Top-level helpers |
+| Function expression | No | Yes | Rare today |
+| Arrow function | No | **No**, it borrows the outer one | Callbacks, test bodies, short helpers |
+
+(\`this\` is explained later in this topic.)
 
 **Arrow shortcuts**
-- One parameter: parentheses optional (\`n => n * 2\`).
-- Expression body returns automatically (\`n => n * 2\`).
-- Block body \`{ }\` needs \`return\` (\`n => { return n * 2; }\`).
-- Returning an object literal needs parentheses: \`() => ({ id: 1 })\`; without them the braces are read as a block.
 
-**Arrows are not just shorter:** they have no own \`this\` and no \`arguments\` object, and cannot be used with \`new\`. That makes them perfect for callbacks inside methods (they keep the method's \`this\`) and wrong as object methods that need \`this\`.
+- One parameter: the brackets are optional: \`n => n * 2\`.
+- No \`{ }\`: the value is returned automatically: \`n => n * 2\`.
+- With \`{ }\`: you must write \`return\`: \`n => { return n * 2; }\`.
+- To return an object, wrap it in brackets: \`() => ({ id: 1 })\`. Without them, JavaScript reads \`{ }\` as the function body.
 
-**What you will see in Playwright:** \`test('adds item', async ({ page }) => { ... })\` is an async arrow function whose single parameter is destructured from the fixtures object.`,
+**Arrows are not just shorter.** They have no own \`this\`, and you cannot use them with \`new\`. So they are great as callbacks inside methods. But they are wrong as object methods that need \`this\`.
+
+**In Playwright:** \`test('adds item', async ({ page }) => { ... })\`. The test body is an async arrow function. \`{ page }\` picks the \`page\` fixture out of the object that Playwright passes in.
+
+**Why testers care:** an arrow with \`{ }\` but no \`return\` gives \`undefined\`. This bug is very common in helper code.`,
       code: [
         {
           language: 'javascript',
@@ -117,7 +136,7 @@ const doubleBroken = (n) => { n * 2; };
 console.log(doubleBroken(4)); // → undefined
 
 // Returning an object literal from an arrow
-const makeUserWrong = (name) => { name: name };   // braces = block, "name:" is a label
+const makeUserWrong = (name) => { name: name };   // { } is read as a function body, not an object
 const makeUser = (name) => ({ name });            // parentheses = object
 console.log(makeUserWrong('qa'));  // → undefined
 console.log(makeUser('qa'));       // → { name: 'qa' }
@@ -128,24 +147,35 @@ console.log(steps.length, typeof steps[0]); // → 2 function`,
         },
       ],
       keyPoints: [
-        'Declarations are hoisted; expressions and arrows are not callable before their line.',
-        'Arrow + braces = needs `return`; arrow returning an object needs `({ })`.',
+        'Declarations can be called before their line. Expressions and arrows cannot.',
+        'An arrow with `{ }` needs `return`. An arrow that returns an object needs `({ })`.',
         'Arrows have no own `this`: great for callbacks, bad for object methods.',
       ],
       source: 'javascript.info: Function expressions, Arrow functions basics; MDN: Arrow function expressions',
     },
     {
       heading: 'Parameters: defaults, rest and missing arguments',
-      body: `**Intuition:** parameters are the input fields of your helper. JavaScript is lenient: it does not complain if you fill in too few or too many fields, so you must design for both.
+      body: `**Example:**
+
+\`function wait(timeout = 5000) { return timeout; }\`
+
+- \`wait()\` gives \`5000\` (the default).
+- \`wait(1000)\` gives \`1000\`.
+- \`wait(null)\` gives \`null\`. The default is *not* used!
+
+Parameters are the input fields of your helper. JavaScript does not complain if you pass too few or too many values. So you must plan for both.
 
 **Rules**
-- **Missing argument** → the parameter is \`undefined\`.
-- **Extra arguments** → silently ignored (still visible in the old \`arguments\` object of regular functions).
-- **Default values** \`(timeout = 5000)\` apply when the argument is **\`undefined\`** (missing or explicitly undefined), **not** when it is \`null\`, \`0\` or \`''\`. Defaults are evaluated at call time and can use earlier parameters: \`(a, b = a * 2)\`.
-- **Rest parameter** \`(...names)\` gathers remaining arguments into a real array; it must be last.
-- **Options object** pattern: for more than 2 or 3 inputs, accept one object and destructure it, \`function createBooking({ firstname, lastname, totalprice = 100 })\`. Callers name what they pass, order no longer matters, and Playwright uses this style everywhere (\`{ name: 'Login', exact: true }\`).
 
-**Common mistake:** relying on \`||\` for defaults inside the body (\`retries = retries || 2\`), which overrides a legitimate 0. Use a default parameter or \`??\`.`,
+- **Missing argument:** the parameter is \`undefined\`.
+- **Extra arguments:** they are ignored.
+- **Default values** like \`(timeout = 5000)\` are used only when the value is \`undefined\`. They are *not* used for \`null\`, \`0\` or \`''\`. A default can use an earlier parameter: \`(a, b = a * 2)\`.
+- **Rest parameter** \`(...names)\` collects all the extra values into a real array. It must come last.
+- **Options object:** for more than two or three inputs, take one object instead. Example: \`function createBooking({ firstname, lastname, totalprice = 100 })\`. Callers name each value, so the order does not matter. Playwright uses this style everywhere: \`{ name: 'Login', exact: true }\`.
+
+**Watch out:** \`retries = retries || 2\` inside the body replaces a real \`0\`. Use a default parameter or \`??\` instead.
+
+**Why testers care:** options objects make helpers easy to read. \`createBooking({ lastname: 'Brown' })\` says exactly what it sets.`,
       code: [
         {
           language: 'javascript',
@@ -177,24 +207,31 @@ console.log(pair(1, 2, 3)); // → [ 1, 2 ]`,
         },
       ],
       keyPoints: [
-        'Defaults fire only for `undefined`.',
-        'Rest parameter is a real array and must be last.',
-        'Prefer an options object for 3+ parameters, as Playwright does.',
+        'Defaults are used only for `undefined`.',
+        'A rest parameter is a real array and must come last.',
+        'Use an options object for 3 or more inputs, like Playwright does.',
       ],
       source: 'javascript.info: Functions (default values), Rest parameters and spread syntax; MDN: Default parameters',
     },
     {
       heading: 'Return values and early returns',
-      body: `**Intuition:** \`return\` is the function handing you the answer and leaving the room. Nothing after it runs.
+      body: `**Example:**
+
+- \`function add(a, b) { return a + b; }\`
+- \`add(2, 3)\` gives \`5\`.
+
+\`return\` hands back the answer and leaves the function at once. Nothing after it runs.
 
 **Rules**
-- \`return value;\` ends the function and makes the call evaluate to \`value\`.
-- \`return;\` or falling off the end returns \`undefined\`.
-- **Early returns** (guard clauses) keep helpers flat: check the bad cases first and leave.
-- **ASI trap:** a line break right after \`return\` inserts a semicolon, so \`return\` on one line and \`{ ok: true }\` on the next returns \`undefined\`.
-- A function returns **one** value; to return several, return an object (\`{ status, body }\`) or an array.
 
-**For testers:** a helper that "checks" something should *return* a result (or throw), not just \`console.log\` it. A logged mismatch does not fail a test; a returned \`false\` that you assert on, or a thrown error, does.`,
+- \`return value;\` ends the function. The call gives back \`value\`.
+- \`return;\`, or no \`return\` at all, gives back \`undefined\`.
+- **Early return** (also called a *guard clause*): check the bad cases first and leave. This keeps helpers flat and easy to read.
+- A function gives back **one** value. To give back several, return an object (\`{ status, body }\`) or an array.
+
+**Watch out:** never break the line right after \`return\`. JavaScript adds a hidden semicolon there. So \`return\` on one line and \`{ ok: true }\` on the next gives \`undefined\`.
+
+**Why testers care:** a helper that "checks" something should *return* a result or throw an error. A \`console.log\` of a mismatch does not fail a test. A returned \`false\` that you assert on, or a thrown error, does.`,
       code: [
         {
           language: 'javascript',
@@ -210,7 +247,7 @@ console.log(parsePrice('$29.99')); // → 29.99
 console.log(parsePrice('  '));     // → null
 console.log(parsePrice(42));       // → null
 
-// ASI trap: a newline after return ends the statement
+// Trap: a new line right after return ends the statement
 function statusBroken() {
   return
   { ok: true };
@@ -227,26 +264,34 @@ console.log(passed, failed); // → 2 1`,
         },
       ],
       keyPoints: [
-        'Use guard clauses to reject bad input early.',
+        'Use early returns to reject bad input first.',
         'Never break the line right after `return`.',
-        'Checks should return a value or throw; logging does not fail a test.',
+        'Checks should return a value or throw. Logging does not fail a test.',
       ],
       source: 'javascript.info: Functions (returning a value); Marijn Haverbeke: Eloquent JavaScript, Ch 3',
     },
     {
       heading: 'Scope: global, function and block',
-      body: `**Intuition:** scope is the set of rooms in a building. From inside a room you can see into the corridor and the lobby (outer scopes), but people in the lobby cannot see into your room.
+      body: `**Example:**
 
-**Kinds of scope**
-- **Global:** declared outside any function or block; visible everywhere in that file/module. Keep it minimal: global mutable state is what makes tests depend on each other.
+- \`function login() { const user = 'qa'; }\`
+- \`console.log(user);\` outside the function throws \`ReferenceError: user is not defined\`.
+
+\`user\` lives inside the function. Code outside cannot see it.
+
+**Scope** means "where a variable is visible". Think of rooms in a building. From inside a room you can see the corridor and the lobby (the outer scopes). People in the lobby cannot see into your room.
+
+**Three kinds of scope**
+
+- **Global:** declared outside every function and block. It is visible everywhere in that file. Keep it small: shared global values make tests depend on each other.
 - **Function scope:** parameters and variables declared inside a function (including \`var\`).
-- **Block scope:** \`let\`/\`const\` inside \`{ }\` of an \`if\`, \`for\`, or bare block.
+- **Block scope:** \`let\` and \`const\` inside the \`{ }\` of an \`if\`, a \`for\` or a plain block.
 
-**Lexical (static) scope:** a function's view is fixed by **where it is written**, not by where it is called. When JavaScript looks up a name, it searches the current scope, then the enclosing one, outward to global. Kyle Simpson describes this as nested "buckets"; Eloquent JavaScript calls it each local scope seeing all the scopes that contain it.
+**Where you write it decides what it sees.** A function sees the variables around the place where it is *written*, not where it is *called*. This is called **lexical scope** ("lexical" means "based on where the code is written"). To find a name, JavaScript looks in the current scope first. Then it looks one level out, and so on, up to global.
 
-**Shadowing:** an inner variable with the same name hides the outer one inside that scope. Legal, but confusing in tests (\`const page\` inside a helper shadowing the fixture \`page\`).
+**Shadowing:** an inner variable with the same name hides the outer one. It is allowed, but confusing. Example: a \`const page\` inside a helper hides the \`page\` fixture.
 
-**For testers:** a variable declared in one Playwright \`test()\` is invisible to another test, which is good: tests should not share state. Data needed by several tests belongs in a fixture or a factory function, not a top-level \`let\` that tests mutate.`,
+**Why testers care:** a variable inside one Playwright \`test()\` is invisible to other tests. That is good, because tests should not share state. Shared data belongs in a fixture or a factory function, not in a top-level \`let\` that tests change.`,
       code: [
         {
           language: 'javascript',
@@ -288,29 +333,40 @@ console.log(caller()); // → outer`,
   +----------------------------------------------+
   lookup goes INSIDE -> OUTSIDE, never the other way`,
       keyPoints: [
-        'Lookup goes from the inner scope outward; outer code cannot see inner variables.',
-        'Scope is fixed where the function is written (lexical).',
-        'Avoid shared mutable globals between tests.',
+        'JavaScript looks for a name from the inside out. Outer code cannot see inner variables.',
+        'A function sees what is around the place where it is written (lexical scope).',
+        'Do not share changeable global variables between tests.',
       ],
       source: "Kyle Simpson: You Don't Know JS Yet: Scope & Closures, Ch 1-3; javascript.info: Variable scope, closure",
     },
     {
       heading: 'Hoisting and the temporal dead zone',
-      body: `**Intuition:** before running a scope, JavaScript reads it once and registers every declaration, like a teacher taking the register before class. What each name holds at the start of class differs by declaration type.
+      body: `**Example:**
 
-| Declaration | Registered at start? | Value before its line | Effect of using it early |
-|---|---|---|---|
-| \`function f() {}\` | Yes | The whole function | Works |
-| \`var x = 1\` | Yes | \`undefined\` | Silently \`undefined\` |
-| \`let\` / \`const\` / \`class\` | Yes | *Uninitialised* (TDZ) | \`ReferenceError: Cannot access 'x' before initialization\` |
-| \`var f = function () {}\` | Yes (as var) | \`undefined\` | \`TypeError: f is not a function\` |
-| \`const f = () => {}\` | Yes (TDZ) | Uninitialised | \`ReferenceError\` |
+- \`console.log(a); var a = 1;\` prints \`undefined\`.
+- \`console.log(b); let b = 2;\` throws a \`ReferenceError\`.
 
-**Temporal dead zone (TDZ):** the time between entering the block and executing the \`let\`/\`const\` line. It is "temporal" because it is about *when* code runs, not where it is written: a function declared above can safely reference a \`const\` below, as long as it is **called** after that line.
+Both lines use a variable before its declaration. Yet they behave differently. Why?
 
-**Practical rules:** declare before use; put helper function declarations wherever reads best (they are hoisted); never rely on \`var\` hoisting.
+**Hoisting:** JavaScript reads your declarations first, before running the code. It is like a teacher taking the register before class. Every name is known from the start. But what it holds at the start depends on how it was declared.
 
-**In interviews, say this:** "Declarations are processed before execution. Function declarations are fully available, var is initialised to undefined, and let/const are hoisted but stay uninitialised in the TDZ, so early access throws instead of silently giving undefined."`,
+| Declaration | Value before its line | Using it early gives |
+|---|---|---|
+| \`function f() {}\` | The whole function | Works fine |
+| \`var x = 1\` | \`undefined\` | Quietly \`undefined\` |
+| \`let\` / \`const\` / \`class\` | No value yet (TDZ) | \`ReferenceError: Cannot access 'x' before initialization\` |
+| \`var f = function () {}\` | \`undefined\` | \`TypeError: f is not a function\` |
+| \`const f = () => {}\` | No value yet (TDZ) | \`ReferenceError\` |
+
+**Temporal Dead Zone (TDZ):** the time between the start of a block and the line where a \`let\` or \`const\` is declared. Using the variable in that gap throws an error.
+
+"Temporal" means it is about *time*: when the code runs, not where it is written. A function written above a \`const\` can use it safely. You just have to *call* the function after the \`const\` line has run.
+
+**Simple rules:** declare things before you use them. Function declarations can go anywhere. Never rely on \`var\` hoisting.
+
+**In an interview, say:** "Hoisting means JavaScript reads declarations before it runs the code. Function declarations work everywhere. var starts as undefined. let and const are hoisted too, but they stay in the TDZ, so early use throws an error instead of giving undefined."
+
+**Why testers care:** if you use \`expectedTotal\` before you set it, \`const\` fails at once with a clear error. \`var\` would quietly compare against \`undefined\`.`,
       code: [
         {
           language: 'javascript',
@@ -342,30 +398,42 @@ console.log(readTimeout());    // → 30000 (called after the const line ran)`,
         },
       ],
       keyPoints: [
-        'Function declarations: fully hoisted.',
-        '`var`: hoisted as undefined. `let`/`const`: TDZ → ReferenceError.',
-        'TDZ depends on when code runs, not on line order alone.',
+        'Function declarations work even before their line.',
+        '`var` starts as undefined. `let`/`const` are in the TDZ, so early use throws a ReferenceError.',
+        'The TDZ is about when code runs, not only about line order.',
       ],
       source: 'MDN: Hoisting, Temporal dead zone; javascript.info: The old "var"; OpenReplay: 10 JS interview questions',
     },
     {
       heading: 'Closures: functions that remember',
-      body: `**Intuition:** a closure is a function carrying a backpack. When a function is created inside another, it packs the surrounding variables into its backpack and keeps them even after the outer function has finished.
+      body: `**Example:**
 
-**Definition:** a closure is the combination of a function and the lexical environment in which it was created. In JavaScript **every** function is a closure; it becomes interesting when an inner function outlives the call that created it (returned, stored, passed as a callback).
+- \`function makeCounter() { let count = 0; return () => ++count; }\`
+- \`const next = makeCounter();\`
+- \`next()\` gives 1. Calling \`next()\` again gives 2.
 
-**Key facts**
-1. The inner function keeps a **live reference** to the variables, not a snapshot. If the variable changes, the function sees the new value.
-2. **Each call** of the outer function creates a **new** environment, so two counters made by the same factory are independent.
-3. Variables in the backpack are **private**: nothing outside can read or change them except through the returned functions.
+\`makeCounter\` has already finished. But the inner arrow still remembers \`count\`.
 
-**Testing uses**
-- **Unique ID / data generators:** \`const nextEmail = makeEmailFactory('checkout')\` → \`checkout_1@test.com\`, \`checkout_2@test.com\`...
-- **Run-once setup / caching:** compute a token once and return the cached value afterwards (the idea behind worker-scoped fixtures).
-- **Configured helpers:** \`const inRange = between(10, 20)\` returns a predicate for filtering prices.
-- Playwright itself: the callback you pass to \`test()\` closes over variables like \`baseURL\` or test data declared above it.
+**Closure:** a function remembers the variables around it, even after the outer function has finished. Think of a backpack. When a function is made inside another function, it packs the nearby variables into its backpack. It keeps them for as long as it lives.
 
-**The loop classic:** with \`for (var i...)\` and callbacks, all callbacks share one \`i\` (function-scoped) and see its final value. \`for (let i...)\` creates a new binding per iteration, so each callback remembers its own.`,
+**Three facts**
+
+1. The function keeps the **live variable**, not a copy. If the variable changes, the function sees the new value.
+2. **Each call** of the outer function makes a **new** backpack. Two counters from the same factory do not share a count.
+3. Variables in the backpack are **private**. Only the returned function can read or change them.
+
+**How testers use closures**
+
+- **Unique data:** \`const nextEmail = makeEmailFactory('checkout')\` gives \`checkout_1@test.com\`, then \`checkout_2@test.com\`, and so on.
+- **Run-once setup:** get a token once, then return the saved value after that. Playwright's worker fixtures use the same idea.
+- **Ready-made checks:** \`const inRange = between(10, 20)\` gives a function that checks prices.
+- **Every test body:** the function you pass to \`test()\` can use variables declared above it, like test data.
+
+**The loop puzzle:** in \`for (var i...)\` there is only one \`i\`. All callbacks share it and see its last value. In \`for (let i...)\`, each loop round gets its own \`i\`, so each callback remembers its own value.
+
+**In an interview, say:** "A closure is a function that remembers the variables from where it was created. I use closures for unique test data and run-once setup."
+
+**Why testers care:** a closure keeps a counter private, so one test cannot reset another test's data by accident.`,
       code: [
         {
           language: 'javascript',
@@ -412,31 +480,42 @@ console.log(viaLet.map((f) => f())); // → [ 0, 1, 2 ]`,
        checkoutEmail()                        loginEmail()
    (arrow keeps a link to env A)        (arrow keeps a link to env B)`,
       keyPoints: [
-        'Closure = function + the scope it was born in, kept alive after the outer call ends.',
-        'Each factory call creates a separate, private environment.',
-        'Closures capture variables live, not as snapshots.',
+        'Closure: a function plus the variables around it, kept alive after the outer call ends.',
+        'Each factory call makes a separate, private set of variables.',
+        'Closures see the live variable, not a copy of its value.',
         'Use `let` in loops that create callbacks.',
       ],
       source: "javascript.info: Variable scope, closure; MDN: Closures; Kyle Simpson: You Don't Know JS Yet: Scope & Closures, Ch 7",
     },
     {
       heading: 'Callbacks and higher-order functions',
-      body: `**Intuition:** a callback is a note you hand someone saying "when you are done, do this". A higher-order function is the person who accepts such notes (or writes new ones).
+      body: `**Example:**
 
-**Definitions**
-- **Callback:** a function passed as an argument to be called later by someone else.
-- **Higher-order function (HOF):** a function that takes a function as an argument and/or returns a function.
+\`[1, 2, 3].map(n => n * 2)\` gives \`[2, 4, 6]\`.
 
-**You already use them:** \`[1, 2, 3].map(n => n * 2)\` (map is a HOF, the arrow is the callback), \`setTimeout(fn, 1000)\`, \`page.on('dialog', handler)\`, and \`test('title', async ({ page }) => {...})\`, where \`test\` is a HOF and your test body is the callback.
+You hand \`map\` a small function: \`n => n * 2\`. Then \`map\` calls it once for each item.
 
-**Writing your own HOFs** is how you remove repetition in test helpers:
-- \`withStep(name, fn)\`: logs before/after any action.
-- \`retry(fn, attempts)\`: calls \`fn\` until it stops throwing.
-- \`between(min, max)\`: returns a predicate (a function that answers true/false).
+**Callback:** a function you pass to another function, so that function can call it later. Think of a note that says "when you are done, do this".
 
-**Common mistakes:** passing the *result* instead of the function (\`retry(login(), 3)\` calls login immediately); and the \`this\` loss when passing a method (\`retry(page.login, 3)\`), covered next.
+**Higher-order function:** a function that takes a function as input, or gives one back. \`map\` is one. Interviewers often call it a "HOF".
 
-(Array HOFs like map/filter/reduce get a full topic of their own, and asynchronous callbacks are covered with promises.)`,
+**You already use them**
+
+- \`setTimeout(fn, 1000)\`: runs \`fn\` after one second.
+- \`page.on('dialog', handler)\`: runs \`handler\` when a dialog opens.
+- \`test('title', async ({ page }) => {...})\`: \`test\` is the higher-order function. Your test body is the callback.
+
+**Write your own** to remove repeated code in test helpers:
+
+- \`withStep(name, fn)\`: logs before and after any action.
+- \`retry(fn, attempts)\`: calls \`fn\` again until it stops throwing.
+- \`between(min, max)\`: gives back a check function that answers true or false.
+
+**Watch out:** pass the function, not its result. \`retry(login(), 3)\` runs \`login\` right away, only once. Write \`retry(login, 3)\` or \`retry(() => login(), 3)\`.
+
+(Array helpers like map, filter and reduce have their own topic. Async callbacks come with promises.)
+
+**Why testers care:** Playwright is full of callbacks. Every \`test()\`, \`page.on()\` and \`test.step()\` takes a function from you.`,
       code: [
         {
           language: 'javascript',
@@ -475,29 +554,39 @@ console.log([7.99, 15.99, 29.99, 49.99].filter(isMidRange)); // → [ 15.99, 29.
       keyPoints: [
         'Pass the function (`fn`), not its result (`fn()`).',
         '`test()`, `map()`, `setTimeout()` and `page.on()` are all higher-order functions.',
-        'HOFs remove repetition: logging, retrying, predicates.',
+        'Your own higher-order functions remove repeated code: logging, retrying, checks.',
       ],
       source: 'Marijn Haverbeke: Eloquent JavaScript, Ch 5 Higher-Order Functions; MDN: Callback function',
     },
     {
       heading: '`this` basics: method calls, arrows and lost this',
-      body: `**Intuition:** \`this\` is the word "me" in a sentence. Who "me" refers to depends on who is speaking right now, i.e. on **how the function is called**, not where it was written. Arrow functions are the exception: they never say "me"; they repeat whatever "me" meant in the surrounding code.
+      body: `**Example:**
 
-**Rules for regular functions and methods**
+- \`const cart = { items: 2, count() { return this.items; } };\`
+- \`cart.count()\` gives \`2\`. Here \`this\` is \`cart\`, the object before the dot.
+
+**\`this\`** is like the word "me" in a sentence. Who "me" means depends on who is speaking. For a regular function, \`this\` depends on **how the function is called**, not where it is written. Arrow functions are different. They have no "me" of their own. They use the \`this\` of the code around them.
+
+**What \`this\` is, by call style**
 
 | Call style | \`this\` is |
 |---|---|
 | \`obj.method()\` | \`obj\` (the thing before the dot) |
-| \`const f = obj.method; f()\` | \`undefined\` in strict mode (classes, ES modules), the global object in old sloppy scripts |
+| \`const f = obj.method; f()\` | \`undefined\` in strict mode (classes, ES modules); the global object in old scripts |
 | \`new LoginPage()\` | The new object |
 | \`fn.call(x)\` / \`fn.bind(x)\` | \`x\` |
 | Arrow function | Whatever \`this\` was where the arrow was **written** |
 
-**Why testers meet this:** Page Objects are classes, and their methods use \`this.page\`, \`this.usernameInput\`. Two classic failures:
-1. **Passing a method as a callback** (\`retry(loginPage.submit, 3)\`): the method is detached from its object, so \`this\` is undefined → \`TypeError: Cannot read properties of undefined\`. Fix: \`retry(() => loginPage.submit(), 3)\` or \`.bind(loginPage)\`.
-2. **Regular function as an inner callback inside a method** (\`items.forEach(function () { this.count++ })\`): the inner function gets its own \`this\`. Fix: use an arrow, which inherits the method's \`this\`.
+(*Strict mode* is a safer set of rules. Classes and modules always use it.)
 
-**The other direction:** do *not* write object methods as arrows (\`open: () => this.url\`); the arrow takes \`this\` from outside the object, not the object itself.`,
+**Two classic bugs in Page Objects.** Page Objects are classes, and their methods use \`this.page\`.
+
+1. **Passing a method on its own:** \`retry(loginPage.submit, 3)\`. The method loses its object, so \`this\` is undefined. You get \`TypeError: Cannot read properties of undefined\`. Fix: \`retry(() => loginPage.submit(), 3)\`, or use \`.bind(loginPage)\`.
+2. **A regular function inside a method:** \`items.forEach(function () { this.count++ })\`. The inner function gets its own \`this\`. Fix: use an arrow, which keeps the method's \`this\`.
+
+**The other way round:** do *not* write object methods as arrows, like \`open: () => this.url\`. The arrow takes \`this\` from outside the object.
+
+**Why testers care:** "Cannot read properties of undefined (reading 'page')" in a Page Object almost always means a method lost its \`this\`.`,
       code: [
         {
           language: 'javascript',
@@ -543,37 +632,47 @@ console.log(page.regular(), '|', page.arrow()); // → cart page | checkout suit
         },
       ],
       keyPoints: [
-        'Regular functions: `this` = object before the dot at call time.',
-        'Arrows: inherit `this` from where they are written.',
-        'Passing `obj.method` as a callback detaches it; wrap it in an arrow or bind.',
+        'Regular functions: `this` is the object before the dot, at call time.',
+        'Arrows: use the `this` from where they are written.',
+        'Passing `obj.method` on its own loses `this`. Wrap it in an arrow or use bind.',
       ],
       source: "javascript.info: Object methods, \"this\"; MDN: this; Kyle Simpson: You Don't Know JS Yet: Objects & Classes (this)",
     },
     {
       heading: 'Pure functions and side effects',
-      body: `**Intuition:** a pure function is a calculator: same buttons pressed, same answer, and pressing them changes nothing else in the room. An impure function is a vending machine: it changes stock, takes money, and might answer differently tomorrow.
+      body: `**Example:**
 
-**Pure function:** (1) output depends only on its inputs, (2) no side effects: no changing arguments or outside variables, no I/O (network, file, console, browser), no randomness or clock.
+- \`const total = (price, qty) => price * qty;\` is **pure**. \`total(10, 2)\` always gives \`20\`.
+- \`const addTax = (cart) => { cart.total *= 1.1; };\` is **not pure**. It changes the cart you pass in.
 
-**Side effects are necessary** (a test must click and navigate), but they should be **at the edges**. Eloquent JavaScript makes the same point: pure functions are easy to test and combine; side effects are needed but harder to reason about.
+A **pure function** follows two rules:
 
-**Why testers love pure helpers**
+1. The same input always gives the same output.
+2. It changes nothing outside itself. It does not change its arguments or outside variables. It does not use the network, files, the console, the browser, the clock or random numbers.
+
+A change to anything outside the function is called a **side effect**. Changing an object or array in place is called *mutating* it.
+
+A pure function is like a calculator: same buttons, same answer, and nothing else changes. An impure function is like a vending machine: it changes the stock and takes your money.
+
+**Side effects are needed.** A test must click and navigate. But keep them at the edges: inside the test or the Page Object. Keep helpers that calculate or build data pure.
 
 | Helper | Pure? | Why it matters |
 |---|---|---|
-| \`toCents('$29.99')\` | Yes | Unit-testable in milliseconds, no browser |
-| \`buildUser(overrides)\` returning a new object | Yes (if it does not touch shared data) | No cross-test pollution |
-| \`addTax(cart)\` that changes \`cart.total\` in place | No (mutates argument) | Tests that reuse \`cart\` get wrong totals |
-| \`uniqueEmail()\` using \`Date.now()\` | No (clock) | Fine, but inject the time to make it testable |
+| \`toCents('$29.99')\` | Yes | You can test it in milliseconds, without a browser |
+| \`buildUser(overrides)\` that returns a new object | Yes, if it does not touch shared data | Tests do not affect each other |
+| \`addTax(cart)\` that changes \`cart.total\` | No, it changes its argument | Other tests that reuse \`cart\` get wrong totals |
+| \`uniqueEmail()\` that uses \`Date.now()\` | No, it reads the clock | Fine, but pass the time in to make it testable |
 
-**Common mistake:** mutating an argument (\`user.role = 'admin'\`) inside a "builder". Every later test using the same object inherits the change: a classic order-dependent flaky test.`,
+**Watch out:** changing an argument inside a "builder", like \`user.role = 'admin'\`, is a classic bug. Every later test that uses the same object gets the change. Those tests then pass or fail depending on the order they run in. This is a typical *flaky* test (one that passes sometimes and fails other times).
+
+**Why testers care:** pure helpers give the same answer every time, so they never cause flaky tests.`,
       code: [
         {
           language: 'javascript',
           title: 'Impure vs pure data builder',
           code: `const defaultUser = { name: 'standard_user', role: 'customer' };
 
-// Impure: mutates the shared default
+// Impure: changes (mutates) the shared default object
 function makeAdminImpure(user) {
   user.role = 'admin';
   return user;
@@ -595,28 +694,37 @@ console.log(emailFor('reg', 1700000000000) === emailFor('reg', 1700000000000)); 
         },
       ],
       keyPoints: [
-        'Pure = same input, same output, no side effects.',
-        'Return new objects instead of mutating arguments.',
-        'Inject time/randomness to make helpers deterministic and unit-testable.',
+        'Pure = same input, same output, and nothing changed outside.',
+        'Return new objects instead of changing the ones passed in.',
+        'Pass in the time or random values. Then helpers give the same result every time and are easy to test.',
       ],
       source: 'Marijn Haverbeke: Eloquent JavaScript, Ch 3 (Functions and side effects)',
     },
     {
       heading: 'Recursion basics',
-      body: `**Intuition:** recursion is Russian dolls: to open the big doll you open a smaller one, and so on until you reach the smallest doll, which you simply hold (the base case).
+      body: `**Example:**
 
-**Structure of every recursive function**
-1. **Base case:** an input simple enough to answer directly (stops the recursion).
-2. **Recursive case:** reduce the problem and call the function on the smaller piece.
+- \`function countdown(n) { if (n === 0) return 'Go!'; return countdown(n - 1); }\`
+- \`countdown(3)\` calls \`countdown(2)\`, then \`countdown(1)\`, then \`countdown(0)\`. The last one gives back \`'Go!'\`.
 
-**The call stack:** each call waits for the inner call to return, piling up frames. With no base case (or one that is never reached) the stack overflows: \`RangeError: Maximum call stack size exceeded\`.
+**Recursion** means a function calls itself. Think of Russian dolls. To reach the smallest doll, you open one doll after another. You stop at the smallest one.
 
-**When testers meet recursion**
-- Walking **nested data**: a JSON API response with nested categories, a site menu tree, a folder of test files.
-- Deep comparison of two objects (the Objects topic builds one).
-- Interview classics: factorial, sum of digits, reverse a string, Fibonacci.
+**Every recursive function has two parts**
 
-**Recursion vs loops:** anything recursive can be written with a loop; loops are usually faster and cannot overflow the stack. Recursion reads better for tree-shaped data. Eloquent JavaScript's advice applies: write it clearly first and only optimise when it matters.`,
+1. **Base case:** a simple input you can answer at once. This is the stop rule.
+2. **Recursive case:** make the problem a bit smaller, and call the function again on it.
+
+**The call stack** is the list of function calls that are still waiting for an answer. Each call waits for the inner call to finish. With no base case, the calls never stop. The stack fills up, and you get \`RangeError: Maximum call stack size exceeded\`.
+
+**Where testers meet recursion**
+
+- Walking **nested data**: a JSON response with nested categories, a site menu, or a folder of test files.
+- Comparing two nested objects deeply (the Objects topic builds one).
+- Interview classics: factorial, sum of digits, reversing a string, Fibonacci.
+
+**Recursion or a loop?** Anything recursive can also be written with a loop. Loops are usually faster, and they cannot overflow the stack. Recursion reads better for tree-shaped data (data with branches, like a menu).
+
+**Why testers care:** API responses are often nested. A short recursive function can find every \`id\` inside them, however deep they go.`,
       code: [
         {
           language: 'javascript',
@@ -652,9 +760,9 @@ try {
         },
       ],
       keyPoints: [
-        'Always write the base case first.',
-        'Each call adds a stack frame; missing base case → RangeError.',
-        'Recursion fits nested/tree data; loops fit flat repetition.',
+        'Always write the base case (the stop rule) first.',
+        'Each call waits on the call stack. No base case means a RangeError.',
+        'Recursion fits nested, tree-shaped data. Loops fit flat repetition.',
       ],
       source: 'javascript.info: Recursion and stack; Marijn Haverbeke: Eloquent JavaScript, Ch 3 (Recursion)',
     },
@@ -664,8 +772,8 @@ try {
       id: 'js-functions-cc-1',
       title: 'Fix a test-data factory that leaks state and returns nothing',
       context:
-        'A shared helper module creates users for registration tests. Tests pass alone but fail when run together: emails collide, a test that expected a "customer" sometimes gets an "admin", and `buildAddress` returns undefined.',
-      task: 'Fix the helpers so each test gets fresh, independent data: no shared mutable globals, no mutation of the defaults, correct return values and correct default handling. The tests call `makeTestData(overridesList, city)`, which simulates one fresh test run: it builds one user per overrides object (emails `user1@test.com`, `user2@test.com`, … restarting at 1 on every call) and returns `{ users, address, defaultRole }`, where `address` is `{ city }` and `defaultRole` is the role in the shared defaults afterwards (must still be "customer"). Press Run to check your fix.',
+        'A shared helper file creates users for registration tests. Each test passes on its own, but they fail when run together. Emails clash. A test that expects a "customer" sometimes gets an "admin". And `buildAddress` returns undefined.',
+      task: 'Fix the helpers so each test gets fresh data of its own. No shared changeable globals. Do not change the defaults. Return the right values and handle defaults correctly. The tests call `makeTestData(overridesList, city)`, which acts like one fresh test run. It builds one user per overrides object, with emails `user1@test.com`, `user2@test.com`, … starting again at 1 on every call. It returns `{ users, address, defaultRole }`. `address` is `{ city }`. `defaultRole` is the role in the shared defaults afterwards, and it must still be "customer". Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'user-data.js (buggy)',
@@ -695,9 +803,9 @@ function makeTestData(overridesList, city) {
 //   growing across calls`,
       },
       hints: [
-        'Does `var user = defaults` create a new object? What is shared between `a` and `b`?',
-        'Look at the arrow function body: is `{ city: city, ... }` an object or a block?',
-        'Put the counter inside a closure (a factory) and use `??` or spread order for defaults instead of `||`.',
+        'Does `var user = defaults` create a new object? Or do both names point at the same one?',
+        'Look at the arrow function body. Is `{ city: city }` an object or a function body?',
+        'Put the counter inside a closure (a factory function). For defaults, use `??` or the order of `...` spreads instead of `||`.',
       ],
       solution: {
         language: 'javascript',
@@ -731,13 +839,13 @@ function makeTestData(overridesList, city) {
 //   address: { city: 'Pune' }, defaultRole: 'customer'`,
       },
       explanation: `**Fixes**
-1. **Shared object:** \`var user = defaults\` copies the *reference*, so every user was the same object and \`role: 'admin'\` leaked into later tests. Spreading \`{ ...DEFAULTS, ...overrides }\` creates a new object per call; \`Object.freeze\` makes accidental writes to the defaults fail loudly in strict code.
-2. **Global counter:** moved into a closure created by \`createUserBuilder\`. Each builder has private state; nothing outside can reset or corrupt it, and you can create one per worker with a different prefix to avoid collisions in parallel runs.
-3. **\`|| true\` bug:** \`false || true\` is \`true\`, so opting out of the newsletter was impossible. Spread order (overrides last) lets an explicit \`false\` win.
-4. **Arrow returning an object:** \`=> { city: city }\` is parsed as a block containing a label (\`city:\`) and an expression, so the arrow returns \`undefined\`. Wrap the object in parentheses.
-5. **\`var\` → \`const\`/\`let\`** and a default parameter \`overrides = {}\` so \`buildUser()\` works with no arguments.
+1. **Shared object:** \`var user = defaults\` does not copy the object. Both names point at the *same* object. So every user was the same object, and \`role: 'admin'\` leaked into later tests. \`{ ...DEFAULTS, ...overrides }\` makes a new object on every call. \`Object.freeze\` makes any accidental change to the defaults fail clearly in strict code.
+2. **Global counter:** it now lives in a closure made by \`createUserBuilder\`. Each builder has its own private count. Nothing outside can reset or break it. You can make one builder per worker with a different prefix, so parallel runs do not clash.
+3. **\`|| true\` bug:** \`false || true\` is \`true\`, so nobody could turn the newsletter off. With overrides spread last, an explicit \`false\` wins.
+4. **Arrow returning an object:** in \`=> { city: city }\`, JavaScript reads \`{ }\` as a function body, not an object. So the arrow returns \`undefined\`. Wrap the object in brackets: \`=> ({ city })\`.
+5. **\`var\` → \`const\`/\`let\`**, and a default \`overrides = {}\`, so \`buildUser()\` also works with no arguments.
 
-The tests call \`makeTestData\` several times in the same page load, exactly like several tests sharing one module: with the global counter the second call starts at \`user3\`, and with the shared defaults an earlier \`role: 'admin'\` leaks into later runs.`,
+The tests call \`makeTestData\` several times on one page load. That is just like several tests sharing one file. With the global counter, the second call starts at \`user3\`. With the shared defaults, an earlier \`role: 'admin'\` leaks into later runs.`,
       fnName: 'makeTestData',
       tests: [
         {
@@ -792,12 +900,12 @@ The tests call \`makeTestData\` several times in the same page load, exactly lik
       ],
       followUps: [
         {
-          q: 'How would you guarantee unique emails across parallel Playwright workers?',
-          a: 'Include the worker index in the prefix, e.g. create the builder in a worker-scoped fixture and pass a prefix such as "w" + workerInfo.workerIndex + "_", or add a random part with crypto.randomUUID(). A module-level counter restarts at 0 in every worker process, so it alone is not unique across workers.',
+          q: 'How would you make sure emails are unique across parallel Playwright workers?',
+          a: 'Add the worker number to the prefix. For example, create the builder in a worker-scoped fixture with a prefix like "w" + workerInfo.workerIndex + "_". Or add a random part with crypto.randomUUID(). A counter in a file starts again at 0 in every worker process, so on its own it is not unique across workers.',
         },
         {
           q: 'Is the spread copy enough if DEFAULTS had a nested address object?',
-          a: 'No. Spread is a shallow copy: the nested object would still be shared, and `user.address.city = "X"` would change it for everyone. Either build nested objects freshly inside the function, or deep-copy with structuredClone(DEFAULTS) before applying overrides.',
+          a: 'No. Spread makes a shallow copy: it copies only the top level. The nested object would still be shared, so `user.address.city = "X"` would change it for everyone. Either build nested objects fresh inside the function, or make a deep copy with structuredClone(DEFAULTS) before applying overrides.',
         },
       ],
     },
@@ -805,8 +913,8 @@ The tests call \`makeTestData\` several times in the same page load, exactly lik
       id: 'js-functions-cc-2',
       title: 'Repair a page-object helper that loses `this`',
       context:
-        'A simplified Page Object (no browser here, a fake `page` that records actions) works when tests call `loginPage.login()` directly, but crashes when passed to the `retry` helper, and the `logAll` method never counts anything.',
-      task: 'Make `retry(loginPage.login, 3)`-style usage safe, fix `logAll`, and make `retry` fail loudly instead of returning undefined. The tests call `runLoginFlow(attempts, failures)`: it creates a fresh `LoginPage` on a `FakePage` whose login button throws for the first `failures` clicks, logs in through `retry`, and returns `{ result, actions, counted }`: `result` is `\'done\'` or the error message `\'failed after N attempts\'`, `actions` the recorded page actions, `counted` the value of `logAll()`. Press Run to check your fix.',
+        'Here is a simple Page Object. There is no browser: a fake `page` just records actions. It works when tests call `loginPage.login()` directly. But it crashes when passed to the `retry` helper. And the `logAll` method never counts anything.',
+      task: 'Make `retry(loginPage.login, 3)`-style calls safe. Fix `logAll`. Make `retry` fail clearly instead of returning undefined. The tests call `runLoginFlow(attempts, failures)`. It makes a fresh `LoginPage` on a `FakePage` whose login button throws for the first `failures` clicks. It logs in through `retry` and returns `{ result, actions, counted }`. `result` is `\'done\'` or the error message `\'failed after N attempts\'`. `actions` is the list of recorded page actions. `counted` is the value of `logAll()`. Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'login-page.js (buggy)',
@@ -860,9 +968,9 @@ function runLoginFlow(attempts, failures) {
 // → TypeError: Cannot read properties of undefined (reading 'logged')`,
       },
       hints: [
-        'What is `this` inside `login` when `retry` calls it as plain `fn()`?',
-        'Inside `logAll`, which function owns the `this` used in `this.logged++`?',
-        'Arrow functions inherit `this`; regular functions get it from the call. Pick the right one for each place.',
+        'What is `this` inside `login` when `retry` calls it as a plain `fn()`?',
+        'Inside `logAll`, which function owns the `this` in `this.logged++`?',
+        'Arrow functions keep the outer `this`. Regular functions get `this` from the call. Pick the right one for each place.',
       ],
       solution: {
         language: 'javascript',
@@ -920,10 +1028,10 @@ function runLoginFlow(attempts, failures) {
 // runLoginFlow(2, 5) → result: 'failed after 2 attempts'`,
       },
       explanation: `**Fixes**
-1. **Detached method:** \`retry(loginPage.login, 2)\` passes the function without its object. Class bodies are strict, so the plain call \`fn()\` gives \`this === undefined\` and \`this.page\` throws. Wrapping in an arrow (\`() => loginPage.login()\`) or using \`bind\` keeps the receiver.
-2. **Callback \`this\`:** the \`function (a) {...}\` passed to \`forEach\` gets its own \`this\` (undefined), so \`this.logged\` crashed. An arrow callback inherits \`logAll\`'s \`this\`.
-3. **\`retry\` swallowing failure:** after all attempts it returned \`undefined\`, which a caller might treat as success. It now throws a clear error.
-4. **The \`describe\` arrow property** was harmless here but was removed: per-instance arrow properties are a workaround people add when they do not understand \`this\`; a normal method plus correct calling style is clearer.`,
+1. **Method passed on its own:** \`retry(loginPage.login, 2)\` passes the function without its object. Class code is always strict, so the plain call \`fn()\` gives \`this === undefined\`, and \`this.page\` throws. Wrapping it in an arrow (\`() => loginPage.login()\`) or using \`bind\` keeps the object.
+2. **Callback \`this\`:** the \`function (a) {...}\` passed to \`forEach\` gets its own \`this\`, which is undefined. So \`this.logged\` crashed. An arrow callback keeps \`logAll\`'s \`this\`.
+3. **\`retry\` hiding failure:** after all attempts it returned \`undefined\`. A caller might treat that as success. Now it throws a clear error.
+4. **The \`describe\` arrow property** did no harm here, but it was removed. People often add such arrow properties as a workaround when they do not understand \`this\`. A normal method, called the right way, is clearer.`,
       fnName: 'runLoginFlow',
       tests: [
         { args: [3, 0], expected: { result: 'done', actions: ['fill #user-name=standard_user', 'click #login-button'], counted: 2 } },
@@ -936,12 +1044,12 @@ function runLoginFlow(attempts, failures) {
       ],
       followUps: [
         {
-          q: 'Some teams define every Page Object method as an arrow class field (login = async () => {...}). Pros and cons?',
-          a: 'Pro: methods can be passed around without losing `this`. Cons: each instance gets its own copy of every function (more memory), they are not on the prototype so subclasses cannot call super.login(), and it hides the calling-style issue rather than teaching it. Most Playwright POMs use normal methods and call them as page.method().',
+          q: 'Some teams write every Page Object method as an arrow class field (login = async () => {...}). What are the pros and cons?',
+          a: 'Pro: you can pass the methods around without losing `this`. Cons: each object gets its own copy of every function, which uses more memory. Child classes cannot call super.login(). And it hides the real problem instead of teaching it. Most Playwright Page Objects use normal methods and call them as page.method().',
         },
         {
           q: 'Why does Playwright code rarely hit this problem in practice?',
-          a: 'Because tests usually call methods directly on the object, `await loginPage.login(user)`, and fixtures pass instances, not detached methods. The problem appears with generic helpers (retry, step wrappers, event handlers) that receive a function, which is exactly where you should wrap the call in an arrow.',
+          a: 'Tests usually call methods directly on the object, like `await loginPage.login(user)`. Fixtures pass whole objects, not loose methods. The problem appears in general helpers (retry, step wrappers, event handlers) that receive a function. That is exactly where you should wrap the call in an arrow.',
         },
       ],
     },
@@ -952,76 +1060,76 @@ function runLoginFlow(attempts, failures) {
       difficulty: 'easy',
       question: 'What is the difference between a function declaration, a function expression and an arrow function? When would you use each in a test framework?',
       whatInterviewerLooksFor: [
-        'Hoisting difference between declaration and expressions',
-        'Arrow syntax rules (implicit return, object literal in parentheses)',
-        'Arrow functions have no own this/arguments',
-        'Practical guidance tied to tests and page objects',
+        'Hoisting: declarations can be called before their line; expressions cannot',
+        'Arrow rules: automatic return, and an object needs brackets',
+        'Arrow functions have no own this or arguments',
+        'Practical advice for tests and Page Objects',
       ],
-      modelAnswer: `**Declaration:** \`function login(user) { ... }\`. Hoisted completely, so it can be called above its definition. Has its own \`this\` and \`arguments\`.
+      modelAnswer: `**Declaration:** \`function login(user) { ... }\`. It is fully hoisted, so you can call it above its line. It has its own \`this\` and \`arguments\`.
 
-**Expression:** \`const login = function (user) { ... };\`. The function is created when that line runs; with \`const\` the name is in the temporal dead zone before it, with \`var\` it is \`undefined\` (calling it gives "login is not a function").
+**Expression:** \`const login = function (user) { ... };\`. The function is created when that line runs. Before that line, a \`const\` name is in the temporal dead zone (TDZ), so using it throws. With \`var\`, it is \`undefined\`, so calling it gives "login is not a function".
 
-**Arrow:** \`const login = (user) => { ... };\`. Same hoisting as an expression, shorter syntax, implicit return for single expressions (\`n => n * 2\`), and **no own \`this\`, \`arguments\` or \`new\`**: it uses \`this\` from where it is written.
+**Arrow:** \`const login = (user) => { ... };\`. Same timing as an expression, but shorter. A one-line arrow returns its value by itself: \`n => n * 2\`. It has **no own \`this\`**, no \`arguments\`, and you cannot use it with \`new\`. It uses \`this\` from where it is written.
 
 **How I use them in a Playwright project:**
 - **Test bodies and callbacks:** arrows. \`test('adds to cart', async ({ page }) => { ... })\`, \`.filter(p => p > 10)\`, \`page.on('dialog', d => d.accept())\`.
-- **Page Object methods:** normal class methods (\`async login(user, pass) { ... }\`) because they need \`this.page\`.
-- **Utility helpers** (\`toCents\`, \`buildUser\`): either a declaration or a \`const\` arrow; teams usually pick one style for consistency.
+- **Page Object methods:** normal class methods, like \`async login(user, pass) { ... }\`, because they need \`this.page\`.
+- **Small helpers** (\`toCents\`, \`buildUser\`): a declaration or a \`const\` arrow. Teams usually pick one style.
 
-**Gotchas I watch for:** an arrow with braces and no \`return\` returns \`undefined\`; returning an object needs \`() => ({ ... })\`; and writing an object method as an arrow makes \`this\` point outside the object.`,
+**Traps I watch for:** an arrow with \`{ }\` and no \`return\` gives \`undefined\`. Returning an object needs \`() => ({ ... })\`. An object method written as an arrow gets the wrong \`this\`.`,
       followUps: [
         {
-          q: 'Can an arrow function be used as a constructor?',
-          a: 'No. Arrow functions have no [[Construct]] behaviour and no prototype property, so `new Arrow()` throws a TypeError ("is not a constructor"). Use a class or a regular function when you need new. In tests this rarely matters because Page Objects are classes.',
+          q: 'Can an arrow function be used with new?',
+          a: 'No. Arrow functions cannot build objects and have no prototype property. So `new Arrow()` throws a TypeError ("is not a constructor"). Use a class or a regular function when you need new. In tests this rarely matters, because Page Objects are classes.',
         },
         {
-          q: 'What does `arguments` refer to inside an arrow function?',
-          a: 'Arrows do not have their own arguments object; the name refers to the arguments of the nearest enclosing regular function (or is a ReferenceError at module top level). Modern code uses rest parameters (...args) instead, which work the same in both kinds of function and give a real array.',
+          q: 'What does `arguments` mean inside an arrow function?',
+          a: 'Arrows have no arguments object of their own. The name refers to the arguments of the nearest regular function around it. At the top level of a module, it is a ReferenceError. Modern code uses rest parameters (...args) instead. They work the same in both kinds of function and give a real array.',
         },
       ],
       pitfalls: [
-        'Saying arrows are "just shorter syntax" with no behavioural difference.',
-        'Claiming expressions are hoisted like declarations.',
-        'Recommending arrow functions for object methods that use this.',
+        'Saying arrows are "just shorter", with no difference in behaviour.',
+        'Saying expressions are hoisted like declarations.',
+        'Suggesting arrow functions for object methods that use this.',
       ],
     },
     {
       id: 'js-functions-iq-02',
       difficulty: 'medium',
-      question: 'Explain closures in your own words and give a practical example from test automation.',
+      question: 'Explain closures in your own words. Give a practical example from test automation.',
       whatInterviewerLooksFor: [
-        'Correct definition: function + lexical environment, survives the outer call',
-        'Each call creates a fresh environment',
-        'Live reference, not a copy',
-        'A realistic testing use case, not just a counter',
+        'Clear definition: a function plus the variables around it, kept after the outer call ends',
+        'Each outer call creates a fresh set of variables',
+        'The live variable is kept, not a copy',
+        'A real testing example, not just a counter',
       ],
-      modelAnswer: `**Definition:** a closure is a function together with the variables from the scope where it was created. When an inner function is returned or stored, it keeps access to those variables even after the outer function has finished. In JavaScript every function forms a closure; it becomes visible when the inner function outlives the outer call.
+      modelAnswer: `**Definition:** a closure is a function that remembers the variables from the place where it was created. If an inner function is returned or stored, it can still use those variables after the outer function has finished. Every JavaScript function is a closure. You notice it when the inner function lives longer than the outer call.
 
-**Minimal example:**
+**Small example:**
 \`function makeCounter() { let count = 0; return () => ++count; }\`
-\`const next = makeCounter(); next(); next();\` → 1, then 2. \`count\` is private: nothing else can touch it. A second \`makeCounter()\` gets its own \`count\` starting at 0.
+\`const next = makeCounter(); next(); next();\` gives 1, then 2. \`count\` is private: nothing else can touch it. A second \`makeCounter()\` gets its own \`count\`, starting at 0.
 
 **Test-automation examples:**
-1. **Unique test data:** \`makeEmailFactory('checkout')\` returns a function producing \`checkout_1@test.com\`, \`checkout_2@test.com\`, with the counter hidden in the closure.
-2. **Run-once / cached setup:** \`once(getAuthToken)\` calls the API the first time and returns the cached token afterwards. Playwright's worker-scoped fixtures follow the same idea: set up once, reuse.
-3. **Configured predicates:** \`between(10, 30)\` returns \`price => price >= 10 && price <= 30\`, used to filter product prices.
-4. **Every test body:** the async arrow passed to \`test()\` closes over constants declared at the top of the spec file.
+1. **Unique test data:** \`makeEmailFactory('checkout')\` returns a function that gives \`checkout_1@test.com\`, \`checkout_2@test.com\`, and so on. The counter is hidden in the closure.
+2. **Run-once setup:** \`once(getAuthToken)\` calls the API the first time and returns the saved token after that. Playwright's worker-scoped fixtures follow the same idea: set up once, reuse.
+3. **Ready-made checks:** \`between(10, 30)\` returns \`price => price >= 10 && price <= 30\`, used to filter prices.
+4. **Every test body:** the async arrow passed to \`test()\` uses constants declared at the top of the spec file.
 
-**Things to know:** closures capture variables **live** (if the variable changes later, the closure sees it), which explains the \`for (var i...)\` puzzle where all callbacks see the final value; \`let\` in the loop gives each iteration its own binding. Closures also keep memory alive, so a long-lived closure holding a large object prevents it from being garbage-collected.`,
+**Good to know:** a closure keeps the **live** variable, not a copy. If the variable changes later, the closure sees the change. That explains the \`for (var i...)\` puzzle, where all callbacks see the last value. With \`let\`, each loop round gets its own variable. Closures also keep memory in use: a long-lived closure that holds a big object stops it from being cleaned up.`,
       followUps: [
         {
           q: 'Why does the classic loop with var and setTimeout print 3, 3, 3?',
-          a: 'var i is function-scoped, so there is a single i shared by all three callbacks. By the time the timers fire, the loop has finished and i is 3. Each callback closes over the same variable, not a copy of its value at that moment. Using let creates a new binding per iteration, so the callbacks print 0, 1, 2.',
+          a: 'var i belongs to the whole function, so there is only one i. All three callbacks share it. When the timers fire, the loop has finished and i is 3. Each callback reads the same variable, not a copy of its old value. With let, each loop round gets a new variable, so the callbacks print 0, 1, 2.',
         },
         {
-          q: 'How are closures related to data privacy?',
-          a: 'Variables inside the outer function are reachable only through the functions it returns, so they act like private fields. Before classes had #private fields, the module pattern used closures to hide internal state. In test helpers this keeps counters or caches from being reset by accident from other tests.',
+          q: 'How are closures linked to keeping data private?',
+          a: 'Variables inside the outer function can only be reached through the functions it returns. So they act like private fields. Before classes had #private fields, people used closures to hide internal state. In test helpers, this stops other tests from resetting a counter or cache by accident.',
         },
       ],
       pitfalls: [
-        'Defining a closure as "a function inside a function" without mentioning retained scope.',
-        'Saying a closure copies the values at creation time.',
-        'Only giving the textbook counter with no real use.',
+        'Defining a closure only as "a function inside a function", without saying it keeps the outer variables.',
+        'Saying a closure copies the values when it is created.',
+        'Giving only the textbook counter, with no real use.',
       ],
     },
     {
@@ -1029,37 +1137,37 @@ function runLoginFlow(attempts, failures) {
       difficulty: 'medium',
       question: 'What is hoisting? Predict the output: `console.log(a); var a = 1; console.log(b); let b = 2; sayHi(); function sayHi() { console.log("hi"); }`',
       whatInterviewerLooksFor: [
-        'Explains the two-phase model (declarations registered first)',
-        'var → undefined, let/const → TDZ ReferenceError, function → callable',
-        'Notices execution stops at the first uncaught error',
+        'Explains that declarations are read before the code runs',
+        'var → undefined, let/const → ReferenceError (TDZ), function → can be called',
+        'Notices that the script stops at the first uncaught error',
       ],
-      modelAnswer: `**Hoisting** is the observable effect of JavaScript processing declarations before executing a scope. Nothing physically moves; the engine registers names first, then runs statements top to bottom.
+      modelAnswer: `**Hoisting:** JavaScript reads your declarations first, before running the code. Nothing actually moves. The engine notes every name first, then runs the lines from top to bottom.
 
-- **Function declarations** are registered with their full body, so they are callable anywhere in the scope.
-- **\`var\`** is registered and initialised to \`undefined\`.
-- **\`let\` / \`const\` / \`class\`** are registered but **uninitialised** until their line runs (the temporal dead zone). Any access before that throws \`ReferenceError\`.
+- **Function declarations** are noted with their whole body. So you can call them anywhere in the scope.
+- **\`var\`** is noted and set to \`undefined\`.
+- **\`let\` / \`const\` / \`class\`** are noted, but they get **no value** until their line runs. That gap is the **Temporal Dead Zone (TDZ)**. Using the name in the gap throws a \`ReferenceError\`.
 
-**Tracing the snippet:**
-1. \`console.log(a)\` → \`undefined\` (var hoisted, value not yet assigned).
-2. \`var a = 1\` assigns 1.
-3. \`console.log(b)\` → \`ReferenceError: Cannot access 'b' before initialization\`. **Execution stops here** because the error is uncaught.
-4. \`sayHi()\` never runs. If the \`b\` line were removed, it would print \`hi\`, since function declarations are hoisted whole.
+**Tracing the code:**
+1. \`console.log(a)\` → \`undefined\`. The var is known, but its value is not set yet.
+2. \`var a = 1\` sets a to 1.
+3. \`console.log(b)\` → \`ReferenceError: Cannot access 'b' before initialization\`. **The script stops here**, because nothing catches the error.
+4. \`sayHi()\` never runs. Without the \`b\` line, it would print \`hi\`, because function declarations are hoisted whole.
 
 **So the output is:** \`undefined\`, then a ReferenceError.
 
-**Why the TDZ exists:** it turns a silent bug (using a variable before it has its value) into a loud one. In test code, that means using a \`const expectedTotal\` before computing it fails immediately with a clear message instead of comparing against \`undefined\`.`,
+**Why the TDZ exists:** it turns a silent bug into a loud one. In test code, using \`const expectedTotal\` before you set it fails at once with a clear message. It does not quietly compare against \`undefined\`.`,
       followUps: [
         {
           q: 'Is `typeof b` safe inside the TDZ?',
-          a: 'No. typeof is safe for undeclared variables (it returns "undefined"), but for a let/const/class in its TDZ it throws a ReferenceError, because the name exists in the scope and is uninitialised. This is a nice trick question that separates "not declared" from "declared but not yet initialised".',
+          a: 'No. typeof is safe for names that were never declared: it gives "undefined". But for a let, const or class in its TDZ, it throws a ReferenceError, because the name exists but has no value yet. This trick question checks if you can tell "not declared" from "declared but not ready".',
         },
         {
           q: 'Are class declarations hoisted?',
-          a: 'Yes, like let: the name is registered but stays in the TDZ until the class line executes, so `new LoginPage()` above the class declaration throws a ReferenceError. That is why Page Object classes are imported or declared before use.',
+          a: 'Yes, like let. The name is known, but it stays in the TDZ until the class line runs. So `new LoginPage()` above the class throws a ReferenceError. That is why Page Object classes are imported or declared before you use them.',
         },
       ],
       pitfalls: [
-        'Printing "hi" despite the uncaught ReferenceError earlier.',
+        'Printing "hi" even though the ReferenceError stopped the script earlier.',
         'Saying let is not hoisted at all.',
         'Describing hoisting as code being physically moved to the top.',
       ],
@@ -1067,54 +1175,54 @@ function runLoginFlow(attempts, failures) {
     {
       id: 'js-functions-iq-04',
       difficulty: 'hard',
-      question: 'How does `this` work in JavaScript, and how is it different in arrow functions? Describe a bug it can cause in a Page Object.',
+      question: 'How does `this` work in JavaScript? How is it different in arrow functions? Describe a bug it can cause in a Page Object.',
       whatInterviewerLooksFor: [
-        'this depends on the call site for regular functions',
-        'Arrows inherit this lexically',
-        'Concrete detached-method bug and fixes (arrow wrapper, bind)',
-        'Mentions strict mode/classes giving undefined',
+        'For regular functions, this depends on how the function is called',
+        'Arrows use the this from where they are written',
+        'A real "method passed on its own" bug, with fixes (arrow wrapper, bind)',
+        'Mentions that strict mode and classes give undefined',
       ],
-      modelAnswer: `**Regular functions:** \`this\` is decided at **call time** by how the function is called:
+      modelAnswer: `**Regular functions:** \`this\` is decided **when the function is called**, by how it is called:
 - \`obj.method()\` → \`this\` is \`obj\`.
 - \`new Ctor()\` → the new object.
 - \`fn.call(x)\`, \`fn.apply(x)\`, \`fn.bind(x)\` → \`x\`.
-- Plain call \`fn()\` → \`undefined\` in strict mode (classes and ES modules are always strict), the global object in old sloppy scripts.
+- A plain call \`fn()\` → \`undefined\` in strict mode. Classes and ES modules are always strict. In old non-strict scripts it is the global object.
 
-**Arrow functions** have no own \`this\`; they use the \`this\` of the scope where they were **defined**, permanently. \`bind\`/\`call\` cannot change it.
+**Arrow functions** have no \`this\` of their own. They use the \`this\` from where they were **written**, forever. \`bind\` and \`call\` cannot change it.
 
 **Page Object bug:**
 \`class LoginPage { constructor(page) { this.page = page; } async submit() { await this.page.getByRole('button', { name: 'Login' }).click(); } }\`
 
-If a helper receives the method, like \`await retry(loginPage.submit, 3)\`, the helper calls \`fn()\` with no receiver. Inside \`submit\`, \`this\` is \`undefined\`, so \`this.page\` throws \`TypeError: Cannot read properties of undefined (reading 'page')\`.
+Say a helper receives the method: \`await retry(loginPage.submit, 3)\`. The helper calls \`fn()\` with no object in front. Inside \`submit\`, \`this\` is \`undefined\`. So \`this.page\` throws \`TypeError: Cannot read properties of undefined (reading 'page')\`.
 
-**Fixes:** \`retry(() => loginPage.submit(), 3)\` (my preferred: obvious and readable), or \`retry(loginPage.submit.bind(loginPage), 3)\`.
+**Fixes:** \`retry(() => loginPage.submit(), 3)\` is my favourite, because it is clear. Or use \`retry(loginPage.submit.bind(loginPage), 3)\`.
 
-**The opposite bug:** a callback inside a method written as \`function () { this.count++ }\` gets its own \`this\`. Using an arrow there inherits the method's \`this\`. Rule of thumb: **methods as regular methods, callbacks inside them as arrows.**`,
+**The opposite bug:** a callback inside a method written as \`function () { this.count++ }\` gets its own \`this\`. An arrow there keeps the method's \`this\`. Rule of thumb: **regular methods for methods, arrows for callbacks inside them.**`,
       followUps: [
         {
-          q: 'What does bind return, and can you rebind a bound function?',
-          a: 'bind returns a new function whose this is permanently set to the given value (optionally with pre-filled arguments). Calling bind again on that result does not change this; the first binding wins. Arrow functions ignore bind for this entirely.',
+          q: 'What does bind return, and can you bind a function twice?',
+          a: 'bind returns a new function whose this is fixed to the value you gave. You can also pre-fill some arguments. Calling bind again on that new function does not change this: the first bind wins. Arrow functions ignore bind for this completely.',
         },
         {
           q: 'What is this inside a Playwright test body?',
-          a: 'Nothing useful: test bodies are usually arrow functions, so this is inherited from module scope (undefined in ES modules). Playwright passes everything you need as fixtures in the first argument ({ page, request }) and testInfo as the second, so tests never rely on this.',
+          a: 'Nothing useful. Test bodies are usually arrow functions, so this comes from the module level, where it is undefined in ES modules. Playwright passes everything you need as fixtures in the first argument ({ page, request }) and testInfo as the second. So tests never need this.',
         },
       ],
       pitfalls: [
-        'Saying this refers to the function itself.',
-        'Saying this is fixed where a regular function is defined.',
-        'Recommending arrow functions for all methods without trade-offs.',
+        'Saying this means the function itself.',
+        'Saying this is fixed where a regular function is written.',
+        'Suggesting arrows for every method without explaining the trade-offs.',
       ],
     },
     {
       id: 'js-functions-iq-05',
       difficulty: 'hard',
-      question: 'Write a function `once(fn)` that returns a new function which calls `fn` only the first time and returns the cached result on later calls. Where could this help in a test suite?',
+      question: 'Write a function `once(fn)` that returns a new function. The new function calls `fn` only the first time, and returns the saved result on later calls. Where could this help in a test suite?',
       whatInterviewerLooksFor: [
-        'Uses a closure with a flag and cached value',
-        'Forwards arguments and the return value',
-        'Handles fn returning undefined (flag, not value check)',
-        'Relates to one-time setup / fixtures',
+        'Uses a closure with a flag and a saved value',
+        'Passes on the arguments and the return value',
+        'Handles fn returning undefined (uses a flag, not a value check)',
+        'Links it to one-time setup and fixtures',
       ],
       modelAnswer: `**Implementation:**
 
@@ -1130,46 +1238,46 @@ If a helper receives the method, like \`await retry(loginPage.submit, 3)\`, the 
 \`  };\`
 \`}\`
 
-**Walkthrough:**
-- \`called\` and \`result\` live in the closure, private to this wrapper.
-- I use a **separate flag** rather than \`if (result === undefined)\`, because \`fn\` might legitimately return \`undefined\` and must still not run twice.
-- \`...args\` forwards any arguments; \`fn.apply(this, args)\` also forwards \`this\` in case the wrapper is used as a method.
-- Setting \`called = true\` **before** calling \`fn\` prevents re-entry if \`fn\` indirectly calls the wrapper again (a design choice to mention).
+**How it works:**
+- \`called\` and \`result\` live in the closure. They are private to this wrapper.
+- I use a **separate flag**, not \`if (result === undefined)\`. \`fn\` might really return \`undefined\`, and it must still not run twice.
+- \`...args\` passes on any arguments. \`fn.apply(this, args)\` also passes on \`this\`, in case the wrapper is used as a method.
+- I set \`called = true\` **before** calling \`fn\`. So if \`fn\` somehow calls the wrapper again, it does not run twice. This is a design choice worth mentioning.
 
-**Usage:** \`const init = once(() => { console.log('seeding'); return 42; }); init(); init();\` logs "seeding" once and returns 42 both times.
+**Usage:** \`const init = once(() => { console.log('seeding'); return 42; }); init(); init();\` logs "seeding" only once, and returns 42 both times.
 
-**Test-suite uses:**
-- Fetching an auth token or seeding reference data once per worker.
-- Lazy creation of an expensive object (a database client) on first use.
-- In Playwright, the built-in answer is a **worker-scoped fixture** or a **setup project** with \`storageState\`; \`once\` is the plain-JS version of the same idea and a common interview stepping stone.
+**Where it helps in a test suite:**
+- Getting an auth token, or loading reference data, once per worker.
+- Creating an expensive object, like a database client, only when it is first needed.
+- In Playwright, the built-in answer is a **worker-scoped fixture**, or a **setup project** with \`storageState\`. \`once\` is the plain JavaScript version of the same idea, and a common interview step.
 
-**Async note:** for an async \`fn\`, caching the **promise** (not the resolved value) makes concurrent callers share the same in-flight request.`,
+**Async note:** if \`fn\` is async, save the **promise**, not the final value. Then callers that arrive at the same time share the same request.`,
       followUps: [
         {
-          q: 'What if fn throws on the first call? Should later calls retry?',
-          a: 'With the flag set before calling fn, a throw leaves called = true and result undefined, so later calls silently return undefined, which is bad. Better: set the flag only after success (wrap in try, set called in the success path), so a failed setup is retried, or cache and rethrow the error so every caller sees the failure.',
+          q: 'What if fn throws on the first call? Should later calls try again?',
+          a: 'With the flag set before calling fn, a throw leaves called = true and result undefined. Later calls then quietly return undefined, which is bad. Better: set the flag only after fn succeeds, so a failed setup is tried again. Or save the error and throw it again, so every caller sees the failure.',
         },
         {
-          q: 'How would you write memoize, which caches per argument?',
-          a: 'Keep a Map from key to result: `const cache = new Map(); return (arg) => { if (!cache.has(arg)) cache.set(arg, fn(arg)); return cache.get(arg); }`. For multiple arguments build a key such as JSON.stringify(args). Use has() rather than checking the value so undefined results are cached too.',
+          q: 'How would you write memoize, which saves a result per argument?',
+          a: 'Keep a Map from each argument to its result: `const cache = new Map(); return (arg) => { if (!cache.has(arg)) cache.set(arg, fn(arg)); return cache.get(arg); }`. For several arguments, build a key such as JSON.stringify(args). Use has() instead of checking the value, so undefined results are saved too.',
         },
       ],
       pitfalls: [
         'Checking `result === undefined` instead of using a flag.',
-        'Not forwarding arguments or the return value.',
+        'Not passing on the arguments or the return value.',
         'Using a global variable instead of a closure.',
       ],
     },
     {
       id: 'js-functions-iq-06',
       difficulty: 'medium',
-      question: 'Write a recursive function that returns the sum of the digits of a non-negative integer (e.g. 4096 → 19). Then explain the base case and what happens without one.',
-      context: 'A small coding question used in automation screening rounds to check basic problem solving before Playwright questions.',
+      question: 'Write a recursive function that returns the sum of the digits of a non-negative whole number (for example 4096 → 19). Then explain the base case, and what happens without one.',
+      context: 'A small coding question used in automation screening rounds. It checks basic problem solving before the Playwright questions.',
       whatInterviewerLooksFor: [
-        'Correct base case and reduction step',
-        'Uses % 10 and Math.floor(n / 10) (or string conversion)',
-        'Explains call stack and RangeError',
-        'Offers an iterative alternative',
+        'A correct base case and a step that makes the number smaller',
+        'Uses % 10 and Math.floor(n / 10) (or turns the number into a string)',
+        'Explains the call stack and the RangeError',
+        'Offers a loop version too',
       ],
       modelAnswer: `**Recursive solution:**
 
@@ -1178,30 +1286,30 @@ If a helper receives the method, like \`await retry(loginPage.submit, 3)\`, the 
 \`  return (n % 10) + sumDigits(Math.floor(n / 10)); // last digit + rest\`
 \`}\`
 
-**Trace for 4096:** \`6 + sumDigits(409)\` → \`9 + sumDigits(40)\` → \`0 + sumDigits(4)\` → \`4\`. Unwinding: 4 + 0 + 9 + 6 = **19**.
+**Trace for 4096:** \`6 + sumDigits(409)\` → \`9 + sumDigits(40)\` → \`0 + sumDigits(4)\` → \`4\`. Adding up on the way back: 4 + 0 + 9 + 6 = **19**.
 
-**Base case:** the smallest input we can answer directly (a single digit is its own sum). Every recursive call must move **towards** it; here \`Math.floor(n / 10)\` drops one digit per call, so it always terminates for non-negative integers.
+**Base case:** the smallest input we can answer at once. A single digit is its own sum. Every recursive call must move **towards** the base case. Here \`Math.floor(n / 10)\` drops one digit per call, so it always stops for non-negative whole numbers.
 
-**Without a base case:** the function keeps calling itself; each call adds a frame to the call stack until the engine's limit is hit: \`RangeError: Maximum call stack size exceeded\`. The same happens if the reduction step is wrong (e.g. \`n / 10\` without \`Math.floor\` produces decimals that never get below the base case in the expected way, or an off-by-one never reaches it).
+**Without a base case:** the function keeps calling itself. Each call adds a waiting entry to the call stack (the list of calls not yet finished). When the stack is full, you get \`RangeError: Maximum call stack size exceeded\`. The same can happen if the "make it smaller" step is wrong. For example, \`n / 10\` without \`Math.floor\` makes decimals, and the function does not behave as planned.
 
-**Alternatives I would mention:**
-- Iterative: \`let s = 0; while (n > 0) { s += n % 10; n = Math.floor(n / 10); } return s;\` (no stack growth).
-- String-based: \`String(n).split('').reduce((s, d) => s + Number(d), 0)\`, readable but converts types.
+**Other ways I would mention:**
+- A loop: \`let s = 0; while (n > 0) { s += n % 10; n = Math.floor(n / 10); } return s;\`. The stack does not grow.
+- With a string: \`String(n).split('').reduce((s, d) => s + Number(d), 0)\`. Easy to read, but it switches between text and numbers.
 
-**Testing my own function:** 0 → 0, 7 → 7, 10 → 1, 4096 → 19, 99999 → 45; and I would clarify the contract for negatives and non-integers (reject, or use \`Math.abs\`).`,
+**Testing my own function:** 0 → 0, 7 → 7, 10 → 1, 4096 → 19, 99999 → 45. I would also ask what should happen for negative numbers and decimals: reject them, or use \`Math.abs\`?`,
       followUps: [
         {
           q: 'When is recursion a better choice than a loop in test automation?',
-          a: 'For tree-shaped data whose depth you do not know in advance: walking nested JSON in an API response to find every "id" field, comparing two nested objects deeply, or traversing a nested menu or folder structure. For flat repetition, such as retries or iterating rows, a loop is simpler and cannot overflow the stack.',
+          a: 'For tree-shaped data when you do not know how deep it goes. Examples: walking nested JSON in an API response to find every "id" field, comparing two nested objects, or going through a nested menu or folder. For flat repetition, like retries or table rows, a loop is simpler and cannot overflow the stack.',
         },
         {
           q: 'What does your function return for 0, and for a negative number?',
-          a: 'For 0 it returns 0 from the base case, which is correct. For -15, n < 10 is true immediately, so it returns -15, which is wrong. I would either guard with `if (n < 0) throw new RangeError("non-negative only")` or use Math.abs, depending on the requirement; pointing this out unprompted is a good signal.',
+          a: 'For 0 it returns 0 from the base case, which is correct. For -15, n < 10 is true at once, so it returns -15, which is wrong. I would either add `if (n < 0) throw new RangeError("non-negative only")` or use Math.abs, depending on the requirement. Pointing this out without being asked is a good sign.',
         },
       ],
       pitfalls: [
-        'Forgetting Math.floor and producing decimals.',
-        'No base case or a base case that is never reached.',
+        'Forgetting Math.floor and getting decimals.',
+        'No base case, or a base case that is never reached.',
         'Not testing edge inputs like 0 and single digits.',
       ],
     },
@@ -1210,17 +1318,17 @@ If a helper receives the method, like \`await retry(loginPage.submit, 3)\`, the 
       difficulty: 'medium',
       question: 'What is a pure function? A test helper `applyCoupon(cart, code)` changes `cart.total` directly. Why might this make your tests flaky, and how would you rewrite it?',
       whatInterviewerLooksFor: [
-        'Same input → same output; no side effects',
-        'Links mutation of shared data to order-dependent failures',
-        'Rewrites to return a new object',
-        'Knows side effects belong at the edges of a test',
+        'Same input → same output, and no side effects',
+        'Links changing shared data to tests that fail depending on their order',
+        'Rewrites it to return a new object',
+        'Knows that side effects belong at the edges of a test',
       ],
-      modelAnswer: `**Pure function:** given the same arguments it always returns the same result, and it has no side effects: it does not modify its arguments or outside variables, and does no I/O (network, files, console, browser, clock, randomness).
+      modelAnswer: `**Pure function:** with the same arguments it always gives the same result. And it has no side effects: it does not change its arguments or outside variables. It does no input/output either: no network, files, console, browser, clock or random numbers.
 
-**The problem with \`applyCoupon(cart, code)\` mutating \`cart.total\`:**
-- If several tests import the same \`cart\` fixture object from a data file, the first test that applies \`SAVE10\` changes the shared object. The next test starts with an already-discounted total.
-- The result depends on **test order**: passes alone, fails in a full run, or the reverse. With parallel workers the order changes between runs, so it looks random. That is the textbook definition of a flaky, order-dependent test.
-- Debugging is hard because the failing test is innocent; the polluter ran earlier.
+**The problem with \`applyCoupon(cart, code)\` changing \`cart.total\`:**
+- Say several tests import the same \`cart\` object from a data file. The first test that applies \`SAVE10\` changes the shared object. The next test starts with a total that is already discounted.
+- The result depends on **test order**. A test passes alone and fails in a full run, or the other way round. With parallel workers the order changes between runs, so it looks random. That is exactly what a flaky, order-dependent test is.
+- Debugging is hard, because the failing test did nothing wrong. The test that changed the data ran earlier.
 
 **Rewrite:**
 
@@ -1230,23 +1338,23 @@ If a helper receives the method, like \`await retry(loginPage.submit, 3)\`, the 
 \`  return { ...cart, totalCents, coupon: code };\`
 \`}\`
 
-It returns a **new** cart; the input is untouched, so any number of tests can share the same starting data. Using cents avoids float surprises. If the cart had nested objects (items), I would create new arrays/objects for the parts I change or use \`structuredClone\`.
+It returns a **new** cart and leaves the input alone. So any number of tests can share the same starting data. Using cents avoids decimal rounding surprises. If the cart had nested objects (like items), I would copy the parts I change. Or I would use \`structuredClone\`.
 
-**The bigger principle:** keep calculation and data-building helpers pure and unit-testable in milliseconds; keep side effects (clicking, API calls) inside the test or Page Object where they are expected. In Playwright, fixtures that create fresh data per test complete the picture.`,
+**The bigger rule:** keep helpers that calculate or build data pure. They can be tested in milliseconds. Keep side effects, like clicks and API calls, inside the test or the Page Object, where people expect them. In Playwright, fixtures that create fresh data for each test complete the picture.`,
       followUps: [
         {
-          q: 'How could you detect accidental mutation of shared test data?',
-          a: 'Deep-freeze the shared fixtures in a dev/CI check (Object.freeze recursively) so any write throws a TypeError in strict mode, ES modules included. Alternatively compare a JSON snapshot of the data before and after each test in a hook. Running tests in random or reversed order also exposes hidden order dependencies.',
+          q: 'How could you catch accidental changes to shared test data?',
+          a: 'Deep-freeze the shared data in a CI check (call Object.freeze on every level). Then any change throws a TypeError in strict mode, which includes ES modules. Or save a JSON copy of the data before each test and compare it afterwards in a hook. Running tests in random or reversed order also shows hidden order problems.',
         },
         {
           q: 'Is a function that only reads Date.now() pure?',
-          a: 'No: the same arguments can give different results at different times, which is a hidden input. To make it pure, pass the time in as a parameter (or inject a clock). Playwright also has a Clock API (page.clock) to control time in the browser for the same reason: determinism.',
+          a: 'No. The same arguments can give different results at different times, so the clock is a hidden input. To make it pure, pass the time in as a parameter (or pass in a clock). Playwright also has a Clock API (page.clock) to control time in the browser, for the same reason: the same result every run.',
         },
       ],
       pitfalls: [
         'Defining pure only as "returns something".',
-        'Not connecting mutation to order-dependent flakiness.',
-        'Fixing it by resetting the global in afterEach instead of removing the shared mutation.',
+        'Not linking changed shared data to tests that fail depending on their order.',
+        'Fixing it by resetting the global in afterEach, instead of removing the shared change.',
       ],
     },
   ],
@@ -1254,27 +1362,27 @@ It returns a **new** cart; the input is untouched, so any number of tests can sh
     {
       id: 'js-functions-drill-1',
       question:
-        'Trace this file line by line and give each output (or the error): `console.log(typeof setup); console.log(count); var count = 5; console.log(typeof helper); var helper = () => 1; console.log(helper()); console.log(limit); const limit = 10; function setup() {}`',
+        'Trace this file line by line. Give each output, or the error: `console.log(typeof setup); console.log(count); var count = 5; console.log(typeof helper); var helper = () => 1; console.log(helper()); console.log(limit); const limit = 10; function setup() {}`',
       assumptions: [
-        'Declarations are registered before any line runs.',
-        'An uncaught error stops the script.',
-        '`typeof` on a var holding undefined returns "undefined".',
+        'JavaScript notes every declaration before any line runs (hoisting).',
+        'An error that nothing catches stops the script.',
+        '`typeof` on a var that holds undefined gives "undefined".',
       ],
       steps: [
-        { label: 'Registration phase', calc: 'setup → function; count → undefined; helper → undefined; limit → TDZ' },
+        { label: 'Before any line runs', calc: 'setup → function; count → undefined; helper → undefined; limit → TDZ (no value yet)' },
         { label: 'typeof setup', calc: 'function declaration, fully hoisted → "function"' },
-        { label: 'console.log(count)', calc: 'var registered as undefined → undefined; then count = 5' },
-        { label: 'typeof helper', calc: 'helper is still undefined (arrow not assigned yet) → "undefined"' },
-        { label: 'helper = () => 1; helper()', calc: 'assignment has now run → 1' },
-        { label: 'console.log(limit)', calc: 'const in TDZ → ReferenceError: Cannot access \'limit\' before initialization; script stops' },
+        { label: 'console.log(count)', calc: 'var starts as undefined → undefined; then count = 5' },
+        { label: 'typeof helper', calc: 'helper is still undefined (the arrow is not saved yet) → "undefined"' },
+        { label: 'helper = () => 1; helper()', calc: 'the line has now run → 1' },
+        { label: 'console.log(limit)', calc: 'const in the TDZ → ReferenceError: Cannot access \'limit\' before initialization; the script stops' },
       ],
       answer: '`function`, `undefined`, `undefined`, `1`, then **ReferenceError** (Cannot access \'limit\' before initialization).',
       insight:
-        'Only function declarations are safe to use early. var silently gives undefined; let/const fail loudly. In test files, declare data and helpers before use and prefer const, so mistakes surface as clear errors.',
+        'Only function declarations are safe to use early. var quietly gives undefined, while let and const fail loudly. In test files, declare data and helpers before you use them, and prefer const. Then mistakes show up as clear errors.',
       followUps: [
         {
           q: 'What changes if `var helper = () => 1` becomes `const helper = () => 1`?',
-          a: '`typeof helper` on the third line now throws a ReferenceError (TDZ), because typeof is not safe for let/const before initialisation. Execution stops there, earlier than before, so only "function" and undefined are printed.',
+          a: '`typeof helper` on the third line now throws a ReferenceError, because helper is in the TDZ, and typeof is not safe there. The script stops at that line, earlier than before. So only "function" and undefined are printed.',
         },
       ],
     },
@@ -1283,26 +1391,26 @@ It returns a **new** cart; the input is untouched, so any number of tests can sh
       question:
         'Predict the outputs: `function makeCounter(start = 0) { let n = start; return { inc: () => ++n, get: () => n }; } const a = makeCounter(); const b = makeCounter(10); a.inc(); a.inc(); b.inc(); console.log(a.get(), b.get()); const c = a; c.inc(); console.log(a.get());`',
       assumptions: [
-        'Each makeCounter call creates its own closure environment.',
-        '`++n` increments then returns the new value.',
-        'Assigning an object to another variable copies the reference, not the object.',
+        'Each makeCounter call makes its own private set of variables (its own closure).',
+        '`++n` adds one first, then gives the new value.',
+        'Saving an object in another variable does not copy it. Both names point at the same object.',
       ],
       steps: [
-        { label: 'a = makeCounter()', calc: 'environment A: n = 0' },
-        { label: 'b = makeCounter(10)', calc: 'environment B: n = 10' },
+        { label: 'a = makeCounter()', calc: 'set A: n = 0' },
+        { label: 'b = makeCounter(10)', calc: 'set B: n = 10' },
         { label: 'a.inc(); a.inc()', calc: 'A: n = 1, then 2' },
-        { label: 'b.inc()', calc: 'B: n = 11 (A unaffected)' },
+        { label: 'b.inc()', calc: 'B: n = 11 (A does not change)' },
         { label: 'console.log(a.get(), b.get())', calc: '2 11' },
-        { label: 'const c = a; c.inc()', calc: 'c points to the same object whose functions close over A → A: n = 3' },
+        { label: 'const c = a; c.inc()', calc: 'c is the same object as a, so its functions use set A → A: n = 3' },
         { label: 'console.log(a.get())', calc: '3' },
       ],
       answer: '`2 11`, then `3`.',
       insight:
-        'Two factory calls give two independent private states; two variables pointing at the same object share one. That is exactly how per-test data factories avoid collisions while shared objects cause them.',
+        'Two factory calls give two separate private counters. Two variables that point at the same object share one. This is why per-test data factories avoid clashes, and shared objects cause them.',
       followUps: [
         {
           q: 'How would you add a reset() that sets the counter back to its start value?',
-          a: 'Add `reset: () => { n = start; }` to the returned object. The start parameter is also part of the closure, so reset can read it later. Nothing outside can set n to an arbitrary value, which keeps the counter consistent.',
+          a: 'Add `reset: () => { n = start; }` to the returned object. The start parameter is also kept in the closure, so reset can read it later. Nothing outside can set n to any other value, which keeps the counter correct.',
         },
       ],
     },
@@ -1311,23 +1419,23 @@ It returns a **new** cart; the input is untouched, so any number of tests can sh
       question:
         'Predict each line: `class Product { constructor(n) { this.name = n; } label() { return "Item: " + this.name; } } const p = new Product("Backpack"); const f = p.label; const g = p.label.bind(p); const h = () => p.label(); console.log(p.label()); console.log(g()); console.log(h()); console.log(f());`',
       assumptions: [
-        'Class bodies are strict mode.',
-        'A plain call `f()` in strict mode gives this === undefined.',
-        'bind fixes this permanently; an arrow wrapper calls the method on p.',
+        'Class code always runs in strict mode.',
+        'In strict mode, a plain call `f()` gives this === undefined.',
+        'bind fixes this for good. The arrow wrapper calls the method on p.',
       ],
       steps: [
         { label: 'p.label()', calc: 'called on p → this = p → "Item: Backpack"' },
         { label: 'g()', calc: 'bound to p → "Item: Backpack"' },
-        { label: 'h()', calc: 'arrow calls p.label() → "Item: Backpack"' },
-        { label: 'f()', calc: 'detached plain call → this undefined → reading this.name throws TypeError' },
+        { label: 'h()', calc: 'the arrow calls p.label() → "Item: Backpack"' },
+        { label: 'f()', calc: 'plain call with no object → this is undefined → reading this.name throws a TypeError' },
       ],
       answer: '`Item: Backpack` three times, then `TypeError: Cannot read properties of undefined (reading \'name\')`.',
       insight:
         'this belongs to the call, not to the function. Whenever you hand a method to someone else (retry helpers, event handlers, array callbacks), wrap it in an arrow or bind it.',
       followUps: [
         {
-          q: 'Would f() also throw if Product were a plain object literal in an old non-module script?',
-          a: 'Not necessarily. In sloppy mode a plain call sets this to the global object, so this.name reads globalThis.name, typically undefined (or, in a browser, window.name, often an empty string), giving "Item: undefined" or "Item: " without an error. That silent wrong result is worse than the TypeError, one reason strict mode is the default in classes and modules.',
+          q: 'Would f() also throw if Product were a plain object in an old, non-module script?',
+          a: 'Not always. In old non-strict code, a plain call sets this to the global object. So this.name reads globalThis.name, which is usually undefined (in a browser, window.name is often an empty string). You get "Item: undefined" or "Item: " with no error. That quiet wrong result is worse than a TypeError. It is one reason classes and modules are always strict.',
         },
       ],
     },
@@ -1336,7 +1444,7 @@ It returns a **new** cart; the input is untouched, so any number of tests can sh
     {
       id: 'js-functions-mcq-01',
       difficulty: 'easy',
-      question: 'A helper is called on line 1 but defined further down as a function declaration. What happens?',
+      question: 'A helper is called on line 1, but it is defined further down as a function declaration. What happens?',
       code: {
         language: 'javascript',
         code: `console.log(greetUser('qa'));
@@ -1348,11 +1456,11 @@ function greetUser(name) {
       options: ['Hello, qa', 'ReferenceError: greetUser is not defined', 'TypeError: greetUser is not a function', 'undefined'],
       correct: [0],
       explanation:
-        'Function declarations are hoisted with their full body, so the call works before the definition line and prints "Hello, qa". A ReferenceError would happen for a const/let function expression (TDZ), and a TypeError for a var function expression called too early.',
+        'Function declarations are hoisted with their whole body. So the call works before the definition line and prints "Hello, qa". A ReferenceError happens for a const/let function expression (TDZ). A TypeError happens for a var function expression called too early.',
       followUps: [
         {
           q: 'What would change with `const greetUser = (name) => ...`?',
-          a: 'The call on line 1 would hit the temporal dead zone and throw ReferenceError: Cannot access \'greetUser\' before initialization. Arrow functions and function expressions are only available after their assignment runs.',
+          a: 'The call on line 1 would hit the temporal dead zone and throw ReferenceError: Cannot access \'greetUser\' before initialization. Arrow functions and function expressions can only be used after their line has run.',
         },
       ],
     },
@@ -1375,11 +1483,11 @@ console.log(getPrices([{ price: 9.99 }, { price: 7.99 }]));`,
       ],
       correct: [0],
       explanation:
-        'With a block body { }, an arrow behaves like a normal function: no return means undefined. Either write `return items.map(...)` or drop the braces for an implicit return. map itself returns a new array; there is nothing asynchronous to await; arrows accept any parameters.',
+        'With { } around the body, an arrow works like a normal function: no return means undefined. Either write `return items.map(...)`, or remove the braces so the value is returned by itself. map does return a new array. There is nothing async to await, and arrows accept any parameters.',
       followUps: [
         {
-          q: 'How would you return an object literal from a one-line arrow?',
-          a: 'Wrap it in parentheses: `(i) => ({ name: i.name, price: i.price })`. Without them, the braces are parsed as a function body and the arrow returns undefined.',
+          q: 'How would you return an object from a one-line arrow?',
+          a: 'Wrap it in brackets: `(i) => ({ name: i.name, price: i.price })`. Without them, JavaScript reads the { } as the function body, and the arrow returns undefined.',
         },
       ],
     },
@@ -1395,11 +1503,11 @@ console.log(getPrices([{ price: 9.99 }, { price: 7.99 }]));`,
       ],
       correct: [0],
       explanation:
-        'Default parameters apply only when the argument is undefined (missing or explicitly undefined). null is a real value, so it is passed through. Beginners often assume defaults work like || or ??, which would treat null differently.',
+        'A default is used only when the argument is undefined (missing, or passed as undefined). null is a real value, so it is passed through as null. Beginners often think defaults work like || or ??, which would treat null differently.',
       followUps: [
         {
-          q: 'How would you also default null?',
-          a: 'Inside the body: `user = user ?? "standard_user"`. ?? treats both null and undefined as missing while keeping legitimate falsy values like an empty string, which you might want to test as an invalid username.',
+          q: 'How would you also use the default for null?',
+          a: 'Inside the body, write `user = user ?? "standard_user"`. ?? treats both null and undefined as missing. It keeps other falsy values, like an empty string, which you might want to test as an invalid username.',
         },
       ],
     },
@@ -1422,18 +1530,18 @@ console.log(tag('login', '@smoke', '@auth', '@p1'));`,
       ],
       correct: [0],
       explanation:
-        'Named parameters take arguments in order (title, first); the rest parameter collects the remaining two into a real array, so its length is 2 and Array.isArray is true. The old arguments object is array-like but not an array, which is why some expect false.',
+        'Named parameters take the arguments in order: title, then first. The rest parameter collects the other two into a real array, so its length is 2 and Array.isArray is true. The old arguments object looks like an array but is not one, which is why some people expect false.',
       followUps: [
         {
           q: 'Can a rest parameter come before other parameters?',
-          a: 'No. It must be the last parameter; `function f(...a, b)` is a SyntaxError. That rule makes it unambiguous which arguments go where.',
+          a: 'No. It must be the last parameter. `function f(...a, b)` is a SyntaxError. This rule makes it clear which arguments go where.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-05',
       difficulty: 'medium',
-      question: 'Two loops schedule callbacks that read the loop variable later. What do they print?',
+      question: 'Two loops save callbacks that read the loop variable later. What do they print?',
       code: {
         language: 'javascript',
         code: `const fromVar = [];
@@ -1445,18 +1553,18 @@ console.log(fromVar.map((f) => f()), fromLet.map((f) => f()));`,
       options: ['[ 3, 3, 3 ] [ 0, 1, 2 ]', '[ 0, 1, 2 ] [ 0, 1, 2 ]', '[ 2, 2, 2 ] [ 0, 1, 2 ]', '[ 3, 3, 3 ] [ 3, 3, 3 ]'],
       correct: [0],
       explanation:
-        'var creates one function-scoped i shared by every callback; when they run, the loop has finished and i is 3 (the value that ended the loop, not 2). let creates a fresh binding per iteration, so each callback closes over its own k. Closures hold live variables, not copies of values.',
+        'var makes one i for the whole function, and every callback shares it. When they run, the loop has finished and i is 3 (the value that ended the loop, not 2). let makes a new k for each loop round, so each callback keeps its own k. Closures keep the live variable, not a copy of its value.',
       followUps: [
         {
-          q: 'How could you fix the var version without changing to let?',
-          a: 'Create a new scope per iteration, e.g. an IIFE: `fromVar.push(((j) => () => j)(i))`, passing the current value as a parameter. That was the pre-ES2015 pattern; today let is the clean fix.',
+          q: 'How could you fix the var version without switching to let?',
+          a: 'Make a new scope for each loop round. For example, call a function at once and pass in the current value: `fromVar.push(((j) => () => j)(i))`. This was the old pattern before ES2015. Today, let is the clean fix.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-06',
       difficulty: 'medium',
-      question: 'A checkout function logs a let variable one line before declaring it. What is the outcome of calling it?',
+      question: 'A checkout function logs a let variable one line before declaring it. What happens when you call it?',
       code: {
         language: 'javascript',
         code: `function checkout() {
@@ -1473,18 +1581,18 @@ checkout();`,
       ],
       correct: [0],
       explanation:
-        'total is hoisted to the top of the function scope but stays in the temporal dead zone until its let line runs, so access throws "Cannot access before initialization". undefined would be the var behaviour; "is not defined" is the message for a name that does not exist at all.',
+        'total is hoisted to the top of the function, but it stays in the temporal dead zone until its let line runs. So using it throws "Cannot access before initialization". undefined would be the var behaviour. "is not defined" is the message for a name that does not exist at all.',
       followUps: [
         {
           q: 'Why is this error better than getting undefined?',
-          a: 'It fails at the exact line of the mistake with a clear message. With var, the code continues with undefined and fails later in an unrelated place (or, worse, an assertion compares against undefined and passes for the wrong reason).',
+          a: 'It fails at the exact line of the mistake, with a clear message. With var, the code carries on with undefined and fails later somewhere else. Or worse, an assertion compares against undefined and passes for the wrong reason.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-07',
       difficulty: 'medium',
-      question: 'Two ID generators are created from the same factory. What is logged?',
+      question: 'Two ID makers are created from the same factory. What is logged?',
       code: {
         language: 'javascript',
         code: `function idMaker(prefix) {
@@ -1499,18 +1607,18 @@ console.log(orderId(), userId());`,
       options: ['ORD-3 USR-1', 'ORD-3 USR-4', 'ORD-1 USR-1', 'ORD-2 USR-1'],
       correct: [0],
       explanation:
-        'Each call to idMaker creates a new environment with its own n. orderId was called twice before the log, so the third call returns ORD-3, while userId\'s private n starts fresh, giving USR-1. USR-4 assumes a shared counter.',
+        'Each call to idMaker makes a new private n. orderId was called twice before the log, so the third call gives ORD-3. userId has its own n that starts fresh, so it gives USR-1. The answer USR-4 assumes the two share one counter.',
       followUps: [
         {
           q: 'Why is this useful for parallel Playwright tests, and what is its limit?',
-          a: 'Each test or worker can get its own generator so IDs never collide within it. But each worker is a separate process, so two workers both produce ORD-1; include the worker index or a random/UUID part for global uniqueness.',
+          a: 'Each test or worker can get its own ID maker, so IDs never clash inside it. But each worker is a separate process, so two workers can both make ORD-1. Add the worker number, or a random or UUID part, to make IDs unique everywhere.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-08',
       difficulty: 'medium',
-      question: 'Select ALL of the following that are higher-order functions.',
+      question: 'Select ALL of the following that are higher-order functions (functions that take or return a function).',
       options: [
         'Array.prototype.map',
         'A function `between(min, max)` that returns `price => price >= min && price <= max`',
@@ -1520,18 +1628,18 @@ console.log(orderId(), userId());`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'A higher-order function takes a function as an argument and/or returns one. map and Playwright\'s test() take callbacks; between returns a function. Math.max and toCents only take and return plain values, so they are ordinary functions.',
+        'A higher-order function takes a function as an argument, or returns one. map and Playwright\'s test() take callbacks. between returns a function. Math.max and toCents only take and return plain values, so they are ordinary functions.',
       followUps: [
         {
-          q: 'Give an example of a HOF you would write for a test framework.',
-          a: 'A step wrapper: `async function step(name, fn) { console.log(name); return await fn(); }`, or a retry helper that takes the action to retry. Playwright already provides test.step(name, async () => {...}), which is a HOF that groups actions in the report and trace.',
+          q: 'Give an example of a higher-order function you would write for a test framework.',
+          a: 'A step wrapper: `async function step(name, fn) { console.log(name); return await fn(); }`. Or a retry helper that takes the action to retry. Playwright already has test.step(name, async () => {...}). It is a higher-order function that groups actions in the report and the trace.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-09',
       difficulty: 'medium',
-      question: 'A helper is defined with `var` as a function expression and called before that line. What is the error?',
+      question: 'A helper is written as a `var` function expression and called before that line. What is the error?',
       code: {
         language: 'javascript',
         code: `try {
@@ -1549,18 +1657,18 @@ var resetCart = function () { return 'empty'; };`,
       ],
       correct: [0],
       explanation:
-        'var resetCart is hoisted and initialised to undefined, so the name exists but calling undefined throws a TypeError ("is not a function"). "is not defined" means the name does not exist at all; "before initialization" is the TDZ message for let/const.',
+        'var resetCart is hoisted and starts as undefined. So the name exists, but calling undefined throws a TypeError ("is not a function"). "is not defined" means the name does not exist at all. "before initialization" is the TDZ message for let and const.',
       followUps: [
         {
           q: 'How would you read these three error messages when debugging?',
-          a: '"X is not defined" → typo or missing import. "Cannot access X before initialization" → used a let/const/class too early (ordering). "X is not a function" → the name exists but holds something else, often undefined from var hoisting, a wrong import, or a property that is not a method.',
+          a: '"X is not defined": a typo or a missing import. "Cannot access X before initialization": a let, const or class used too early, so check the order. "X is not a function": the name exists but holds something else, often undefined from var hoisting, a wrong import, or a property that is not a method.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-10',
       difficulty: 'hard',
-      question: 'Calling `new Timer().start()` produces what result?',
+      question: 'What happens when you call `new Timer().start()`?',
       code: {
         language: 'javascript',
         code: `class Timer {
@@ -1582,18 +1690,18 @@ console.log(new Timer().start());`,
       ],
       correct: [0],
       explanation:
-        'The regular function passed to forEach gets its own this; with no thisArg and class code being strict, that this is undefined, so this.ticks throws. Using an arrow callback would inherit start\'s this and return 3. NaN would require this to be an object without ticks (as in sloppy mode with the global object).',
+        'The regular function passed to forEach gets its own this. Class code is strict and no thisArg is given, so that this is undefined, and this.ticks throws. An arrow callback would keep start\'s this and return 3. NaN would need this to be some object without ticks, as in old non-strict code with the global object.',
       followUps: [
         {
           q: 'Name two fixes besides an arrow function.',
-          a: 'Pass a thisArg: `[1, 2, 3].forEach(function () { this.ticks++; }, this)`, or capture it before the callback: `const self = this;` and use self.ticks inside. The arrow version is the modern, most readable choice.',
+          a: 'Pass a thisArg: `[1, 2, 3].forEach(function () { this.ticks++; }, this)`. Or save it before the callback: `const self = this;`, then use self.ticks inside. The arrow version is the modern, easiest-to-read choice.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-11',
       difficulty: 'hard',
-      question: 'A Page Object method is passed to a generic retry helper as `retry(loginPage.submit, 3)` and every attempt fails with "Cannot read properties of undefined (reading \'page\')". What is the root cause?',
+      question: 'A Page Object method is passed to a retry helper as `retry(loginPage.submit, 3)`. Every attempt fails with "Cannot read properties of undefined (reading \'page\')". What is the root cause?',
       options: [
         'The method was detached from its object, so inside it `this` is undefined when retry calls fn()',
         'retry must be declared with async to call class methods',
@@ -1602,18 +1710,18 @@ console.log(new Timer().start());`,
       ],
       correct: [0],
       explanation:
-        'Passing loginPage.submit hands over just the function; this is decided at call time, and retry calls fn() with no receiver, so this is undefined in strict class code. Methods can be passed as values, async is unrelated to this, and a closed page gives a different error (target closed). Fix with `() => loginPage.submit()` or bind.',
+        'Passing loginPage.submit hands over only the function, without its object. this is decided when the function is called. retry calls fn() with nothing before the dot, so this is undefined in strict class code. Methods can be passed as values, async has nothing to do with this, and a closed page gives a different error (target closed). Fix it with `() => loginPage.submit()` or bind.',
       followUps: [
         {
-          q: 'Which fix do you prefer and why?',
-          a: 'An arrow wrapper, `retry(() => loginPage.submit(), 3)`: it is explicit, lets you pass arguments naturally, and works for async methods. bind works too but is easier to forget and harder to read when arguments are involved.',
+          q: 'Which fix do you prefer, and why?',
+          a: 'An arrow wrapper: `retry(() => loginPage.submit(), 3)`. It is clear, it lets you pass arguments in the normal way, and it works for async methods. bind works too, but it is easier to forget and harder to read when there are arguments.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-12',
       difficulty: 'hard',
-      question: 'Select ALL functions that are pure.',
+      question: 'Select ALL functions that are pure (same input gives the same output, and nothing outside changes).',
       code: {
         language: 'javascript',
         code: `const a = (price, qty) => price * qty;
@@ -1626,18 +1734,18 @@ const e = (list) => { list.push('done'); return list; };`,
       options: ['a', 'b', 'c', 'd', 'e'],
       correct: [0, 2],
       explanation:
-        'a depends only on its inputs and changes nothing. c returns a new object without touching its argument. b changes an outside variable (side effect), d depends on the clock (different output for the same input), and e mutates its argument. Mutation and hidden inputs are what make helpers unpredictable in tests.',
+        'a depends only on its inputs and changes nothing. c returns a new object and leaves its argument alone. b changes an outside variable (a side effect). d depends on the clock, so the same input can give a different output. e changes its argument. Changed data and hidden inputs make helpers unpredictable in tests.',
       followUps: [
         {
           q: 'How would you make d pure?',
-          a: 'Pass the timestamp in as a parameter, so d becomes (now) => a string built from now, e.g. "user_" + now + "@test.com". The caller (a fixture or the test) decides the time, and unit tests of d become deterministic.',
+          a: 'Pass the time in as a parameter. Then d becomes (now) => a string built from now, like "user_" + now + "@test.com". The caller (a fixture or the test) chooses the time, and unit tests of d give the same result every run.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-13',
       difficulty: 'medium',
-      question: 'Select ALL statements about closures that are true.',
+      question: 'Select ALL true statements about closures.',
       options: [
         'A closure keeps access to variables of its outer function after that function has returned',
         'A closure stores a snapshot copy of outer variables taken when it was created',
@@ -1646,11 +1754,11 @@ const e = (list) => { list.push('done'); return list; };`,
       ],
       correct: [0, 2],
       explanation:
-        'Closures retain the outer environment after the outer call ends, and every call creates a new environment (independent counters). They reference variables live, not as snapshots, which explains the var-loop puzzle. Every JavaScript function forms a closure, not only arrows.',
+        'A closure keeps the outer variables after the outer call ends. Every call of the outer function makes a new set of variables, so counters do not share a count. Closures see the live variable, not a snapshot, which explains the var-loop puzzle. Every JavaScript function forms a closure, not only arrows.',
       followUps: [
         {
           q: 'Can closures cause memory problems?',
-          a: 'Yes, if a long-lived closure (an event handler or a cached function) references a large object, that object cannot be garbage-collected. In tests this rarely matters, but in long-running apps leaked listeners holding DOM nodes are a classic memory-leak source.',
+          a: 'Yes. If a long-lived closure, like an event handler or a cached function, holds a big object, that object cannot be cleaned up from memory. In tests this rarely matters. In long-running apps, leftover listeners holding page elements are a classic memory leak.',
         },
       ],
     },
@@ -1672,18 +1780,18 @@ console.log(run());`,
       options: ["[ 'qa', 'prod' ]", "[ 'prod', 'prod' ]", "[ 'qa', 'qa' ]", "[ 'prod', 'qa' ]"],
       correct: [0],
       explanation:
-        'Scope is lexical: readEnv was written at the top level, so it sees the outer env ("qa") even though it is called inside run. inner was written inside run, so it sees run\'s env ("prod"). Answers with "prod" first assume dynamic scope (lookup by caller), which JavaScript does not use.',
+        'A function sees the variables where it was written (lexical scope). readEnv was written at the top level, so it sees the outer env ("qa"), even though run calls it. inner was written inside run, so it sees run\'s env ("prod"). Answers with "prod" first assume a function sees its caller\'s variables. JavaScript does not work that way.',
       followUps: [
         {
-          q: 'Is `this` lexical or dynamic in JavaScript?',
-          a: 'For regular functions, this is dynamic (decided by the call), unlike variables, which are lexical. Arrow functions make this lexical too. That contrast is a frequent interview follow-up and the root of most this-related bugs.',
+          q: 'Is `this` decided where a function is written, or where it is called?',
+          a: 'For regular functions, this is decided by the call. That is different from variables, which are decided by where the code is written. Arrow functions make this follow the written place too. This contrast is a common interview follow-up, and the root of most this bugs.',
         },
       ],
     },
     {
       id: 'js-functions-mcq-15',
       difficulty: 'expert',
-      question: 'A recursive helper walks a nested category tree from an API. Select ALL statements that are correct.',
+      question: 'A recursive helper walks a nested category tree from an API. Select ALL correct statements.',
       code: {
         language: 'javascript',
         code: `function countLeaves(node) {
@@ -1703,11 +1811,11 @@ console.log(countLeaves(tree));`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Leaves are the empty-children node and the two {} nodes (no children property, handled by the base case), so the result is 3. There is a base case, so no RangeError for this tree. A cyclic reference would never reach a leaf, causing "Maximum call stack size exceeded", which is why robust walkers track visited nodes with a Set.',
+        'The leaves are the node with empty children and the two {} nodes (no children property, which the base case handles). So the result is 3. There is a base case, so this tree gives no RangeError. A node that contains itself (a cycle) would never reach a leaf and would cause "Maximum call stack size exceeded". That is why careful walkers remember visited nodes in a Set.',
       followUps: [
         {
           q: 'How would you protect the walker against cycles?',
-          a: 'Pass a Set of visited nodes: at the start, `if (seen.has(node)) return 0; seen.add(node);`. Object identity makes the Set check reliable. structuredClone and many deep-equal libraries do the same internally to handle circular structures.',
+          a: 'Pass in a Set of visited nodes. At the start, write `if (seen.has(node)) return 0; seen.add(node);`. A Set checks if it is the exact same object, so this is reliable. structuredClone and many deep-equal libraries do the same inside to handle circular data.',
         },
       ],
     },

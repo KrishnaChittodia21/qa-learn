@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Code2, FlaskConical, Package } from 'lucide-react';
 import { CODING_PROBLEMS, TOPIC_BY_ID } from '../content';
 import { PRIORITY, PROJECTS, RESOURCES, RESUME_TIP, ROADMAP } from '../content/roadmap';
 import { useProgress } from '../lib/progress';
@@ -33,7 +34,7 @@ export default function RoadmapPage() {
                 ))}
               </ul>
               <div className="roadmap-deliverable">
-                📦 <strong>Deliverable:</strong> {w.deliverable}
+                <Package size={15} aria-hidden="true" className="card-icon" /> <strong>Deliverable:</strong> {w.deliverable}
               </div>
               {topics.length > 0 && (
                 <>
@@ -52,12 +53,12 @@ export default function RoadmapPage() {
                     ))}
                     {w.pwLab && (
                       <Link to="/pw-lab" className="chip">
-                        🧪 Playwright Lab (Judge)
+                        <FlaskConical size={14} aria-hidden="true" /> Playwright Lab (Judge)
                       </Link>
                     )}
                     {w.coding && (
                       <Link to="/coding" className="chip">
-                        ⌨️ Coding practice ({Object.keys(p.code).length}/{CODING_PROBLEMS.length})
+                        <Code2 size={14} aria-hidden="true" /> Coding practice ({Object.keys(p.code).length}/{CODING_PROBLEMS.length})
                       </Link>
                     )}
                   </div>
@@ -100,7 +101,7 @@ export default function RoadmapPage() {
       </ol>
 
       <div className="card info small">
-        <Markdown>{`💼 **Resume tip.** ${RESUME_TIP}`}</Markdown>
+        <Markdown>{`**Resume tip.** ${RESUME_TIP}`}</Markdown>
       </div>
 
       <h2>Resources</h2>

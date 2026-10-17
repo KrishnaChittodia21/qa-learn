@@ -67,28 +67,31 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="field">
-          <span id="accent-label">Accent colour</span>
-          <div className="accent-picker" role="group" aria-labelledby="accent-label">
+          <span id="accent-label">Ink</span>
+          <div className="ink-picker" role="group" aria-labelledby="accent-label">
             {ACCENTS.map((a) => {
               const on = (s.accent ?? 'indigo') === a.id;
               return (
                 <button
                   key={a.id}
                   type="button"
-                  className={`accent-swatch ${on ? 'on' : ''}`}
+                  className={`ink-swatch ${on ? 'on' : ''}`}
                   data-value={a.id}
                   aria-pressed={on}
                   onClick={() => setSettings({ accent: a.id })}
                 >
-                  <span className="accent-dot" aria-hidden="true">
-                    {on && <Check size={14} strokeWidth={3} />}
+                  <span className="ink-sample" aria-hidden="true">
+                    Aa
                   </span>
-                  {a.label}
+                  <span className="ink-label">
+                    {on && <Check size={13} strokeWidth={3} aria-hidden="true" />}
+                    {a.label}
+                  </span>
                 </button>
               );
             })}
           </div>
-          <span className="muted small">Buttons, links and highlights. Charts keep their own colours so they stay comparable.</span>
+          <span className="muted small">The pen colour for links, buttons and highlights. Passed, failed and skipped keep their own colours.</span>
         </div>
       </div>
       <div className="card form">

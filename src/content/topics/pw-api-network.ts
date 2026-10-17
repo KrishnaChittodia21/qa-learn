@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 5,
   title: 'API Testing & Network Control in Playwright',
   subtitle:
-    'Use the request fixture to test APIs and set up data fast, then take control of the browser\'s network with page.route, waitForResponse and HAR replay.',
+    'Call APIs straight from your tests to check them and to set up data fast. Then control the browser\'s network: fake answers with page.route, wait for calls with waitForResponse, and replay saved traffic.',
   estimatedMinutes: 95,
   sources: [
     'Playwright docs — API testing (playwright.dev/docs/api-testing)',
@@ -20,37 +20,43 @@ const topic: Topic = {
   ],
   tags: ['api-testing', 'request-fixture', 'APIRequestContext', 'restful-booker', 'page.route', 'mocking', 'waitForResponse', 'har', 'test-data'],
   cheatSheet: [
-    '`request` fixture = an APIRequestContext that reads `baseURL`, `extraHTTPHeaders`, `httpCredentials` and `proxy` from config `use`. No browser needed.',
-    '`page.request` / `context.request` share cookies with the browser context; `playwright.request.newContext()` is isolated and must be `dispose()`d.',
-    'Calls: `request.get/post/put/patch/delete/fetch(url, { data, params, headers, form, multipart })`; `data` objects are sent as JSON.',
-    'Assert: `await expect(res).toBeOK()` (2xx), `res.status()`, `await res.json()`, `res.headers()`; use `toMatchObject` / `expect.any(Number)` for partial bodies.',
-    'Restful Booker: `POST /auth` → `{ token }`; write calls need `Cookie: token=<t>` or Basic auth; create returns 200 + `bookingid`; DELETE returns **201**; bad login returns **200** with `reason`.',
-    'API for setup, UI for the behaviour under test: create data via API in a fixture, assert in the browser, clean up via API after `use()`.',
-    '`page.route(glob, handler)` must be registered **before** the request fires; handlers choose `fulfill` (fake response), `abort` (network error), `continue` (send, maybe modified), `fallback` (next handler).',
-    '`route.fetch()` + `route.fulfill({ response, json })` = patch a real response. Last-registered matching route runs first.',
-    'Globs: `*` = no slash, `**` = anything, pattern must match the **whole URL**; use `**/api/booking*` style or a RegExp/predicate.',
-    'Wait for a call: `const p = page.waitForResponse(...)` → trigger → `await p`. Never start waiting after the trigger.',
-    '`page.routeFromHAR(file, { url, update })` replays recorded traffic; `update: true` records it; unmatched requests abort by default (`notFound`).',
-    'Mocks prove UI behaviour, not integration. Keep at least a few un-mocked end-to-end tests plus API/contract tests against the real backend.',
+    '`request` fixture = a ready-made API client (an APIRequestContext). It reads `baseURL`, `extraHTTPHeaders`, `httpCredentials` and `proxy` from `use` in the config. No browser needed.',
+    '`page.request` / `context.request` share cookies with the browser. `playwright.request.newContext()` has its own cookies; call `dispose()` when done.',
+    'Calls: `request.get/post/put/patch/delete/fetch(url, { data, params, headers, form, multipart })`. A `data` object is sent as JSON.',
+    'Check: `await expect(res).toBeOK()` (any 2xx), `res.status()`, `await res.json()`, `res.headers()`. Use `toMatchObject` / `expect.any(Number)` to check part of a body.',
+    'Restful Booker: `POST /auth` → `{ token }`. Write calls need `Cookie: token=<t>` or Basic auth. Create returns 200 + `bookingid`. DELETE returns **201**. Wrong login returns **200** with `reason`.',
+    'Use the API to set up data and the UI to test the feature. Create data in a fixture, check it in the browser, delete it after `use()`.',
+    '`page.route(glob, handler)` must be added **before** the request starts. The handler picks `fulfill` (fake answer), `abort` (network error), `continue` (send it, maybe changed) or `fallback` (next handler).',
+    '`route.fetch()` + `route.fulfill({ response, json })` = edit a real response. The route added last runs first.',
+    'Glob patterns: `*` = anything except `/`, `**` = anything. The pattern must match the **whole URL**. Use `**/api/booking*`, a RegExp or a function.',
+    'Wait for a call: `const p = page.waitForResponse(...)` → do the action → `await p`. Never start waiting after the action.',
+    '`page.routeFromHAR(file, { url, update })` replays saved traffic. `update: true` records it. Requests not in the file are aborted by default (`notFound`).',
+    'Mocks prove how the UI reacts, not that the real system works. Keep a few real end-to-end tests and API tests against the real backend.',
   ],
   sections: [
     {
       heading: 'Why API and network control belong in a UI framework',
-      body: `**Intuition:** clicking through five screens to create a booking just so you can test the "cancel" button is like walking up 20 floors to check one window. Take the lift (the API) to the right floor, then test the window by hand (the UI).
+      body: `**Example:** \`await request.post('/booking', { data })\` → Playwright creates a booking through the API. No browser opens. It takes well under a second.
 
-Playwright gives you two superpowers next to the browser:
-1. **An HTTP client** (\`request\`) to call APIs directly: for API tests, and for fast, reliable setup/teardown of UI tests.
-2. **Network interception** (\`page.route\`) to watch, block, change or fake any request the *browser* makes: for edge cases the real backend cannot easily produce (500 errors, empty lists, slow responses).
+**Example:** \`await page.route('**/api/bookings', route => route.fulfill({ status: 500 }))\` → the browser gets a fake "server error". Now you can check the error banner.
 
-| Goal | Tool | Typical speed |
+Think of a tall building. You want to test one window on floor 20. You take the lift up, then check the window by hand. The API is the lift. The UI is the window.
+
+Playwright gives you two tools next to the browser:
+1. **\`request\`** — it calls APIs directly. Use it for API tests. Use it to create and delete test data quickly.
+2. **\`page.route\`** — it watches the browser's network calls. It can block, change or fake them. Use it for cases the real server cannot give you easily, like a 500 error or an empty list.
+
+| Goal | Tool | Speed |
 |---|---|---|
-| Verify an endpoint's contract/status/body | \`request\` fixture | ~100–500 ms per call |
-| Create test data for a UI test | \`request\` in a fixture | much faster than UI setup |
-| Show the UI's error state | \`page.route\` + \`route.fulfill({ status: 500 })\` | instant, deterministic |
-| Wait until the UI's call finished | \`page.waitForResponse\` | as fast as the app |
-| Freeze a complex backend for demos/regression | \`page.routeFromHAR\` | instant |
+| Check an endpoint's status and body | \`request\` fixture | ~100–500 ms per call |
+| Create test data for a UI test | \`request\` in a fixture | much faster than the UI |
+| Show the UI's error screen | \`page.route\` + \`route.fulfill({ status: 500 })\` | instant, same result every run |
+| Wait until the UI's API call finishes | \`page.waitForResponse\` | as fast as the app |
+| Replay saved traffic for demos | \`page.routeFromHAR\` | instant |
 
-**In interviews, say this:** "I use the API to put the system in a known state quickly and the UI only for the behaviour I'm actually testing; I mock the network to reach states the real backend can't reliably give me."`,
+**In an interview, say:** "I use the API to set up data fast. I use the UI only for the feature I am testing. I fake network answers to reach states the real server cannot give me."
+
+**Why testers care:** UI tests get faster and break less often. You can also test error screens that are hard to trigger for real.`,
       diagram: `   test code
    |-- request.post('/booking') ------------------> real API (no browser)
    |
@@ -58,34 +64,42 @@ Playwright gives you two superpowers next to the browser:
                                          (interceptor)   +--> abort   (error)
                                                          +--> continue --> real API`,
       keyPoints: [
-        'request = direct HTTP client; page.route = interceptor for browser traffic.',
-        'API setup removes slow, flaky UI steps that are not under test.',
-        'Mocking reaches states the real backend cannot produce on demand.',
+        '`request` calls APIs directly. `page.route` catches the browser\'s own requests.',
+        'Creating data through the API removes slow UI steps that are not being tested.',
+        'Faking answers lets you test states the real server cannot give on demand.',
       ],
       source: 'Playwright docs — API testing; Network',
     },
     {
       heading: 'The request fixture and APIRequestContext',
-      body: `**Intuition:** \`request\` is Postman inside your test runner: same assertions library, same reports, same CI job.
+      body: `**Example:** \`const res = await request.get('/booking/1')\` → Playwright sends a GET request from your test code. No browser is used. You get back a response to check.
 
-An **APIRequestContext** sends HTTP requests from Node (not from the page). There are three ways to get one:
+The \`request\` fixture is like Postman inside your tests. It uses the same \`expect\`, the same reports and the same CI job.
 
-| Way | Cookies | Lifetime | Use for |
+A **fixture** is something Playwright prepares for your test and cleans up after it. The \`request\` fixture is an **APIRequestContext**. That just means "an object that sends HTTP requests from Node, not from the page".
+
+A **browser context** is like a fresh browser profile. It has its own cookies and storage.
+
+There are three ways to get one:
+
+| Way | Cookies | How long it lives | Use it for |
 |---|---|---|---|
-| \`request\` fixture | its own jar | one test (auto-disposed) | API tests, setup in a test |
-| \`page.request\` / \`context.request\` | **shared with the browser context** | the context | API calls that must reuse the browser's login cookies (and vice versa) |
-| \`playwright.request.newContext({...})\` | isolated jar | until you \`dispose()\` | \`beforeAll\` setup, global setup, worker fixtures |
+| \`request\` fixture | its own cookies | one test (closed for you) | API tests, setup inside a test |
+| \`page.request\` / \`context.request\` | **shared with the browser** | as long as the browser context | API calls that need the browser's login cookies |
+| \`playwright.request.newContext({...})\` | its own cookies | until you call \`dispose()\` | \`beforeAll\` setup, global setup, worker fixtures |
 
-The \`request\` fixture reads config from \`use\`: \`baseURL\` (so you can call \`'/booking'\`), \`extraHTTPHeaders\` (e.g. \`Accept\`, an auth header), \`httpCredentials\`, \`proxy\`, \`ignoreHTTPSErrors\`.
+The \`request\` fixture reads settings from \`use\` in the config. The main ones are \`baseURL\`, \`extraHTTPHeaders\`, \`httpCredentials\`, \`proxy\` and \`ignoreHTTPSErrors\`. With \`baseURL\` set, you can write \`'/booking'\` instead of the full URL.
 
-Request options you will use most:
-- \`data\`: object → sent as JSON with \`Content-Type: application/json\`.
-- \`params\`: query string, e.g. \`{ firstname: 'Asha' }\` → \`?firstname=Asha\`.
-- \`headers\`: per-call headers (merged with \`extraHTTPHeaders\`).
-- \`form\` / \`multipart\`: form-encoded and file uploads.
-- \`failOnStatusCode: true\`: throw automatically on non-2xx/3xx.
+Options you will use most:
+- \`data\` — an object. It is sent as JSON with \`Content-Type: application/json\`.
+- \`params\` — the query string. \`{ firstname: 'Asha' }\` becomes \`?firstname=Asha\`.
+- \`headers\` — headers for this one call. They are added to \`extraHTTPHeaders\`.
+- \`form\` / \`multipart\` — form data and file uploads.
+- \`failOnStatusCode: true\` — throw an error on any status that is not 2xx or 3xx.
 
-**Common mistake:** forgetting that \`request.post\` does **not** throw on 4xx/5xx by default. Without an assertion, a 500 passes silently.`,
+**Watch out:** \`request.post\` does **not** fail on a 4xx or 5xx status by default. If you forget to assert, a 500 error passes quietly.
+
+**Why testers care:** API tests live in the same project as UI tests. One report shows everything.`,
       code: [
         {
           language: 'typescript',
@@ -111,30 +125,38 @@ export default defineConfig({
         },
       ],
       keyPoints: [
-        'request fixture inherits baseURL and extraHTTPHeaders from config.',
-        'page.request shares cookies with the page; newContext is isolated.',
-        'Non-2xx responses do not throw unless you assert or set failOnStatusCode.',
+        'The `request` fixture uses `baseURL` and `extraHTTPHeaders` from the config.',
+        '`page.request` shares cookies with the page. `newContext()` has its own cookies.',
+        'A 4xx or 5xx status does not fail the test unless you assert it or set `failOnStatusCode`.',
       ],
       source: 'Playwright docs — API testing; APIRequestContext reference',
     },
     {
       heading: 'CRUD on Restful Booker with Playwright',
-      body: `**Intuition:** a full create → read → update → delete cycle is the "hello world" of API automation. Restful Booker is a deliberately quirky practice API, so it also teaches you to assert what the API *really* does.
+      body: `**Example:** \`await request.delete('/booking/5', { headers: { Cookie: 'token=abc' } })\` → Restful Booker deletes booking 5. It answers with status **201**, not 200.
+
+CRUD means create, read, update and delete. A full CRUD test is the "hello world" of API automation.
+
+Restful Booker is a practice API. It has some odd answers on purpose. So it teaches you to check what the API *really* does.
 
 **Endpoints you need:**
-| Call | Auth | Success | Notes |
+| Call | Login needed | Success | Notes |
 |---|---|---|---|
-| \`POST /auth\` \`{ username, password }\` | none | 200 \`{ token }\` | wrong password → **200** \`{ reason: 'Bad credentials' }\` (quirk) |
-| \`POST /booking\` | none | **200** \`{ bookingid, booking }\` | not 201 |
-| \`GET /booking/:id\` | none | 200 booking | 404 when missing |
-| \`GET /booking?firstname=…\` | none | 200 \`[{ bookingid }]\` | filters |
+| \`POST /auth\` \`{ username, password }\` | no | 200 \`{ token }\` | wrong password → still **200** with \`{ reason: 'Bad credentials' }\` |
+| \`POST /booking\` | no | **200** \`{ bookingid, booking }\` | not 201 |
+| \`GET /booking/:id\` | no | 200 booking | 404 when missing |
+| \`GET /booking?firstname=…\` | no | 200 \`[{ bookingid }]\` | filters the list |
 | \`PUT /booking/:id\` | token cookie or Basic | 200 full booking | all fields required |
-| \`PATCH /booking/:id\` | token cookie or Basic | 200 | partial update |
-| \`DELETE /booking/:id\` | token cookie or Basic | **201** | 403 without auth |
+| \`PATCH /booking/:id\` | token cookie or Basic | 200 | change some fields |
+| \`DELETE /booking/:id\` | token cookie or Basic | **201** | 403 without login |
 
-Default admin credentials are \`admin\` / \`password123\`. Write calls take the token as a **cookie**: \`Cookie: token=<value>\`.
+The default admin login is \`admin\` / \`password123\`. Write calls need the token as a **cookie**: \`Cookie: token=<value>\`.
 
-**Worked example:** the test below performs the whole lifecycle in one test, using \`test.step\` so the report shows which step broke. Each run uses a unique first name, so parallel runs never collide.`,
+The test below runs the whole cycle in one test. Each part sits inside \`test.step\`. So the report shows which step broke.
+
+Each run uses a new first name. So runs at the same time never clash.
+
+**Why testers care:** you assert real behaviour, not what you guess. If the API returns 201 for delete, your test says 201.`,
       code: [
         {
           language: 'typescript',
@@ -186,32 +208,43 @@ test('booking lifecycle: create, read, update, delete', async ({ request }) => {
         },
       ],
       keyPoints: [
-        'Assert actual behaviour: create = 200, delete = 201, bad login = 200 with reason.',
-        'Token goes in a cookie header for PUT/PATCH/DELETE.',
-        'Unique data per run keeps parallel tests independent.',
+        'Assert what the API really does: create = 200, delete = 201, wrong login = 200 with `reason`.',
+        'Send the token as a cookie header for PUT, PATCH and DELETE.',
+        'Use new data on every run so tests running together do not clash.',
       ],
       source: 'Restful Booker API docs; verified against the live API (Oct 2026)',
     },
     {
       heading: 'Asserting API responses',
-      body: `**Intuition:** a good API assertion checks the envelope (status, headers), the shape (fields and types) and the meaning (values), in that order, so the first failure tells you what went wrong.
+      body: `**Example:** \`await expect(res).toBeOK()\` → passes for any 2xx status. If it fails, Playwright prints the response body, so you see why.
+
+Check a response in this order:
+1. The status and headers.
+2. The shape — which fields exist and their types.
+3. The values.
+
+Then the first failure tells you what went wrong.
 
 | What | How | Note |
 |---|---|---|
-| Any 2xx | \`await expect(res).toBeOK()\` | prints the response body on failure |
-| Exact status | \`expect(res.status()).toBe(201)\` | \`status()\` is synchronous |
+| Any 2xx | \`await expect(res).toBeOK()\` | prints the body on failure |
+| Exact status | \`expect(res.status()).toBe(201)\` | \`status()\` needs no \`await\` |
 | Header | \`expect(res.headers()['content-type']).toContain('application/json')\` | header names are lower-case |
-| Exact body | \`expect(await res.json()).toEqual({...})\` | brittle if server adds fields |
-| Partial body | \`expect(body).toMatchObject({ firstname: 'Asha' })\` | ignores extra fields |
-| Types | \`expect(body).toEqual({ bookingid: expect.any(Number), booking: expect.any(Object) })\` | shape check |
-| Array content | \`expect(list).toContainEqual({ bookingid: id })\` | element match |
-| Eventual value | \`await expect.poll(async () => (await request.get(url)).status()).toBe(404)\` | async backends |
+| Exact body | \`expect(await res.json()).toEqual({...})\` | breaks if the server adds a field |
+| Part of the body | \`expect(body).toMatchObject({ firstname: 'Asha' })\` | ignores extra fields |
+| Types | \`expect(body).toEqual({ bookingid: expect.any(Number), booking: expect.any(Object) })\` | checks the shape |
+| Item in a list | \`expect(list).toContainEqual({ bookingid: id })\` | finds a matching item |
+| Value that changes later | \`await expect.poll(async () => (await request.get(url)).status()).toBe(404)\` | retries until it matches |
 
-\`res.json()\`, \`res.text()\` and \`res.body()\` return promises: always \`await\` them. \`res.ok()\` returns a boolean, which is fine for \`if\` logic but gives a poor message as an assertion; prefer \`toBeOK()\`.
+\`res.json()\`, \`res.text()\` and \`res.body()\` return promises. Always \`await\` them.
 
-**For schema validation** (all required fields, types, formats), teams add a JSON-schema library such as Ajv or a Zod schema; Playwright itself has no built-in schema assertion.
+\`res.ok()\` returns \`true\` or \`false\`. It is fine inside an \`if\`. As an assertion, its failure message is poor. Use \`toBeOK()\` instead.
 
-**Negative tests matter as much as positive ones:** missing auth → 403, unknown id → 404, invalid body → error code. On Restful Booker, a POST with missing fields returns **500** rather than a clean 400: a real finding you would report.`,
+**Schema checks** mean "all required fields exist, with the right types". Playwright has no built-in schema check. Teams add a library such as Ajv or Zod.
+
+**Test the unhappy paths too.** No login → 403. Unknown id → 404. Bad body → an error code. On Restful Booker, a POST with missing fields returns **500**, not a clean 400. That is a real bug you would report.
+
+**Why testers care:** good assertions give clear failure messages. You find the bug faster.`,
       code: [
         {
           language: 'typescript',
@@ -239,25 +272,29 @@ test('wrong password does not issue a token', async ({ request }) => {
         },
       ],
       keyPoints: [
-        'toBeOK() for 2xx with a helpful failure message.',
-        'toMatchObject + expect.any for resilient body checks.',
-        'Always test the unhappy paths: 401/403/404/validation.',
+        'Use `toBeOK()` for any 2xx. It gives a helpful failure message.',
+        'Use `toMatchObject` and `expect.any` to check a body without breaking on extra fields.',
+        'Always test the failure cases too: 401, 403, 404 and bad input.',
       ],
       source: 'Playwright docs — APIResponse, APIResponseAssertions, GenericAssertions',
     },
     {
       heading: 'Tokens and auth reuse for API calls',
-      body: `**Intuition:** logging in for every single API call is like showing your passport at every shop in the airport. Get the boarding pass (token) once, then show it where needed.
+      body: `**Example:** \`extraHTTPHeaders: { Cookie: 'token=' + token }\` → every call from this API context sends the token. You log in once, not before every call.
+
+Logging in for every API call is like showing your passport at every airport shop. Get the boarding pass (the token) once. Then show it where needed.
 
 **Options, from simplest to most scalable:**
-1. **Per test:** call \`/auth\` at the start (fine for a handful of tests).
-2. **Worker-scoped fixture:** log in once per worker and hand an authenticated context to every test in that worker. Fast and still isolated per worker.
-3. **Config headers:** if the API uses a static key/Bearer token from a secret, put it in \`extraHTTPHeaders\` read from \`process.env\`.
-4. **Shared with the browser:** call \`page.request\` or \`context.request\` after a UI login, and the browser's cookies are sent automatically. Or log in through an API context and save \`await apiContext.storageState({ path })\`, then start browser contexts with that \`storageState\`.
+1. **Per test** — call \`/auth\` at the start of the test. This is fine for a few tests.
+2. **Worker-scoped fixture** — a worker is one test process. This fixture logs in once per worker. Every test in that worker reuses the logged-in context. It is fast, and workers stay separate.
+3. **Config headers** — some APIs use a fixed key or Bearer token. Put it in \`extraHTTPHeaders\` and read it from \`process.env\`.
+4. **Share with the browser** — after a UI login, \`page.request\` and \`context.request\` send the browser's cookies for you. Or the other way: log in with an API context and call \`await apiContext.storageState({ path })\`. **storageState** is a saved file of cookies and local storage. Start browser contexts with it, and they begin logged in.
 
-**Secrets:** never hard-code credentials. Read them from \`process.env\` (a local \`.env\` file via dotenv that is git-ignored; CI secrets in the pipeline).
+**Secrets:** never write passwords in the code. Read them from \`process.env\`. Locally, keep them in a \`.env\` file (loaded with dotenv) that Git ignores. In CI, use pipeline secrets.
 
-**Token expiry:** a worker can live for many minutes; if tokens expire quickly, refresh in the fixture or create one per test.`,
+**Watch out:** a worker can run for many minutes. If tokens expire fast, refresh the token in the fixture. Or get a new token per test.
+
+**Why testers care:** one login per worker saves many API calls. Suites run faster, and secrets stay out of Git.`,
       code: [
         {
           language: 'typescript',
@@ -289,27 +326,36 @@ export { expect } from '@playwright/test';`,
         },
       ],
       keyPoints: [
-        'Worker-scoped fixture = one login per worker, reused by all its tests.',
-        'context.request shares cookies with the browser; storageState bridges API → UI.',
-        'Credentials come from env vars / CI secrets, never from source.',
+        'A worker-scoped fixture logs in once per worker. All tests in that worker reuse it.',
+        '`context.request` shares the browser\'s cookies. `storageState` carries an API login into the browser.',
+        'Passwords come from environment variables or CI secrets, never from the code.',
       ],
       source: 'Playwright docs — API testing (reuse authentication state); Fixtures (worker scope); Authentication',
     },
     {
       heading: 'API setup for UI tests',
-      body: `**Intuition:** the UI test should only click through the part of the journey it is *about*. Everything before that is scaffolding, and scaffolding goes up fastest via the API.
+      body: `**Example:** a fixture calls \`request.post('/booking')\` before the test and \`request.delete(...)\` after it → the UI test starts with a fresh booking. Nothing is left behind.
 
-**Pattern: Arrange via API, Act + Assert via UI, Clean up via API.** Wrap it in a test-scoped fixture so setup and teardown are always paired, even when the test fails.
+A UI test should only click through the part it is *about*. Everything before that is preparation. Preparation is fastest through the API.
 
-Why it matters:
-- **Speed:** one POST (~300 ms) replaces 20–30 s of form filling.
-- **Stability:** fewer UI steps = fewer places to flake, and failures point at the feature under test.
-- **Isolation:** each test gets its own fresh record with a unique name; nothing is shared.
-- **Clean environments:** teardown deletes what the test created, so shared staging does not fill up with junk.
+**The pattern:**
+1. **Arrange** with the API — create the data.
+2. **Act and assert** in the UI — test the feature.
+3. **Clean up** with the API — delete the data.
 
-**Also the other way round:** do the action in the UI, then **verify with the API** that the backend really stored it (e.g. after cancelling in the UI, \`GET /booking/:id\` returns 404). That catches "UI says success but nothing was saved" bugs.
+Put this in a fixture. The code after \`use()\` is the clean-up step, also called **teardown**. It runs even when the test fails.
 
-**Watch out:** API setup skips the UI validation of the data you inserted. Keep at least one UI test that creates the record through the form, so the form itself stays covered.`,
+Why it helps:
+- **Speed** — one POST (~300 ms) replaces 20–30 seconds of form filling.
+- **Stability** — fewer UI steps means fewer places to break. A failure points at the feature you are testing.
+- **Isolation** — each test gets its own new record with a unique name. Nothing is shared.
+- **Clean environments** — clean-up deletes what the test created. Shared staging does not fill up with junk.
+
+**It works the other way too.** Do the action in the UI. Then check with the API that the server really saved it. For example, cancel a booking in the UI. Then \`GET /booking/:id\` should return 404. This catches "the UI said success, but nothing was saved" bugs.
+
+**Watch out:** API setup skips the form's own checks. Keep at least one UI test that creates the record through the form.
+
+**Why testers care:** tests run faster and fail only for real reasons. Test data never piles up.`,
       code: [
         {
           language: 'typescript',
@@ -343,32 +389,44 @@ export const test = base.extend<{ booking: Booking }>({
         },
       ],
       keyPoints: [
-        'Arrange via API, act/assert via UI, clean up via API.',
-        'Fixture teardown after use() always runs.',
-        'Verify UI actions through the API to catch fake successes.',
+        'Create data with the API, test in the UI, delete with the API.',
+        'Clean-up code after `use()` in a fixture always runs, even when the test fails.',
+        'Check UI actions with an API call to catch fake "success" messages.',
       ],
       source: 'Playwright docs — API testing (prepare server state, check postconditions); Fixtures',
     },
     {
       heading: 'Mocking the network with page.route',
-      body: `**Intuition:** \`page.route\` puts a receptionist between the browser and the internet. For every request matching your pattern, the receptionist can answer directly (**fulfill**), refuse it (**abort**), forward it, maybe with changes (**continue**), or pass it to the next receptionist (**fallback**).
+      body: `**Example:** \`await page.route('**/api/fruits', route => route.fulfill({ json: [] }))\` → when the page asks for fruits, Playwright answers with an empty list. The real server is never called.
+
+Faking the server's answer is called **mocking**. \`page.route\` is how Playwright does it.
+
+Think of a receptionist between the browser and the internet. For each request that matches your pattern, the receptionist picks one action:
+- **fulfill** — answer directly with a fake response.
+- **abort** — refuse it, like a network error.
+- **continue** — send it to the real server, maybe with changes.
+- **fallback** — pass it to the next matching route.
 
 **Rules that trip people up:**
-- Register the route **before** the request happens (usually before \`page.goto\`).
-- The pattern must match the **whole URL**: \`*\` does not cross \`/\`, \`**\` does, \`{a,b}\` lists options. \`'**/api/booking'\` will not match \`/api/booking?page=2\`; use \`'**/api/booking*'\` or a RegExp.
-- If several routes match, the **last registered runs first**; it can call \`route.fallback()\` to hand over to earlier ones.
-- \`page.route\` covers one page; \`context.route\` covers all pages in the context, including popups.
-- Routing only sees **browser** traffic: it does not intercept your \`request\` fixture calls.
-- Requests handled by a **service worker** are invisible to routing; set \`serviceWorkers: 'block'\` in \`use\` if the app registers one (e.g. MSW).
-- Enabling routing disables the browser HTTP cache for that page.
+- Add the route **before** the request happens. Usually that means before \`page.goto\`.
+- The pattern must match the **whole URL**. This kind of pattern is called a **glob**.
+- In a glob, \`*\` matches anything except \`/\`. \`**\` matches anything, including \`/\`. \`{a,b}\` means "a or b".
+- So \`'**/api/booking'\` does not match \`/api/booking?page=2\`. Use \`'**/api/booking*'\` or a RegExp.
+- If several routes match, the **one added last runs first**. It can call \`route.fallback()\` to pass to older ones.
+- \`page.route\` covers one page. \`context.route\` covers every page in the browser context, popups too.
+- Routes only see **browser** traffic. They do not catch calls from your \`request\` fixture.
+- Some apps use a **service worker**, a background script that can answer requests itself. Routes cannot see those requests. Set \`serviceWorkers: 'block'\` in \`use\` if the app has one (for example, MSW).
+- While routing is on, the browser's HTTP cache is off for that page.
 
 | Handler call | What the app sees | Use it for |
 |---|---|---|
 | \`route.fulfill({ json })\` | a normal response you made up | empty lists, edge data, 500/503 pages |
-| \`route.fulfill({ status: 500, body })\` | server error | error banners, retry UI |
-| \`route.abort()\` | network failure (default code \`'failed'\`) | offline handling, block images/analytics |
-| \`route.continue({ headers })\` | the real response | add a header, change method/URL |
-| \`route.fetch()\` + \`fulfill({ response, json })\` | the real response, edited | one field changed (see next section) |`,
+| \`route.fulfill({ status: 500, body })\` | a server error | error banners, "try again" screens |
+| \`route.abort()\` | a network failure (default code \`'failed'\`) | offline screens, blocking images or analytics |
+| \`route.continue({ headers })\` | the real response | add a header, change the method or URL |
+| \`route.fetch()\` + \`fulfill({ response, json })\` | the real response, edited | change one field (next section) |
+
+**Why testers care:** you can test empty lists, errors and offline screens on demand. Every run gets the same answer.`,
       code: [
         {
           language: 'typescript',
@@ -408,23 +466,38 @@ test('page still loads when analytics and images are blocked', async ({ page }) 
         +-- continue -> goes to the real server (optionally modified)
         '-- fallback -> try the next (older) matching route`,
       keyPoints: [
-        'Register before the request; patterns match the whole URL.',
-        'fulfill fakes, abort fails, continue forwards, fallback delegates.',
-        'Routing does not see request-fixture calls or service-worker traffic.',
+        'Add the route before the request starts. The pattern must match the whole URL.',
+        'fulfill = fake answer, abort = fail, continue = send to the server, fallback = pass to the next route.',
+        'Routes do not see `request` fixture calls or service-worker traffic.',
       ],
       source: 'Playwright docs — Mock APIs; Network (glob patterns, service workers); Page.route reference',
     },
     {
       heading: 'Modifying real responses and requests',
-      body: `**Intuition:** sometimes you want the real data with one detail changed: "everything as normal, but this user is a premium member" or "the stock count is 0". Fetch the real response, edit it, hand it to the browser.
+      body: `**Example:** inside a route, \`const response = await route.fetch()\` gets the real answer. You add one fruit to its JSON. Then \`route.fulfill({ response, json })\` sends the edited answer to the page.
 
-**Response patching:** inside the handler, \`const response = await route.fetch()\` performs the real request, \`await response.json()\` reads it, you change a field and call \`route.fulfill({ response, json })\`. Status and headers stay real; only the body changes.
+Sometimes you want real data with one small change. "Everything normal, but this user is premium." "Everything normal, but stock is 0." So you get the real response, edit it, and give it to the browser.
 
-**Request modification:** \`route.continue({ headers, method, postData, url })\` sends a changed request. Typical uses: add a feature-flag header, strip a header to test a fallback, redirect to a staging host. Some headers (\`cookie\`, \`host\`, \`content-length\`) are controlled by the browser and cannot be overridden this way.
+**Change a response:**
+1. \`const response = await route.fetch()\` — sends the real request.
+2. \`await response.json()\` — reads the body.
+3. Change one field.
+4. \`route.fulfill({ response, json })\` — sends it on.
 
-**Delays:** to test loading spinners, await a short timer inside the handler before \`continue\`/\`fulfill\`. This is the one place a timer is fine: you are simulating a slow server, not waiting for your app.
+The status and headers stay real. Only the body changes.
 
-**Clean-up:** \`page.unroute(pattern)\` or \`page.unrouteAll({ behavior: 'ignoreErrors' })\` removes handlers mid-test (routes die with the page anyway).`,
+**Change a request:** \`route.continue({ headers, method, postData, url })\` sends a changed request. Common uses:
+- Add a feature-flag header.
+- Remove a header to test a fallback.
+- Send the call to a staging host.
+
+The browser controls some headers, like \`cookie\`, \`host\` and \`content-length\`. You cannot override them this way.
+
+**Add a delay:** to test a loading spinner, wait a short time inside the handler. Then call \`continue\` or \`fulfill\`. A timer is fine here. You are pretending the server is slow. You are not waiting for your app.
+
+**Remove routes:** \`page.unroute(pattern)\` or \`page.unrouteAll({ behavior: 'ignoreErrors' })\` removes handlers during a test. Routes also end when the page closes.
+
+**Why testers care:** you test rare cases using real data. You do not need to hand-write a full fake response.`,
       code: [
         {
           language: 'typescript',
@@ -454,29 +527,38 @@ test('spinner shows while the API is slow', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'route.fetch() + fulfill({ response, json }) patches the body of a real response.',
-        'route.continue({ headers, method, postData, url }) modifies the outgoing request.',
-        'A delay inside a handler simulates a slow server; it is not a hard wait in the test.',
+        '`route.fetch()` + `fulfill({ response, json })` changes the body of a real response.',
+        '`route.continue({ headers, method, postData, url })` changes the request before it goes out.',
+        'A delay inside a route handler fakes a slow server. It is not a hard wait in your test.',
       ],
       source: 'Playwright docs — Mock APIs (modify API responses); Network (modify requests)',
     },
     {
       heading: 'Waiting for network: waitForResponse and waitForRequest',
-      body: `**Intuition:** if you want to catch a ball, put your hands up *before* it is thrown.
+      body: `**Example:** \`const resPromise = page.waitForResponse('**/api/search')\` → then click Search → then \`await resPromise\`. You get the search response the click caused.
 
-\`page.waitForResponse(urlOrPredicate)\` returns a promise that resolves with the first matching \`Response\` **from the moment you call it**. If the response already happened, it waits for the next one, often forever (until the timeout). So:
+To catch a ball, put your hands up *before* it is thrown.
 
-1. create the promise,
-2. perform the action that triggers the call,
+\`page.waitForResponse\` starts listening **when you call it**. It catches the first matching response after that. If the response already came, it waits for the next one. Often that means it waits until the timeout.
+
+So always use this order:
+1. Create the promise.
+2. Do the action that starts the call.
 3. \`await\` the promise.
 
-The matcher can be a glob, a RegExp, or a predicate: \`(r) => r.url().includes('/api/booking') && r.request().method() === 'POST'\`. A predicate lets you match method and status and avoid catching an unrelated GET to the same URL.
+The matcher can be a glob, a RegExp or a function. A function can check the method and status too. For example: \`(r) => r.url().includes('/api/booking') && r.request().method() === 'POST'\`. Then you do not catch an unrelated GET to the same URL.
 
-\`page.waitForRequest\` works the same for outgoing requests, useful to assert **what the UI sent**: \`(await reqPromise).postDataJSON()\`.
+\`page.waitForRequest\` works the same way for outgoing requests. Use it to check **what the UI sent**: \`(await reqPromise).postDataJSON()\`.
 
-**When to use it:** to assert the API call the UI made (payload, status), or when the UI gives no visible signal. **When not to:** if a visible result exists (a toast, a row), assert that with a web-first assertion; it is closer to what the user sees.
+**When to use it:**
+- To check the API call the UI made (its payload or status).
+- When the UI shows no visible sign that it finished.
 
-\`page.on('request' | 'response' | 'requestfailed', ...)\` lets you log or collect all traffic, e.g. fail the test if any \`/api/\` call returned 5xx.`,
+**When not to:** if something visible appears, like a toast or a new row, assert that instead. Use a **web-first assertion** — an \`expect\` on a locator that retries until it passes. It is closer to what the user sees.
+
+You can also listen to all traffic with \`page.on('request' | 'response' | 'requestfailed', ...)\`. For example, fail the test if any \`/api/\` call returned a 5xx.
+
+**Why testers care:** you can prove what the UI sent to the server. Tests never miss a fast response.`,
       code: [
         {
           language: 'typescript',
@@ -504,25 +586,34 @@ test('search sends the right query and renders results', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Register → trigger → await: the only safe order.',
-        'Use predicates to match method/status, not just URL.',
-        'Prefer a visible UI assertion when one exists.',
+        'Start waiting → do the action → await. This is the only safe order.',
+        'Use a function to match the method and status, not just the URL.',
+        'If the UI shows a visible result, assert that instead.',
       ],
       source: 'Playwright docs — Network (waiting for responses, network events)',
     },
     {
       heading: 'HAR recording and replay',
-      body: `**Intuition:** a HAR file is a tape recording of network traffic. Record it once against the real backend, then play the tape in every test run: same answers, no backend needed.
+      body: `**Example:** \`await page.routeFromHAR('hars/fruits.har', { url: '*/**/api/v1/fruits' })\` → the page's fruit API calls get answers from a saved file. The real server is not needed.
 
-**HAR** (HTTP Archive) is a JSON format listing requests and responses. Playwright can:
-- **Record** while testing: \`await page.routeFromHAR('hars/fruits.har', { url: '*/**/api/v1/fruits', update: true })\` runs against the real server and writes the HAR.
-- **Replay**: the same call with \`update: false\` serves matching requests from the file. Matching uses URL and method (and POST body); unmatched requests are **aborted** by default (\`notFound: 'abort'\`), or sent to the network with \`notFound: 'fallback'\`.
-- **Record from the CLI**: \`npx playwright open --save-har=example.har --save-har-glob="**/api/**" https://example.com\`.
-- Extra options: \`updateContent: 'attach' | 'embed'\` and \`updateMode: 'minimal' | 'full'\`.
+A **HAR file** (HTTP Archive) is a recording of network traffic. It is a JSON file listing requests and their responses. Record it once against the real server. Then replay it in every run. You get the same answers each time.
 
-**Good for:** complex responses that are tedious to hand-write, demo/regression suites that must not depend on a shared staging DB, and reproducing a customer bug from a HAR captured in their browser (DevTools → Network → Save all as HAR).
+What Playwright can do with a HAR:
+- **Record** — add \`update: true\`. The test runs against the real server and writes the file.
+- **Replay** — use \`update: false\`. Matching requests get answers from the file.
+- Matching uses the URL and method, and the body for POST.
+- Requests not found in the file are **aborted** by default (\`notFound: 'abort'\`). With \`notFound: 'fallback'\` they go to the real network.
+- **Record from the command line:** \`npx playwright open --save-har=example.har --save-har-glob="**/api/**" https://example.com\`.
+- More options: \`updateContent: 'attach' | 'embed'\` and \`updateMode: 'minimal' | 'full'\`.
 
-**Risks:** HARs go stale when the API changes (tests pass against yesterday's contract) and can contain tokens/personal data, so scrub them and re-record on a schedule.`,
+**Good for:**
+- Big responses that are boring to write by hand.
+- Demo or regression suites that must not depend on a shared staging database.
+- Reproducing a customer's bug. They can save a HAR from DevTools → Network → "Save all as HAR".
+
+**Watch out:** HAR files get old when the API changes. Then tests pass against yesterday's API. HARs can also hold tokens or personal data. Remove those, and record again on a schedule.
+
+**Why testers care:** you get realistic fake answers with almost no work. Tests do not depend on a busy server.`,
       code: [
         {
           language: 'typescript',
@@ -544,36 +635,42 @@ test('fruit list from a recorded HAR', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'update: true records; update: false replays.',
-        'Unmatched requests abort by default.',
-        'Re-record regularly and scrub secrets from HARs.',
+        '`update: true` records a HAR file. `update: false` replays it.',
+        'Requests missing from the file are aborted by default.',
+        'Record HAR files again regularly, and remove secrets from them.',
       ],
       source: 'Playwright docs — Mock APIs (HAR); Page.routeFromHAR reference',
     },
     {
       heading: 'Choosing a strategy: real, mocked, or hybrid',
-      body: `**Intuition:** mocks are a flight simulator. Great for practising engine failures you could never safely trigger in a real plane, but you still need real flights before you get a licence.
+      body: `**Example:** you mock the bookings API with \`totalprice\`. The real backend renames it to \`total_price\`. Your mocked test stays green, but production breaks.
+
+Mocks are like a flight simulator. They are great for practising engine failures you cannot safely cause in a real plane. But you still need real flights before you get a licence.
 
 | Test type | Backend | Catches | Misses |
 |---|---|---|---|
-| Full E2E | real | integration bugs, config, data | rare states; can be slow and flaky |
-| UI + mocked API | \`page.route\`/HAR | UI logic, error/empty/edge states | API contract drift, backend bugs |
-| API tests | real (request fixture) | status codes, validation, auth, data | UI rendering |
-| Hybrid | real API setup + real UI, mock only 3rd parties | most things, stable | payment provider etc. (covered separately) |
+| Full end-to-end | real | integration bugs, config, data | rare states; can be slow and flaky |
+| UI + mocked API | \`page.route\` / HAR | UI logic, error, empty and edge states | API changes, backend bugs |
+| API tests | real (\`request\` fixture) | status codes, validation, auth, data | how the UI looks |
+| Hybrid | real API setup + real UI, mock only third parties | most things, stable | payment provider etc. (tested separately) |
 
-**A sensible mix for a booking app:**
-- a handful of **un-mocked smoke E2E** tests (login, create booking, cancel) on every deploy;
-- **API tests** for every endpoint's happy and unhappy paths;
-- **mocked UI tests** for error banners, empty states, slow responses, feature-flag variants;
-- third-party services (payments, maps, analytics) **always mocked or aborted** in UI tests.
+A **flaky test** sometimes passes and sometimes fails without any code change. Real backends make that more likely. Mocks make results the same every run.
 
-**Over-mocking warning:** if the backend renames \`totalprice\` to \`total_price\`, every mocked test stays green while production breaks. Counter it with API tests against the real service (or contract tests) and periodic HAR re-recording.
+**A good mix for a booking app:**
+- A few **real end-to-end smoke tests** (login, create booking, cancel) on every deploy.
+- **API tests** for every endpoint, for both success and failure cases.
+- **Mocked UI tests** for error banners, empty states, slow responses and feature flags.
+- Third-party services (payments, maps, analytics) **always mocked or blocked** in UI tests.
 
-**In interviews, say this:** "I mock to reach states, not to avoid the backend. Every mocked UI behaviour has a matching real API test that keeps the mock honest."`,
+**Watch out for too much mocking.** Add API tests against the real service, or contract tests. Record HARs again from time to time.
+
+**In an interview, say:** "I mock to reach rare states, not to avoid the backend. Each mocked UI case has a real API test that keeps the mock honest."
+
+**Why testers care:** the right mix finds UI bugs and backend bugs. Mocks alone can hide a broken API.`,
       keyPoints: [
-        'Mock for states, use the real backend for integration.',
-        'Always mock/abort third parties in UI tests.',
-        'Pair mocked UI tests with real API tests to catch contract drift.',
+        'Mock to reach special states. Use the real backend to test that everything works together.',
+        'Always mock or block third-party services in UI tests.',
+        'Pair mocked UI tests with real API tests, so an API change is caught.',
       ],
       source: 'Playwright docs — Mock APIs; Best Practices (avoid testing third-party dependencies)',
     },
@@ -583,8 +680,8 @@ test('fruit list from a recorded HAR', async ({ page }) => {
       id: 'pw-api-network-cc-1',
       title: 'Replace slow UI setup with API setup and a network mock',
       context:
-        'Your team\'s admin app (`baseURL` in config) lists bookings from `GET /api/bookings` and can cancel one with `DELETE /api/bookings/:id`; the backend has the same data model as Restful Booker and a `POST /api/bookings` endpoint. The suite below takes 70 s, fails when staging is slow, and the "error banner" test cannot really check anything.',
-      task: 'Rewrite both tests so data is created and removed via the API, the cancel test verifies the backend too, and the error-banner test forces a server error deterministically.',
+        'Your team\'s admin app (`baseURL` in the config) lists bookings from `GET /api/bookings`. It can cancel one with `DELETE /api/bookings/:id`. There is also a `POST /api/bookings` endpoint, with the same data as Restful Booker. The tests below take 70 seconds. They fail when staging is slow. The "error banner" test does not really check anything.',
+      task: 'Rewrite both tests. Create and delete the data through the API. Make the cancel test check the server too. Make the error-banner test force a server error the same way on every run.',
       starter: {
         language: 'typescript',
         code: `import { test, expect } from '@playwright/test';
@@ -615,9 +712,9 @@ test('shows an error banner when the API fails', async ({ page }) => {
 });`,
       },
       hints: [
-        'The `request` fixture shares `baseURL` with the page; a fixture can create a booking with a unique name and delete it after `use()`.',
-        'After clicking Cancel in the UI, a `GET` for that id tells you whether the backend really removed it.',
-        'For the banner, register a route for `**/api/bookings*` that fulfills with status 500 before navigating.',
+        'The `request` fixture uses the same `baseURL` as the page. A fixture can create a booking with a unique name and delete it after `use()`.',
+        'After you click Cancel in the UI, a `GET` for that id tells you if the server really removed it.',
+        'For the banner, add a route for `**/api/bookings*` before you open the page. Make it fulfill with status 500.',
       ],
       solution: {
         language: 'typescript',
@@ -658,21 +755,20 @@ test('shows an error banner when the API fails', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('try again');
 });`,
       },
-      explanation: `**Fixes:**
-- **API setup in a fixture:** one POST replaces ~25 s of form filling and the brittle \`#fname\`/\`.btn-primary\` locators. The unique \`firstname\` keeps parallel runs from colliding, and teardown after \`use()\` always deletes the record.
-- **Role-based row locator** replaces the chained CSS/text selector; \`toHaveCount(0)\` retries instead of a sleep plus \`count()\`.
-- **Backend verification:** the GET returning 404 proves the cancel was persisted, not just hidden in the UI.
-- **Deterministic error state:** \`page.route\` + \`fulfill({ status: 500 })\` produces the failure every time. The old \`if (isVisible())\` test passed without checking anything.
-- **Hard waits removed** everywhere.
-- The form itself still needs coverage: keep one separate UI test that creates a booking through the form.`,
+      explanation: `- **API setup in a fixture.** One POST replaces about 25 seconds of form filling. It also removes the fragile \`#fname\` and \`.btn-primary\` locators. The unique \`firstname\` stops tests running together from clashing. The clean-up after \`use()\` always deletes the record.
+- **Role-based row locator.** It replaces the chained CSS and text selector. \`toHaveCount(0)\` retries until it passes, so no sleep and \`count()\` are needed.
+- **Server check.** The GET returns 404. That proves the cancel was saved, not just hidden in the UI.
+- **Error on demand.** \`page.route\` with \`fulfill({ status: 500 })\` gives the same failure every run. The old \`if (isVisible())\` test passed without checking anything.
+- **No hard waits.** Every \`waitForTimeout\` is gone.
+- **Keep form coverage.** Keep one separate UI test that creates a booking through the form.`,
       followUps: [
         {
-          q: 'The route pattern is `**/api/bookings*`. Would it also intercept the fixture\'s POST and DELETE?',
-          a: 'No. `page.route` only intercepts requests made by the browser page. The `request` fixture sends HTTP from Node through its own APIRequestContext, so setup and teardown hit the real backend even while the page sees mocked 500s. That separation is exactly what you want here.',
+          q: 'The route pattern is `**/api/bookings*`. Does it also catch the fixture\'s POST and DELETE?',
+          a: 'No. `page.route` only catches requests made by the browser page. The `request` fixture sends HTTP from Node, with its own APIRequestContext. So setup and clean-up reach the real server, while the page sees fake 500 errors. That is exactly what you want here.',
         },
         {
-          q: 'How would you test that the UI retries after the error?',
-          a: 'Make the handler stateful: count calls, fulfill the first with 500 and call `route.continue()` (or fulfill with data) for the second. Then click "Try again" and assert the list appears. You can also assert the call count to prove exactly one retry happened.',
+          q: 'How would you test that the UI tries again after the error?',
+          a: 'Count the calls inside the handler. Answer the first call with a 500. For the second call, use `route.continue()` or fulfill with data. Then click "Try again" and check that the list appears. You can also assert the call count, to prove exactly one retry happened.',
         },
       ],
     },
@@ -680,8 +776,8 @@ test('shows an error banner when the API fails', async ({ page }) => {
       id: 'pw-api-network-cc-2',
       title: 'Harden a fragile Restful Booker API suite',
       context:
-        'A junior engineer wrote these API tests. They pass on their machine on a good day, fail randomly in parallel, and once deleted a booking another team was using for a demo.',
-      task: 'Find the bugs and smells (at least six) and rewrite the file as independent, secure, correctly-asserted tests.',
+        'A junior engineer wrote these API tests. They pass on their machine on a good day. They fail at random when run in parallel. Once, they deleted a booking another team was using for a demo.',
+      task: 'Find at least six bugs or bad habits. Rewrite the file so each test is independent, safe with secrets and correctly checked.',
       starter: {
         language: 'typescript',
         code: `import { test, expect } from '@playwright/test';
@@ -707,9 +803,9 @@ test('delete booking', async ({ request }) => {
 });`,
       },
       hints: [
-        'What does `res.json()` return, and what does Restful Booker really return for create and delete?',
+        'What does `res.json()` return? What does Restful Booker really return for create and delete?',
         'What happens to `bookingId` when the tests run in different workers, or when "delete" runs alone?',
-        'Where should credentials and the base URL live, and how do you get a fresh token?',
+        'Where should passwords and the base URL live? How do you get a fresh token?',
       ],
       solution: {
         language: 'typescript',
@@ -752,22 +848,22 @@ test('delete booking removes it', async ({ request }) => {
   expect((await request.get(\`/booking/\${id}\`)).status()).toBe(404);
 });`,
       },
-      explanation: `**Bugs and smells fixed:**
-1. **Missing \`await\` on \`res.json()\`**: it returns a promise, so \`bookingId\` was always \`undefined\`.
-2. **Wrong expected status:** create returns 200 on Restful Booker; the test asserted 201 and failed for the wrong reason.
-3. **Shared module variable + order dependence:** in parallel or alone, "delete" had no id and fell back to **booking 1**: someone else's data. Each test now creates its own booking.
-4. **Hard-coded, stale token** in source: tokens expire and secrets don't belong in git. A fresh token is fetched with credentials from env vars.
-5. **Weak assertion:** \`res.ok()\` + \`toBeTruthy()\` gives a useless failure message; now exact statuses and \`toBeOK()\`.
-6. **No verification of the effect:** delete now checks the booking is really gone (404).
-7. **Hard-coded base URL:** moved to the config project so environments can change without editing tests.`,
+      explanation: `**Bugs and bad habits fixed:**
+1. **Missing \`await\` on \`res.json()\`.** It returns a promise, so \`bookingId\` was always \`undefined\`.
+2. **Wrong status.** Create returns 200 on Restful Booker. The test expected 201, so it failed for the wrong reason.
+3. **Shared variable and test order.** When run in parallel or alone, "delete" had no id. It then used **booking 1** — someone else's data. Now each test creates its own booking.
+4. **Old token written in the code.** Tokens expire, and secrets do not belong in Git. Now a fresh token comes from login details in environment variables.
+5. **Weak assertion.** \`res.ok()\` with \`toBeTruthy()\` gives a useless failure message. Now the tests check exact statuses and use \`toBeOK()\`.
+6. **No check of the result.** Delete now checks that the booking is really gone (404).
+7. **Base URL in the code.** It moved to the config project. You can change environments without editing tests.`,
       followUps: [
         {
-          q: 'Fetching a token in every delete test is wasteful. How would you scale this?',
-          a: 'Move token creation into a worker-scoped fixture that logs in once per worker and exposes an APIRequestContext with the `Cookie: token=…` header pre-set via `extraHTTPHeaders`. Tests stay independent, but there is one login per worker instead of per test.',
+          q: 'Getting a token in every delete test is wasteful. How would you scale this?',
+          a: 'Move the login into a worker-scoped fixture. It logs in once per worker. It gives tests an APIRequestContext with the `Cookie: token=…` header already set in `extraHTTPHeaders`. Tests stay independent, but you log in once per worker, not once per test.',
         },
         {
-          q: 'Restful Booker returns 200 for a wrong password. Is your assertion enough?',
-          a: 'Checking only status would pass on bad credentials, so the helper also asserts the body contains a token. In a real project I would also raise this as a defect: authentication failures should return 401, and clients relying on status codes will misbehave.',
+          q: 'Restful Booker returns 200 for a wrong password. Is your check enough?',
+          a: 'A status-only check would pass with a wrong password. So the helper also checks that the body has a token. In a real project, I would also report this as a bug. A failed login should return 401. Apps that rely on status codes will behave wrongly.',
         },
       ],
     },
@@ -776,43 +872,45 @@ test('delete booking removes it', async ({ request }) => {
     {
       id: 'pw-api-network-iq-01',
       difficulty: 'medium',
-      question: 'Why would you create test data through the API instead of the UI in a Playwright suite? Are there downsides?',
+      question: 'Why would you create test data through the API instead of the UI? Are there any downsides?',
       whatInterviewerLooksFor: [
-        'Speed, stability and isolation arguments with numbers',
-        'Knows the fixture pattern with teardown',
-        'Acknowledges the form still needs UI coverage',
-        'Mentions verifying UI actions through the API',
+        'Speed, stability and isolation reasons, with rough numbers',
+        'Knows the fixture pattern with clean-up after use()',
+        'Says the form itself still needs one UI test',
+        'Mentions checking UI actions through the API',
       ],
-      modelAnswer: `**The UI test should only exercise the behaviour it is about.** If I am testing "cancel a booking", the booking form is scaffolding.
+      modelAnswer: `**A UI test should only test the feature it is about.** If I test "cancel a booking", the booking form is just preparation.
+
+**Example:** a fixture calls \`request.post('/booking')\` → the test opens the admin page and cancels that booking → the fixture deletes it afterwards.
 
 **Why API setup:**
-- **Speed:** a \`POST /booking\` takes ~300 ms; filling the form takes 20–30 s. Across 200 tests that's over an hour of CI time saved.
-- **Stability:** every UI step is a chance to flake (slow render, changed locator). Fewer steps → fewer false failures, and a failure points at the feature under test.
-- **Isolation:** each test creates its own record with a unique name, so parallel workers never fight over shared data.
-- **Clean environments:** a fixture deletes the record after \`use()\`, even when the test fails.
+- **Speed.** A \`POST /booking\` takes about 300 ms. Filling the form takes 20–30 seconds. Over 200 tests, that saves more than an hour of CI time.
+- **Stability.** Every UI step can break, for example a slow screen or a changed locator. Fewer steps mean fewer false failures. A failure points at the feature I am testing.
+- **Isolation.** Each test creates its own record with a unique name. Workers never fight over shared data.
+- **Clean environments.** The fixture deletes the record after \`use()\`, even when the test fails.
 
-**How:** a test-scoped fixture using the \`request\` fixture (same \`baseURL\` as the page) that creates data, hands it to the test and deletes it afterwards. Login state works the same way: log in via API once and save \`storageState\`.
+**How:** a test fixture uses the \`request\` fixture, which has the same \`baseURL\` as the page. It creates the data, gives it to the test and deletes it afterwards. Login works the same way: log in once through the API and save \`storageState\`.
 
-**Downsides and mitigations:**
-- The form itself is no longer exercised by every test → keep **one dedicated UI test** that creates a booking through the form.
-- API-inserted data may skip UI validation and create states a user could never reach → use realistic payloads.
-- It requires a usable API and test credentials → work with developers to expose test endpoints or seed scripts.
+**Downsides and fixes:**
+- The form is no longer used by every test. So I keep **one UI test** that creates a booking through the form.
+- API data may skip UI checks. It could create states a real user cannot reach. So I use realistic data.
+- It needs a usable API and test logins. I work with developers to get test endpoints or seed scripts.
 
-I also use the API in the other direction: after a UI action, a \`GET\` confirms the backend persisted the change, catching "UI shows success but nothing saved" bugs.`,
+I also use the API the other way. After a UI action, a \`GET\` confirms the server saved the change. That catches "the UI says success but nothing was saved" bugs.`,
       followUps: [
         {
-          q: 'There is no public API for creating users. What do you do?',
-          a: 'Options in order of preference: ask developers for a test-only endpoint or seed script available in non-prod environments; use a database seed through a fixture (with care and proper access); or create users once through the UI in a setup project and reuse them via storageState. I would avoid creating users through the UI in every test.',
+          q: 'There is no API for creating users. What do you do?',
+          a: 'In order of preference: ask developers for a test-only endpoint or seed script in non-production environments. Or seed the database through a fixture, carefully and with proper access. Or create users once through the UI in a setup project and reuse them with storageState. I would not create users through the UI in every test.',
         },
         {
-          q: 'How do you make sure teardown happens when a test fails halfway?',
-          a: 'Put creation and deletion in a fixture: code after `await use(...)` runs whether the test passed or failed. That is more reliable than afterEach with shared variables, and the dependency is visible in the test signature.',
+          q: 'How do you make sure clean-up happens when a test fails halfway?',
+          a: 'Put the create and delete steps in one fixture. The code after `await use(...)` runs whether the test passed or failed. This is more reliable than afterEach with shared variables. The test also lists the fixture it needs, so the link is easy to see.',
         },
       ],
       pitfalls: [
-        'Saying "API setup is always better" without mentioning form coverage.',
-        'Creating data but never cleaning it up.',
-        'Using the same record for every test.',
+        'Saying "API setup is always better" without mentioning the form still needs a test.',
+        'Creating data but never deleting it.',
+        'Using the same record in every test.',
       ],
     },
     {
@@ -820,75 +918,77 @@ I also use the API in the other direction: after a UI action, a \`GET\` confirms
       difficulty: 'medium',
       question: 'Explain route.fulfill, route.abort, route.continue and route.fallback. Give a real use for each.',
       whatInterviewerLooksFor: [
-        'Correct semantics for each call',
-        'Concrete testing scenarios',
-        'Knows ordering (last registered first) and registering before navigation',
-        'Mentions route.fetch for patching',
+        'Knows what each call does',
+        'Gives a real testing example for each',
+        'Knows the route added last runs first, and routes go before navigation',
+        'Mentions route.fetch for editing a real response',
       ],
-      modelAnswer: `All four are ways a \`page.route\` / \`context.route\` handler decides what happens to an intercepted **browser** request. The handler must be registered before the request fires, usually before \`page.goto\`.
+      modelAnswer: `All four are choices inside a \`page.route\` or \`context.route\` handler. They decide what happens to a caught **browser** request. Add the route before the request starts, usually before \`page.goto\`.
 
-- **\`route.fulfill(options)\`**: answer it myself; the server is never called. Options: \`status\`, \`headers\`, \`contentType\`, \`body\`, \`json\`, \`path\` (file), or \`response\` (a real one to base it on). *Use:* return \`[]\` to test the empty-state message, or \`status: 500\` to test the error banner.
-- **\`route.abort(errorCode?)\`**: fail the request like a network error (default \`'failed'\`; others like \`'timedout'\`, \`'blockedbyclient'\`). *Use:* block images/fonts/analytics to speed tests up, or test the offline / "could not connect" UI.
-- **\`route.continue(overrides?)\`**: send it to the real server, optionally with changed \`headers\`, \`method\`, \`postData\` or \`url\`. *Use:* add a feature-flag header, or delay before continuing to see a spinner.
-- **\`route.fallback(overrides?)\`**: pass to the next matching handler. Handlers run **last-registered first**, so a specific mock can handle \`POST\` and fall back to a general handler for everything else.
+**Example:** \`page.route('**/api/items', r => r.fulfill({ json: [] }))\` → the page gets an empty list, and the server is never called.
 
-Bonus: **\`route.fetch()\`** performs the real request and returns the response, so \`fulfill({ response, json })\` can patch one field of real data.
+- **\`route.fulfill(options)\`** — I answer the request myself. The server is never called. Options: \`status\`, \`headers\`, \`contentType\`, \`body\`, \`json\`, \`path\` (a file) or \`response\` (a real one to start from). *Use:* return \`[]\` to test the empty-list message. Or return \`status: 500\` to test the error banner.
+- **\`route.abort(errorCode?)\`** — the request fails like a network error. The default code is \`'failed'\`. Others include \`'timedout'\` and \`'blockedbyclient'\`. *Use:* block images, fonts or analytics to speed tests up. Or test the "could not connect" screen.
+- **\`route.continue(overrides?)\`** — the request goes to the real server. I can change \`headers\`, \`method\`, \`postData\` or \`url\`. *Use:* add a feature-flag header. Or wait a moment first, to see a spinner.
+- **\`route.fallback(overrides?)\`** — pass the request to the next matching handler. The handler added **last runs first**. So a specific mock can handle \`POST\` and fall back to a general handler for the rest.
 
-Note: routing does not touch calls made by the \`request\` fixture; those go straight from Node.`,
+**Bonus:** \`route.fetch()\` sends the real request and returns the response. Then \`fulfill({ response, json })\` can change one field of real data.
+
+Note: routes do not touch calls from the \`request\` fixture. Those go straight from Node.`,
       followUps: [
         {
-          q: 'Your route never seems to fire. What do you check?',
-          a: 'First, was it registered before the request happened (before goto or the click)? Second, does the glob match the full URL, including query strings (use `**/api/items*` or a RegExp)? Third, is a service worker handling the request (set `serviceWorkers: \'block\'`)? Finally, is the call made by the page and not by the request fixture, which routing never sees.',
+          q: 'Your route never seems to run. What do you check?',
+          a: 'First, was the route added before the request happened, before goto or the click? Second, does the glob match the full URL, query string included? Use `**/api/items*` or a RegExp. Third, is a service worker handling the request? Set `serviceWorkers: \'block\'`. Last, is the call made by the page? Routes never see request-fixture calls.',
         },
         {
           q: 'What is the difference between continue and fallback?',
-          a: '`continue` sends the request to the network immediately, skipping any other handlers. `fallback` hands it to the next (older) matching handler, which may fulfill, abort or continue it. Use fallback when layering handlers, e.g. a test-specific override on top of a fixture\'s default mocks.',
+          a: '`continue` sends the request to the network right away. It skips any other handlers. `fallback` gives it to the next (older) matching handler. That handler may fulfill, abort or continue it. Use fallback when you stack handlers, for example a test\'s own mock on top of a fixture\'s default mocks.',
         },
       ],
       pitfalls: [
-        'Thinking route also intercepts request-fixture calls.',
-        'Registering the route after page.goto.',
-        'Confusing abort (network error) with fulfill status 500 (server error).',
+        'Thinking routes also catch request-fixture calls.',
+        'Adding the route after page.goto.',
+        'Mixing up abort (a network error) with fulfill status 500 (a server error).',
       ],
     },
     {
       id: 'pw-api-network-iq-03',
       difficulty: 'easy',
-      question: 'How would you test what the UI shows when the backend returns a 500 or takes ten seconds to respond?',
+      question: 'How would you test what the UI shows when the server returns a 500, or takes ten seconds to answer?',
       whatInterviewerLooksFor: [
         'Uses page.route instead of waiting for staging to break',
-        'Knows fulfill with status and delay in the handler',
-        'Asserts user-visible behaviour',
-        'Considers retry/timeout UI paths',
+        'Knows fulfill with a status, and a delay inside the handler',
+        'Checks what the user sees',
+        'Thinks about "try again" and timeout screens',
       ],
-      modelAnswer: `I wouldn't wait for staging to break; I'd **create those conditions** with network interception so they're deterministic.
+      modelAnswer: `I would not wait for staging to break. I would **create those conditions** with \`page.route\`. Then they happen the same way on every run.
 
-**500 error:**
-1. Before navigating, register \`page.route('**/api/bookings*', route => route.fulfill({ status: 500, json: { error: 'boom' } }))\`.
+**A 500 error:**
+1. Before opening the page, add \`page.route('**/api/bookings*', route => route.fulfill({ status: 500, json: { error: 'boom' } }))\`.
 2. Open the page.
-3. Assert the user-facing result: \`await expect(page.getByRole('alert')).toContainText('Something went wrong')\`, a retry button is visible, and nothing crashes (I can also listen to \`page.on('pageerror')\`).
+3. Check what the user sees: \`await expect(page.getByRole('alert')).toContainText('Something went wrong')\`. Check that a retry button is visible. Check that nothing crashed. I can listen to \`page.on('pageerror')\` for that.
 
-**Slow response:**
-1. In the handler, \`await new Promise(r => setTimeout(r, 10_000))\` then \`route.continue()\` or \`fulfill\`.
-2. Assert the loading state appears (spinner/skeleton), buttons are disabled to prevent double-submit, then that the data appears once the response comes. If the app has its own client timeout, assert the timeout message.
+**A slow answer:**
+1. In the handler, \`await new Promise(r => setTimeout(r, 10_000))\`, then call \`route.continue()\` or \`fulfill\`.
+2. Check that a loading spinner appears. Check that buttons are disabled, so users cannot submit twice. Then check that the data appears once the answer comes. If the app has its own timeout, check the timeout message.
 
-**Network failure:** \`route.abort('internetdisconnected')\` or \`'timedout'\` to test offline messaging.
+**A network failure:** use \`route.abort('internetdisconnected')\` or \`'timedout'\` to test the offline message.
 
-**Extras:** a stateful handler (first call 500, second call real) tests the "Try again" flow. And I'd still have a real-backend smoke test for the happy path, because mocks only prove the UI's reaction, not that the server is healthy.`,
+**Extras:** a handler can remember calls. The first call gets a 500, the second gets real data. That tests the "Try again" flow. I still keep one real-backend smoke test for the happy path. Mocks only prove how the UI reacts, not that the server works.`,
       followUps: [
         {
-          q: 'Isn\'t the 10-second delay a hard wait, which you said is bad?',
-          a: 'The delay is inside the fake server, simulating the system under test\'s environment; the test itself still waits with web-first assertions for observable states. A hard wait is bad when the test sleeps hoping the app is ready. Here, I could also shorten it to 2 seconds as long as it is long enough to observe the spinner.',
+          q: 'Isn\'t the 10-second delay a hard wait? You said those are bad.',
+          a: 'The delay is inside the fake server. It copies a slow environment. The test itself still waits with web-first assertions for things it can see. A hard wait is bad when the test sleeps and hopes the app is ready. I could also shorten it to 2 seconds, if that is long enough to see the spinner.',
         },
         {
-          q: 'How do you check that the error didn\'t throw an uncaught JavaScript exception?',
-          a: 'Collect errors with `page.on(\'pageerror\', e => errors.push(e))` and assert `errors` is empty at the end, and optionally watch `console` messages of type error. That catches the case where the banner shows but the app is broken underneath.',
+          q: 'How do you check that the error did not cause an uncaught JavaScript error?',
+          a: 'Collect errors with `page.on(\'pageerror\', e => errors.push(e))`. At the end, assert that `errors` is empty. You can also watch `console` messages of type error. That catches a page where the banner shows but the app is broken underneath.',
         },
       ],
       pitfalls: [
-        'Waiting for a real outage or asking devs to break staging.',
-        'Using route.abort when a 500 response was intended.',
-        'Only asserting that "no data" appears instead of the specific error message.',
+        'Waiting for a real outage, or asking developers to break staging.',
+        'Using route.abort when you wanted a 500 response.',
+        'Only checking that "no data" appears, not the exact error message.',
       ],
     },
     {
@@ -896,88 +996,90 @@ Note: routing does not touch calls made by the \`request\` fixture; those go str
       difficulty: 'medium',
       question: 'Walk me through automating CRUD tests for the Restful Booker API in Playwright. What surprised you about the API?',
       whatInterviewerLooksFor: [
-        'Correct endpoints and auth mechanism (token cookie / Basic)',
-        'Independent tests with own data and cleanup',
-        'Asserts real behaviour, notices quirks',
-        'Positive and negative cases',
+        'Right endpoints and login method (token cookie or Basic auth)',
+        'Independent tests that create and delete their own data',
+        'Checks real behaviour and spots odd answers',
+        'Both success and failure cases',
       ],
-      modelAnswer: `**Setup:** an \`api\` project in \`playwright.config.ts\` with \`baseURL: 'https://restful-booker.herokuapp.com'\` and \`extraHTTPHeaders: { Accept: 'application/json' }\`. Credentials come from env vars.
+      modelAnswer: `**Setup:** an \`api\` project in \`playwright.config.ts\`. It sets \`baseURL: 'https://restful-booker.herokuapp.com'\` and \`extraHTTPHeaders: { Accept: 'application/json' }\`. Login details come from environment variables.
 
 **Flow:**
-1. \`POST /auth\` with admin credentials → \`{ token }\`. I assert the token exists, not just the status.
+1. \`POST /auth\` with the admin login → \`{ token }\`. I check the token exists, not just the status.
 2. \`POST /booking\` with firstname, lastname, totalprice, depositpaid, bookingdates and additionalneeds → \`{ bookingid, booking }\`. I check \`booking\` with \`toMatchObject\` and keep the id.
-3. \`GET /booking/:id\` → same data.
-4. \`PUT\` (full) and \`PATCH\` (partial) with \`Cookie: token=<token>\` → updated fields.
+3. \`GET /booking/:id\` → the same data.
+4. \`PUT\` (all fields) and \`PATCH\` (some fields) with \`Cookie: token=<token>\` → the fields are updated.
 5. \`DELETE\` with the cookie → then \`GET\` returns 404.
 
-Each test creates its own booking with a unique name, and I wrap steps in \`test.step\` so the report is readable. Token creation moves into a worker fixture once there are many tests.
+**Example:** \`expect(del.status()).toBe(201)\` → I assert the real delete status, even though it is unusual.
 
-**Negative cases:** update/delete without a token → 403; unknown id → 404; filters (\`?firstname=\`) return the created id.
+Each test creates its own booking with a unique name. I wrap steps in \`test.step\`, so the report is easy to read. With many tests, I move the login into a worker fixture.
 
-**Surprises (quirks I assert and report):**
+**Failure cases:** update or delete without a token → 403. Unknown id → 404. A filter like \`?firstname=\` returns the id I created.
+
+**Surprises (I assert them and report them):**
 - Create returns **200**, not 201.
 - DELETE returns **201 Created**.
-- A wrong password returns **200** with \`{ reason: 'Bad credentials' }\`, so status-only checks pass on a failed login.
-- A POST with missing required fields returns **500** instead of 400.
+- A wrong password returns **200** with \`{ reason: 'Bad credentials' }\`. So a status-only check passes on a failed login.
+- A POST with missing required fields returns **500**, not 400.
 - Sending \`Accept: text/html\` gets **418 I'm a teapot**.
 
-The point for an interviewer: I assert what the API actually does, and I log non-standard behaviour as defects rather than silently coding around it.`,
+The point for the interviewer: I check what the API really does. I log odd behaviour as bugs. I do not quietly code around it.`,
       followUps: [
         {
-          q: 'Your tests pass but you notice the public API is shared with thousands of users. Any concerns?',
-          a: 'Yes: data from other people can appear in list endpoints and the service resets periodically, so I never assume a list is empty or that id 1 exists. Every test creates and deletes its own booking, uses unique names, and filters by my own id. For a real project I would run against a dedicated environment.',
+          q: 'Your tests pass, but the public API is shared with thousands of users. Any concerns?',
+          a: 'Yes. Other people\'s data can appear in list endpoints. The service also resets from time to time. So I never assume a list is empty or that id 1 exists. Every test creates and deletes its own booking, uses unique names and filters by its own id. For a real project, I would use a separate environment.',
         },
         {
-          q: 'How would you validate the full response schema?',
-          a: 'Playwright has no schema assertion, so I would add Ajv (JSON Schema) or Zod, define the booking schema once, and assert `validate(body)` is true with readable errors. `toMatchObject` with `expect.any(Number)` covers simple shape checks without a library.',
+          q: 'How would you check the full shape (schema) of a response?',
+          a: 'Playwright has no schema assertion. I would add Ajv (JSON Schema) or Zod. I define the booking schema once and assert that `validate(body)` is true, with readable errors. For simple shape checks, `toMatchObject` with `expect.any(Number)` works without a library.',
         },
       ],
       pitfalls: [
-        'Assuming standard REST status codes without checking.',
+        'Assuming normal REST status codes without checking.',
         'Hard-coding a booking id like 1.',
-        'Putting the admin password directly in the test file.',
+        'Putting the admin password straight into the test file.',
       ],
     },
     {
       id: 'pw-api-network-iq-05',
       difficulty: 'hard',
-      question: 'Your test clicks Save and then waits for the API response, but it sometimes times out even though the network log shows the response arrived. Explain and fix.',
+      question: 'Your test clicks Save and then waits for the API response. Sometimes it times out, even though the network log shows the response arrived. Why, and how do you fix it?',
       whatInterviewerLooksFor: [
-        'Identifies the race (listener created after the trigger)',
-        'Knows the promise-first pattern',
-        'Uses predicates to match the exact call',
-        'Considers asserting the UI instead',
+        'Spots the race: the listener starts after the click',
+        'Knows the "promise first" pattern',
+        'Uses a function to match the exact call',
+        'Thinks about checking the UI instead',
       ],
-      modelAnswer: `**Cause:** the code is probably:
+      modelAnswer: `**Cause:** the code probably looks like this:
 
 \`await page.getByRole('button', { name: 'Save' }).click();\`
 \`const res = await page.waitForResponse('**/api/profile');\`
 
-\`waitForResponse\` only sees responses that arrive **after** it is called. When the backend is fast, the response is already complete by the time the click resolves and the listener is attached, so the wait hangs until the timeout. On a slower environment it happens to work, which is why it's intermittent.
+\`waitForResponse\` only sees responses that arrive **after** you call it. When the server is fast, the response is done before the click finishes. Then the listener starts too late, and the wait runs until the timeout. On a slower environment it happens to work. That is why it fails only sometimes.
 
-**Fix: register, trigger, await.**
+**Fix: start waiting, do the action, then await.**
 \`const resPromise = page.waitForResponse(r => r.url().includes('/api/profile') && r.request().method() === 'PUT');\`
 \`await page.getByRole('button', { name: 'Save' }).click();\`
 \`const res = await resPromise;\`
 \`await expect(res).toBeOK();\`
 
-The **predicate** also guards against catching a different call to the same URL (e.g. a GET that refreshes the profile).
+The **function** also stops you catching a different call to the same URL, such as a GET that reloads the profile.
 
-**Better still:** if the UI shows a result ("Profile saved" toast), assert that with \`toBeVisible()\`; web-first assertions retry and reflect what the user sees. I keep \`waitForResponse\` for when I need the payload or status, or when there is no visible signal.
+**Even better:** if the UI shows a result, like a "Profile saved" message, assert it with \`toBeVisible()\`. Web-first assertions retry, and they match what the user sees. I keep \`waitForResponse\` for when I need the payload or status, or when nothing visible changes.
 
-The same "promise first" rule applies to \`waitForRequest\`, \`waitForEvent('download')\` and \`waitForEvent('popup')\`.`,
+The same "promise first" rule works for \`waitForRequest\`, \`waitForEvent('download')\` and \`waitForEvent('popup')\`.`,
       followUps: [
         {
           q: 'Could you use Promise.all instead?',
-          a: 'Yes: `const [res] = await Promise.all([page.waitForResponse(...), button.click()]);` starts both at once, so the listener is registered synchronously before the click resolves. The "promise variable first" style is equivalent and often easier for readers; both avoid the race.',
+          a: 'Yes: `const [res] = await Promise.all([page.waitForResponse(...), button.click()]);`. Both start together, so the listener exists before the click finishes. The "promise variable first" style does the same and is often easier to read. Both avoid the race.',
         },
         {
-          q: 'What if two identical requests are fired and you need the second?',
-          a: 'Use a predicate that distinguishes them (method, post body, query params), or register the wait after the first response has been consumed but before the action that triggers the second. Counting responses in a `page.on(\'response\')` listener is another option.',
+          q: 'What if the page sends two identical requests and you need the second one?',
+          a: 'Use a function that tells them apart, by method, request body or query string. Or start the second wait after the first response is handled, but before the action that sends the second call. You can also count responses in a `page.on(\'response\')` listener.',
         },
       ],
       pitfalls: [
-        'Increasing the timeout.',
+        'Making the timeout longer.',
         'Adding a waitForTimeout before the click.',
         'Matching only by URL when several calls share it.',
       ],
@@ -985,84 +1087,87 @@ The same "promise first" rule applies to \`waitForRequest\`, \`waitForEvent('dow
     {
       id: 'pw-api-network-iq-06',
       difficulty: 'expert',
-      question: 'Mocking makes UI tests fast and stable, but how do you stop mocks from hiding real integration bugs?',
-      context: 'The team has started mocking every API call in UI tests and is happy with a 100% green dashboard.',
+      question: 'Mocking makes UI tests fast and stable. How do you stop mocks from hiding real integration bugs?',
+      context: 'The team now mocks every API call in UI tests. They are happy with a 100% green dashboard.',
       whatInterviewerLooksFor: [
-        'Understands contract drift',
-        'Proposes a layered strategy (real E2E smoke + API/contract tests)',
-        'Keeps mock data close to reality (HAR, shared fixtures, schema validation)',
-        'Mocks third parties but not your own critical paths everywhere',
+        'Understands contract drift (the real API changes, the mock does not)',
+        'Suggests layers: a few real end-to-end tests plus API or contract tests',
+        'Keeps fake data close to real data (HAR, shared types, schema checks)',
+        'Mocks third parties, but not the team\'s own key flows everywhere',
       ],
-      modelAnswer: `A 100% mocked suite only proves the UI reacts correctly **to the responses we imagined**. If the backend renames \`totalprice\` to \`total_price\`, every mocked test stays green while production breaks. That's contract drift.
+      modelAnswer: `A fully mocked suite only proves the UI reacts correctly **to the answers we imagined**.
+
+**Example:** the backend renames \`totalprice\` to \`total_price\`. Every mocked test stays green, but production breaks. This is called **contract drift**: the real API changed, and the mock did not.
 
 **What I would put in place:**
-1. **Real-backend smoke E2E**: a small set (login, create booking, pay, cancel) with no mocks except third parties, run on every deploy. These catch wiring, config and contract issues.
-2. **API tests against the real service** using the \`request\` fixture: every endpoint, positive and negative, plus **schema validation** (Ajv/Zod) of the responses.
+1. **Real-backend smoke tests.** A small set — login, create booking, pay, cancel. No mocks except third parties. Run them on every deploy. They catch wiring, config and contract problems.
+2. **API tests against the real service**, using the \`request\` fixture. Cover every endpoint, success and failure. Add **schema checks** (Ajv or Zod) on the responses.
 3. **Keep mocks honest:**
-   - Generate mock payloads from the same schema or types the API tests validate, so a schema change breaks the mocks too.
-   - Prefer \`route.fetch()\` + patch over fully invented bodies where possible: real structure, one changed field.
-   - Re-record HAR files on a schedule (e.g. weekly job with \`update: true\`) and review the diff.
-4. **Consumer-driven contract tests** (e.g. Pact) if frontend and backend are separate teams.
-5. **Scope rules:** mock to reach states (errors, empty, slow, flags) and to remove third parties (payments, maps, analytics). Do not mock your own happy path in every test.
+   - Build fake data from the same schema or types the API tests check. Then a schema change breaks the mocks too.
+   - Prefer \`route.fetch()\` plus a small edit over a fully made-up body. You keep the real structure and change one field.
+   - Record HAR files again on a schedule, for example a weekly job with \`update: true\`. Review the diff.
+4. **Consumer-driven contract tests** (for example Pact), if frontend and backend are separate teams.
+5. **Clear rules:** mock to reach states (errors, empty, slow, feature flags). Mock third parties (payments, maps, analytics). Do not mock your own happy path in every test.
 
-The dashboard should then show three layers: mocked UI behaviour, real API correctness, and a real end-to-end smoke. Green on all three is meaningful.`,
+Then the dashboard shows three layers: mocked UI behaviour, real API checks and real end-to-end smoke. Green on all three really means something.`,
       followUps: [
         {
-          q: 'How would you detect drift automatically between a HAR and the live API?',
-          a: 'A scheduled job re-records the HAR with `update: true` against staging and commits it to a branch; a diff in the PR shows changed fields. Alternatively, validate both the HAR responses and live responses against the same JSON schema in tests, so any mismatch fails one of them.',
+          q: 'How would you spot drift between a HAR file and the live API automatically?',
+          a: 'A scheduled job records the HAR again with `update: true` against staging. It commits the file to a branch, and the pull request diff shows changed fields. Or check both the HAR responses and the live responses against the same JSON schema. Then any mismatch fails one of them.',
         },
         {
-          q: 'Which external dependencies would you always mock?',
-          a: 'Services you don\'t own and can\'t control: payment gateways, SMS/email providers, maps, analytics, ads, social logins. They are slow, rate-limited, may charge money, and failures there say nothing about your app. Their integration is tested separately with their sandbox environments.',
+          q: 'Which outside services would you always mock?',
+          a: 'Services you do not own or control: payment gateways, SMS and email providers, maps, analytics, ads and social logins. They are slow and limited. Some cost money. Their failures say nothing about your app. Test those integrations separately in their sandbox environments.',
         },
       ],
       pitfalls: [
-        'Claiming mocked tests are "end-to-end".',
-        'Never re-recording HARs or updating mock data.',
-        'Mocking everything or nothing, with no strategy.',
+        'Calling mocked tests "end-to-end".',
+        'Never recording HARs again or updating fake data.',
+        'Mocking everything or nothing, with no plan.',
       ],
     },
     {
       id: 'pw-api-network-iq-07',
       difficulty: 'hard',
-      question: 'How do you handle authentication tokens across hundreds of API tests without slowing down the suite or leaking secrets?',
+      question: 'How do you handle login tokens across hundreds of API tests, without slowing the suite or leaking secrets?',
       whatInterviewerLooksFor: [
         'Worker-scoped fixture or setup project',
-        'extraHTTPHeaders / storageState mechanics',
-        'Secrets from env/CI, git-ignored files',
-        'Handles expiry and isolation',
+        'Knows how extraHTTPHeaders and storageState work',
+        'Secrets from environment variables or CI, in files Git ignores',
+        'Handles token expiry and keeps tests independent',
       ],
       modelAnswer: `**Goal:** log in rarely, never commit secrets, and keep tests independent.
 
-**Mechanics:**
-- A **worker-scoped fixture** calls \`POST /auth\` once per worker using \`request.newContext()\`, then creates an authenticated APIRequestContext with \`extraHTTPHeaders\` (\`Authorization: Bearer …\` or \`Cookie: token=…\`). Every test in that worker receives it via \`use()\`, and it is disposed at the end.
-- With 4 workers, that is 4 logins for the whole run instead of hundreds.
-- For UI tests, a **setup project** logs in (via API is fastest) and saves \`storageState\` to \`playwright/.auth/user.json\`; browser projects declare it as a dependency and load that state. \`apiContext.storageState({ path })\` bridges an API login to the browser.
+**Example:** with 4 workers, a worker-scoped login fixture logs in 4 times for the whole run, not hundreds of times.
+
+**How it works:**
+- A **worker-scoped fixture** calls \`POST /auth\` once per worker, using \`request.newContext()\`. A worker is one test process. The fixture then makes a logged-in APIRequestContext with \`extraHTTPHeaders\` — \`Authorization: Bearer …\` or \`Cookie: token=…\`. Every test in that worker gets it through \`use()\`. It is disposed at the end.
+- For UI tests, a **setup project** logs in once (through the API is fastest). It saves \`storageState\` to \`playwright/.auth/user.json\`. **storageState** is a saved file of cookies and local storage. Browser projects list the setup project as a dependency and load that file. \`apiContext.storageState({ path })\` carries an API login into the browser.
 
 **Secrets:**
-- Credentials come from \`process.env\`: a local \`.env\` loaded with dotenv and listed in \`.gitignore\`, and CI secrets (e.g. GitHub Actions \`secrets.BOOKER_PASS\`) injected as env vars.
-- \`playwright/.auth\` is git-ignored because it contains live session cookies.
-- Traces and HARs can contain tokens; keep artifact retention short.
+- Login details come from \`process.env\`. Locally, a \`.env\` file loaded with dotenv and listed in \`.gitignore\`. In CI, secrets such as GitHub Actions \`secrets.BOOKER_PASS\`, passed in as environment variables.
+- \`playwright/.auth\` is ignored by Git, because it holds live session cookies.
+- Traces and HARs can hold tokens. Keep them stored only for a short time.
 
 **Expiry and roles:**
-- If tokens live shorter than a worker, refresh inside the fixture (check expiry, re-login) or use test-scoped auth for those tests.
-- Different roles (admin, guest) get separate fixtures/state files, so a test declares the role it needs.
+- If tokens expire before a worker finishes, refresh inside the fixture. Or use per-test login for those tests.
+- Each role (admin, guest) gets its own fixture or state file. A test says which role it needs.
 
-**Isolation:** sharing a token is fine; sharing *data* is not. Each test still creates its own records.`,
+**Isolation:** sharing a token is fine. Sharing *data* is not. Each test still creates its own records.`,
       followUps: [
         {
           q: 'Why not log in once in globalSetup and write the token to a file?',
-          a: 'You can, and it is the fewest logins. But setup projects are now recommended over globalSetup because they appear in the report, get traces, and can use fixtures. A token file also needs to be git-ignored and may expire in long runs. A worker fixture is simpler when only API tests need the token.',
+          a: 'You can, and it means the fewest logins. But setup projects are now recommended over globalSetup. They appear in the report, get traces and can use fixtures. A token file must also be ignored by Git, and it may expire in long runs. A worker fixture is simpler when only API tests need the token.',
         },
         {
-          q: 'A test needs to verify that an expired token is rejected. How?',
-          a: 'Don\'t use the shared fixture for it. Create a dedicated context with a deliberately invalid or expired token (or a token you revoke via a logout endpoint) and assert 401/403. Keeping this out of the shared fixture prevents breaking other tests.',
+          q: 'A test must check that an expired token is rejected. How?',
+          a: 'Do not use the shared fixture for it. Create a separate context with a wrong or expired token, or a token you cancel through a logout endpoint. Then assert 401 or 403. Keeping this out of the shared fixture stops it from breaking other tests.',
         },
       ],
       pitfalls: [
-        'Hard-coding tokens or passwords in test files.',
+        'Writing tokens or passwords in test files.',
         'Logging in before every request.',
-        'Committing the .auth folder or .env file.',
+        'Committing the .auth folder or the .env file.',
       ],
     },
   ],
@@ -1070,10 +1175,10 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
     {
       id: 'pw-api-network-drill-1',
       question:
-        'For each scenario, choose `route.fulfill`, `route.abort`, `route.continue` (possibly modified) or `route.fetch` + `fulfill`, and say why: (a) show the "No bookings yet" empty state; (b) test the offline banner; (c) block Google Analytics and images to speed up tests; (d) add header `X-Feature-NewCheckout: on` to API calls; (e) make one real product appear out of stock while keeping the rest of the real catalogue; (f) see the loading skeleton for 2 seconds while still using real data.',
+        'For each case, pick `route.fulfill`, `route.abort`, `route.continue` (maybe with changes) or `route.fetch` + `fulfill`. Say why. (a) Show the "No bookings yet" empty state. (b) Test the offline banner. (c) Block Google Analytics and images to speed up tests. (d) Add the header `X-Feature-NewCheckout: on` to API calls. (e) Show one real product as out of stock, but keep the rest of the real catalogue. (f) See the loading skeleton for 2 seconds, still with real data.',
       assumptions: [
-        'All calls are made by the browser page (not the request fixture).',
-        'Routes are registered before navigation.',
+        'All calls come from the browser page, not the request fixture.',
+        'Routes are added before the page opens.',
       ],
       steps: [
         { label: '(a) empty state', calc: 'fulfill({ json: [] }) — we need a specific body the real DB may not have.' },
@@ -1083,23 +1188,23 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
         { label: '(e) one item out of stock', calc: 'fetch() → edit json[i].stock = 0 → fulfill({ response, json }) — real data, one field patched.' },
         { label: '(f) slow but real', calc: 'await a 2s timer inside the handler, then continue() — real response, simulated latency.' },
       ],
-      answer: `**fulfill** when you need a made-up response (a), **abort** when you need a network failure or want to block traffic (b, c), **continue** when the real server should answer, optionally with a modified request or added delay (d, f), and **fetch + fulfill** when you want real data with a small patch (e).`,
-      insight: 'Ask two questions: "Should the real server be called?" and "Do I need to change the request, the response, or neither?" The answer picks the method.',
+      answer: `Use **fulfill** when you need a made-up answer (a). Use **abort** for a network failure, or to block traffic (b, c). Use **continue** when the real server should answer, maybe with a changed request or a delay (d, f). Use **fetch + fulfill** for real data with a small edit (e).`,
+      insight: 'Ask two questions. "Should the real server be called?" and "Do I change the request, the response, or neither?" The answers pick the method.',
       followUps: [
         {
-          q: 'For (a), why not test the empty state by deleting all bookings in staging?',
-          a: 'It would destroy shared data, break other people\'s tests and be impossible to run in parallel. A mock produces the state instantly and only for this page, and the real "list with data" path is still covered by other tests.',
+          q: 'For (a), why not delete all bookings in staging to get the empty state?',
+          a: 'It would destroy shared data and break other people\'s tests. It could never run in parallel. A mock gives the state at once, only for this page. Other tests still cover the real "list with data" case.',
         },
       ],
     },
     {
       id: 'pw-api-network-drill-2',
       question:
-        'A UI suite has 120 tests that each create a booking through a form (avg 24 s of setup) before the real test steps (avg 12 s). It runs on 3 browser projects with 4 workers. Estimate the wall-clock saving if setup moves to an API call that takes 0.6 s.',
+        'A UI suite has 120 tests. Each creates a booking through a form first (24 s on average). Then the real test steps run (12 s on average). It runs on 3 browser projects with 4 workers. How much time is saved if setup moves to an API call that takes 0.6 s?',
       assumptions: [
-        'Test executions = 120 tests × 3 projects = 360.',
-        'Work spreads evenly across 4 workers.',
-        'Ignore worker startup and report generation.',
+        'Test runs = 120 tests × 3 projects = 360.',
+        'Work is shared evenly across 4 workers.',
+        'Ignore worker start-up and report time.',
       ],
       steps: [
         { label: 'Before, per test', calc: '24 s setup + 12 s steps = 36 s' },
@@ -1109,21 +1214,21 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
         { label: 'Saving', calc: '54 − 19 ≈ 35 min per run (~65%)' },
         { label: 'Bonus: flake exposure', calc: '~10 fewer UI steps per test × 360 runs = 3,600 fewer chances to flake per run' },
       ],
-      answer: `Roughly **54 min → 19 min**, saving about **35 minutes (≈65%)** per run, plus thousands fewer UI interactions that could flake. Keep 1–2 tests that still exercise the booking form through the UI.`,
-      insight: 'Setup is often the majority of UI-test time. Moving it to the API is usually the single biggest speed-up available, bigger than adding workers.',
+      answer: `About **54 min → 19 min**. That saves about **35 minutes (≈65%)** per run. There are also thousands fewer UI steps that could fail at random. Keep 1–2 tests that still use the booking form in the UI.`,
+      insight: 'Setup is often most of a UI test\'s time. Moving it to the API is usually the biggest speed-up you can get — bigger than adding workers.',
       followUps: [
         {
-          q: 'Would adding 4 more workers give a similar saving?',
-          a: 'Only if the machine has the CPU and memory: doubling workers on a 4-vCPU runner usually adds contention and flakiness rather than halving time. Even with ideal scaling, 8 workers take the old suite from 54 to 27 min, still slower than API setup at 4 workers, and the two improvements combine.',
+          q: 'Would adding 4 more workers save a similar amount?',
+          a: 'Only if the machine has enough CPU and memory. Doubling workers on a 4-CPU runner usually causes slowdowns and random failures, not half the time. Even with perfect scaling, 8 workers take the old suite from 54 to 27 min. That is still slower than API setup with 4 workers. And the two ideas can be combined.',
         },
       ],
     },
     {
       id: 'pw-api-network-drill-3',
       question:
-        'Which of these URLs does each route pattern intercept? Patterns: P1 `**/api/booking`, P2 `**/api/booking*`, P3 `**/api/*/items`, P4 `/\\/api\\/booking/` (RegExp). URLs: U1 `https://shop.test/api/booking`, U2 `https://shop.test/api/booking?page=2`, U3 `https://shop.test/api/booking/42`, U4 `https://shop.test/api/v2/cart/items`.',
+        'Which URLs does each route pattern catch? Patterns: P1 `**/api/booking`, P2 `**/api/booking*`, P3 `**/api/*/items`, P4 `/\\/api\\/booking/` (RegExp). URLs: U1 `https://shop.test/api/booking`, U2 `https://shop.test/api/booking?page=2`, U3 `https://shop.test/api/booking/42`, U4 `https://shop.test/api/v2/cart/items`.',
       assumptions: [
-        'Glob rules: `*` matches any characters except `/`; `**` matches any characters including `/`; the glob must match the whole URL.',
+        'Glob rules: `*` matches anything except `/`. `**` matches anything, including `/`. The glob must match the whole URL.',
         'A RegExp matches if it is found anywhere in the URL.',
       ],
       steps: [
@@ -1133,12 +1238,12 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
         { label: 'P4 RegExp /\\/api\\/booking/', calc: 'U1 ✓, U2 ✓, U3 ✓ (substring match). U4 ✗.' },
         { label: 'Fix for U4', calc: 'Use **/api/**/items or a RegExp like /\\/api\\/.*\\/items$/' },
       ],
-      answer: `P1 → U1 only. P2 → U1, U2. P3 → none (single \`*\` does not cross \`/\`). P4 → U1, U2, U3. The most common bug is P1: forgetting that query strings are part of the URL.`,
-      insight: 'Globs must match the entire URL; `*` stops at slashes. When in doubt, use a RegExp or a predicate function and add a quick assertion that the route actually fired.',
+      answer: `P1 → U1 only. P2 → U1, U2. P3 → none (a single \`*\` cannot cross \`/\`). P4 → U1, U2, U3. The most common bug is P1: people forget that the query string is part of the URL.`,
+      insight: 'A glob must match the whole URL, and `*` stops at slashes. When unsure, use a RegExp or a function. Also add a quick check that the route really ran.',
       followUps: [
         {
-          q: 'How can you confirm in a test that your mock was actually used?',
-          a: 'Count calls in the handler (`let hits = 0; ... hits++`) and assert `expect(hits).toBeGreaterThan(0)` at the end, or assert on UI text that only the mock data contains, like a fake product name that does not exist in the real backend.',
+          q: 'How can a test prove that your mock was really used?',
+          a: 'Count calls in the handler (`let hits = 0; ... hits++`). At the end, assert `expect(hits).toBeGreaterThan(0)`. Or check for text that only the mock contains, like a fake product name the real backend does not have.',
         },
       ],
     },
@@ -1147,15 +1252,15 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
     {
       id: 'pw-api-network-mcq-01',
       difficulty: 'easy',
-      question: 'A spec signs in through the UI and must then call a protected endpoint as that same signed-in shopper. Which object sends the browser session cookies automatically?',
+      question: 'A test logs in through the UI. Then it must call a protected endpoint as the same logged-in shopper. Which object sends the browser\'s login cookies automatically?',
       options: ['page.request', 'the request fixture', 'playwright.request.newContext()', 'Node\'s global fetch()'],
       correct: [0],
       explanation:
-        '`page.request` (like `context.request`) shares the cookie jar of the browser context, so the login cookie goes with every call. The `request` fixture and `newContext()` each have their own isolated cookie jar, and plain `fetch()` knows nothing about the browser at all.',
+        '`page.request` (like `context.request`) uses the same cookies as the browser context. So the login cookie goes with every call. The `request` fixture and `newContext()` each have their own separate cookies. Plain `fetch()` knows nothing about the browser at all.',
       followUps: [
         {
-          q: 'When is the isolated request fixture the better choice?',
-          a: 'For pure API tests and for setup/teardown that should not depend on any browser session, e.g. creating a booking before the UI test starts or testing that an unauthenticated call is rejected.',
+          q: 'When is the separate request fixture the better choice?',
+          a: 'For pure API tests, and for setup and clean-up that should not depend on any browser login. For example, creating a booking before the UI test starts, or checking that a call without login is rejected.',
         },
       ],
     },
@@ -1171,11 +1276,11 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
       ],
       correct: [0],
       explanation:
-        '`toBeOK()` is the APIResponse web assertion for the 200–299 range and includes response info in the failure message. `ok()` + `toBe(true)` works but only says "expected true, received false". `status()` is truthy for 404 or 500 too. `toHaveStatus` is not a Playwright matcher.',
+        '`toBeOK()` is the response assertion for statuses 200–299. Its failure message includes the response details. `ok()` with `toBe(true)` works, but only says "expected true, received false". `status()` is truthy for 404 or 500 too. `toHaveStatus` is not a Playwright matcher.',
       followUps: [
         {
           q: 'How do you check for exactly 201?',
-          a: 'expect(response.status()).toBe(201). `status()` is synchronous, so no await is needed for that call.',
+          a: 'expect(response.status()).toBe(201). `status()` is not async, so this call needs no await.',
         },
       ],
     },
@@ -1199,18 +1304,18 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
       ],
       correct: [0],
       explanation:
-        '`json()` is async; without `await`, `body` is a Promise and `bookingid` is undefined, so the assertion fails confusingly. An object in `data` is serialized to JSON automatically. `post` does not throw on 4xx/5xx by default. Relative URLs work when `baseURL` is set.',
+        '`json()` is async. Without `await`, `body` is a Promise, so `bookingid` is undefined and the check fails in a confusing way. An object in `data` is turned into JSON for you. `post` does not throw on 4xx or 5xx by default. Relative URLs work when `baseURL` is set.',
       followUps: [
         {
           q: 'What else would you add to this test?',
-          a: 'A status check (`expect(res.status()).toBe(200)` for Restful Booker, or `toBeOK()`), a `toMatchObject` on `body.booking` to compare sent and stored data, and cleanup of the created booking.',
+          a: 'A status check (`expect(res.status()).toBe(200)` for Restful Booker, or `toBeOK()`). A `toMatchObject` on `body.booking`, to compare sent and saved data. And clean-up of the booking you created.',
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-04',
       difficulty: 'medium',
-      question: 'On Restful Booker, which header do PUT, PATCH and DELETE accept as authentication? Select ALL that apply.',
+      question: 'On Restful Booker, which headers do PUT, PATCH and DELETE accept for login? Select ALL that apply.',
       options: [
         'Cookie: token=<token from POST /auth>',
         'Authorization: Basic <base64 of admin:password123>',
@@ -1219,18 +1324,18 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
       ],
       correct: [0, 1],
       explanation:
-        'Restful Booker accepts the token as a cookie named `token` or HTTP Basic auth with the admin credentials. It does not read an `X-Api-Key` header, and a Bearer token is not its documented scheme, so both of those return 403.',
+        'Restful Booker accepts the token as a cookie named `token`, or HTTP Basic auth with the admin login. It does not read an `X-Api-Key` header. A Bearer token is not its documented method either. Both of those return 403.',
       followUps: [
         {
           q: 'What status does DELETE return on success there?',
-          a: '201, which is unusual (204 or 200 would be typical). Assert the real value and consider raising it as an API-design defect.',
+          a: '201, which is unusual (204 or 200 is more common). Assert the real value. Think about reporting it as an API design bug.',
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-05',
       difficulty: 'medium',
-      question: 'A test needs the bookings page to show "No bookings yet". The real backend always has data. What is the best approach?',
+      question: 'A test needs the bookings page to show "No bookings yet". The real server always has data. What is the best approach?',
       options: [
         "Register page.route('**/api/bookings*', r => r.fulfill({ json: [] })) before page.goto",
         'Delete every booking in staging via the API before the test',
@@ -1239,18 +1344,18 @@ The dashboard should then show three layers: mocked UI behaviour, real API corre
       ],
       correct: [0],
       explanation:
-        'Fulfilling with an empty array produces the exact state, only for this page, before the request fires. Deleting shared staging data breaks other tests and parallel runs. Registering after goto misses the initial request. Aborting simulates a network error, which typically shows an error state, not the empty state.',
+        'Fulfilling with an empty array gives exactly this state, only for this page, before the request starts. Deleting shared staging data breaks other tests and parallel runs. Adding the route after goto misses the first request. Abort fakes a network error, which usually shows an error screen, not the empty state.',
       followUps: [
         {
           q: 'How would you prove the mock was used?',
-          a: 'Count handler calls and assert at least one, or assert the empty-state text, which would not appear with real data. Both catch a route pattern that silently matched nothing.',
+          a: 'Count handler calls and assert at least one. Or check the empty-state text, which real data would never show. Both catch a route pattern that quietly matched nothing.',
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-06',
       difficulty: 'medium',
-      question: 'On fast environments the booking confirmation check below intermittently hits its timeout. What is the cause?',
+      question: 'On fast environments, the booking check below sometimes hits its timeout. What is the cause?',
       code: {
         language: 'typescript',
         code: `await page.getByRole('button', { name: 'Book now' }).click();
@@ -1265,18 +1370,18 @@ await expect(res).toBeOK();`,
       ],
       correct: [0],
       explanation:
-        'Listeners only see responses after they are created; a fast response can complete during the click, so the wait never resolves. Globs, RegExps and predicates are all accepted, and `toBeOK()` works on page responses too. `click()` does not wait for network idle.',
+        'Listeners only see responses after they start. A fast response can finish during the click, so the wait never ends. Globs, RegExps and functions are all accepted. `toBeOK()` works on page responses too. `click()` does not wait for the network to go quiet.',
       followUps: [
         {
           q: 'Rewrite it.',
-          a: "const p = page.waitForResponse('**/api/booking'); await page.getByRole('button', { name: 'Book now' }).click(); await expect(await p).toBeOK(); — listener first, trigger second.",
+          a: "const p = page.waitForResponse('**/api/booking'); await page.getByRole('button', { name: 'Book now' }).click(); await expect(await p).toBeOK(); — start listening first, click second.",
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-07',
       difficulty: 'hard',
-      question: 'Which URLs will this handler intercept? Select ALL that apply.',
+      question: 'Which URLs will this handler catch? Select ALL that apply.',
       code: {
         language: 'typescript',
         code: `await page.route('**/api/rooms*', (route) =>
@@ -1292,11 +1397,11 @@ await expect(res).toBeOK();`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'The trailing `*` matches any characters except `/`, so it covers no suffix, a query string, and "-available". `/12` contains a slash, so `*` cannot match it. "/api/room" lacks the "s" required by the literal "rooms". The leading `**` matches any host and path prefix.',
+        'The last `*` matches anything except `/`. So it covers nothing extra, a query string, and "-available". `/12` has a slash, so `*` cannot match it. "/api/room" is missing the "s" in "rooms". The leading `**` matches any host and path before it.',
       followUps: [
         {
           q: 'How would you also match /api/rooms/12?',
-          a: 'Use `**/api/rooms**` or add a second route `**/api/rooms/*`, or switch to a RegExp like `/\\/api\\/rooms/`. Be careful a broad pattern does not catch unrelated endpoints.',
+          a: 'Use `**/api/rooms**`, or add a second route `**/api/rooms/*`, or use a RegExp like `/\\/api\\/rooms/`. Be careful that a wide pattern does not catch other endpoints.',
         },
       ],
     },
@@ -1318,18 +1423,18 @@ await page.goto('/cart');`,
       ],
       correct: [0],
       explanation:
-        'Playwright runs matching handlers in reverse registration order, so the last-registered (more specific) mock B handles /api/cart. If B called `route.fallback()`, A would then get the request. Handlers never run in parallel for one request, and overlapping patterns are allowed.',
+        'Playwright runs matching handlers in reverse order of adding. So B, added last and more specific, handles /api/cart. If B called `route.fallback()`, A would get the request next. Handlers never run in parallel for one request. Overlapping patterns are allowed.',
       followUps: [
         {
           q: 'How does this help with shared fixtures?',
-          a: 'A fixture can register default mocks; a test registers its own override afterwards, which wins. The override can `fallback()` for cases it does not care about, so defaults still apply.',
+          a: 'A fixture can add default mocks. A test adds its own mock afterwards, and that one wins. The test\'s mock can call `fallback()` for cases it does not care about, so the defaults still apply.',
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-09',
       difficulty: 'medium',
-      question: 'You want real product data but with one product showing `stock: 0`. Which handler does that?',
+      question: 'You want real product data, but with one product showing `stock: 0`. Which handler does that?',
       options: [
         'const response = await route.fetch(); const json = await response.json(); json[0].stock = 0; await route.fulfill({ response, json });',
         'await route.continue({ postData: JSON.stringify({ stock: 0 }) });',
@@ -1338,11 +1443,11 @@ await page.goto('/cart');`,
       ],
       correct: [0],
       explanation:
-        '`route.fetch()` gets the real response; you patch one field and fulfill with the original response plus the new JSON. `continue` with `postData` changes the request body sent to the server, not the response. `abort` fails the request. A hand-written `{ stock: 0 }` replaces the whole catalogue with one meaningless object.',
+        '`route.fetch()` gets the real response. You change one field and fulfill with the original response plus the new JSON. `continue` with `postData` changes the request body sent to the server, not the response. `abort` fails the request. A hand-written `{ stock: 0 }` replaces the whole catalogue with one useless object.',
       followUps: [
         {
-          q: 'What does passing `response` to fulfill preserve?',
-          a: 'The original status code and headers (content type, caching headers, etc.), so the page sees a realistic response while only the body you provided changes.',
+          q: 'What does passing `response` to fulfill keep?',
+          a: 'The original status code and headers (content type, caching headers and so on). The page sees a realistic response. Only the body you gave changes.',
         },
       ],
     },
@@ -1358,11 +1463,11 @@ await page.goto('/cart');`,
       ],
       correct: [0, 1, 2],
       explanation:
-        'Routing covers browser traffic of that page only: request-fixture calls go directly from Node, service-worker traffic can be invisible to it, and late registration misses requests already sent. It does not apply to other contexts; `context.route` covers popups within one context, not other contexts.',
+        'Routes cover only that page\'s browser traffic. Request-fixture calls go straight from Node. Service-worker traffic can be invisible to routes. A route added late misses requests already sent. Routes do not apply to other browser contexts. `context.route` covers popups in one context, not other contexts.',
       followUps: [
         {
-          q: 'When would you prefer context.route?',
-          a: 'When a test opens popups or new tabs (e.g. a payment window) that make the same API calls; `context.route` applies to every page in that context, including ones opened later.',
+          q: 'When would you use context.route instead?',
+          a: 'When a test opens popups or new tabs (like a payment window) that make the same API calls. `context.route` applies to every page in that context, including pages opened later.',
         },
       ],
     },
@@ -1378,18 +1483,18 @@ await page.goto('/cart');`,
       ],
       correct: [0],
       explanation:
-        'The API reports a failed login with status 200 and a `reason` field, so a status-only test passes with bad credentials; you must assert the `token` field exists. It does not return 201 here, `status()` is readable, and the token is in the JSON body.',
+        'The API reports a failed login with status 200 and a `reason` field. So a status-only test passes with a wrong password. You must check that the `token` field exists. It does not return 201 here. `status()` can be read. The token is in the JSON body.',
       followUps: [
         {
           q: 'Would you report this as a bug?',
-          a: 'Yes, as an API design defect: failed authentication should return 401 so clients and monitoring can detect it. Until fixed, the tests assert the body explicitly.',
+          a: 'Yes, as an API design bug. A failed login should return 401, so apps and monitoring can spot it. Until it is fixed, the tests check the body directly.',
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-12',
       difficulty: 'medium',
-      question: 'Which practices make API-based test setup reliable in a parallel suite? Select ALL that apply.',
+      question: 'Which habits make API-based test setup reliable when tests run in parallel? Select ALL that apply.',
       options: [
         'Generate unique names (e.g. with Date.now() or workerIndex) for created records',
         'Delete created records in fixture teardown after `use()`',
@@ -1398,11 +1503,11 @@ await page.goto('/cart');`,
       ],
       correct: [0, 1],
       explanation:
-        'Unique data prevents collisions between workers and fixture teardown runs even when tests fail. Module-level ids create order dependence and break under parallelism and retries, and assuming id 1 exists uses data you do not own on a shared API.',
+        'Unique data stops workers from clashing. Fixture clean-up runs even when tests fail. A module-level id makes tests depend on order, so they break with parallel runs and retries. Assuming id 1 exists uses data you do not own on a shared API.',
       followUps: [
         {
-          q: 'Why is the fixture better than afterEach for cleanup?',
-          a: 'Setup and teardown live together and the test declares the dependency in its signature; there is no shared variable between hooks to get out of sync, and only tests that use the fixture pay for it.',
+          q: 'Why is a fixture better than afterEach for clean-up?',
+          a: 'Setup and clean-up live together, and the test lists the fixture it needs. No shared variable between hooks can get out of sync. Only tests that use the fixture pay for it.',
         },
       ],
     },
@@ -1426,11 +1531,11 @@ await page.goto('/cart');`,
       ],
       correct: [0],
       explanation:
-        'Like `page.route`, HAR routing only affects requests sent after it is registered; the catalog loaded during `goto`. Replay is the default (`update` false), `page.routeFromHAR` exists alongside the context version, and `url` accepts a glob.',
+        'Like `page.route`, HAR routing only affects requests sent after it is added. The catalog loaded during `goto`. Replay is the default (`update` is false). `page.routeFromHAR` exists next to the context version. `url` accepts a glob.',
       followUps: [
         {
           q: 'What happens to a request that matches the url pattern but is not in the HAR?',
-          a: 'By default it is aborted (`notFound: \'abort\'`), which makes missing recordings obvious. With `notFound: \'fallback\'` it goes to the next handler or the network.',
+          a: 'By default it is aborted (`notFound: \'abort\'`), so missing recordings are obvious. With `notFound: \'fallback\'` it goes to the next handler or the network.',
         },
       ],
     },
@@ -1446,18 +1551,18 @@ await page.goto('/cart');`,
       ],
       correct: [0, 1, 2],
       explanation:
-        '`page.request`/`context.request` use the browser context\'s cookies, `newContext()` is independent and needs `dispose()`, and `storageState()` exports its cookies for `browser.newContext({ storageState })`. The `request` fixture has its own cookie jar; it does not share cookies with `page`.',
+        '`page.request` and `context.request` use the browser context\'s cookies. `newContext()` is separate and needs `dispose()`. `storageState()` saves its cookies for `browser.newContext({ storageState })`. The `request` fixture has its own cookies. It does not share cookies with `page`.',
       followUps: [
         {
-          q: 'Give a use of the shared jar.',
-          a: 'Log in through the UI, then call a protected API with `page.request.get(...)` to verify server state as the same user, without handling tokens manually.',
+          q: 'Give a use for the shared cookies.',
+          a: 'Log in through the UI. Then call a protected API with `page.request.get(...)` to check server data as the same user. You never handle tokens by hand.',
         },
       ],
     },
     {
       id: 'pw-api-network-mcq-15',
       difficulty: 'expert',
-      question: 'A team mocks every API call in all 300 UI tests. Production broke when the backend renamed a JSON field, yet all tests stayed green. Which measures would have caught it? Select ALL that apply.',
+      question: 'A team mocks every API call in all 300 UI tests. Production broke when the backend renamed a JSON field, yet all tests stayed green. Which steps would have caught it? Select ALL that apply.',
       options: [
         'A small real-backend E2E smoke suite with no mocks of first-party APIs',
         'API tests with schema validation against the real service',
@@ -1467,11 +1572,11 @@ await page.goto('/cart');`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Real-backend smoke tests, schema-validated API tests and refreshed HARs all compare against the actual contract, so the rename would surface. Retries and timeouts change nothing when the mocked responses never reflect the new field name; the tests would keep passing.',
+        'Real-backend smoke tests, API tests with schema checks and refreshed HARs all compare against the real API. So the rename would show up. Retries and timeouts change nothing. The fake responses never had the new field name, so the tests keep passing.',
       followUps: [
         {
-          q: 'What is this failure mode called?',
-          a: 'Contract drift: the mock describes an API that no longer exists. Consumer-driven contract testing (e.g. Pact) is another formal way to prevent it between teams.',
+          q: 'What is this kind of failure called?',
+          a: 'Contract drift: the mock describes an API that no longer exists. Consumer-driven contract testing (for example Pact) is a formal way to prevent it between teams.',
         },
       ],
     },

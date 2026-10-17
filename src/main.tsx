@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // self-hosted variable fonts (woff2; browsers fetch only the unicode-range subsets a page uses)
 import '@fontsource-variable/inter/wght.css'
-import '@fontsource-variable/plus-jakarta-sans/wght.css'
+import '@fontsource-variable/newsreader/opsz.css'
 import '@fontsource-variable/jetbrains-mono/wght.css'
 import './index.css'
 import './prism-theme.css'

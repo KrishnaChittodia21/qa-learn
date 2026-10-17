@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 4,
   title: 'Assertions and Waiting: Auto-waiting, Web-first Assertions, Timeouts',
   subtitle:
-    'How Playwright synchronises with a changing page: actionability checks, the full catalog of retrying assertions, generic vs web-first, timeouts, soft assertions, expect.poll and toPass, and how to replace every hard wait.',
+    'How Playwright waits for a changing page: the checks before each action, checks that keep trying (web-first assertions), time limits, soft checks, expect.poll and toPass, and how to replace every fixed sleep.',
   estimatedMinutes: 105,
   sources: [
     'Playwright docs — Auto-waiting / actionability (playwright.dev/docs/actionability)',
@@ -20,40 +20,51 @@ const topic: Topic = {
   ],
   tags: ['playwright', 'assertions', 'expect', 'auto-waiting', 'actionability', 'timeouts', 'soft-assertions', 'expect-poll', 'toPass', 'flaky-tests'],
   cheatSheet: [
-    'Actions auto-wait for actionability: click = visible + stable + receives events + enabled; fill = visible + enabled + editable; hover/dragTo skip enabled; press, focus, setInputFiles check nothing.',
-    'Web-first assertion = `await expect(locator).toBeVisible()`: re-queries the page and retries until it passes or the expect timeout (5s) ends. Always `await` it.',
-    'Generic assertion = `expect(value).toBe(x)`: checks a value once, no retry. Fine for plain data, wrong for page state you read a moment ago.',
-    '`expect(await loc.isVisible()).toBe(true)` is the classic trap: isVisible returns immediately, so the check races the app. Use `await expect(loc).toBeVisible()`.',
-    'Defaults: test 30s, expect 5s, action and navigation no timeout (bounded by the test), global none. Config: `timeout`, `expect: { timeout }`, `use: { actionTimeout, navigationTimeout }`, `globalTimeout`.',
-    '`test.slow()` triples the test timeout; `test.setTimeout(ms)` sets it; per-call `{ timeout }` on an action or assertion overrides that call only.',
-    '`toHaveText` = full text (normalised whitespace, string or regex or array); `toContainText` = substring. `toHaveCount`, `toHaveValue`, `toHaveAttribute`, `toHaveClass`, `toHaveURL`, `toHaveTitle`, `toBeOK`.',
+    'Actions wait until the element is ready (auto-waiting). click = visible + stable (not moving) + receives events (not covered) + enabled. fill = visible + enabled + editable. hover/dragTo skip enabled. press, focus, setInputFiles check nothing.',
+    'Web-first assertion = `await expect(locator).toBeVisible()`. It looks at the page again and again until it passes or 5 s run out (the expect timeout). Always `await` it.',
+    'Generic assertion = `expect(value).toBe(x)`. It checks a value once and never tries again. Fine for plain data; wrong for page state you read a moment ago.',
+    '`expect(await loc.isVisible()).toBe(true)` is the classic trap. isVisible answers at once, so the check can run too early. Use `await expect(loc).toBeVisible()`.',
+    'Defaults: test 30 s, expect 5 s. Action, navigation and global have no limit (the test limit stops them). Config: `timeout`, `expect: { timeout }`, `use: { actionTimeout, navigationTimeout }`, `globalTimeout`.',
+    '`test.slow()` gives the test three times the time. `test.setTimeout(ms)` sets it. `{ timeout }` on one action or check changes only that call.',
+    '`toHaveText` = full text (extra spaces ignored; string, regex or list). `toContainText` = part of the text. Also: `toHaveCount`, `toHaveValue`, `toHaveAttribute`, `toHaveClass`, `toHaveURL`, `toHaveTitle`, `toBeOK`.',
     '`expect.soft()` records a failure and keeps going; the test still fails at the end. Custom message: `expect(loc, \'cart badge after add\').toHaveText(\'1\')`.',
-    '`expect.poll(fn)` retries a function returning a value (intervals 100, 250, 500, 1000 ms; default 5s). `expect(async () => {...}).toPass()` retries a block (default timeout 0 = until the test times out; set one).',
-    'Spinners and async data: assert the final state (`toBeVisible` on the result, `toBeHidden` on the loader); use `page.waitForResponse` only when you need the response itself.',
-    '`page.waitForTimeout()` is for debugging only: too short = flaky, too long = slow. `networkidle` is discouraged. Wait for a condition, never for a clock.',
+    '`expect.poll(fn)` repeats a function until its value passes (gaps 100, 250, 500, 1000 ms; limit 5 s). `expect(async () => {...}).toPass()` repeats a block (default limit 0 = until the test times out, so set one).',
+    'Spinners and loading data: check the final result (`toBeVisible` on the result, `toBeHidden` on the loader). Use `page.waitForResponse` only when you need the response itself.',
+    '`page.waitForTimeout()` is for debugging only: too short = random failures, too long = slow. `networkidle` is not recommended. Wait for a condition, never for a clock.',
   ],
   sections: [
     {
       heading: 'Why waiting is the hard part of UI automation',
-      body: `**Intuition:** your test and the web app are two runners on separate tracks. The test runs as fast as the CPU allows; the app waits for servers, animations and JavaScript. A test that checks something before the app has finished is like a waiter clearing a plate before the guest has eaten: wrong, even though both did their job.
+      body: `**Example:** \`await expect(page.locator('#finish')).toBeVisible()\` → Playwright keeps checking until the result shows. It moves on the moment it appears.
 
-In manual testing you wait automatically: you see the spinner and do not click until it disappears. Automation must express that patience **as conditions**, never as fixed pauses.
+Your test and the web app run at different speeds. The test runs as fast as the computer allows. The app waits for servers, animations and JavaScript. If the test checks too early, it fails, even though the app is fine.
+
+A manual tester waits without thinking. You see the spinner, so you do not click yet. Automation must wait in the same way: **for a condition** (something becoming true), never for a fixed number of seconds.
 
 Three ways to wait, from worst to best:
 
 | Approach | Example | Problem |
 |---|---|---|
-| Fixed sleep | \`await page.waitForTimeout(3000)\` | Too short on a slow CI machine (flaky), too long on a fast one (slow) |
-| Manual polling | \`while (!(await loc.isVisible())) {...}\` | Reinvents what the framework already does, usually without a timeout |
-| Condition with auto-retry | \`await expect(loc).toBeVisible()\` | Waits exactly as long as needed, up to a bounded timeout |
+| Fixed sleep | \`await page.waitForTimeout(3000)\` | Too short on a slow CI machine (fails), too long on a fast one (slow) |
+| Home-made loop | \`while (!(await loc.isVisible())) {...}\` | Rebuilds what Playwright already does, usually with no time limit |
+| Condition, checked again and again | \`await expect(loc).toBeVisible()\` | Waits exactly as long as needed, up to a bounded timeout |
 
-Playwright gives you two built-in waiting mechanisms:
-1. **Auto-waiting before actions** (actionability checks): the click waits until the element can really be clicked.
-2. **Web-first assertions**: \`expect(locator)\` matchers that retry until the page reaches the expected state.
+Playwright has two built-in ways to wait:
+1. **Auto-waiting before actions.** A click waits until the element can really be clicked.
+2. **Web-first assertions.** An \`expect(locator)\` check keeps trying until the page shows what you expect.
 
-Between them, almost every test can be written without a single explicit wait.
+With these two, almost every test needs no extra wait at all.
 
-**Worked example:** on the-internet \`/dynamic_loading/1\`, clicking Start shows "Loading..." for about 5 seconds, then reveals "Hello World!". A \`waitForTimeout(3000)\` fails every time; \`waitForTimeout(6000)\` passes but wastes a second per run and fails when the server is slow. The assertion \`await expect(page.locator('#finish')).toBeVisible()\` passes the moment the result is shown... except the default expect timeout is **5s**, the same as the page's delay, so this one needs \`{ timeout: 10_000 }\`. Knowing your timeouts is part of waiting correctly. (A subtle trap: on this page \`#finish\` is in the DOM from the start, just hidden, so \`toHaveText('Hello World!')\` alone would pass immediately. Visibility is the real signal here.)`,
+**Practice page:** on the-internet \`/dynamic_loading/1\`, clicking Start shows "Loading..." for about 5 seconds. Then "Hello World!" appears.
+- \`waitForTimeout(3000)\` fails every time.
+- \`waitForTimeout(6000)\` passes, but wastes time. It still fails when the server is slow.
+- \`await expect(page.locator('#finish')).toBeVisible()\` passes the moment the text shows.
+
+One catch: an \`expect\` check waits only **5 seconds** by default. This page also needs about 5 seconds. So give this check more time: \`{ timeout: 10_000 }\`.
+
+**Watch out:** on this page, \`#finish\` is in the HTML from the start, just hidden. So \`toHaveText('Hello World!')\` alone passes too early. Check visibility first.
+
+**Why testers care:** fixed sleeps are the top cause of **flaky tests**. A flaky test sometimes passes and sometimes fails, with no code change.`,
       diagram: `  time --->   0s        1s        2s        3s        4s        5s    6s
   app:        [click Start][ Loading... spinner ................ ][Hello]
   sleep(3000) ------------------------> check: FAIL (still loading)
@@ -61,22 +72,24 @@ Between them, almost every test can be written without a single explicit wait.
   expect(finish).toBeVisible({ timeout: 10_000 })
               retry . . . . . . . . . . . . . . . . . . . . . . . . -> PASS at ~5s`,
       keyPoints: [
-        'Wait for conditions, never for the clock.',
+        'Wait for a condition, never for a fixed time.',
         'Auto-waiting covers actions; web-first assertions cover checks.',
-        'Know the timeouts: a correct wait can still fail if the limit is too low.',
+        'Know the time limits: a correct wait still fails if the limit is too short.',
       ],
       source: 'Playwright docs — Auto-waiting; Checkly — Dealing with waits and timeouts',
     },
     {
       heading: 'Auto-waiting and actionability checks',
-      body: `**Intuition:** before pressing a button, a careful person checks that it is there, not moving, not hidden behind a popup and not greyed out. Playwright does exactly these checks, and which ones depends on the action.
+      body: `**Example:** \`await page.getByRole('button', { name: 'Enable' }).click()\` → Playwright waits until the button is visible, not moving, enabled and not covered. Then it clicks.
+
+**Auto-waiting** means Playwright waits until the element is ready before it acts. A careful person does the same. They check the button is there, still, not behind a popup and not greyed out. These checks are called **actionability checks**. Which checks run depends on the action.
 
 **The five checks:**
-- **Visible**: non-empty bounding box and not \`visibility:hidden\`. \`display:none\` and zero-size elements are not visible; **\`opacity:0\` counts as visible**.
-- **Stable**: same bounding box for at least two consecutive animation frames (not animating).
-- **Receives events**: the element is the hit target at the click point; no overlay, toast or cookie banner on top.
-- **Enabled**: not a disabled \`button\`/\`input\`/\`select\`/\`textarea\`/\`option\`/\`optgroup\`, not inside a disabled \`fieldset\`, not under \`aria-disabled="true"\`.
-- **Editable**: enabled and not \`readonly\` / \`aria-readonly="true"\`.
+- **Visible:** the element has a size and is not hidden. \`display:none\` is not visible. But **\`opacity:0\` counts as visible**.
+- **Stable:** it is not moving (not animating).
+- **Receives events:** nothing covers it. No popup, toast or cookie banner sits on top.
+- **Enabled:** it is not disabled.
+- **Editable:** it is enabled and not read-only.
 
 **Which action waits for what** (from the official table):
 
@@ -92,13 +105,15 @@ Between them, almost every test can be written without a single explicit wait.
 | \`scrollIntoViewIfNeeded\` | - | Yes | - | - | - |
 | \`press\`, \`pressSequentially\`, \`focus\`, \`blur\`, \`dispatchEvent\`, \`setInputFiles\` | - | - | - | - | - |
 
-If a check fails, Playwright **retries** (re-resolving the locator each time) until the action timeout. There is **no default action timeout**, so in practice the 30s test timeout ends it, and the error lists the last failing reason, for example "element is not enabled" or "\`<div class="overlay">\` intercepts pointer events".
+If a check fails, Playwright tries again. It finds the element fresh each time. Actions have **no time limit of their own**. So in practice the 30 second test timeout stops them. The error then shows the last reason, like "element is not enabled".
 
-\`{ force: true }\` skips the non-essential checks. Use it rarely and never to hide an overlay a real user would hit.
+\`{ force: true }\` skips these checks. Use it rarely. Never use it to get past a banner a real user would hit.
 
-**Important limitation:** auto-waiting answers "can I act on it?", not "is the app finished?". A button can be visible and enabled while the data behind it is still loading. That is what assertions are for.
+**Watch out:** auto-waiting answers "can I act on it?". It does not answer "has the app finished?". A button can be ready while its data is still loading. That is what assertions are for.
 
-**In interviews, say this:** "Before a click Playwright checks visible, stable, receives events and enabled; for fill it checks visible, enabled and editable. It retries until the timeout, so I do not need explicit waits before actions."`,
+**In an interview, say:** "Before a click, Playwright checks visible, stable, receives events and enabled. For fill, it checks visible, enabled and editable. It keeps trying, so I add no waits before actions."
+
+**Why testers care:** you delete most sleeps, and the error message tells you exactly why a click failed.`,
       code: [
         {
           language: 'typescript',
@@ -127,20 +142,22 @@ test('an action error tells you which check failed', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Five checks: visible, stable, receives events, enabled, editable; the set depends on the action.',
+        'Five checks: visible, stable, receives events, enabled, editable. Each action uses some of them.',
         'opacity:0 counts as visible; display:none does not.',
-        'No default action timeout; the test timeout bounds it.',
-        'Actionable is not the same as "app finished": assert outcomes.',
+        'Actions have no time limit of their own; the test timeout stops them.',
+        '"Ready to click" is not "app finished": check the result with expect.',
       ],
       source: 'Playwright docs — Auto-waiting (actionability checks table)',
     },
     {
       heading: 'Web-first assertions: the catalog',
-      body: `**Intuition:** a web-first assertion is a question you keep asking until you get the right answer or run out of patience: "Is the badge showing 1 yet? ... yet? ... yes." Each retry **re-queries the live page**, so it sees changes that happen after the assertion started.
+      body: `**Example:** \`await expect(badge).toHaveText('1')\` → Playwright asks "does the badge show 1 yet?" again and again. It passes as soon as the answer is yes.
 
-They all have the shape \`await expect(locatorOrPage).matcher(...)\`, retry until the **expect timeout (5s default)**, and must be **awaited**.
+A **web-first assertion** is a check that keeps trying on the live page. Each try looks at the page again. So it sees changes that happen after the check started.
 
-**Locator assertions (retrying):**
+All of them look like \`await expect(locatorOrPage).matcher(...)\`. They keep trying for up to **5 seconds** by default (the **expect timeout**). You must always \`await\` them.
+
+**Locator checks (they keep trying):**
 
 | Group | Matchers | Typical use |
 |---|---|---|
@@ -153,16 +170,17 @@ They all have the shape \`await expect(locatorOrPage).matcher(...)\`, retry unti
 | Accessibility | \`toHaveAccessibleName\`, \`toHaveAccessibleDescription\`, \`toHaveRole\`, \`toMatchAriaSnapshot\` | a11y checks, structure snapshots |
 | Visual | \`toHaveScreenshot\` | Visual regression |
 
-**Page assertions:** \`toHaveURL\`, \`toHaveTitle\` (plus \`toHaveScreenshot\`, \`toMatchAriaSnapshot\`).
-**API response assertion:** \`await expect(response).toBeOK()\` (status 200–299).
+**Page checks:** \`toHaveURL\`, \`toHaveTitle\`.
+**API response check:** \`await expect(response).toBeOK()\` passes for status 200–299.
 
 Useful details:
-- \`toBeHidden\` passes when the element is hidden **or not in the DOM at all**, so it suits "spinner disappeared" and "row deleted".
-- \`toHaveCount(0)\` is the precise way to say "no rows".
-- \`toBeVisible({ visible: false })\` and \`toBeChecked({ checked: false })\` exist for parameterised checks.
-- Any matcher accepts \`{ timeout }\` for that call only.
+- \`toBeHidden\` passes when the element is hidden **or not on the page at all**. Use it for "spinner gone" and "row deleted".
+- \`toHaveCount(0)\` is the exact way to say "no rows".
+- Any check accepts \`{ timeout }\` to change the time limit for that one call.
 
-**In interviews, say this:** "I use web-first assertions for anything on the page because they retry against the live DOM; generic assertions only for plain values I already have."`,
+**In an interview, say:** "For anything on the page, I use web-first assertions, because they keep trying. I use plain \`expect(value)\` checks only for values I already have."
+
+**Why testers care:** one such check replaces a sleep plus a check, so tests run faster and fail less.`,
       code: [
         {
           language: 'typescript',
@@ -195,27 +213,29 @@ test('cart flow assertions', async ({ page }) => {
       ],
       keyPoints: [
         'Shape: await expect(locator | page | response).matcher().',
-        'Retries by re-querying the page until the 5s expect timeout.',
-        'toBeHidden passes for elements that are not in the DOM.',
+        'It looks at the page again and again, for up to 5 s by default.',
+        'toBeHidden also passes when the element is not on the page at all.',
       ],
       source: 'Playwright docs — Assertions; API reference LocatorAssertions and PageAssertions',
     },
     {
       heading: 'Generic vs web-first assertions (and the isVisible trap)',
-      body: `**Intuition:** a generic assertion checks a photo; a web-first assertion checks a live video. If you took the photo half a second too early, the photo will always be wrong.
+      body: `**Example:** \`expect(await loc.isVisible()).toBe(true)\` → checks once, right now, and may fail. \`await expect(loc).toBeVisible()\` → keeps checking until it is visible.
 
-| | Generic (non-retrying) | Web-first (auto-retrying) |
+A **generic assertion** like \`expect(value).toBe(x)\` checks a value once. It is like checking a photo. A web-first check watches a live video. If you took the photo half a second too early, it will always be wrong.
+
+| | Generic (checks once) | Web-first (keeps checking) |
 |---|---|---|
 | Shape | \`expect(value).toBe(x)\` | \`await expect(locator).toHaveText(x)\` |
 | Input | A value you already have | A locator / page / response |
-| Retries? | **No**, evaluated once | **Yes**, until it passes or times out |
+| Tries again? | **No**, checks once | **Yes**, until it passes or times out |
 | \`await\` | Not needed (synchronous) | **Required** |
 | Examples | \`toBe\`, \`toEqual\`, \`toContain\`, \`toHaveLength\`, \`toBeTruthy\`, \`toMatch\`, \`toBeGreaterThan\`, \`toBeCloseTo\` | \`toBeVisible\`, \`toHaveText\`, \`toHaveCount\`, \`toHaveURL\`, \`toHaveValue\` |
 | Use for | API JSON fields, computed arrays, numbers you calculated | Anything shown in the browser |
 
-**The trap pairs** (left side is flaky, right side is correct):
+**The trap pairs** (left side fails sometimes, right side is correct):
 
-| Flaky | Correct |
+| Fails sometimes | Correct |
 |---|---|
 | \`expect(await loc.isVisible()).toBe(true)\` | \`await expect(loc).toBeVisible()\` |
 | \`expect(await loc.textContent()).toBe('1')\` | \`await expect(loc).toHaveText('1')\` |
@@ -224,13 +244,15 @@ test('cart flow assertions', async ({ page }) => {
 | \`expect(await loc.isChecked()).toBeTruthy()\` | \`await expect(loc).toBeChecked()\` |
 | \`expect(await loc.inputValue()).toBe('az')\` | \`await expect(loc).toHaveValue('az')\` |
 
-Why the left side flakes: \`isVisible()\`, \`textContent()\`, \`count()\` and \`page.url()\` read the page **once, right now**. \`isVisible()\` in particular does not wait at all (its old \`timeout\` option is deprecated and ignored). Wrapping the result in \`expect\` adds no waiting.
+Why the left side fails sometimes: \`isVisible()\`, \`textContent()\`, \`count()\` and \`page.url()\` read the page **once, right now**. \`isVisible()\` does not wait at all. Putting the result inside \`expect\` adds no waiting.
 
-**\`isVisible()\` is still fine** for branching in a helper (\`if (await banner.isVisible()) await banner.getByText('Close').click()\`), as long as you accept it is a snapshot. But a test that *must* see the element should assert it.
+**\`isVisible()\` is still fine for an "if".** Example: close a banner only if it shows. But if the test *must* see the element, use \`toBeVisible()\`.
 
-**Generic assertions are still useful:** after a snapshot read that is known to be stable, e.g. sorting \`allTextContents()\` of a loaded list (assert \`toHaveCount\` first), or checking API JSON.
+**Generic assertions are still useful** for values that will not change. Examples: API JSON, or a list you read after \`toHaveCount\` passed.
 
-**Missing \`await\`** on a web-first assertion is a silent bug: the promise floats, the test can finish before it settles, and a failure may be reported late or not at all. Enable the \`@typescript-eslint/no-floating-promises\` or \`playwright/missing-playwright-await\` lint rule.`,
+**Watch out:** an \`expect(locator)\` check without \`await\` is a silent bug. The test can finish before the check runs. A lint rule like \`playwright/missing-playwright-await\` catches it.
+
+**Why testers care:** this one swap fixes many random test failures in real projects.`,
       code: [
         {
           language: 'typescript',
@@ -262,17 +284,19 @@ test('generic assertions on data you already hold', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Generic = one-time check of a value; web-first = retrying check of the live page.',
-        'isVisible/textContent/count/url are snapshots; never assert on them directly.',
-        'Always await web-first assertions; lint for floating promises.',
+        'Generic = checks a value once; web-first = keeps checking the live page.',
+        'isVisible, textContent, count and url read the page once; do not check them directly.',
+        'Always await web-first assertions; a lint rule can catch a missing await.',
       ],
       source: 'Playwright docs — Best practices (use web-first assertions); Assertions (non-retrying assertions)',
     },
     {
       heading: 'Text, count and value assertions in depth',
-      body: `**Intuition:** most bugs are "the right element shows the wrong words". Text matchers are where precision matters most.
+      body: `**Example:** \`await expect(error).toContainText('Username is required')\` → passes if the error message contains those words anywhere.
 
-**\`toHaveText\` vs \`toContainText\`:**
+Many bugs are "the right element shows the wrong words". So text checks must be exact where it matters.
+
+**\`toHaveText\` vs \`toContainText\`:** \`toHaveText\` needs the full text to match. \`toContainText\` needs only a part.
 
 | Element text | \`toHaveText('Hello')\` | \`toContainText('Hello')\` | \`toHaveText(/hello/i)\` |
 |---|---|---|---|
@@ -281,18 +305,20 @@ test('generic assertions on data you already hold', async ({ page }) => {
 | "Hello World!" | **fail** (full match) | pass (substring) | pass (regex search) |
 | "hello" | fail (case-sensitive) | fail | pass (\`i\` flag) |
 
-- Both accept \`{ ignoreCase: true }\` and \`{ useInnerText: true }\`.
-- **Arrays** compare a list of elements in order: \`await expect(page.locator('.inventory_item_name')).toHaveText(['A', 'B'])\`. It fails if the count differs, so it also covers "no extra items".
-- With an array, \`toContainText(['Backpack', 'Bike'])\` checks each element contains the corresponding substring, in order.
-- **Regex** is useful for dynamic parts: \`toHaveText(/Order #\\d+ confirmed/)\`.
+- Extra spaces at the start and end are ignored.
+- Add \`{ ignoreCase: true }\` to ignore upper and lower case.
+- **A list** checks many elements in order: \`toHaveText(['A', 'B'])\`. It fails if the number of elements differs. So it also catches extra items.
+- **A regex** (a text pattern) helps with changing parts: \`toHaveText(/Order #\\d+ confirmed/)\`.
 
-**Counts:** \`toHaveCount(n)\` retries until exactly n elements match. Use \`not.toHaveCount(0)\` to wait for "at least one" without knowing how many.
+**Counts:** \`toHaveCount(n)\` keeps trying until exactly n elements match. \`not.toHaveCount(0)\` means "at least one".
 
-**Values:** \`toHaveValue\` reads the current input/select value (not the \`value\` attribute in the HTML). \`toHaveValues(['a', 'b'])\` for multi-selects. \`toBeEmpty()\` for empty inputs or elements with no text.
+**Values:** \`toHaveValue\` reads what is in an input or dropdown right now. \`toBeEmpty()\` checks an empty input or an element with no text.
 
-**Attributes and classes:** \`toHaveAttribute('aria-expanded', 'true')\`, \`toHaveClass(/active/)\` (regex because the class list may contain more), \`toContainClass('active')\` for a single class name.
+**Attributes and classes:** \`toHaveAttribute('aria-expanded', 'true')\`. For classes, \`toHaveClass(/active/)\` uses a regex, because the element may have more classes.
 
-**Common mistake:** asserting on long full-page text (\`toHaveText\` on \`body\`). It breaks on every copy change. Assert on the smallest element that carries the meaning.`,
+**Watch out:** do not check the text of the whole page. It breaks on every wording change. Check the smallest element that holds the meaning.
+
+**Why testers care:** precise text checks catch wrong prices, wrong names and wrong error messages.`,
       code: [
         {
           language: 'typescript',
@@ -328,15 +354,17 @@ test('error message: substring vs full text vs regex', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'toHaveText = full (normalised) match; toContainText = substring; regex for dynamic parts.',
-        'Arrays compare whole lists in order, including the count.',
-        'Assert on the smallest meaningful element.',
+        'toHaveText = full text; toContainText = part of the text; regex for changing parts.',
+        'A list checks every element in order, and the count too.',
+        'Check the smallest element that holds the meaning.',
       ],
       source: 'Playwright API reference — LocatorAssertions toHaveText, toContainText, toHaveCount',
     },
     {
       heading: 'Timeouts: test, expect, action, navigation',
-      body: `**Intuition:** timeouts are nested kitchen timers. The big one (test) rings if the whole recipe takes too long; the small ones (each assertion, each action) ring if one step gets stuck.
+      body: `**Example:** \`await expect(page).toHaveURL(/inventory/, { timeout: 15_000 })\` → this one check may wait up to 15 seconds. All other checks keep the normal 5 seconds.
+
+A **timeout** is a time limit. Think of kitchen timers inside each other. The big timer (the test) rings if the whole recipe takes too long. The small timers (each check, each action) ring if one step gets stuck.
 
 | Timeout | Default | Set globally | Override locally |
 |---|---|---|---|
@@ -347,13 +375,16 @@ test('error message: substring vs full text vs regex', async ({ page }) => {
 | Global (whole run) | none | \`globalTimeout: 60 * 60 * 1000\` | – |
 | \`beforeAll\` / \`afterAll\` | 30 000 ms (own budget) | – | \`test.setTimeout()\` inside the hook |
 
-Rules of thumb:
-- Because action and navigation have **no default**, a stuck click waits until the **test** times out, and the error says "Test timeout of 30000ms exceeded" while pointing at the click. Setting \`actionTimeout\` (e.g. 10–15s) gives faster, clearer failures.
-- An assertion that times out reports "Timed out 5000ms waiting for expect(locator).toHaveText(expected)" with the actual value it last saw. Read that **actual value** before changing any timeout.
-- \`test.slow()\` is the honest way to mark a known-slow test (for example, a report export). Raising the global timeout for one slow test slows down failure feedback for all.
-- \`afterEach\` and fixture teardown share a separate window of the test timeout length.
+Simple rules:
+- Actions and page loads have **no limit of their own**. So a stuck click waits for the whole **test** timeout. The error says "Test timeout of 30000ms exceeded". Set \`actionTimeout\` (10–15 seconds) to get faster, clearer errors.
+- A failed check says "Timed out 5000ms waiting for expect(locator)...". It also shows the value it last saw. Read that **received value** before you change any timeout.
+- \`test.slow()\` marks one known-slow test. It gives that test three times the time.
 
-**Worked example:** \`performance_glitch_user\` on SauceDemo has a deliberately slow login (a few seconds). The default 5s expect usually copes; on a slow CI agent it may not. The fix is a targeted \`{ timeout: 15_000 }\` on that one \`toHaveURL\`, not a 30s global expect timeout.`,
+**Watch out:** do not raise the global limit to fix one slow test. Every real failure then takes longer to report.
+
+**Practice:** SauceDemo's \`performance_glitch_user\` logs in slowly on purpose. Give that one \`toHaveURL\` check \`{ timeout: 15_000 }\`.
+
+**Why testers care:** the right limit makes slow pages pass and broken pages fail fast with a clear message.`,
       code: [
         {
           language: 'typescript',
@@ -385,30 +416,35 @@ test('slow login user', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Test 30s, expect 5s, action and navigation none, global none.',
-        'Stuck actions surface as test timeouts unless actionTimeout is set.',
-        'Prefer targeted overrides (one call, test.slow) over raising global limits.',
+        'Defaults: test 30 s, expect 5 s; action, navigation and global have no limit.',
+        'A stuck action shows up as a test timeout unless actionTimeout is set.',
+        'Give extra time to one call or one test (test.slow), not to the whole suite.',
       ],
       source: 'Playwright docs — Timeouts',
     },
     {
       heading: 'Negation, soft assertions and custom messages',
-      body: `**Intuition:** \`.not\` asks "make sure this is NOT the case", soft assertions are a checklist that keeps going after a failed item, and custom messages are the note you leave for whoever reads the failure at 2 am.
+      body: `**Example:** \`await expect.soft(price, 'price').toHaveText('$29.99')\` → if the price is wrong, the failure is recorded. The test keeps going and checks the next field.
 
-**\`.not\`** works with every matcher and also retries: \`await expect(badge).not.toBeVisible()\` waits until the badge is gone. For disappearance, \`toBeHidden()\` reads more naturally and means the same thing. Be careful: \`await expect(error).not.toBeVisible()\` straight after a click may pass **immediately**, before the error had a chance to appear. Negative checks need a positive anchor first (assert the success state, then the absence of the error).
+**\`.not\` flips a check.** \`await expect(badge).not.toBeVisible()\` waits until the badge is gone. It keeps trying too. For "gone", \`toBeHidden()\` reads more naturally and means the same.
 
-**Soft assertions:** \`await expect.soft(loc).toHaveText('x')\` records a failure but does not stop the test. The test is still marked **failed** at the end and the report lists every soft failure. Good for checking several independent fields on one screen (name, price, description of a product). Bad for preconditions: if login failed, continuing just produces noise. Stop early when needed with \`expect(test.info().errors).toHaveLength(0)\`.
+**Watch out:** a "not" check right after a click can pass **too early**. The error may simply not have appeared yet. So first check the success state. Then check the error is absent.
 
-**Custom messages:** the second argument to \`expect\` names the check in reports: \`await expect(badge, 'cart badge after adding backpack').toHaveText('1')\`. Worth it in loops and helpers where line numbers are ambiguous.
+**Soft assertions** are checks that do not stop the test. \`expect.soft(...)\` records a failure and carries on. At the end, the test is still marked **failed**. The report lists every soft failure.
+- Good for: many separate fields on one screen, like name, price and description.
+- Bad for: steps the rest depends on, like login. If login fails, later failures are just noise.
+- To stop early: \`expect(test.info().errors).toHaveLength(0)\`.
 
-**\`expect.configure\`** creates a pre-set expect: \`const slowExpect = expect.configure({ timeout: 15_000 })\` or \`const softExpect = expect.configure({ soft: true })\`.
+**Custom messages** name a check in the report: \`await expect(badge, 'cart badge after adding backpack').toHaveText('1')\`. They help most in loops and helpers.
 
 | Feature | Syntax | Test stops on failure? |
 |---|---|---|
 | Normal | \`await expect(loc).toBeVisible()\` | Yes |
 | Negated | \`await expect(loc).not.toBeVisible()\` | Yes |
 | Soft | \`await expect.soft(loc).toBeVisible()\` | No (fails at end) |
-| With message | \`await expect(loc, 'why').toBeVisible()\` | Yes |`,
+| With message | \`await expect(loc, 'why').toBeVisible()\` | Yes |
+
+**Why testers care:** one run shows every wrong field on a screen, and the report says which check failed.`,
       code: [
         {
           language: 'typescript',
@@ -440,25 +476,27 @@ test('product details page shows correct data', async ({ page }) => {
         },
       ],
       keyPoints: [
-        '.not retries too, but negative checks need a positive anchor first.',
-        'Soft assertions continue the test and fail it at the end.',
-        'Custom messages and expect.configure make failures readable.',
+        '.not retries too, but check the success state before a "not" check.',
+        'Soft assertions let the test continue, then fail it at the end.',
+        'Custom messages make failures easy to read in the report.',
       ],
       source: 'Playwright docs — Assertions: negating matchers, soft assertions, custom expect message, expect.configure',
     },
     {
       heading: 'expect.poll and toPass: retrying things that are not locators',
-      body: `**Intuition:** web-first assertions only retry page state. Sometimes the thing you wait for lives elsewhere: an API status, a value in local storage, a file being written. \`expect.poll\` and \`toPass\` give the same "keep asking" behaviour to any code.
+      body: `**Example:** \`await expect.poll(() => getStatus()).toBe('SHIPPED')\` → Playwright calls \`getStatus()\` again and again until it returns "SHIPPED".
 
-**\`expect.poll(fn)\`** calls a function repeatedly and applies a generic matcher to its **return value** until it passes.
-- Default timeout: the expect timeout (5s); \`timeout: 0\` disables it.
-- Default intervals: \`[100, 250, 500, 1000]\` ms (then 1000 ms repeated).
-- Example: wait until an order created in the UI shows status "SHIPPED" in the API.
+Web-first assertions only re-check things on the page. Sometimes you wait for something else: an API status, a saved value, a file. \`expect.poll\` and \`toPass\` give the same "keep asking" power to any code.
 
-**\`expect(async () => { ... }).toPass()\`** retries a **whole block** (which can contain several assertions and even actions) until it runs without throwing.
-- Default intervals: \`[100, 250, 500, 1000]\` ms.
-- Default timeout: **0, meaning no own limit**: it keeps retrying until the **test** timeout. It does **not** use the expect timeout. Always pass \`{ timeout }\`.
-- Example: click "Refresh" and check the status, repeating until it changes.
+**\`expect.poll(fn)\`** calls your function again and again. It checks the **returned value** each time, until the check passes.
+- Time limit: the expect timeout (5 seconds) by default.
+- Gaps between tries: 100, 250, 500, then 1000 ms (repeated).
+- Use it for: "the order shows SHIPPED in the API".
+
+**\`expect(async () => { ... }).toPass()\`** repeats a **whole block** of steps until it runs with no error.
+- Gaps between tries: the same, 100, 250, 500, 1000 ms.
+- Time limit: **0 by default, which means no limit of its own.** It keeps trying until the **test** timeout. It does **not** use the 5 second expect timeout. So always pass \`{ timeout }\`.
+- Use it for: click "Refresh", check the status, repeat until it changes.
 
 | Need | Tool |
 |---|---|
@@ -466,7 +504,9 @@ test('product details page shows correct data', async ({ page }) => {
 | A single value from a function (API, storage, file) | \`expect.poll(() => value).toBe(...)\` |
 | A multi-step block that may need repeating | \`expect(async () => {...}).toPass({ timeout })\` |
 
-**Caution:** \`toPass\` can hide real problems if the block contains actions with side effects (clicking "Add" ten times adds ten items). Keep it idempotent, and prefer web-first assertions whenever the condition is visible on the page.`,
+**Watch out:** \`toPass\` repeats every step in the block. If the block clicks "Add", ten tries add ten items. Only put steps inside that are safe to repeat (like Refresh). If the condition is visible on the page, use a normal web-first assertion instead.
+
+**Why testers care:** you can test slow background jobs, like order processing, without guessing sleeps.`,
       code: [
         {
           language: 'typescript',
@@ -503,15 +543,17 @@ test('refresh until the status updates', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'expect.poll retries a value-returning function; default timeout = expect timeout.',
-        'toPass retries a block; default timeout 0 = until the test times out, so set one.',
-        'Use them only when the condition is not a locator state.',
+        'expect.poll repeats a function and checks its value; its limit is the expect timeout.',
+        'toPass repeats a block; its default limit is 0 (until the test times out), so set one.',
+        'Use them only when the thing you wait for is not on the page.',
       ],
       source: 'Playwright docs — Assertions: expect.poll, expect.toPass',
     },
     {
       heading: 'Dynamic elements: spinners, async data and network waits',
-      body: `**Intuition:** wait for the thing the user waits for. A user does not wait for "the spinner to disappear"; they wait for **their results**. Assert the result and the spinner takes care of itself.
+      body: `**Example:** \`await expect(page.locator('#finish')).toHaveText('Hello World!', { timeout: 10_000 })\` → Playwright waits through the loading spinner. It passes when the result appears.
+
+Wait for what the user waits for. A user does not wait for "the spinner to go away". They wait for **their results**. Check the result, and the spinner takes care of itself.
 
 **Patterns:**
 
@@ -525,15 +567,16 @@ test('refresh until the status updates', async ({ page }) => {
 | No assertion makes sense, only "be ready" | \`await locator.waitFor()\` (state \`visible\` by default; also \`attached\`, \`detached\`, \`hidden\`) |
 | A JS condition in the page | \`await page.waitForFunction(() => window.appReady === true)\` |
 
-**\`waitForResponse\`** follows the same listen-trigger-consume rule as popups: create the promise **before** the click. It is the right tool when you assert on the response (status, body), and a useful extra guard when the UI gives no signal. The network topic covers mocking and response checks in depth.
+**\`waitForResponse\`** waits for a server answer. It follows the same rule as new tabs: start waiting **before** the click, then \`await\` after. Use it when you need to check the response itself (status, body). The network topic covers this in depth.
 
 **What not to do:**
-- \`page.waitForTimeout(n)\`: the docs say it is for debugging only; tests with timers are flaky.
-- \`waitForLoadState('networkidle')\`: discouraged; long-polling, analytics and websockets keep it from settling, and SPAs often render after it.
-- \`page.waitForSelector('.x')\` as a habit: works, but a web-first assertion says the same thing and reads as a check.
-- Loops around \`isVisible()\` with \`waitForTimeout\` inside: a hand-made, worse \`toBeVisible\`.
+- \`page.waitForTimeout(n)\`: the docs say it is for debugging only. Tests with fixed sleeps fail at random.
+- \`waitForLoadState('networkidle')\`: not recommended. Background traffic can stop it from ever finishing.
+- Loops around \`isVisible()\` with sleeps inside: a home-made, worse \`toBeVisible\`.
 
-**Worked example:** the-internet \`/dynamic_loading/2\` adds \`#finish\` to the DOM only after ~5 seconds. \`page.locator('#finish').textContent()\` right after Start returns nothing (or times out waiting for the element), while \`toHaveText('Hello World!', { timeout: 10_000 })\` passes as soon as it appears.`,
+**Practice page:** the-internet \`/dynamic_loading/2\` adds \`#finish\` to the page only after about 5 seconds. \`toHaveText('Hello World!', { timeout: 10_000 })\` passes as soon as it appears.
+
+**Why testers care:** loading screens are everywhere, and these patterns test them without random failures.`,
       code: [
         {
           language: 'typescript',
@@ -564,36 +607,46 @@ test('wait for a specific API response when you need its data', async ({ page })
         },
       ],
       keyPoints: [
-        'Assert the final state the user cares about; loaders resolve themselves.',
-        'waitForResponse: create the promise before the trigger.',
-        'locator.waitFor() when you need readiness but no assertion.',
+        'Check the final result the user cares about; spinners take care of themselves.',
+        'waitForResponse: start waiting before the click, await after.',
+        'Use locator.waitFor() when you need "ready" but no check.',
       ],
       source: 'Playwright docs — Assertions; API reference Page.waitForResponse, Locator.waitFor, Page.waitForTimeout',
     },
     {
       heading: 'Choosing the right wait: a decision guide',
-      body: `**Intuition:** before writing any wait, ask "what would a human look at to know it is ready?". Then turn that into a condition.
+      body: `**Example:** a manual tester knows the page is ready when "It's gone!" shows. So the test says \`await expect(message).toHaveText("It's gone!")\`.
 
-Most flaky Playwright tests in real projects come from four habits: hard sleeps, snapshot reads used as assertions, missing \`await\`, and waiting for the wrong signal (network idle instead of UI). The diagram below is the habit that replaces them.
+Before writing any wait, ask: "what would a person look at to know it is ready?". Then turn that into a check.
 
-**Translating Selenium habits** (many interviewers ask this):
+Most randomly failing tests come from four habits:
+- fixed sleeps,
+- one-time reads used as checks,
+- a missing \`await\`,
+- waiting for the wrong signal (network quiet instead of the screen).
+
+The diagram below shows what to use instead.
+
+**Selenium habits in Playwright** (interviewers often ask this):
 
 | Selenium | Playwright equivalent |
 |---|---|
-| Implicit wait (global find timeout) | Not needed: locators re-resolve and actions auto-wait |
+| Implicit wait (global find timeout) | Not needed: locators find the element fresh each time, and actions auto-wait |
 | Explicit wait \`WebDriverWait(...).until(visibilityOf(el))\` | \`await expect(loc).toBeVisible()\` |
 | \`elementToBeClickable\` | Built into \`click()\` (actionability checks) |
 | \`Thread.sleep(3000)\` | Nothing. Replace with a condition |
-| \`StaleElementReferenceException\` retries | Not applicable: locators are lazy and re-query each time |
-| FluentWait with polling | \`expect.poll\` / \`toPass\` with \`intervals\` |
+| Retrying on \`StaleElementReferenceException\` | Not needed: a locator looks up the element again each time |
+| FluentWait (check every few ms) | \`expect.poll\` / \`toPass\` with \`intervals\` |
 
-**Code-review checklist for waits:**
-1. Any \`waitForTimeout\`? Replace with the condition it was waiting for.
-2. Any \`expect(await ...is*()/textContent()/count())\`? Convert to a web-first matcher.
-3. Every \`expect(locator)\` and every action \`await\`ed?
-4. Negative assertions preceded by a positive anchor?
-5. Timeouts raised globally to fix one test? Move the override to that call or use \`test.slow()\`.
-6. \`networkidle\` anywhere? Replace with a UI or response condition.`,
+**Code review checklist for waits:**
+1. Any \`waitForTimeout\`? Replace it with the condition it was waiting for.
+2. Any \`expect(await ...isVisible() / textContent() / count())\`? Use a web-first check instead.
+3. Is every \`expect(locator)\` and every action awaited?
+4. Does every "not" check come after a success check?
+5. Was a global timeout raised for one test? Move it to that call, or use \`test.slow()\`.
+6. Any \`networkidle\`? Replace it with a screen or response check.
+
+**Why testers care:** this checklist turns a randomly failing suite into a reliable one, one review at a time.`,
       diagram: `  What are you waiting for?
         |
         +-- to ACT on an element ------------> just act (auto-waiting)
@@ -637,8 +690,8 @@ test('dynamic controls: remove and re-add the checkbox', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Ask what a human looks at, then assert that.',
-        'Selenium explicit waits map to web-first assertions; implicit waits are unnecessary.',
+        'Ask what a person looks at, then check that.',
+        'Selenium explicit waits become web-first assertions; implicit waits are not needed.',
         'Use the checklist in code review to remove flaky waits.',
       ],
       source: 'Playwright docs — Best practices; Checkly — Auto-waiting methods',
@@ -649,8 +702,8 @@ test('dynamic controls: remove and re-add the checkbox', async ({ page }) => {
       id: 'pw-assertions-waiting-cc-1',
       title: 'Hard sleeps and isVisible() used as an assertion',
       context:
-        'This test for the-internet dynamic_loading/1 passes on the author\'s laptop and fails in CI roughly once in every four runs. It also takes 8 seconds even when the page is fast.',
-      task: 'Remove every fixed wait and snapshot assertion so the test waits exactly as long as needed, gives a clear failure message, and still fails if "Hello World!" never appears.',
+        'This test for the-internet dynamic_loading/1 passes on the author\'s laptop. In CI it fails about once in four runs. It also takes 8 seconds, even when the page is fast.',
+      task: 'Remove every fixed sleep and every one-time check. The test should wait only as long as needed. It should give a clear failure message. It must still fail if "Hello World!" never appears.',
       starter: {
         language: 'typescript',
         title: 'dynamic-loading.spec.ts (flaky)',
@@ -674,9 +727,9 @@ test('shows Hello World after loading', async ({ page }) => {
 });`,
       },
       hints: [
-        'Which lines read the page once and which ones keep retrying?',
-        'The page takes about 5 seconds, and the default expect timeout is also 5 seconds. Where should a longer timeout go?',
-        'The first sleep waits for nothing in particular: what does goto already wait for?',
+        'Which lines read the page once, and which ones keep trying?',
+        'The page takes about 5 seconds. The default expect timeout is also 5 seconds. Where should a longer limit go?',
+        'The first sleep waits for nothing special. What does goto already wait for?',
       ],
       solution: {
         language: 'typescript',
@@ -699,24 +752,24 @@ test('shows Hello World after loading', async ({ page }) => {
       },
       explanation: `Each change and why:
 
-1. **First \`waitForTimeout(2000)\` removed.** \`goto\` already waits for the \`load\` event, and \`click\` auto-waits for the button to be actionable. The sleep waited for nothing.
-2. **\`page.click('#start button')\` → \`getByRole('button', { name: 'Start' })\`.** User-facing locator, locator-based action.
-3. **\`waitForTimeout(6000)\` removed.** It was a guess: on a slow CI agent 6s is not enough (the flaky 1 in 4), on a fast one it wastes time. The assertion now waits only as long as needed.
-4. **\`isHidden()\` / \`isVisible()\` + \`toBeTruthy\`/\`toBe(true)\` → \`toBeHidden()\` / \`toBeVisible()\`.** \`is*()\` methods return immediately and never retry, so they were only correct because of the sleep before them.
-5. **\`textContent()\` + \`toBe\` → \`toHaveText\`.** Retries, normalises whitespace and prints expected vs actual on failure.
-6. **Visibility first, text second.** On this page \`#finish\` exists (hidden) from the start, so \`toHaveText\` alone would pass before loading ends; \`toBeVisible\` is the real readiness signal.
-7. **Timeout placed where it belongs.** Only this assertion knows the page is slow, so it gets \`{ timeout: 10_000 }\`; the global expect timeout stays at 5s.
+1. **First \`waitForTimeout(2000)\` removed.** \`goto\` already waits for the page to load. \`click\` already waits for the button to be ready. The sleep waited for nothing.
+2. **\`page.click('#start button')\` → \`getByRole('button', { name: 'Start' })\`.** A locator based on what the user sees.
+3. **\`waitForTimeout(6000)\` removed.** It was a guess. On a slow CI machine 6 seconds is not enough (the 1-in-4 failure). On a fast one it wastes time. The check now waits only as long as needed.
+4. **\`isHidden()\` / \`isVisible()\` + \`toBeTruthy\` / \`toBe(true)\` → \`toBeHidden()\` / \`toBeVisible()\`.** The \`is...()\` methods answer at once and never try again. They only worked because of the sleep before them.
+5. **\`textContent()\` + \`toBe\` → \`toHaveText\`.** It keeps trying, ignores extra spaces and shows expected vs received on failure.
+6. **Visibility first, text second.** \`#finish\` is on the page (hidden) from the start. So \`toHaveText\` alone would pass before loading ends. \`toBeVisible\` is the real "ready" signal.
+7. **Extra time only where needed.** Only this check knows the page is slow. So it gets \`{ timeout: 10_000 }\`. The normal 5 second limit stays for all other checks.
 8. **Custom message** names the check in the report.
 
-Result: the test takes about 5s instead of 8s+ and only fails when the text truly never appears.`,
+Result: the test takes about 5 seconds instead of 8+. It fails only when the text truly never appears.`,
       followUps: [
         {
           q: 'Why not just set expect.timeout to 10 seconds in the config?',
-          a: 'It would make every failing assertion in the suite take twice as long to report, and hide genuine slowness regressions elsewhere. Timeouts should reflect known behaviour: this one page is slow by design, so the override lives on this one call. If many pages are slow in a given environment, that is a config-per-project decision, not a fix for one test.',
+          a: 'Then every failing check in the suite takes twice as long to report. It can also hide real slowness on other pages. Only this one page is slow by design. So the extra time belongs on this one call. If many pages are slow in one environment, change the config for that project instead.',
         },
         {
           q: 'Why not just assert toHaveText and drop toBeVisible?',
-          a: 'On dynamic_loading/1 the #finish element is in the DOM from the start, only hidden, and toHaveText reads its text even when hidden. So toHaveText alone passes immediately, before loading ends, and the test would not notice a broken loader. The visibility assertion is what proves the user can see the result; the text check then proves it is the right result.',
+          a: 'On dynamic_loading/1, #finish is in the HTML from the start, just hidden. toHaveText reads text even when it is hidden. So toHaveText alone passes at once, before loading ends. The test would miss a broken loader. The visibility check proves the user can see the result. The text check then proves it is the right result.',
         },
       ],
     },
@@ -724,8 +777,8 @@ Result: the test takes about 5s instead of 8s+ and only fails when the text trul
       id: 'pw-assertions-waiting-cc-2',
       title: 'Generic assertions on live page state',
       context:
-        'A SauceDemo cart test fails intermittently with "Expected: 2, Received: 1" and sometimes passes even when the badge is wrong. A reviewer suspects missing awaits and snapshot reads.',
-      task: 'Rewrite the assertions so every page check retries, nothing floats, and the test fails clearly if the cart badge or URL is wrong.',
+        'A SauceDemo cart test sometimes fails with "Expected: 2, Received: 1". Sometimes it passes even when the badge is wrong. A reviewer suspects missing awaits and one-time reads.',
+      task: 'Rewrite the checks so every page check keeps trying and every check is awaited. The test must fail clearly if the cart badge or URL is wrong.',
       starter: {
         language: 'typescript',
         title: 'cart.spec.ts (unreliable)',
@@ -752,8 +805,8 @@ test('two items in cart', async ({ page }) => {
       },
       hints: [
         'Find the four places where a value is read once and then compared.',
-        'Which assertion returns a Promise that nobody awaits?',
-        'There are matchers for URL, text, count and visibility that accept the locator or page directly.',
+        'Which check returns a Promise that nobody awaits?',
+        'There are checks for URL, text, count and visibility that take the locator or page directly.',
       ],
       solution: {
         language: 'typescript',
@@ -782,19 +835,19 @@ test('two items in cart', async ({ page }) => {
       },
       explanation: `Fixes:
 
-1. **\`expect(page.url()).toContain(...)\` → \`await expect(page).toHaveURL(...)\`.** \`page.url()\` is read once, possibly before the redirect finishes.
-2. **\`textContent()\` + \`Number()\` + \`toBe(2)\` → \`toHaveText('2')\`.** The badge updates asynchronously after the second click; reading it once gave "1" on fast runs. The retrying matcher waits for "2".
-3. **\`count()\` + \`toEqual(2)\` → \`toHaveText([...])\` on item names.** Retries until the cart page shows exactly these two items in order, which is stronger than a count (it catches the wrong product too).
-4. **Floating \`expect(...).toBeVisible()\` awaited.** Without \`await\`, the test could finish before the assertion ran, so it sometimes "passed" with a broken checkout button.
-5. **Added a URL assertion for the cart page** as a positive anchor before checking its content, and a custom message on the badge check.`,
+1. **\`expect(page.url()).toContain(...)\` → \`await expect(page).toHaveURL(...)\`.** \`page.url()\` is read once, maybe before the page has changed.
+2. **\`textContent()\` + \`Number()\` + \`toBe(2)\` → \`toHaveText('2')\`.** The badge updates a moment after the second click. Reading it once gave "1" on fast runs. The new check keeps trying until it sees "2".
+3. **\`count()\` + \`toEqual(2)\` → \`toHaveText([...])\` on item names.** It keeps trying until the cart shows exactly these two items, in order. That is stronger than a count. It also catches a wrong product.
+4. **The missing \`await\` added to \`expect(...).toBeVisible()\`.** Without it, the test could finish before the check ran. So it sometimes "passed" with a broken checkout button.
+5. **A URL check for the cart page was added** before checking its content. The badge check also got a custom message.`,
       followUps: [
         {
           q: 'How would you catch missing awaits automatically across the suite?',
-          a: 'Enable TypeScript-aware linting: `@typescript-eslint/no-floating-promises` flags any un-awaited promise, and eslint-plugin-playwright has `missing-playwright-await` specifically for expect and actions. Run the linter in CI so the PR fails before review.',
+          a: 'Turn on lint rules. `@typescript-eslint/no-floating-promises` flags any promise without await. eslint-plugin-playwright has `missing-playwright-await` just for expect and actions. Run the linter in CI, so the pull request fails before review.',
         },
         {
           q: 'When is reading count() and using a generic assertion acceptable?',
-          a: 'When you need the number for further logic and the list is already known to be stable, for example after a web-first `toHaveCount` or `toHaveText` passed, or on a static page. The rule is: wait with a web-first assertion first, snapshot second.',
+          a: 'When you need the number for more logic, and the list will not change any more. For example, after `toHaveCount` or `toHaveText` already passed, or on a page that never changes. The rule: first wait with a web-first check, then read once.',
         },
       ],
     },
@@ -803,49 +856,49 @@ test('two items in cart', async ({ page }) => {
     {
       id: 'pw-assertions-waiting-iq-1',
       difficulty: 'medium',
-      question: 'Explain auto-waiting in Playwright. What exactly does it check before a click, and how is this different from implicit and explicit waits in Selenium?',
+      question: 'Explain auto-waiting in Playwright. What does it check before a click, and how is it different from implicit and explicit waits in Selenium?',
       whatInterviewerLooksFor: [
-        'Names the actionability checks correctly',
-        'Knows checks differ per action (fill vs click)',
-        'Knows the timeout behaviour (no default action timeout)',
-        'Separates action auto-waiting from assertion retrying',
-        'Maps Selenium waits to Playwright concepts accurately',
+        'Names the readiness (actionability) checks correctly',
+        'Knows the checks differ per action (fill vs click)',
+        'Knows actions have no time limit of their own',
+        'Separates action waiting from assertion retrying',
+        'Maps Selenium waits to Playwright correctly',
       ],
-      modelAnswer: `**Auto-waiting** means every action waits until the element is ready for that action, retrying until a timeout.
+      modelAnswer: `**Auto-waiting** means every action waits until the element is ready for that action. It keeps trying until a time limit.
 
-**Before a click** Playwright checks that the element:
-1. **Visible**: has a non-empty box and is not \`visibility:hidden\` (\`opacity:0\` still counts as visible).
-2. **Stable**: not animating; same bounding box for two animation frames.
-3. **Receives events**: is the actual hit target, not covered by an overlay.
-4. **Enabled**: not \`disabled\`, not in a disabled fieldset, not \`aria-disabled\`.
+**Before a click**, Playwright checks that the element is:
+1. **Visible:** it has a size and is not hidden. (\`opacity:0\` still counts as visible.)
+2. **Stable:** it is not moving or animating.
+3. **Receives events:** nothing covers it, like a banner or popup.
+4. **Enabled:** it is not disabled.
 
-It also scrolls the element into view. Other actions use different sets: \`fill\` checks visible, enabled and **editable**; \`hover\` and \`dragTo\` skip enabled; \`press\` and \`setInputFiles\` check nothing.
+It also scrolls the element into view. Other actions use other checks. \`fill\` checks visible, enabled and **editable**. \`press\` and \`setInputFiles\` check nothing.
 
-**Timeouts:** there is no default action timeout, so a stuck click waits until the 30s test timeout unless \`actionTimeout\` is configured. The error log shows which check was failing, for example "element intercepts pointer events".
+**Time limit:** actions have no limit of their own. So a stuck click waits for the whole 30 second test timeout, unless \`actionTimeout\` is set. The error shows which check kept failing.
 
-**Assertions are the second half:** web-first assertions like \`await expect(loc).toHaveText('2')\` retry for up to 5s by default. Auto-waiting says "I can act"; assertions say "the app reached the expected state".
+**Assertions are the other half.** \`await expect(loc).toHaveText('2')\` keeps trying for up to 5 seconds. Auto-waiting says "I can act". Assertions say "the app shows the right result".
 
 **Compared with Selenium:**
-- **Implicit wait** only waits for an element to exist when finding it. Playwright locators are lazy and re-resolve on every action, so there is no global find timeout to tune.
-- **Explicit waits** (\`WebDriverWait\` + \`ExpectedConditions\`) are written by hand per step. In Playwright, \`elementToBeClickable\` is built into \`click()\`, and \`visibilityOf\` becomes \`await expect(loc).toBeVisible()\`.
-- **StaleElementReferenceException** does not happen with locators because nothing is cached.
+- **Implicit wait** only waits for an element to exist. Playwright locators find the element fresh on every action. There is no global wait to tune.
+- **Explicit waits** are written by hand for each step. In Playwright, "clickable" is built into \`click()\`. \`visibilityOf\` becomes \`await expect(loc).toBeVisible()\`.
+- **StaleElementReferenceException** does not happen, because a locator stores nothing.
 
-So in Playwright I write no waits before actions, and I express every expectation as a web-first assertion.`,
+So I write no waits before actions, and every expectation is a web-first assertion.`,
       followUps: [
         {
           q: 'Does auto-waiting guarantee the data on the page is loaded?',
-          a: 'No. It only guarantees the element can be acted on. A Submit button may be visible and enabled while the form is still fetching default values. If the test depends on data, assert on that data first with a web-first assertion, such as the expected value in a field or the row count in a table.',
+          a: 'No. It only means the element can be used. A Submit button can be visible and enabled while the form is still loading its values. If the test needs the data, check the data first. For example, check the value in a field or the number of rows in a table.',
         },
         {
           q: 'Why would you set actionTimeout if there is no default?',
-          a: 'To fail faster and more clearly. Without it, a click on a permanently covered button burns the full 30s test timeout and the error is reported as a test timeout. With actionTimeout around 10–15s, the failure points to the click and leaves time budget for useful teardown and traces.',
+          a: 'To fail faster and more clearly. Without it, a click on a covered button uses the full 30 seconds. The error is then reported as a test timeout. With actionTimeout at 10–15 seconds, the error points at the click. Time is also left for clean-up and saving the trace.',
         },
       ],
       pitfalls: [
-        'Listing "present in DOM" as the only check',
-        'Saying Playwright has an implicit wait setting to configure',
-        'Claiming actions verify the result of the action',
-        'Thinking opacity:0 elements are treated as hidden',
+        'Saying "present in the page" is the only check',
+        'Saying Playwright has an implicit wait setting',
+        'Saying actions check the result of the action',
+        'Thinking opacity:0 elements count as hidden',
       ],
     },
     {
@@ -853,39 +906,39 @@ So in Playwright I write no waits before actions, and I express every expectatio
       difficulty: 'easy',
       question: 'What is the difference between expect(await locator.isVisible()).toBe(true) and await expect(locator).toBeVisible()? Which do you use?',
       whatInterviewerLooksFor: [
-        'Knows isVisible returns immediately without waiting',
-        'Explains retrying web-first assertions',
-        'Recognises the flakiness pattern',
-        'Knows when isVisible is still acceptable',
+        'Knows isVisible answers at once without waiting',
+        'Explains checks that keep trying (web-first assertions)',
+        'Sees why the first one fails at random',
+        'Knows when isVisible is still fine',
       ],
       modelAnswer: `**\`expect(await locator.isVisible()).toBe(true)\`**
-- \`isVisible()\` checks visibility **once, right now**, and returns a boolean. It does not wait (its old \`timeout\` option is ignored).
-- \`toBe(true)\` is a generic assertion on that boolean; it cannot retry because it only has a stored value.
-- If the element appears 200 ms later, the test fails. It passes only when the timing happens to be favourable: a classic flaky test.
+- \`isVisible()\` checks **once, right now**, and returns true or false. It does not wait.
+- \`toBe(true)\` then compares that saved value. It cannot try again, because it only has the old value.
+- If the element appears 200 ms later, the test fails. It passes only when timing is lucky. That is a classic **flaky test** (passes sometimes, fails sometimes).
 
 **\`await expect(locator).toBeVisible()\`**
-- A web-first assertion: it re-queries the page and retries until the element is visible or the expect timeout (5s by default) ends.
-- On failure it prints the locator, the expectation and what it found, which is far easier to debug.
+- A web-first assertion. It looks at the page again and again, until the element is visible or 5 seconds pass.
+- On failure, it prints the locator, what it expected and what it found. That is much easier to debug.
 
-I always use the second one in tests. The same applies to \`textContent()\` vs \`toHaveText\`, \`count()\` vs \`toHaveCount\`, \`isChecked()\` vs \`toBeChecked\`, \`page.url()\` vs \`toHaveURL\`.
+I always use the second one in tests. The same goes for \`textContent()\` vs \`toHaveText\`, \`count()\` vs \`toHaveCount\`, \`isChecked()\` vs \`toBeChecked\`, and \`page.url()\` vs \`toHaveURL\`.
 
-**When \`isVisible()\` is fine:** in conditional logic where either outcome is valid, for example a helper that closes an optional promo banner: \`if (await promo.isVisible()) await promo.getByRole('button', { name: 'Close' }).click()\`. Even then I prefer making the test deterministic (for example, disabling the promo via a cookie) because conditional tests can hide bugs.
+**When \`isVisible()\` is fine:** in an "if", where both answers are OK. Example: close a promo banner only if it shows: \`if (await promo.isVisible()) await promo.getByRole('button', { name: 'Close' }).click()\`. Even then, I prefer to turn the promo off with a cookie. Tests with "if" can hide bugs.
 
-The official best-practices page uses exactly this pair as its "don't / do" example.`,
+The official best practices page uses exactly this pair as its "don't / do" example.`,
       followUps: [
         {
           q: 'What does the failure output look like for each?',
-          a: 'The generic one says "Expected: true, Received: false", with no clue about which element or why. The web-first one names the locator, says it timed out after 5000ms waiting for toBeVisible, and lists the call log (for example "locator resolved to <div id=finish style=display:none>"), which points straight at the cause.',
+          a: 'The first says "Expected: true, Received: false". It gives no clue about which element or why. The second names the locator. It says it waited 5000ms for toBeVisible. It also shows a call log, like "locator resolved to <div id=finish style=display:none>". That points straight at the cause.',
         },
         {
           q: 'Would await expect(locator.isVisible()).resolves.toBe(true) fix it?',
-          a: 'No. `.resolves` only unwraps the promise; isVisible still runs once and returns immediately. Nothing retries. The fix is to pass the locator itself to expect and use a locator matcher.',
+          a: 'No. `.resolves` only unwraps the promise. isVisible still runs once and answers at once. Nothing tries again. The fix is to pass the locator itself to expect and use a locator check like toBeVisible.',
         },
       ],
       pitfalls: [
-        'Thinking wrapping in expect adds waiting',
+        'Thinking that putting it inside expect adds waiting',
         'Adding waitForTimeout before isVisible to "fix" it',
-        'Not mentioning the related snapshot methods (textContent, count)',
+        'Not naming the similar one-time reads (textContent, count)',
       ],
     },
     {
@@ -893,20 +946,20 @@ The official best-practices page uses exactly this pair as its "don't / do" exam
       difficulty: 'medium',
       question: 'Your test fails with "Timed out 5000ms waiting for expect(locator).toHaveText(expected)". How do you debug it, and which timeouts exist in Playwright?',
       whatInterviewerLooksFor: [
-        'Reads expected vs received before touching timeouts',
-        'Knows all defaults (test 30s, expect 5s, action and navigation none)',
-        'Uses trace viewer / UI mode to see page state',
-        'Applies targeted timeout overrides',
-        'Distinguishes slow app from wrong expectation',
+        'Reads expected vs received before touching any timeout',
+        'Knows all defaults (test 30 s, expect 5 s, action and navigation none)',
+        'Uses the trace viewer or UI mode to see the page',
+        'Adds extra time only where it is needed',
+        'Can tell a slow app from a wrong expectation',
       ],
-      modelAnswer: `**Step 1: read the error, not the timeout.** The message shows the locator, the expected text and the **received** text from the last retry, plus a call log. Three common cases:
-- **Received a different text** (e.g. "1" instead of "2"): the app or my expectation is wrong; more time will not help.
-- **Locator resolved to nothing**: wrong locator, element in an iframe, or the page never navigated.
-- **Received the right text later in the trace**: the app is genuinely slower than 5s.
+      modelAnswer: `**Step 1: read the error, not the timeout.** The message shows the locator, the expected text and the **received** text from the last try. It also shows a call log. Three common cases:
+- **Received a different text** (like "1" instead of "2"): the app or my expectation is wrong. More time will not help.
+- **The locator found nothing:** wrong locator, an iframe, or the page never changed.
+- **The right text appears later in the trace:** the app really is slower than 5 seconds.
 
-**Step 2: look at the page at that moment.** Run with \`--trace on\` (or rely on \`trace: 'on-first-retry'\` in CI) and open the trace: the DOM snapshot, network calls and console at the failing step. Locally, UI mode or \`--debug\` lets me step through.
+**Step 2: look at the page at that moment.** I open the **trace viewer**. A trace is a recording of the test: page snapshots, network calls and console at each step. I run with \`--trace on\`, or use \`trace: 'on-first-retry'\` in CI. Locally, UI mode or \`--debug\` lets me step through.
 
-**Step 3: fix the cause.** Correct the locator or expectation; if the app is slow by design, override only that call: \`toHaveText('2', { timeout: 15_000 })\` or mark the test \`test.slow()\`. If it is slow because of a performance regression, that is a bug to report.
+**Step 3: fix the cause.** Fix the locator or the expectation. If the app is slow by design, give only that call more time: \`toHaveText('2', { timeout: 15_000 })\`. Or mark the test \`test.slow()\`. If the app got slower, that is a bug to report.
 
 **Timeouts and defaults:**
 
@@ -918,23 +971,23 @@ The official best-practices page uses exactly this pair as its "don't / do" exam
 | Navigation | none | \`use.navigationTimeout\` |
 | Global | none | \`globalTimeout\` |
 
-Per call: \`{ timeout }\` on actions and assertions; per test: \`test.setTimeout\`, \`test.slow()\` (triples). The test timeout also covers \`beforeEach\` and fixture setup.
+For one call: \`{ timeout }\`. For one test: \`test.setTimeout\`, or \`test.slow()\` (three times). The test timeout also covers \`beforeEach\` and fixture setup.
 
-**What I avoid:** raising \`expect.timeout\` globally to 30s, which slows every real failure, and adding \`waitForTimeout\` before the assertion.`,
+**What I avoid:** raising the expect timeout to 30 seconds for everyone, and adding \`waitForTimeout\` before the check.`,
       followUps: [
         {
           q: 'A click hangs and the error says "Test timeout of 30000ms exceeded". Why not an action timeout?',
-          a: 'Because action timeout has no default, the click is only limited by the test timeout. The report still shows the click as the pending step with its call log (for example "element is not enabled - waiting"). Setting `actionTimeout` would make the click itself fail sooner with a more specific error.',
+          a: 'Because actions have no time limit by default. So the click is stopped only by the test timeout. The report still shows the click as the step that was running, with its log, like "element is not enabled - waiting". Setting `actionTimeout` makes the click itself fail sooner, with a clearer error.',
         },
         {
           q: 'How does test.slow() differ from test.setTimeout(90_000)?',
-          a: 'test.slow() multiplies the configured test timeout by three, so it scales if the config changes, and it documents intent ("this test is known to be slow"). setTimeout sets an absolute value. Both apply only to that test. slow() can also take a condition, like `test.slow(browserName === \'webkit\', \'slow on WebKit\')`.',
+          a: 'test.slow() multiplies the configured test timeout by three. So it follows any config change. It also says clearly "this test is known to be slow". setTimeout sets a fixed number. Both affect only that test. slow() can take a condition too, like `test.slow(browserName === \'webkit\', \'slow on WebKit\')`.',
         },
       ],
       pitfalls: [
-        'Immediately increasing timeouts without reading the received value',
-        'Saying the default action timeout is 30s or 5s',
-        'Raising timeouts globally for one slow page',
+        'Raising timeouts at once without reading the received value',
+        'Saying the default action timeout is 30 s or 5 s',
+        'Raising timeouts for the whole suite because of one slow page',
       ],
     },
     {
@@ -942,41 +995,41 @@ Per call: \`{ timeout }\` on actions and assertions; per test: \`test.setTimeout
       difficulty: 'medium',
       question: 'What are soft assertions in Playwright? Give a scenario where you would use them and one where you would not.',
       whatInterviewerLooksFor: [
-        'Correct semantics: continue running, fail at the end',
-        'Good use case: many independent checks on one screen',
-        'Bad use case: preconditions and dependent steps',
-        'Knows how to stop early using test.info().errors',
+        'Correct meaning: the test keeps running, then fails at the end',
+        'Good use: many separate checks on one screen',
+        'Bad use: steps that later steps depend on',
+        'Knows how to stop early with test.info().errors',
       ],
-      modelAnswer: `**What they are:** \`expect.soft(...)\` records a failed assertion but lets the test continue. At the end, the test is marked **failed** and the report lists every soft failure. They work with both web-first (\`await expect.soft(loc).toHaveText(...)\`) and generic matchers, and only within the Playwright test runner.
+      modelAnswer: `**What they are:** \`expect.soft(...)\` records a failed check but lets the test go on. At the end, the test is marked **failed**. The report lists every soft failure. They work with page checks (\`await expect.soft(loc).toHaveText(...)\`) and with plain value checks.
 
-**Good use: one screen, many independent fields.** A product details page shows name, price, description, image alt text and the Add button. If the price is wrong, I still want to know whether the description is wrong too, in the same run, instead of fixing-and-rerunning five times:
+**Good use: one screen, many separate fields.** A product page shows name, price, description, image and the Add button. If the price is wrong, I still want to know if the description is wrong too. I want that in the same run, not after five fix-and-rerun rounds:
 
 - \`await expect.soft(price, 'price').toHaveText('$29.99')\`
 - \`await expect.soft(desc, 'description').toContainText('carry.allTheThings()')\`
 - \`await expect.soft(addButton, 'add button').toBeEnabled()\`
 
-Similar uses: verifying all columns of a table row, a set of footer links, all fields of an order confirmation.
+Similar uses: all columns of a table row, a set of footer links, all fields of an order confirmation.
 
-**Bad use: preconditions and chains.** Login, navigation and "item added to cart" must be **hard** assertions. If login fails softly, every later step fails too and the report fills with noise that hides the first real cause.
+**Bad use: steps that others depend on.** Login, page changes and "item added to cart" must be **normal (hard)** checks. If login fails softly, every later step fails too. The report fills with noise that hides the real cause.
 
-**Stopping early after soft checks:** before moving to a dependent part, add \`expect(test.info().errors).toHaveLength(0)\`; if any soft check failed, the test stops there.
+**Stopping early:** before a step that depends on the soft checks, add \`expect(test.info().errors).toHaveLength(0)\`. If any soft check failed, the test stops there.
 
-**Configured instance:** \`const softExpect = expect.configure({ soft: true })\` for a block of soft checks.
+**Shortcut:** \`const softExpect = expect.configure({ soft: true })\` for a group of soft checks.
 
-**My rule:** hard for steps the rest of the test depends on, soft for independent observations on one page. Each soft assertion gets a custom message so the report reads like a checklist.`,
+**My rule:** hard checks for steps the rest depends on. Soft checks for separate details on one page. Each soft check gets a custom message, so the report reads like a checklist.`,
       followUps: [
         {
           q: 'Does a soft assertion failure trigger a retry?',
-          a: 'Yes, because the test ends as failed. If retries are configured, the whole test runs again; if it then passes, it is reported as flaky. Soft assertions change when the test stops, not whether it fails.',
+          a: 'Yes, because the test ends as failed. If retries are set, the whole test runs again. If it then passes, the report marks it as flaky. Soft assertions change when the test stops, not whether it fails.',
         },
         {
           q: 'How is this different from wrapping assertions in try/catch?',
-          a: 'try/catch swallows the error, so the test passes unless you rethrow, and the report loses the failure details. Soft assertions keep full reporting (expected, received, call log) and mark the test failed. Catching assertion errors manually is an anti-pattern.',
+          a: 'try/catch swallows the error. The test passes unless you throw it again, and the report loses the details. Soft assertions keep the full report (expected, received, call log) and still fail the test. Catching assertion errors by hand is a bad practice.',
         },
       ],
       pitfalls: [
-        'Saying soft assertions make the test pass with warnings',
-        'Using soft assertions for login or navigation steps',
+        'Saying soft assertions let the test pass with warnings',
+        'Using soft assertions for login or page changes',
         'Replacing soft assertions with try/catch',
       ],
     },
@@ -985,45 +1038,45 @@ Similar uses: verifying all columns of a table row, a set of footer links, all f
       difficulty: 'medium',
       question: 'A page shows a loading spinner for a few seconds while it fetches orders from an API. How do you wait for it correctly, without hard waits?',
       whatInterviewerLooksFor: [
-        'Asserts the final state rather than the spinner',
-        'Uses toBeHidden for the loader when needed',
-        'Uses waitForResponse with correct ordering when the data matters',
+        'Checks the final result, not the spinner',
+        'Uses toBeHidden for the spinner when needed',
+        'Uses waitForResponse in the right order when the data matters',
         'Avoids networkidle and waitForTimeout',
-        'Considers empty and error states',
+        'Thinks about empty and error states',
       ],
-      modelAnswer: `**Principle:** wait for what the user waits for: the orders, not the spinner.
+      modelAnswer: `**Rule:** wait for what the user waits for: the orders, not the spinner.
 
-**1. Assert the result directly.** \`await expect(page.getByRole('row')).toHaveCount(6)\` or \`await expect(page.getByRole('cell', { name: 'ORD-1001' })).toBeVisible()\`. The assertion retries while the spinner is shown and passes when the data arrives. If loading takes longer than 5s by design, add \`{ timeout: 15_000 }\` to that call.
+**1. Check the result directly.** \`await expect(page.getByRole('row')).toHaveCount(6)\` or \`await expect(page.getByRole('cell', { name: 'ORD-1001' })).toBeVisible()\`. The check keeps trying while the spinner shows. It passes when the data arrives. If loading takes more than 5 seconds by design, add \`{ timeout: 15_000 }\` to that call.
 
-**2. Spinner check only when it adds value.** If an action is enabled under the spinner (e.g. a filter input that is reset when loading ends), first \`await expect(page.getByTestId('spinner')).toBeHidden()\`, then act. \`toBeHidden\` also passes if the spinner is removed from the DOM.
+**2. Check the spinner only when it matters.** Sometimes a field is usable under the spinner, but gets reset when loading ends. Then first \`await expect(page.getByTestId('spinner')).toBeHidden()\`, then act. \`toBeHidden\` also passes if the spinner is removed from the page.
 
-**3. When I need the response itself:**
-- \`const ordersRes = page.waitForResponse(r => r.url().includes('/api/orders') && r.ok());\` (no await)
-- trigger the load (click, goto)
+**3. When I need the server's answer itself:**
+- \`const ordersRes = page.waitForResponse(r => r.url().includes('/api/orders') && r.ok());\` (no await yet)
+- start the load (click or goto)
 - \`const res = await ordersRes; const orders = await res.json();\`
-- assert the UI matches the data: \`toHaveCount(orders.length + 1)\` including the header row.
-Creating the promise before the trigger avoids missing a fast response.
+- check the screen matches the data: \`toHaveCount(orders.length + 1)\`, counting the header row.
+Starting the wait before the click means a fast response is never missed.
 
-**4. Other states:** an empty API result should show "No orders", and a 500 should show an error message; I cover those by mocking the route (covered in the network topic).
+**4. Other states:** an empty result should show "No orders". A server error (500) should show an error message. I test those by faking the server's answer (mocking), covered in the network topic.
 
 **What I avoid:**
-- \`waitForTimeout(3000)\`: flaky on slow CI, wasteful on fast machines.
-- \`waitForLoadState('networkidle')\`: discouraged; polling or analytics can stop it from settling, and it still does not prove rendering finished.
-- Asserting \`not.toBeVisible()\` on the spinner immediately after navigation: it may pass before the spinner even appeared.`,
+- \`waitForTimeout(3000)\`: fails on slow CI, wastes time on fast machines.
+- \`waitForLoadState('networkidle')\`: not recommended. Background traffic can stop it from finishing, and it does not prove the screen is ready.
+- \`not.toBeVisible()\` on the spinner right after opening the page. It may pass before the spinner even appeared.`,
       followUps: [
         {
           q: 'The spinner sometimes appears for only 50 ms. Should you assert it appears?',
-          a: 'Only if showing a loader is a requirement, and then preferably with a mocked slow response (route with a delay) so the check is deterministic. Asserting a 50 ms flash against a real backend is inherently flaky; the important check is the final state.',
+          a: 'Only if showing a spinner is a requirement. Then fake a slow server answer (a route with a delay), so the check gives the same result every time. Checking a 50 ms flash against a real server fails at random. The important check is the final result.',
         },
         {
           q: 'What if two requests to /api/orders happen (prefetch and real)?',
-          a: 'Make the predicate more specific: check the query string, the method, or a request header, for example `r.url().includes(\'/api/orders?page=1\') && r.request().method() === \'GET\'`. Or assert purely on the UI, which is indifferent to how many calls were made.',
+          a: 'Make the match more exact. Check the query string, the method or a header, for example `r.url().includes(\'/api/orders?page=1\') && r.request().method() === \'GET\'`. Or check only the screen, which does not care how many calls were made.',
         },
       ],
       pitfalls: [
         'Waiting for the spinner with a sleep',
         'Starting waitForResponse after the click',
-        'Using networkidle as the default readiness signal',
+        'Using networkidle as the normal "ready" signal',
         'Ignoring empty and error states',
       ],
     },
@@ -1032,95 +1085,97 @@ Creating the promise before the trigger avoids missing a fast response.
       difficulty: 'hard',
       question: 'When would you use expect.poll, when expect(...).toPass, and when a normal web-first assertion? What are the defaults and the dangers?',
       whatInterviewerLooksFor: [
-        'Matches tool to the kind of condition (DOM, value, block)',
-        'Knows default intervals and timeouts, especially toPass timeout 0',
-        'Warns about side effects inside toPass',
-        'Gives realistic examples',
+        'Picks the tool by what is being waited for (page, value, block)',
+        'Knows the default gaps and limits, especially toPass timeout 0',
+        'Warns about repeated side effects inside toPass',
+        'Gives real examples',
       ],
-      modelAnswer: `**Web-first assertion**: whenever the condition is **page state** a locator can express (text, count, visibility, URL). This covers most tests and gives the best error messages.
+      modelAnswer: `**Web-first assertion:** whenever the thing is **on the page** and a locator can see it: text, count, visibility, URL. This covers most tests and gives the best error messages.
 
-**\`expect.poll(fn).matcher()\`**: when the condition is a **single value** produced by code, not by the DOM.
-- Examples: an API status after a UI action, a value in \`localStorage\` via \`page.evaluate\`, the size of an exported file, a row count in a test database.
-- Defaults: timeout = the expect timeout (5s; \`0\` disables it), intervals \`[100, 250, 500, 1000]\` ms.
+**\`expect.poll(fn).matcher()\`:** when the thing is **one value** that comes from code, not from the page.
+- Examples: an API status after a UI action, a value in \`localStorage\`, the size of an exported file, a row count in a test database.
+- Defaults: limit = the expect timeout (5 seconds). Gaps between tries: 100, 250, 500, 1000 ms.
 - Example: \`await expect.poll(async () => (await request.get('/api/order/42')).status(), { timeout: 15_000 }).toBe(200)\`.
 
-**\`expect(async () => {...}).toPass()\`**: when a **block** of steps must be retried together, often with several assertions.
-- Example: click "Refresh", then check the status cell; repeat until it says "Shipped".
-- Defaults: intervals \`[100, 250, 500, 1000]\` ms; **timeout 0**, meaning it has no own limit and keeps retrying until the **test** times out. It does not follow \`expect.timeout\`. I always set \`{ timeout }\`.
-- Inner web-first assertions should get short timeouts (e.g. 1s) so each attempt is quick.
+**\`expect(async () => {...}).toPass()\`:** when a **block** of steps must be repeated together.
+- Example: click "Refresh", then check the status cell. Repeat until it says "Shipped".
+- Defaults: the same gaps. But the **limit is 0**, which means no limit of its own. It keeps trying until the **test** times out. It does not use the 5 second expect timeout. So I always set \`{ timeout }\`.
+- Checks inside the block should get short limits (about 1 second), so each try is quick.
 
 **Dangers:**
-- **Side effects inside \`toPass\`**: if the block clicks "Add to cart", every retry adds another item. Keep blocks idempotent (refresh, read, check).
-- **Hiding real bugs**: wrapping a flaky UI assertion in \`toPass\` to make it green can mask a race in the product. Use these tools for genuinely eventual-consistency behaviour (async jobs, queues), not to paper over a wrong locator.
-- **Silent long waits**: \`toPass\` without a timeout can eat the whole 30s test budget.
+- **Repeated side effects:** if the block clicks "Add to cart", every try adds another item. Only put steps inside that are safe to repeat (refresh, read, check).
+- **Hiding real bugs:** wrapping a randomly failing check in \`toPass\` can hide a real timing bug in the product. Use these tools for slow background work (jobs, queues), not to cover a wrong locator.
+- **Long silent waits:** \`toPass\` without a limit can use the whole 30 second test time.
 
-**Summary:** DOM → web-first; one value → \`poll\`; several steps → \`toPass\` with an explicit timeout.`,
+**Summary:** on the page → web-first. One value → \`poll\`. Several steps → \`toPass\` with a clear limit.`,
       followUps: [
         {
           q: 'Could you replace expect.poll with a for-loop and waitForTimeout?',
-          a: 'You could, but you would rebuild retry intervals, a total timeout and a decent error message by hand, and the loop usually has bugs (no upper bound, swallowed errors). expect.poll gives all of that in one line and reports the last received value on failure.',
+          a: 'You could, but you would rebuild the gaps, the total limit and a good error message by hand. Such loops often have bugs, like no upper limit or hidden errors. expect.poll does all of that in one line. On failure it also shows the last value it received.',
         },
         {
           q: 'Why give inner assertions in toPass a short timeout?',
-          a: 'Each attempt should fail fast so the outer loop can retry. With the default 5s inner timeout and a 30s outer limit, you only get about five attempts and each one waits the full 5s before refreshing again, which wastes time and makes the behaviour hard to reason about.',
+          a: 'Each try should fail fast, so the outer loop can try again. With the normal 5 second inner limit and a 30 second outer limit, you get only about five tries. Each try waits the full 5 seconds before refreshing. That wastes time and is hard to reason about.',
         },
       ],
       pitfalls: [
-        'Believing toPass uses the 5s expect timeout by default',
-        'Putting non-idempotent actions inside toPass',
-        'Using poll or toPass for plain DOM checks',
+        'Believing toPass uses the 5 s expect timeout by default',
+        'Putting steps that are not safe to repeat inside toPass',
+        'Using poll or toPass for plain page checks',
       ],
     },
     {
       id: 'pw-assertions-waiting-iq-7',
       difficulty: 'expert',
-      question: 'You join a team whose Playwright suite has around 200 waitForTimeout calls and a 25% flaky rate. How do you plan and execute removing them safely?',
+      question: 'You join a team whose Playwright suite has around 200 waitForTimeout calls and 25% of tests are flaky. How do you plan and carry out removing them safely?',
       context: 'The suite runs on GitHub Actions with retries: 2. Management wants fewer flaky reruns without pausing feature testing.',
       whatInterviewerLooksFor: [
         'Measures before changing (flaky rate, time spent sleeping)',
-        'Prioritises by impact',
-        'Has a mechanical replacement strategy per pattern',
-        'Prevents regression via lint and review rules',
-        'Verifies with repeat runs and traces',
+        'Starts with the biggest impact',
+        'Has a clear replacement for each kind of sleep',
+        'Stops sleeps coming back with lint and review rules',
+        'Proves each fix with repeated runs and traces',
       ],
-      modelAnswer: `**1. Measure the baseline.**
-- Count sleeps per file (\`grep -rn waitForTimeout tests/\`) and total sleep time: 200 calls averaging 2s is about 400s of pure waiting per full run.
-- From CI reports, list tests marked flaky (passed on retry) over the last few weeks. Rank files by flaky count multiplied by run frequency.
+      modelAnswer: `A **flaky test** passes sometimes and fails sometimes, with no code change. Here is my plan.
 
-**2. Classify each sleep by intent.** Nearly every sleep is waiting for one of a few things:
+**1. Measure first.**
+- Count sleeps per file: \`grep -rn waitForTimeout tests/\`. 200 sleeps of about 2 seconds is about 400 seconds of pure waiting per run.
+- From CI reports, list tests that passed only on retry in the last few weeks. Rank files by how often they flake and how often they run.
+
+**2. Sort each sleep by what it waits for.** Almost every sleep waits for one of a few things:
 
 | Sleep is waiting for | Replace with |
 |---|---|
 | Element to appear / change | \`await expect(loc).toBeVisible()\` / \`toHaveText\` |
-| Loader to go away | \`await expect(spinner).toBeHidden()\` after a positive anchor |
+| Loader to go away | \`await expect(spinner).toBeHidden()\` after a success check |
 | Navigation | \`await expect(page).toHaveURL(...)\` |
-| API data | \`page.waitForResponse\` created before the trigger |
+| API data | \`page.waitForResponse\` started before the click |
 | Element to be clickable | Nothing: actions auto-wait |
-| Eventually-consistent backend | \`expect.poll\` with an explicit timeout |
+| Slow background work | \`expect.poll\` with a clear timeout |
 
-Remove \`isVisible()\`/\`textContent()\` snapshot assertions in the same pass, since they were only working because of the sleeps.
+In the same pass, I remove one-time checks like \`isVisible()\` and \`textContent()\`. They only worked because of the sleeps.
 
-**3. Execute in small PRs**, highest flaky impact first, one feature area per PR, so reviews are quick and feature work continues.
+**3. Work in small pull requests.** Biggest impact first, one feature area per PR. Reviews stay quick and feature work goes on.
 
-**4. Verify each PR:** run the changed specs with \`--repeat-each=20\` locally and in CI, with \`trace: 'retain-on-failure'\` to diagnose any remaining failure. A change is done when it passes all repeats and runs faster.
+**4. Prove each PR.** Run the changed tests with \`--repeat-each=20\`, locally and in CI. Keep traces on failure (\`trace: 'retain-on-failure'\`). A change is done when all repeats pass and the tests run faster.
 
-**5. Prevent regressions:** add \`playwright/no-wait-for-timeout\` and \`no-floating-promises\` lint rules as errors for new code (warnings for legacy files until cleaned), and a review checklist item. Set \`actionTimeout\` so stuck actions fail clearly.
+**5. Stop sleeps coming back.** Add the lint rules \`playwright/no-wait-for-timeout\` and \`no-floating-promises\`. Make them errors for new code. Add a review checklist item. Set \`actionTimeout\` so stuck actions fail clearly.
 
-**6. Report outcomes:** flaky rate, suite duration and rerun minutes saved, before vs after. That turns a clean-up task into visible value for management.
+**6. Report results.** Show flaky rate, suite time and rerun minutes saved, before and after. Managers then see clear value.
 
-Where a sleep hides a real product race (data loads after the button is enabled), I file a bug rather than adding another workaround.`,
+If a sleep hides a real product timing bug, I file a bug instead of adding another workaround.`,
       followUps: [
         {
           q: 'Some tests still flake after removing sleeps. What next?',
-          a: 'Open the trace from a failing repeat and look at what the page showed at the failing step. Typical leftovers are shared test data between parallel workers, tests depending on order, animations without stable states, or genuine app races. Fix isolation first (unique data per test), then report app races as bugs with the trace attached.',
+          a: 'Open the trace from a failed repeat. Look at what the page showed at the failing step. Common causes: tests running at the same time share test data, tests depend on each other\'s order, animations, or real app timing bugs. Fix test isolation first (unique data per test). Then report app bugs with the trace attached.',
         },
         {
           q: 'Should retries be set to 0 during this work?',
-          a: 'Keep retries in CI so delivery is not blocked, but track "flaky" (passed on retry) as a metric and treat it as a failure for the cleanup work. Locally, run with retries 0 and --repeat-each to expose flakiness instead of hiding it.',
+          a: 'Keep retries in CI so delivery is not blocked. But track "flaky" (passed on retry) as a number and treat it as a failure for this clean-up. Locally, run with retries 0 and --repeat-each, so random failures show up instead of being hidden.',
         },
       ],
       pitfalls: [
-        'Doing a big-bang rewrite of all 200 in one PR',
+        'Rewriting all 200 in one big pull request',
         'Replacing sleeps with networkidle everywhere',
         'Not measuring before and after',
         'No lint rule, so sleeps come back within weeks',
@@ -1143,11 +1198,11 @@ Where a sleep hides a real product race (data loads after the button is enabled)
         { label: 'With actionTimeout 10s', calc: 'Click fails at 3.2s + 10s = 13.2s with "locator.click: Timeout 10000ms exceeded" and the same intercept reason.' },
       ],
       answer: 'Without actionTimeout the test fails at **30s** as a test timeout blamed on the click; with actionTimeout 10s it fails at **about 13.2s** with a click-specific timeout error. In both cases the assertion is never reached.',
-      insight: 'Because actions have no default timeout, a stuck action burns the whole test budget. Setting actionTimeout makes failures faster and more specific, and keeps time for teardown and trace capture.',
+      insight: 'Actions have no time limit of their own. So a stuck action uses up the whole test time. Setting actionTimeout makes failures faster and clearer. It also leaves time for clean-up and saving the trace.',
       followUps: [
         {
           q: 'Would increasing the test timeout to 60s help this test?',
-          a: 'No. The overlay never goes away, so a longer timeout only delays the same failure by 30 more seconds. The fix is to handle the overlay (accept cookies or pre-set the consent cookie) or to report it as a bug if users are blocked too.',
+          a: 'No. The banner never goes away. A longer timeout only delays the same failure by 30 more seconds. The fix is to handle the banner: accept cookies, or set the consent cookie before the test. If users are blocked too, report it as a bug.',
         },
       ],
     },
@@ -1168,11 +1223,11 @@ Where a sleep hides a real product race (data loads after the button is enabled)
         { label: '(8) one-shot on page state', calc: 'await expect(input).toHaveValue(\'lohi\')' },
       ],
       answer: 'Retrying: **1, 4, 7**. One-shot: **2, 3, 5, 6, 8**. Of the one-shot ones, only **3** is acceptable as written (plain data). Rewrite 2 → `toHaveCount(4)`, 5 → `toBeHidden()`, 6 → `toHaveURL(/cart/)`, 8 → `toHaveValue(\'lohi\')`.',
-      insight: 'The question is never "generic or web-first?" in the abstract; it is "is this value still changing?". Live page state needs a retrying matcher; data you already computed does not.',
+      insight: 'The real question is: "can this value still change?". Live page state needs a check that keeps trying. Data you already calculated does not.',
       followUps: [
         {
           q: 'Line (3): how do you make sure the computed total was based on loaded data?',
-          a: 'Put a web-first assertion before the snapshot read, for example `await expect(rows).toHaveCount(4)` or `toHaveText` on the last row, then read allTextContents and compute. The retrying assertion guarantees the snapshot is taken after the table finished loading.',
+          a: 'Put a web-first check before the one-time read. For example, `await expect(rows).toHaveCount(4)`, or `toHaveText` on the last row. Then read allTextContents and calculate. The first check makes sure the table has finished loading before you read it.',
         },
       ],
     },
@@ -1192,11 +1247,11 @@ Where a sleep hides a real product race (data loads after the button is enabled)
         { label: 'Saved per day', calc: '2.6 min × 20 runs ≈ 52 minutes of wall-clock; machine time ≈ 630s × 20 = 12,600s = 210 worker-minutes' },
       ],
       answer: 'About **2.6 minutes faster per run** (≈157s), about **52 minutes of pipeline wall-clock per day**, and about **210 worker-minutes per day** of compute. The bigger gain is usually flakiness: fewer retries and fewer people re-running jobs.',
-      insight: 'Hard waits cost time on every run even when the app is fast, and still fail when it is slow. Web-first assertions win on both speed and reliability, which is an easy case to make to a manager with numbers.',
+      insight: 'Fixed sleeps cost time on every run, even when the app is fast. They still fail when it is slow. Web-first checks win on both speed and reliability. With numbers, that is easy to explain to a manager.',
       followUps: [
         {
           q: 'Add flakiness: 10% of tests used to retry once (avg 20s each). What else is saved?',
-          a: '15 tests × 20s = 300s of serial retry time per run, about 75s wall-clock on 4 workers, plus the human cost of investigating red builds. If the cleanup halves the flaky rate, that is roughly another 37s per run and about 12 minutes per day, on top of the sleep savings.',
+          a: '15 tests × 20s = 300s of retry time per run. On 4 workers that is about 75s of real time. People also lose time looking at red builds. If the clean-up halves the flaky rate, you save about 37s more per run. That is about 12 minutes per day, on top of the sleep savings.',
         },
       ],
     },
@@ -1219,11 +1274,11 @@ expect(await page.locator('#finish').isVisible()).toBe(true);`,
       ],
       correct: [1],
       explanation:
-        'isVisible() returns the current visibility immediately and does not retry; toBe(true) only compares the stored boolean, so it fails while "Loading..." shows. Waiting up to 5 seconds describes await expect(locator).toBeVisible(), not this code. Nothing here waits for the test timeout, and isVisible returns a promise that can be awaited.',
+        'isVisible() answers at once with the current state and never tries again. toBe(true) only compares that saved true/false value. So it fails while "Loading..." still shows. "Waits up to 5 seconds" describes await expect(locator).toBeVisible(), not this code. Nothing here waits for the test timeout, and isVisible returns a promise that can be awaited.',
       followUps: [
         {
           q: 'Rewrite it correctly.',
-          a: "await expect(page.locator('#finish')).toBeVisible(); and since this page can take about 5s in other variants, add { timeout: 10_000 } if needed.",
+          a: 'await expect(page.locator(\'#finish\')).toBeVisible(); This page can take about 5 seconds in other versions, so add { timeout: 10_000 } if needed.',
         },
       ],
     },
@@ -1239,11 +1294,11 @@ expect(await page.locator('#finish').isVisible()).toBe(true);`,
       ],
       correct: [1],
       explanation:
-        'Web-first assertions retry only for the expect timeout, which defaults to 5 seconds, so a toast that needs 7 seconds is not seen in time. The 30 second limit is the test timeout, a different budget. The assertion does not fail instantly, because retrying is the whole point. It never waits for network idle.',
+        'Web-first checks keep trying only for the expect timeout, which is 5 seconds by default. A toast that needs 7 seconds comes too late. The 30 second limit is the test timeout, a different limit. The check does not fail at once, because trying again is the whole point. It never waits for the network to go quiet.',
       followUps: [
         {
           q: 'What is the right fix if 7 s is expected behaviour on that environment?',
-          a: "Give that one assertion more time: await expect(toast).toBeVisible({ timeout: 10_000 }). If the whole CI environment is slower, raise expect.timeout for the CI project in the config rather than for every environment.",
+          a: 'Give that one check more time: await expect(toast).toBeVisible({ timeout: 10_000 }). If the whole CI environment is slower, raise expect.timeout only for the CI project in the config.',
         },
       ],
     },
@@ -1264,11 +1319,11 @@ expect(page.locator('[data-test="checkout"]')).toBeVisible();`,
       ],
       correct: [1],
       explanation:
-        'Web-first assertions return a promise; without await nothing waits for it, so the test can end before the check finishes and the failure may be lost or reported out of place. Any locator works with toBeVisible. Custom messages are optional, and no explicit load-state wait is required because the assertion retries on its own.',
+        'Web-first checks return a promise. Without await, nothing waits for it. The test can end before the check finishes, so the failure may be lost or shown in the wrong place. toBeVisible works with any locator. A custom message is optional. No extra load wait is needed, because the check keeps trying by itself.',
       followUps: [
         {
           q: 'How do you catch this mistake automatically?',
-          a: 'Enable @typescript-eslint/no-floating-promises or eslint-plugin-playwright\'s missing-playwright-await rule and run lint in CI so the PR fails.',
+          a: 'Turn on @typescript-eslint/no-floating-promises or the missing-playwright-await rule from eslint-plugin-playwright. Run lint in CI, so the pull request fails.',
         },
       ],
     },
@@ -1285,11 +1340,11 @@ expect(page.locator('[data-test="checkout"]')).toBeVisible();`,
       ],
       correct: [0, 1, 4],
       explanation:
-        'toHaveText, toHaveURL and toHaveCount are web-first matchers on a locator or page and keep re-querying until they pass. The textContent version reads the text once and toBe compares a fixed string. toHaveLength on an array is a generic matcher on a value you already hold, so it cannot change between attempts.',
+        'toHaveText, toHaveURL and toHaveCount are web-first checks on a locator or page. They look at the page again until they pass. The textContent version reads the text once, and toBe compares a fixed string. toHaveLength on an array is a generic check on a value you already have, so it cannot change between tries.',
       followUps: [
         {
           q: 'When is the array toHaveLength perfectly fine?',
-          a: 'When the array is plain data that will not change, such as parsed API JSON or a list read after a web-first assertion proved the page had loaded.',
+          a: 'When the array is plain data that will not change. For example, parsed API JSON, or a list read after a web-first check proved the page had loaded.',
         },
       ],
     },
@@ -1308,11 +1363,11 @@ await expect(msg).toHaveText('  Hello World!  ');  // D`,
       options: ['A', 'B', 'C', 'D'],
       correct: [1],
       explanation:
-        'toHaveText with a string requires the full text to match after whitespace normalisation, so "Hello" does not equal "Hello World!". A passes because toContainText checks a substring. C passes because the case-insensitive regex finds a match. D passes because leading and trailing whitespace is normalised.',
+        'toHaveText with a string needs the full text to match (extra spaces at the ends are ignored). "Hello" is not "Hello World!", so B fails. A passes, because toContainText needs only part of the text. C passes, because the regex ignores case and finds a match. D passes, because spaces at the start and end are ignored.',
       followUps: [
         {
           q: 'Which would you choose for an error message that includes a dynamic order id?',
-          a: 'A regex with toHaveText, for example toHaveText(/^Order #\\d+ confirmed$/), so the fixed parts are strict and only the id varies.',
+          a: 'A regex with toHaveText, for example toHaveText(/^Order #\\d+ confirmed$/). The fixed words are checked exactly, and only the id may change.',
         },
       ],
     },
@@ -1328,18 +1383,18 @@ await expect(msg).toHaveText('  Hello World!  ');  // D`,
       ],
       correct: [0],
       explanation:
-        'toBeHidden passes when the element is hidden or not in the DOM at all, and it retries until the removal happens. The isVisible snapshot may run before the delete completes and does not retry. toBeVisible with timeout 0 asserts the opposite. toHaveText on a removed element waits for an element that no longer exists and times out.',
+        'toBeHidden passes when the element is hidden or not on the page at all. It keeps trying until the row is removed. The isVisible version may run before the delete finishes, and it never tries again. toBeVisible with timeout 0 checks the opposite. toHaveText on a removed element waits for something that no longer exists and times out.',
       followUps: [
         {
           q: 'How would you also prove the count dropped?',
-          a: 'await expect(page.getByRole(\'row\')).toHaveCount(previousCount - 1), using a count read before the delete, or the known expected number.',
+          a: 'await expect(page.getByRole(\'row\')).toHaveCount(previousCount - 1). Use a count read before the delete, or the known expected number.',
         },
       ],
     },
     {
       id: 'pw-assertions-waiting-mcq-07',
       difficulty: 'medium',
-      question: 'Clicks on covered buttons currently hang until the test is killed at 30 s. Which single config change makes every click and fill give up after 10 s with an action-specific error?',
+      question: 'Clicks on covered buttons now hang until the test is stopped at 30 s. Which one config change makes every click and fill give up after 10 s, with an error about that action?',
       options: [
         'timeout: 10_000',
         'expect: { timeout: 10_000 }',
@@ -1348,11 +1403,11 @@ await expect(msg).toHaveText('  Hello World!  ');  // D`,
       ],
       correct: [2],
       explanation:
-        'actionTimeout under use limits each action such as click or fill, which otherwise has no default timeout. The top-level timeout would cut the whole test to 10 s. expect.timeout only affects assertions. globalTimeout caps the entire run, which would stop the suite after 10 seconds.',
+        'actionTimeout under use sets a limit for each action, like click or fill. Without it, actions have no limit of their own. The top-level timeout would cut the whole test to 10 seconds. expect.timeout only affects checks. globalTimeout limits the entire run, so the whole suite would stop after 10 seconds.',
       followUps: [
         {
           q: 'Which setting would you pair with it for page.goto?',
-          a: 'use: { navigationTimeout: 20_000 }, since navigation also has no default timeout and would otherwise be bounded only by the test timeout.',
+          a: 'use: { navigationTimeout: 20_000 }. Page loads also have no limit of their own, so only the test timeout would stop them.',
         },
       ],
     },
@@ -1368,11 +1423,11 @@ await expect(msg).toHaveText('  Hello World!  ');  // D`,
       ],
       correct: [2],
       explanation:
-        'A soft assertion records the failure and lets the test continue, but the test is still marked failed at the end. Stopping immediately is what a normal assertion does. Soft failures are never just warnings, and they have nothing to do with skipping.',
+        'A soft check records the failure and lets the test continue. At the end, the test is still marked failed. Stopping at once is what a normal check does. Soft failures are never just warnings, and they have nothing to do with skipping a test.',
       followUps: [
         {
           q: 'How do you stop the test before a dependent step if any soft check failed?',
-          a: 'Add expect(test.info().errors).toHaveLength(0) before that step; it fails the test right there when soft errors were collected.',
+          a: 'Add expect(test.info().errors).toHaveLength(0) before that step. It fails the test right there if any soft errors were recorded.',
         },
       ],
     },
@@ -1396,11 +1451,11 @@ test('pay', async ({ page }) => {
       ],
       correct: [1],
       explanation:
-        'Action timeout has no default, so the click keeps retrying the receives-events check until the test timeout of 30s runs out, about 28s after goto. The expect timeout applies to assertions, not actions. Clicks retry rather than fail at once, and the test timeout prevents waiting forever.',
+        'Actions have no time limit by default. So the click keeps checking "is something covering it?" until the 30 second test timeout ends. That is about 28 seconds after goto. The expect timeout is for checks, not actions. A covered click tries again instead of failing at once, and the test timeout stops it from waiting forever.',
       followUps: [
         {
           q: 'How would you make this fail faster with a clearer error?',
-          a: 'Set use: { actionTimeout: 10_000 } in the config, or pass { timeout } to that click. The error then names the click and the intercepting element.',
+          a: 'Set use: { actionTimeout: 10_000 } in the config, or pass { timeout } to that click. The error then names the click and the element covering it.',
         },
       ],
     },
@@ -1411,11 +1466,11 @@ test('pay', async ({ page }) => {
       options: ['Visible', 'Stable', 'Enabled', 'Editable', 'Receives events'],
       correct: [0, 2, 3],
       explanation:
-        'Per the actionability table, fill (and clear) waits for Visible, Enabled and Editable. Stable and Receives events apply to pointer actions such as click, check, hover and dragTo. Fill does not go through the pointer at all; it focuses the element and sets the value, so overlays and animations do not stop it.',
+        'The official table says fill (and clear) waits for Visible, Enabled and Editable. Stable and Receives events are for mouse actions like click, check, hover and dragTo. fill does not use the mouse at all. It focuses the field and sets the value, so banners and animations do not stop it.',
       followUps: [
         {
           q: 'A field has the readonly attribute. What happens when you fill it?',
-          a: 'It is not editable, so fill keeps retrying and fails at the timeout with a log saying the element is not editable. That is correct behaviour because a user cannot type there; assert it with toBeEditable({ editable: false }) or toHaveAttribute(\'readonly\', \'\').',
+          a: 'It is not editable, so fill keeps trying and fails at the time limit. The log says the element is not editable. That is correct, because a user cannot type there either. Check it with toBeEditable({ editable: false }) or toHaveAttribute(\'readonly\', \'\').',
         },
       ],
     },
@@ -1438,11 +1493,11 @@ test('pay', async ({ page }) => {
       ],
       correct: [2],
       explanation:
-        'toPass has a default timeout of 0, meaning no limit of its own, and it ignores the expect timeout, so it keeps retrying until the 30s test timeout. The default intervals [100, 250, 500, 1000] are delays, not a retry count; the last one repeats. Each attempt also spends up to 5s inside the inner toHaveText, making the run even slower.',
+        'toPass has a default timeout of 0, which means no limit of its own. It ignores the expect timeout. So it keeps trying until the 30 second test timeout. The default gaps [100, 250, 500, 1000] are waits between tries, not a count; the last one repeats. Each try also waits up to 5 seconds inside the inner toHaveText, which makes it even slower.',
       followUps: [
         {
           q: 'How would you write it properly?',
-          a: "Give toPass an explicit limit and the inner assertion a short timeout: toHaveText('Shipped', { timeout: 1_000 }) inside, and .toPass({ intervals: [1_000, 2_000, 5_000], timeout: 30_000 }) outside.",
+          a: 'Give toPass a clear limit and the inner check a short one: toHaveText(\'Shipped\', { timeout: 1_000 }) inside, and .toPass({ intervals: [1_000, 2_000, 5_000], timeout: 30_000 }) outside.',
         },
       ],
     },
@@ -1458,11 +1513,11 @@ test('pay', async ({ page }) => {
       ],
       correct: [1],
       explanation:
-        'networkidle needs a quiet network for 500 ms, and a ping every 400 ms prevents that, so navigation waits until a timeout. That is one reason the docs mark networkidle as discouraged. It fires after load, not before, it does not filter analytics, and even when it fires it says nothing about whether the UI rendered the data.',
+        'networkidle needs 500 ms with no network traffic. A ping every 400 ms never allows that, so the page load waits until a timeout. That is one reason the docs do not recommend networkidle. It comes after load, not before. It does not ignore analytics. Even when it fires, it says nothing about whether the screen shows the data.',
       followUps: [
         {
           q: 'What should the test wait for instead?',
-          a: 'Keep the default goto and assert on visible content, for example await expect(page.getByRole(\'heading\', { name: \'Dashboard\' })).toBeVisible() and a data widget\'s text.',
+          a: 'Keep the normal goto and check visible content. For example, await expect(page.getByRole(\'heading\', { name: \'Dashboard\' })).toBeVisible(), plus the text of one data widget.',
         },
       ],
     },
@@ -1485,11 +1540,11 @@ expect(await results.allTextContents()).toHaveLength(3);`,
       options: ['A', 'B', 'C', 'D'],
       correct: [2],
       explanation:
-        'toHaveCount is a web-first assertion that re-counts until it sees exactly 3 or times out. count(), all() and allTextContents() each take a single snapshot. The docs warn that all() does not wait for elements and gives unpredictable results on dynamic lists. A, B and D can all see 0 or a partial list.',
+        'toHaveCount is a web-first check. It counts again and again until it sees exactly 3, or times out. count(), all() and allTextContents() each read the list only once. The docs warn that all() does not wait and gives unpredictable results on changing lists. So A, B and D can all see 0 items or only some.',
       followUps: [
         {
           q: 'You also need the texts in order. How?',
-          a: "await expect(results).toHaveText(['Result 1', 'Result 2', 'Result 3']). The array form checks count, order and content, and it retries.",
+          a: 'await expect(results).toHaveText([\'Result 1\', \'Result 2\', \'Result 3\']). The list form checks count, order and text, and it keeps trying.',
         },
       ],
     },
@@ -1505,11 +1560,11 @@ expect(await results.allTextContents()).toHaveLength(3);`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Both helpers default to the intervals 100, 250, 500, 1000 ms. expect.poll calls a function, checks its return value with a normal matcher, and is bounded by the expect timeout. toPass is the exception: its default timeout is 0, meaning it ignores the expect timeout and can run until the test times out, so the third statement is false.',
+        'Both helpers wait 100, 250, 500, 1000 ms between tries by default. expect.poll calls a function, checks its returned value with a normal check, and stops at the expect timeout. toPass is the exception. Its default timeout is 0, so it ignores the expect timeout and can run until the test times out. So the third statement is false.',
       followUps: [
         {
           q: 'Give a case for expect.poll that a locator assertion cannot handle.',
-          a: 'Waiting until an API returns status 200 or a field becomes "SHIPPED" after a UI action, or until a value in localStorage is set via page.evaluate. None of those is a DOM state a locator matcher can see.',
+          a: 'Waiting until an API returns status 200, or a field becomes "SHIPPED", after a UI action. Or waiting until a value is saved in localStorage. None of those is on the page, so a locator check cannot see it.',
         },
       ],
     },
@@ -1525,11 +1580,11 @@ expect(await results.allTextContents()).toHaveLength(3);`,
       ],
       correct: [1],
       explanation:
-        'Per the docs, an element with a non-empty box and no visibility:hidden is visible even at opacity 0. The assertion is satisfied as soon as the toast is in the DOM, while it is still transparent. toBeVisible does retry, but it has nothing left to wait for. Screenshots run in order after the await, and toBeVisible does not check stability at all.',
+        'The docs say an element with a size and no visibility:hidden is visible, even at opacity 0. So the check passes as soon as the toast is added, while it is still see-through. toBeVisible does keep trying, but it has nothing left to wait for. The screenshot runs after the await, in order, and toBeVisible does not check for movement at all.',
       followUps: [
         {
           q: 'How would you make the screenshot reliable?',
-          a: "Assert the final style, for example await expect(toast).toHaveCSS('opacity', '1'), before the screenshot. Alternatively, disable animations with toHaveScreenshot's animations: 'disabled' option or a reduced-motion setting in the test.",
+          a: 'Check the final style before the screenshot, for example await expect(toast).toHaveCSS(\'opacity\', \'1\'). Or turn animations off with toHaveScreenshot\'s animations: \'disabled\' option, or a reduced-motion setting.',
         },
       ],
     },

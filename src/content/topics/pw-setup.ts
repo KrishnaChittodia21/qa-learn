@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 1,
   title: 'Playwright Setup, Architecture & Tooling',
   subtitle:
-    'What Playwright is and how it differs from Selenium and Cypress, the browser → context → page model, installing with npm init playwright, reading playwright.config.ts, writing and running your first test, and the tools (CLI, UI mode, codegen, VS Code, HTML report) you will use every day.',
+    `What Playwright is, how it compares with Selenium and Cypress, and how browser, context and page fit together. Then install it, read the config file, write and run your first test, and meet the everyday tools: the command line, UI mode, codegen, VS Code and the HTML report.`,
   estimatedMinutes: 85,
   sources: [
     'Playwright docs — Installation (playwright.dev/docs/intro)',
@@ -26,102 +26,146 @@ const topic: Topic = {
   ],
   tags: ['playwright', 'setup', 'architecture', 'browser-context', 'config', 'cli', 'ui-mode', 'codegen', 'vs-code', 'html-report', 'selenium', 'cypress'],
   cheatSheet: [
-    'Install: `npm init playwright@latest` → picks TS/JS, tests folder, optional GitHub Actions workflow, downloads Chromium + Firefox + WebKit; on CI/Linux use `npx playwright install --with-deps`.',
-    'Created files: `playwright.config.ts`, `package.json` (+ lock file), `tests/example.spec.ts`, and `.github/workflows/playwright.yml` if you said yes.',
-    'Object model: Browser (one process) → BrowserContext (incognito-like profile: own cookies, localStorage) → Page (a tab). Each test gets a fresh context + page from the fixtures.',
-    'Test anatomy: `import { test, expect } from \'@playwright/test\'` → `test(\'title\', async ({ page }) => { await page.goto(...); await expect(locator).toBeVisible(); })`. Every Playwright call is awaited.',
-    'Config defaults: test timeout 30s, expect timeout 5s, no action/navigation timeout, retries 0, workers = half the logical CPU cores; the template adds `fullyParallel: true`, `retries: CI ? 2 : 0`, `trace: \'on-first-retry\'`, `reporter: \'html\'`.',
-    'Top-level config = runner options (testDir, timeout, retries, workers, reporter, projects, webServer); `use` = browser/page options (baseURL, trace, screenshot, video, headless, testIdAttribute, viewport).',
-    'Run: `npx playwright test` (all, headless, every project) · `tests/login.spec.ts:12` (one test by line) · `-g "checkout"` (by title/tag) · `--project=chromium` · `--headed` · `--last-failed` · `--list` · `-x`.',
-    'Debug/explore: `--ui` (watch mode + time-travel timeline + pick locator) · `--debug` (Inspector, headed, 1 worker, no timeout) · `npx playwright codegen <url>` (record actions & assertions).',
-    'Report: HTML report in `playwright-report/` (opens automatically on failure); `npx playwright show-report` serves it on port 9323; raw artifacts (traces, screenshots, videos) live in `test-results/`.',
-    'TypeScript works with zero setup, but Playwright only strips types; run `npx tsc --noEmit` and the `@typescript-eslint/no-floating-promises` rule on CI to catch type errors and missing `await`s.',
-    'vs Selenium: no drivers, auto-waiting built in, contexts for cheap isolation, free parallelism/sharding, trace viewer. vs Cypress: runs outside the browser, so multi-tab, multi-origin, iframes and WebKit are first-class.',
-    'Keep it current: `npm install -D @playwright/test@latest` then `npx playwright install --with-deps`; check with `npx playwright --version`.',
+    `Install: \`npm init playwright@latest\`. It asks TS or JS, the tests folder name and whether to add a GitHub Actions workflow. Then it downloads Chromium, Firefox and WebKit. On CI or Linux, use \`npx playwright install --with-deps\`.`,
+    `Files it creates: \`playwright.config.ts\`, \`package.json\` (and lock file), \`tests/example.spec.ts\`, and \`.github/workflows/playwright.yml\` if you said yes.`,
+    `Browser → context → page: Browser = one running browser. BrowserContext = a private profile, like an incognito window, with its own cookies and local storage. Page = one tab. Every test gets a fresh context and page.`,
+    `A test: \`import { test, expect } from '@playwright/test'\` → \`test('title', async ({ page }) => { await page.goto(...); await expect(locator).toBeVisible(); })\`. Put \`await\` before every Playwright call.`,
+    `Defaults: test timeout 30 s, expect timeout 5 s, no action or navigation timeout, retries 0, workers = half the logical CPU cores. The template adds \`fullyParallel: true\`, \`retries: CI ? 2 : 0\`, \`trace: 'on-first-retry'\` and \`reporter: 'html'\`.`,
+    `Top level of the config = runner settings (testDir, timeout, retries, workers, reporter, projects, webServer). Inside \`use\` = browser and page settings (baseURL, trace, screenshot, video, headless, testIdAttribute, viewport).`,
+    `Run: \`npx playwright test\` (all tests, no window, every project) · \`tests/login.spec.ts:12\` (one test by line) · \`-g "checkout"\` (by title or tag) · \`--project=chromium\` · \`--headed\` · \`--last-failed\` · \`--list\` · \`-x\`.`,
+    `Debug and explore: \`--ui\` (UI mode: watch, step-by-step timeline, pick locator) · \`--debug\` (Inspector, visible browser, 1 worker, no timeout) · \`npx playwright codegen <url>\` (records your clicks as code).`,
+    `Report: the HTML report is in \`playwright-report/\`. It opens by itself when a test fails locally. \`npx playwright show-report\` serves it on port 9323. Traces, screenshots and videos are in \`test-results/\`.`,
+    `TypeScript works with no setup. But Playwright only removes the types; it does not check them. On CI, run \`npx tsc --noEmit\` and the \`@typescript-eslint/no-floating-promises\` lint rule to catch type errors and missing \`await\`s.`,
+    `vs Selenium: no drivers, built-in waiting, cheap clean profiles per test, free parallel runs and sharding, trace viewer. vs Cypress: Playwright runs outside the browser, so many tabs, many websites, iframes and WebKit all work well.`,
+    `Update: \`npm install -D @playwright/test@latest\`, then \`npx playwright install --with-deps\`. Check with \`npx playwright --version\`.`,
   ],
   sections: [
     {
       heading: 'What Playwright is (and what it is not)',
-      body: `**Intuition:** Playwright is a robot that drives a real browser exactly like a careful manual tester would: it opens a page, waits until a button is really clickable, clicks it, and then checks what the user would see. The difference is that it does it in seconds, in three browser engines, and the same way every time.
+      body: `**Example:** \`await page.getByRole('button', { name: 'Login' }).click()\`
 
-**Precisely:** Playwright is an open-source browser automation framework from Microsoft (first released in 2020 by engineers who had earlier built Google's Puppeteer). It ships in two layers:
+- Playwright finds the Login button the way a user sees it.
+- It waits until the button can be clicked. This is called **auto-waiting**.
+- Then it clicks it.
 
-| Layer | Package | What you get |
-|---|---|---|
-| **Playwright Test** (what this course uses) | \`@playwright/test\` | A full test runner: \`test\`/\`expect\`, fixtures, parallel workers, retries, projects, reporters, UI mode, trace viewer |
-| **Playwright Library** | \`playwright\` | Just the browser-automation API (launch, contexts, pages). You bring your own runner (Jest, Mocha) or write scripts and scrapers |
+That is Playwright in one line. It is a tool that controls a real browser. It works like a careful manual tester. But it takes seconds, and it does the same steps every time.
 
-**Browsers:** Chromium (Chrome, Edge), Firefox and WebKit (the engine behind Safari), plus device emulation for mobile Chrome and Mobile Safari. Playwright downloads its own tested browser builds, so you never install or match a "driver" by hand.
+Microsoft makes Playwright. It is free and open source.
 
-**Languages:** TypeScript/JavaScript, Python, Java and .NET. The \`@playwright/test\` runner itself is the Node.js flavour; Python uses a pytest plugin, Java and .NET use JUnit/TestNG or NUnit/MSTest. Interview tip: the most complete feature set (fixtures, UI mode, sharding, HTML report) lives in the TypeScript/Node runner.
+**Two packages:**
 
-**What it covers:** UI end-to-end tests, API tests (the \`request\` fixture), network mocking, visual comparisons, accessibility checks with plugins, and component testing (experimental). **What it is not:** a load-testing tool (use k6/JMeter), a native mobile-app tool (use Appium), or a replacement for unit tests.
+| Package | What you get |
+|---|---|
+| \`@playwright/test\` (this course) | A full test runner: \`test\`, \`expect\`, fixtures (ready-made helpers like \`page\`), parallel runs, retries, reports, UI mode, trace viewer (a step-by-step replay of a test) |
+| \`playwright\` | Only the browser-control part, with no runner. Used for scripts and scrapers |
 
-**Common mistake:** saying "Playwright is a Selenium wrapper". It is not; it talks to browsers through its own protocol connections, not through WebDriver.
+**Browsers:** Chromium (Chrome, Edge), Firefox and WebKit. WebKit is the engine inside Safari. Playwright can also act like a phone, such as mobile Chrome or Mobile Safari.
 
-**In interviews, say this:** "Playwright is a cross-browser end-to-end framework with a built-in test runner. Its big wins for me as a tester are auto-waiting, isolated browser contexts per test, and debugging tools like UI mode and the trace viewer."`,
+Playwright downloads its own browsers. You never install a "driver" by hand.
+
+**Languages:** TypeScript/JavaScript, Python, Java and .NET. The TypeScript version has the most tools, like UI mode and the HTML report.
+
+**What it can test:** web pages from start to end, and APIs (with the \`request\` fixture). It can also fake network answers, compare screenshots and check accessibility with plugins.
+
+**What it is not:** it is not a load-testing tool (use k6 or JMeter). It does not test native mobile apps (use Appium). It does not replace unit tests.
+
+**Watch out:** Playwright is not a "Selenium wrapper". It does not use WebDriver. It talks to the browsers directly.
+
+**In an interview, say:** "Playwright is a cross-browser tool for end-to-end tests, with its own test runner. I like three things: auto-waiting, a clean browser profile for every test, and debugging tools like UI mode and the trace viewer."
+
+**Why testers care:** one free tool covers three browsers, UI tests and API tests.`,
       keyPoints: [
-        '`@playwright/test` = runner + assertions + fixtures; `playwright` = automation library only.',
-        'Chromium, Firefox and WebKit from one API; browsers are downloaded by Playwright, no drivers.',
-        'Supports TS/JS, Python, Java, .NET; the Node runner has the richest tooling.',
+        `\`@playwright/test\` = runner + assertions + fixtures. \`playwright\` = browser control only.`,
+        `One API for Chromium, Firefox and WebKit. Playwright downloads the browsers; no drivers.`,
+        `Works with TS/JS, Python, Java and .NET. The TypeScript runner has the most tools.`,
       ],
       source: 'Playwright docs — Installation & Library vs Test',
     },
     {
       heading: 'Playwright vs Selenium vs Cypress',
-      body: `**Intuition:** Selenium is the long-established universal remote (works with everything, but you assemble the parts). Cypress lives *inside* the browser next to your app (great developer experience, but it sees the world through one tab). Playwright stands *outside* the browser and controls it directly (one tool that covers many tabs, origins and engines).
+      body: `**Example:** \`await page.getByRole('button', { name: 'Login' }).click()\`
 
-| Dimension | Playwright | Selenium (4.x) | Cypress |
+- In Playwright, this line waits for the button by itself.
+- In Selenium, you usually write an extra "wait until clickable" line first.
+
+That one difference shows the main idea. Each tool sits in a different place:
+
+- **Selenium** is the old, universal remote. It works with almost every language and browser. You build the parts yourself.
+- **Cypress** runs inside the browser, next to your app. JavaScript developers like it. But it sees only one tab.
+- **Playwright** sits outside the browser and controls it. One tool handles many tabs, many websites and three browser engines.
+
+| Point | Playwright | Selenium 4 | Cypress |
 |---|---|---|---|
-| How it talks to the browser | Persistent connection to the browser over its own protocol (CDP for Chromium, patched Firefox/WebKit builds) | W3C WebDriver protocol (HTTP) through a browser driver; WebDriver BiDi being added | Test code runs **inside** the browser alongside the app, plus a Node process |
-| Languages | TS/JS, Python, Java, .NET | Java, Python, C#, JavaScript, Ruby (plus community bindings) | JavaScript/TypeScript only |
-| Browsers | Chromium, Firefox, WebKit (Safari engine) | Chrome, Edge, Firefox, Safari, legacy IE | Chrome-family, Firefox; WebKit is experimental |
-| Waiting | Auto-waits for actionability before each action; web-first assertions retry | You write implicit/explicit waits yourself | Built-in retry-ability of commands and assertions |
-| Multi-tab / popups | Yes, first-class (\`context.waitForEvent('page')\`) | Yes, via window handles | No multi-tab support |
-| Multiple origins in one test | Yes | Yes | Supported via \`cy.origin()\` with restrictions |
-| iframes | \`frameLocator()\` / \`contentFrame()\` | \`switchTo().frame()\` | Needs workarounds or plugins |
-| Isolation | New browser context per test (cheap, milliseconds) | Usually a new browser session per test (slow) or manual cleanup | Clears state between tests in the same browser |
-| Parallelism | Built-in workers and \`--shard\`, free | Selenium Grid / cloud providers | Parallelisation through Cypress Cloud (paid) or third-party tools |
-| Network mocking | \`page.route()\` built in | Limited (BiDi/CDP in newer versions) | \`cy.intercept()\` built in |
-| Debugging | UI mode, Inspector, trace viewer, HTML report | IDE debugger, screenshots, Grid logs | Time-travel runner UI |
-| Mobile | Device emulation (viewport, touch, UA) | Real devices via Appium | Viewport emulation |
+| How it talks to the browser | Direct, always-open connection | WebDriver standard, through a driver program | Test code runs inside the browser |
+| Languages | TS/JS, Python, Java, .NET | Java, Python, C#, JavaScript, Ruby | JavaScript/TypeScript only |
+| Browsers | Chromium, Firefox, WebKit (Safari engine) | Chrome, Edge, Firefox, Safari | Chrome family, Firefox; WebKit is experimental |
+| Waiting | Waits by itself before each action; assertions retry | You write the waits | Commands and assertions retry |
+| Many tabs / popups | Yes | Yes, with window handles | No |
+| Several websites in one test | Yes | Yes | With \`cy.origin()\`, with limits |
+| iframes | \`frameLocator()\` | \`switchTo().frame()\` | Needs workarounds |
+| Clean state per test | New browser context (a fresh private profile) per test, in milliseconds | Usually a new browser (slow) | Clears state between tests |
+| Running tests at the same time | Built in and free | Selenium Grid or a cloud | Cypress Cloud (paid) or other tools |
+| Faking network answers | \`page.route()\` | Limited | \`cy.intercept()\` |
+| Debugging | UI mode, Inspector, trace viewer, HTML report | IDE debugger, screenshots | Time-travel runner |
+| Mobile | Phone emulation | Real devices through Appium | Screen size only |
 
-**When to pick which (honest answer):**
+**When to pick which:**
 
-- **Playwright:** new web projects, teams who want cross-browser + API + mocking in one free tool, and anyone who must test Safari behaviour on Linux CI.
-- **Selenium:** large existing Java/C# suites, organisations with an established Grid, or when you need real mobile devices through Appium and a single WebDriver skill set.
-- **Cypress:** front-end teams who live in JavaScript, test one origin at a time, and value its interactive runner.
+- **Playwright:** new web projects. Teams that want many browsers, API tests and network faking in one free tool. Also teams that must test Safari's engine on Linux CI.
+- **Selenium:** big existing Java or C# suites. Teams that already run a Selenium Grid. Testing on real phones through Appium.
+- **Cypress:** JavaScript front-end teams who test one website at a time and like its runner.
 
-**Common mistake:** claiming one tool is "best" for everything. Interviewers want trade-offs: "We had 600 Selenium Java tests and a Java team; rewriting would cost a quarter. For the *new* React app, I would start with Playwright because…"`,
+**Watch out:** don't say one tool is "best" for everything. Talk about trade-offs. For example: "We had 600 Selenium Java tests and a Java team. A rewrite would take three months. For the new React app, I would start with Playwright."
+
+**Why testers care:** this is a very common interview question. A balanced answer shows real experience.`,
       keyPoints: [
-        'Playwright: outside the browser, auto-waiting, contexts, free parallelism, trace viewer.',
-        'Selenium: WebDriver standard, most languages, Grid/Appium ecosystem; you manage waits.',
-        'Cypress: inside the browser, JS only, no multi-tab, strong interactive runner.',
+        `Playwright: outside the browser, built-in waiting, fresh context per test, free parallel runs, trace viewer.`,
+        `Selenium: the WebDriver standard, most languages, Grid and Appium. You write the waits.`,
+        `Cypress: inside the browser, JavaScript only, no multiple tabs, a strong interactive runner.`,
       ],
       source: 'Playwright docs — Why Playwright / Browsers; Selenium docs — WebDriver; Cypress docs — Trade-offs; Checkly — Playwright guides',
     },
     {
       heading: 'Architecture: browser → context → page',
-      body: `**Intuition:** think of a hotel. The **browser** is the building (expensive to build, you start one). A **browser context** is a guest room with its own key, its own minibar and its own luggage (cookies, localStorage, sessionStorage, cache, permissions). A **page** is a window inside that room (a tab). Two rooms never share luggage, even though they are in the same building.
+      body: `**Example:** \`test('login', async ({ page }) => { ... })\`
 
-**Mechanics:**
+- \`{ page }\` is a **fixture**: something Playwright prepares for your test and cleans up after it.
+- Here it is a brand-new tab, called a **page**.
+- The page lives in a brand-new **browser context**. A context is a private browser profile, like an incognito window.
+- When the test ends, Playwright throws the context away.
 
-1. The test runner (Node.js) starts one **worker process** per parallel slot.
-2. Each worker launches a **browser** for its project (for example Chromium) and keeps the connection open over a WebSocket-style pipe, so commands do not pay an HTTP round-trip each.
-3. For **every test**, the built-in \`context\` fixture creates a brand-new **BrowserContext**, and the \`page\` fixture opens one **Page** in it. When the test ends, the context is thrown away.
+Think of a hotel:
 
-Because a context is "fast and cheap" (milliseconds, not the seconds a new browser costs), Playwright can give each test a clean, incognito-like profile. That is why test order does not matter and why tests can run in parallel safely.
+- The **browser** is the building. It is slow to build, so Playwright starts it once.
+- A **browser context** is a guest room. It has its own key and its own bags: cookies, local storage, session storage, cache and permissions.
+- A **page** is a window in that room. It is one tab.
 
-**Two users in one test:** create two contexts from the \`browser\` fixture. They are as separate as two different laptops. Use **two pages in the same context** only when you want the *same* user in two tabs (they share the login cookie).
+Two rooms never share bags, even in the same building.
 
-| Need | Use |
+**What happens when you run tests:**
+
+1. The test runner starts some **workers**. A worker is a separate process that runs tests. Several workers run at the same time.
+2. Each worker opens one browser, for example Chromium. It keeps a fast, open connection to it.
+3. For every test, Playwright makes a new context and a new page. When the test ends, the context is closed.
+
+A new context takes milliseconds. A new browser takes seconds. So every test can get a clean start cheaply.
+
+That is why test order does not matter. It is also why tests can safely run at the same time.
+
+**Two users in one test:** create two contexts from the \`browser\` fixture. They are as separate as two laptops.
+
+**Same user in two tabs:** use two pages in one context. They share the login cookie.
+
+| You need | Use |
 |---|---|
-| Fresh user per test | Default \`page\` fixture (new context each test) |
-| Buyer and seller chatting in one test | \`browser.newContext()\` twice |
-| Same user, link opens a new tab | Pages in the same \`context\` |
-| Reuse a logged-in session across tests | \`storageState\` (covered in pw-auth-config) |
+| A fresh user for each test | The default \`page\` fixture |
+| Buyer and seller chatting in one test | \`browser.newContext()\` two times |
+| Same user, a link opens a new tab | Two pages in the same \`context\` |
+| Stay logged in across tests | \`storageState\`, a saved file of cookies (see pw-auth-config) |
 
-**In interviews, say this:** "Isolation comes from browser contexts, not from cleanup code. Playwright starts every test from scratch instead of trying to undo the previous test."`,
+**In an interview, say:** "Each test gets its own browser context. Playwright starts every test clean. It does not try to undo the last test."
+
+**Why testers care:** one test cannot break the next one by leaving cookies or items in the cart.`,
       diagram: `  playwright test (Node runner)
     |-- worker 1 -----------------------------------------
     |     Browser: Chromium (launched once per worker)
@@ -171,35 +215,54 @@ test('two users do not share a session', async ({ browser }) => {
         },
       ],
       keyPoints: [
-        'Browser = expensive process; context = cheap isolated profile; page = tab.',
-        'The `page` fixture gives every test a new context, which is the basis of isolation and parallelism.',
-        'Two users → two contexts; same user in two tabs → two pages in one context.',
+        `Browser = slow to start; context = cheap private profile; page = one tab.`,
+        `The \`page\` fixture gives every test a new context. This keeps tests apart and lets them run at the same time.`,
+        `Two users → two contexts. Same user in two tabs → two pages in one context.`,
       ],
       source: 'Playwright docs — Isolation (Browser contexts); Playwright docs — Writing tests (test isolation)',
     },
     {
       heading: 'Installing Playwright with npm init playwright',
-      body: `**Intuition:** one command scaffolds the project and downloads the browsers, like a "starter kit" that contains a sample test and a sensible configuration.
+      body: `**Example:** \`npm init playwright@latest\`
 
-**Prerequisites:** a current LTS release of **Node.js** (check the docs' system requirements for the exact supported versions; recent docs list Node 22, 24 and 26), a terminal, and VS Code. Supported OS: Windows 11+ (or WSL), recent macOS, and Debian/Ubuntu LTS releases.
+- This one command creates a starter project.
+- It adds a config file and a sample test.
+- It downloads the browsers.
+
+**Before you start:** install a current LTS version of Node.js. LTS means the stable version with long support. Recent docs list Node 22, 24 and 26. You also need a terminal and VS Code.
+
+Playwright runs on Windows 11 (or WSL), recent macOS, and Debian or Ubuntu LTS.
 
 **Steps:**
 
-1. Create a folder and open it in a terminal.
-2. Run \`npm init playwright@latest\`. It asks four questions:
-   - TypeScript or JavaScript (default **TypeScript**),
-   - name of the tests folder (default \`tests\`, or \`e2e\` if \`tests\` already exists),
-   - add a **GitHub Actions** workflow (say yes; you will need it later),
-   - install Playwright browsers (default yes).
-3. Run \`npx playwright test\` to execute the example test headless in all three browsers, then \`npx playwright show-report\`.
+1. Make a new folder and open it in a terminal.
+2. Run \`npm init playwright@latest\`. It asks four questions.
+   - TypeScript or JavaScript? The default is **TypeScript**.
+   - Name of the tests folder? The default is \`tests\` (or \`e2e\` if \`tests\` already exists).
+   - Add a **GitHub Actions** workflow? Say yes. You will need it later.
+   - Install the browsers? The default is yes.
+3. Run \`npx playwright test\`. It runs the sample test in all three browsers.
+4. Run \`npx playwright show-report\` to see the results.
 
-**Where do browsers go?** Into a shared cache, not \`node_modules\`: \`~/Library/Caches/ms-playwright\` on macOS, \`~/.cache/ms-playwright\` on Linux, \`%USERPROFILE%\\AppData\\Local\\ms-playwright\` on Windows. Each Playwright version pins specific browser builds, which is why upgrading the package is followed by \`npx playwright install\`.
+By default the tests run **headless**. That means the browser runs with no visible window.
 
-**Linux and CI:** browsers need system libraries (fonts, codecs). \`npx playwright install --with-deps\` installs the browsers *and* the OS packages. To save CI minutes, install only what you run: \`npx playwright install chromium --with-deps\`.
+**Where do browsers go?** Not into \`node_modules\`. They go into a shared cache folder.
 
-**Existing project?** Running the same command inside an existing repo just adds \`@playwright/test\` to your \`package.json\` and creates the config; or install manually with \`npm install -D @playwright/test\` and \`npx playwright install\`.
+- macOS: \`~/Library/Caches/ms-playwright\`.
+- Linux: \`~/.cache/ms-playwright\`.
+- Windows: \`%USERPROFILE%\\AppData\\Local\\ms-playwright\`.
 
-**Common mistake:** installing \`playwright\` (the library) instead of \`@playwright/test\`, then wondering why \`test\` and \`expect\` cannot be imported.`,
+Each Playwright version needs its own browser builds. So after you upgrade Playwright, run \`npx playwright install\` again.
+
+**Linux and CI:** browsers need some system files, like fonts. \`npx playwright install --with-deps\` installs the browsers and these files.
+
+To save CI time, install only the browser you use: \`npx playwright install chromium --with-deps\`.
+
+**Existing project?** Run the same init command inside it. Or install by hand: \`npm install -D @playwright/test\`, then \`npx playwright install\`.
+
+**Watch out:** don't install \`playwright\` (the library) by mistake. Install \`@playwright/test\`. Otherwise you cannot import \`test\` and \`expect\`.
+
+**Why testers care:** you go from an empty folder to a green test run in a few minutes.`,
       code: [
         {
           language: 'bash',
@@ -230,34 +293,48 @@ npx playwright --version`,
         },
       ],
       keyPoints: [
-        '`npm init playwright@latest` = scaffold + config + example test + optional CI workflow + browsers.',
-        'Browsers live in a per-user cache folder and are tied to the Playwright version.',
-        '`--with-deps` adds the OS libraries Linux/CI images need.',
+        `\`npm init playwright@latest\` = project + config + sample test + optional CI workflow + browsers.`,
+        `Browsers live in a cache folder for your user. Each Playwright version needs its own browsers.`,
+        `\`--with-deps\` adds the system files that Linux and CI machines need.`,
       ],
       source: 'Playwright docs — Installation; Playwright docs — Browsers; Playwright docs — Best practices (CI)',
     },
     {
       heading: 'Project structure after setup',
-      body: `**Intuition:** like a new test management project, there is one settings file, one place for test cases, and folders that results get written to.
+      body: `**Example:** after \`npm init playwright@latest\`, your folder has \`playwright.config.ts\` and \`tests/example.spec.ts\`.
 
-| Path | Created by | Purpose | Commit to Git? |
+- \`playwright.config.ts\` holds the settings.
+- \`tests/\` holds your test files.
+- After a run, \`test-results/\` and \`playwright-report/\` appear. They hold the results.
+
+It is like a project in a test management tool. There is one settings file, one place for test cases, and folders for results.
+
+| Path | Made by | What it is for | Commit to Git? |
 |---|---|---|---|
-| \`playwright.config.ts\` | init | Runner + browser configuration | Yes |
-| \`package.json\` / lock file | init | Dependencies (\`@playwright/test\`, \`@types/node\`) and npm scripts | Yes |
-| \`tests/example.spec.ts\` | init | Sample test; files ending in \`.spec.ts\` or \`.test.ts\` are picked up | Yes |
-| \`.github/workflows/playwright.yml\` | init (if chosen) | Runs tests on push / PR | Yes |
+| \`playwright.config.ts\` | init | Runner and browser settings | Yes |
+| \`package.json\` / lock file | init | Packages (\`@playwright/test\`, \`@types/node\`) and npm scripts | Yes |
+| \`tests/example.spec.ts\` | init | A sample test. Files ending in \`.spec.ts\` or \`.test.ts\` are tests | Yes |
+| \`.github/workflows/playwright.yml\` | init (if you said yes) | Runs the tests on every push or pull request | Yes |
 | \`node_modules/\` | npm | Installed packages | **No** |
-| \`test-results/\` | each run | Per-test artifacts: traces, screenshots, videos, error context | **No** |
-| \`playwright-report/\` | html reporter | The HTML report | **No** (upload as CI artifact) |
-| \`playwright/.cache\`, \`playwright/.auth\` | component tests / auth setup | Caches and saved login state | **No** (\`.auth\` holds secrets) |
+| \`test-results/\` | each run | Files saved for each test: traces, screenshots, videos, error details | **No** |
+| \`playwright-report/\` | html reporter | The HTML report | **No** (upload it from CI instead) |
+| \`playwright/.cache\`, \`playwright/.auth\` | component tests / login setup | Caches and saved login state | **No** (\`.auth\` holds secrets) |
 
-Older versions of the scaffold also created a \`tests-examples/demo-todo-app.spec.ts\` file with a richer TodoMVC example; it is worth reading once and deleting.
+Older versions also made \`tests-examples/demo-todo-app.spec.ts\`. It is a bigger example. Read it once, then delete it.
 
-**Which files are tests?** By default the runner looks in \`testDir\` for files matching \`*.spec.ts\`, \`*.test.ts\` (and the \`.js\`, \`.mjs\`, \`.tsx\` variants). Override with \`testMatch\` / \`testIgnore\`.
+**Which files are tests?** Playwright looks inside \`testDir\`. It picks files that end in \`.spec.ts\` or \`.test.ts\`. The \`.js\`, \`.mjs\` and \`.tsx\` versions count too. You can change this with \`testMatch\` and \`testIgnore\`.
 
-**A structure you can grow into** (POM and fixtures come later in the course): \`tests/\` for specs grouped by feature, \`pages/\` for page objects, \`fixtures/\` for custom fixtures, \`test-data/\` for JSON data, \`.env\` for local secrets (git-ignored).
+**A layout you can grow into.** Later in the course you will add more folders.
 
-**Common mistake:** committing \`test-results/\` or \`playwright/.auth/\` (which can contain session cookies) to Git.`,
+- \`tests/\` for test files, grouped by feature.
+- \`pages/\` for page objects.
+- \`fixtures/\` for your own fixtures.
+- \`test-data/\` for JSON data.
+- \`.env\` for local secrets. Git ignores it.
+
+**Watch out:** never commit \`test-results/\` or \`playwright/.auth/\` to Git. The \`.auth\` folder can hold real login cookies.
+
+**Why testers care:** a clean folder layout makes the suite easy to grow and safe to share.`,
       diagram: `saucedemo-tests/
 |-- .github/workflows/playwright.yml   CI pipeline (optional)
 |-- tests/
@@ -270,42 +347,59 @@ Older versions of the scaffold also created a \`tests-examples/demo-todo-app.spe
 |-- test-results/                      traces, screenshots, videos (ignored)
 '-- playwright-report/                 HTML report (ignored)`,
       keyPoints: [
-        'Config, specs, package.json and the CI workflow are source; results and reports are generated output.',
-        'Default test files: `*.spec.ts` / `*.test.ts` under `testDir`.',
-        'Never commit saved auth state; it contains real session cookies.',
+        `Config, test files, package.json and the CI workflow go into Git. Results and reports do not.`,
+        `By default, test files are \`*.spec.ts\` or \`*.test.ts\` inside \`testDir\`.`,
+        `Never commit saved login state. It holds real session cookies.`,
       ],
       source: 'Playwright docs — Installation (what was installed); Playwright docs — Test configuration (testMatch)',
     },
     {
       heading: 'playwright.config.ts walkthrough',
-      body: `**Intuition:** the config is the "test plan settings" of your suite: where tests live, how long to wait, how many to run at once, which browsers, and what evidence to collect.
+      body: `**Example:** \`retries: process.env.CI ? 2 : 0\`
 
-**Rule of thumb:** options at the **top level** control the *runner* (which tests, how many workers, timeouts, retries, reporters). Options inside \`use\` control the *browser and page* each test gets (base URL, viewport, trace, screenshots, test id attribute). A \`use\` block inside a **project** overrides the global one for that browser.
+- On CI, a failed test runs again, up to 2 more times.
+- On your laptop, it does not run again.
+- This one line in \`playwright.config.ts\` sets it for the whole suite.
 
-| Option | Where | Default | What it does |
+The config file is the settings page of your suite. It says where tests live and how long to wait. It says how many tests run at once and which browsers to use. It also says what proof to save, like screenshots.
+
+**Rule of thumb:**
+
+- Settings at the **top level** control the *runner*: which tests, how many workers, timeouts, retries and reports.
+- Settings inside \`use\` control the *browser and page*: base URL, screen size, trace, screenshots and test id attribute.
+- A **project** is one named setup, usually one browser or device. A \`use\` block inside a project overrides the main one for that project.
+
+| Setting | Where | Default | What it does |
 |---|---|---|---|
-| \`testDir\` | top | config folder | Folder scanned for tests |
-| \`timeout\` | top | 30 000 ms | Max time for one test (including hooks/fixtures) |
-| \`expect.timeout\` | top | 5 000 ms | How long web-first assertions retry |
-| \`fullyParallel\` | top | false | Run tests inside one file in parallel too |
-| \`forbidOnly\` | top | false | Fail the run if a \`test.only\` slipped in (turn on for CI) |
-| \`retries\` | top | 0 | Re-run failed tests; a pass on retry is reported as **flaky** |
-| \`workers\` | top | half of logical CPU cores | Parallel worker processes |
-| \`reporter\` | top | \`list\` locally, \`dot\` on CI (template sets \`html\`) | Output format(s) |
-| \`projects\` | top | one default project | Browser/device matrix (or setup/teardown projects) |
-| \`webServer\` | top | none | Start your app before tests |
+| \`testDir\` | top | config folder | Folder with your tests |
+| \`timeout\` | top | 30 000 ms | Most time one test may take, including hooks and fixtures |
+| \`expect.timeout\` | top | 5 000 ms | How long assertions like \`toBeVisible\` keep retrying |
+| \`fullyParallel\` | top | false | Also run the tests inside one file at the same time |
+| \`forbidOnly\` | top | false | Fail the run if a \`test.only\` was left in (turn on for CI) |
+| \`retries\` | top | 0 | Run a failed test again. A pass on a retry is marked **flaky** |
+| \`workers\` | top | half of logical CPU cores | How many test processes run at the same time |
+| \`reporter\` | top | \`list\` locally, \`dot\` on CI (template sets \`html\`) | Report format |
+| \`projects\` | top | one default project | Browsers and devices to run on (also setup projects) |
+| \`webServer\` | top | none | Start your app before the tests |
 | \`use.baseURL\` | use | none | Lets you write \`page.goto('/')\` |
 | \`use.trace\` | use | \`off\` | \`on-first-retry\` records a trace only when a test is retried |
-| \`use.screenshot\` / \`use.video\` | use | \`off\` | \`only-on-failure\` / \`retain-on-failure\` are the usual choices |
-| \`use.testIdAttribute\` | use | \`data-testid\` | Attribute read by \`getByTestId\` |
-| \`use.headless\` | use | true | \`--headed\` flips it for one run |
-| \`use.actionTimeout\` / \`navigationTimeout\` | use | 0 (no limit) | Per-action caps; the test timeout still applies |
+| \`use.screenshot\` / \`use.video\` | use | \`off\` | Usually \`only-on-failure\` / \`retain-on-failure\` |
+| \`use.testIdAttribute\` | use | \`data-testid\` | The attribute that \`getByTestId\` reads |
+| \`use.headless\` | use | true | \`--headed\` shows the window for one run |
+| \`use.actionTimeout\` / \`navigationTimeout\` | use | 0 (no limit) | Limit for each action; the test timeout still applies |
 
-**SauceDemo note:** SauceDemo marks elements with \`data-test="username"\`, not \`data-testid\`. Setting \`testIdAttribute: 'data-test'\` lets you write \`page.getByTestId('username')\`.
+Two words from the table:
 
-Detailed config patterns (env files, multiple environments, storageState, setup projects) are covered in **pw-auth-config**; this section is the map.
+- A **flaky test** sometimes passes and sometimes fails, with no code change.
+- A **trace** is a recording of every step. It has page snapshots, network calls and console logs.
 
-**Common mistake:** putting runner options such as \`timeout\` or \`retries\` inside \`use\`; they belong at the top level (TypeScript will flag most of these).`,
+**SauceDemo note:** SauceDemo marks elements with \`data-test="username"\`, not \`data-testid\`. Set \`testIdAttribute: 'data-test'\`. Then \`page.getByTestId('username')\` works.
+
+More config patterns are in **pw-auth-config**: env files, many environments, storageState and setup projects. This section is the map.
+
+**Watch out:** don't put runner settings like \`timeout\` or \`retries\` inside \`use\`. They belong at the top level. TypeScript flags most of these mistakes.
+
+**Why testers care:** a few lines of config make the suite fast on your laptop and strict on CI.`,
       code: [
         {
           language: 'typescript',
@@ -339,33 +433,48 @@ export default defineConfig({
         },
       ],
       keyPoints: [
-        'Top level = runner (timeout, retries, workers, reporter, projects); `use` = browser/page options.',
-        'Defaults to remember: test 30s, expect 5s, retries 0, workers = half the cores, no action timeout.',
-        '`testIdAttribute: \'data-test\'` makes `getByTestId` work on SauceDemo.',
+        `Top level = runner (timeout, retries, workers, reporter, projects). \`use\` = browser and page settings.`,
+        `Defaults to remember: test 30 s, expect 5 s, retries 0, workers = half the cores, no action timeout.`,
+        `\`testIdAttribute: 'data-test'\` makes \`getByTestId\` work on SauceDemo.`,
       ],
       source: 'Playwright docs — Test configuration; Playwright docs — Test use options; Playwright docs — Timeouts',
     },
     {
       heading: 'Your first test, line by line',
-      body: `**Intuition:** a Playwright test is a manual test case written as code: preconditions (open the page), steps (fill, click), and expected results (assertions), with every step awaited like "wait until the previous step has really finished".
+      body: `**Example:** \`await page.getByPlaceholder('Username').fill('standard_user')\`
 
-**Anatomy of the test below:**
+- Playwright finds the box with the placeholder "Username".
+- It waits until the box is ready.
+- It types \`standard_user\` into it.
+- \`await\` makes the test wait until the typing is done.
+
+A Playwright test is a manual test case written as code. It has preconditions (open the page), steps (fill, click) and expected results (assertions).
 
 | Line | Meaning |
 |---|---|
-| \`import { test, expect } from '@playwright/test'\` | The runner's test function and assertion library |
-| \`test.describe('Login', ...)\` | Groups related tests (like a test suite) |
-| \`test('title', async ({ page }) => { ... })\` | One test case; \`{ page }\` is a **fixture**: a fresh tab in a fresh context, injected for you |
-| \`await page.goto('/')\` | Navigate; \`/\` is joined to \`baseURL\` from the config |
-| \`page.getByPlaceholder('Username')\` | A **locator**: a description of how to find the element (next topic) |
-| \`.fill(...)\`, \`.click()\` | Actions; each one auto-waits until the element is visible, enabled, stable and ready |
-| \`await expect(page).toHaveURL(...)\` | A **web-first assertion**: retries until true or until the 5s expect timeout |
+| \`import { test, expect } from '@playwright/test'\` | Brings in the test function and the assertion library |
+| \`test.describe('Login', ...)\` | Groups related tests, like a test suite |
+| \`test('title', async ({ page }) => { ... })\` | One test case. \`{ page }\` is a fixture: a fresh tab in a fresh context |
+| \`await page.goto('/')\` | Opens a page. \`/\` is added to \`baseURL\` from the config |
+| \`page.getByPlaceholder('Username')\` | A **locator**: a way to find an element (next topic) |
+| \`.fill(...)\`, \`.click()\` | Actions. Each one first waits until the element is visible, enabled, still and ready |
+| \`await expect(page).toHaveURL(...)\` | A **web-first assertion**: it keeps checking until it is true, for up to 5 s |
 
-**Why \`await\` everywhere?** Every Playwright action talks to a separate browser process and returns a Promise. Without \`await\`, the next line runs before the click has happened, and the test can finish (and pass!) before the browser did anything. You met this in the JavaScript async topic; here it becomes the number-one beginner bug.
+**Why \`await\` everywhere?** Every Playwright action talks to the browser, and that takes time. Each action returns a Promise, a "result comes later" value.
 
-**Writing tests from a manual case:** keep the same structure. Title = test case title, steps = actions, expected result = \`expect\`. One test checks one behaviour; tests never depend on each other (each starts in a new context).
+Without \`await\`, the next line runs before the click happens. The test can even finish, and pass, before the browser does anything. You met this in the JavaScript async topic. Here it is the number-one beginner bug.
 
-**Common mistake:** asserting with \`expect(await locator.isVisible()).toBe(true)\`. It checks once, immediately, and does not wait. Use \`await expect(locator).toBeVisible()\` (covered in depth in pw-assertions-waiting).`,
+**From a manual case to code.** Keep the same shape.
+
+- Test case title → test name.
+- Steps → actions.
+- Expected result → \`expect\`.
+
+One test checks one behaviour. Tests never depend on each other, because each one starts in a new context.
+
+**Watch out:** don't write \`expect(await locator.isVisible()).toBe(true)\`. It checks only once, right now, and does not wait. Write \`await expect(locator).toBeVisible()\` instead. There is more in pw-assertions-waiting.
+
+**Why testers care:** your manual test cases turn into code almost line by line.`,
       code: [
         {
           language: 'typescript',
@@ -398,42 +507,52 @@ test.describe('Login', () => {
         },
       ],
       keyPoints: [
-        '`{ page }` is a fixture: a new isolated tab per test, created and cleaned up by the runner.',
-        'Await every action and every web-first assertion.',
-        'Map manual test cases directly: title → test name, steps → actions, expected → expect.',
+        `\`{ page }\` is a fixture: a new, separate tab for each test. The runner creates it and cleans it up.`,
+        `Put \`await\` before every action and every web-first assertion.`,
+        `Map manual cases directly: title → test name, steps → actions, expected result → expect.`,
       ],
       source: 'Playwright docs — Writing tests; Playwright docs — Fixtures (built-in page fixture)',
     },
     {
       heading: 'Running tests from the CLI',
-      body: `**Intuition:** the CLI is your "test execution" screen. You choose *which* tests (files, lines, titles, tags, projects), *how* (headed, workers, retries) and *what output* (reporter).
+      body: `**Example:** \`npx playwright test tests/login.spec.ts --project=chromium\`
+
+- It runs only the tests in \`login.spec.ts\`.
+- It runs them only in Chromium.
+- With no other flags, they run headless (no window) and at the same time.
+
+The CLI (command line) is your "run tests" screen. You choose *which* tests run, *how* they run, and *what report* you get.
 
 | You want to… | Command |
 |---|---|
-| Run everything (headless, all projects, parallel) | \`npx playwright test\` |
-| One file | \`npx playwright test tests/login.spec.ts\` |
-| Files whose path contains words | \`npx playwright test login cart\` (regex on file paths) |
-| One test at a line | \`npx playwright test tests/login.spec.ts:12\` |
-| Tests whose **title** matches | \`npx playwright test -g "locked-out"\` |
-| Everything except a tag | \`npx playwright test --grep-invert @slow\` (or \`-G\`) |
-| One browser | \`npx playwright test --project=chromium\` |
+| Run everything (no window, all projects, in parallel) | \`npx playwright test\` |
+| Run one file | \`npx playwright test tests/login.spec.ts\` |
+| Run files whose path contains some words | \`npx playwright test login cart\` |
+| Run one test at a line | \`npx playwright test tests/login.spec.ts:12\` |
+| Run tests whose **title** matches | \`npx playwright test -g "locked-out"\` |
+| Run everything except a tag | \`npx playwright test --grep-invert @slow\` (or \`-G\`) |
+| Run one browser | \`npx playwright test --project=chromium\` |
 | See the browser | \`npx playwright test --headed\` |
-| Only last run's failures | \`npx playwright test --last-failed\` |
-| Only tests in files changed vs Git | \`npx playwright test --only-changed=main\` |
+| Run only last run's failures | \`npx playwright test --last-failed\` |
+| Run only tests in files changed in Git | \`npx playwright test --only-changed=main\` |
 | Just list what would run | \`npx playwright test --list\` |
-| Stop at first failure | \`npx playwright test -x\` |
-| Control parallelism | \`npx playwright test --workers=4\` (or \`--workers=50%\`) |
-| Stress a test for flakiness | \`npx playwright test --repeat-each=10\` |
+| Stop at the first failure | \`npx playwright test -x\` |
+| Choose how many run at once | \`npx playwright test --workers=4\` (or \`--workers=50%\`) |
+| Run a test many times to find flakiness | \`npx playwright test --repeat-each=10\` |
 | Step through with the Inspector | \`npx playwright test --debug\` |
-| Interactive runner | \`npx playwright test --ui\` |
+| Open the interactive runner | \`npx playwright test --ui\` |
 
-**How filters combine:** file filters (positional args) and \`-g\` both narrow the set; the result is then multiplied by the number of projects. A file with 4 tests and 3 browser projects is 12 test runs.
+**How filters combine:** a file filter and \`-g\` both make the list smaller. Then the list is multiplied by the number of projects.
 
-**Tags:** put \`@smoke\` in the title (or use the \`tag\` option) and filter with \`-g @smoke\`. Tags and annotations are covered in pw-hooks-fixtures.
+For example, a file with 4 tests and 3 browser projects gives 12 test runs.
 
-**npm scripts** make commands discoverable for the team: \`"test:smoke": "playwright test -g @smoke --project=chromium"\`.
+**Tags:** put \`@smoke\` in the test title (or use the \`tag\` option). Then run with \`-g @smoke\`. Tags are covered in pw-hooks-fixtures.
 
-**Common mistake:** confusing the positional filter (matches **file paths**) with \`-g\` (matches **test titles**). \`npx playwright test checkout\` runs \`checkout.spec.ts\`; it does not run a test titled "checkout" inside \`cart.spec.ts\`.`,
+**npm scripts** help the team find common commands: \`"test:smoke": "playwright test -g @smoke --project=chromium"\`.
+
+**Watch out:** a plain word after \`test\` matches **file paths**. \`-g\` matches **test titles**. So \`npx playwright test checkout\` runs \`checkout.spec.ts\`. It does not run a test called "checkout" inside \`cart.spec.ts\`.
+
+**Why testers care:** running only the tests you need saves minutes on every change.`,
       code: [
         {
           language: 'json',
@@ -458,38 +577,55 @@ test.describe('Login', () => {
         },
       ],
       keyPoints: [
-        'Positional args filter by file path; `-g` filters by test title (including tags).',
-        'Total runs = matching tests × selected projects.',
-        '`--last-failed`, `--list`, `-x`, `--repeat-each` are the everyday productivity flags.',
+        `A plain word filters by file path. \`-g\` filters by test title, including tags.`,
+        `Total runs = matching tests × selected projects.`,
+        `Everyday flags: \`--last-failed\`, \`--list\`, \`-x\`, \`--repeat-each\`.`,
       ],
       source: 'Playwright docs — Command line; Playwright docs — Running and debugging tests',
     },
     {
       heading: 'UI mode, codegen and the VS Code extension',
-      body: `**Intuition:** three cockpits for the same engine. **UI mode** is the control room for running and watching tests. **Codegen** is a recorder that writes code while you click. The **VS Code extension** brings both into the editor next to your code.
+      body: `**Example:** \`npx playwright codegen https://www.saucedemo.com\`
+
+- A browser opens, next to a small code window.
+- You click and type on the site.
+- Playwright writes the matching test code as you go.
+
+Playwright has three helper tools.
+
+- **UI mode** is a control room. You run tests and watch each step.
+- **Codegen** is a recorder. It writes code while you click.
+- The **VS Code extension** puts both tools inside your editor.
 
 **UI mode** (\`npx playwright test --ui\`):
-- sidebar of all tests; run a file, a describe block or a single test; filter by name, project, \`@tag\` or status;
-- **watch mode** (eye icon) re-runs a test when you save;
-- a **timeline** with a DOM snapshot for every action: Before/After tabs, Actions, Source, Console, Network, Errors and Attachments tabs;
-- **Pick locator**: hover the snapshot, click an element, copy a suggested locator.
+
+- A list of all tests is on the left. Run one file, one group or one test. Filter by name, project, \`@tag\` or status.
+- **Watch mode** (the eye icon) runs a test again each time you save.
+- A **timeline** keeps a snapshot of the page for every action. You can see the page before and after each step.
+- Tabs show Actions, Source, Console, Network, Errors and Attachments.
+- **Pick locator:** hover over the snapshot, click an element, and copy a suggested locator.
 
 **Codegen** (\`npx playwright codegen https://www.saucedemo.com\`):
-- opens a browser + the Inspector; every click and fill becomes code;
-- toolbar buttons add **assertions** for visibility, text and value;
-- prefers role, text and test-id locators and refines them until they match exactly one element;
-- useful flags: \`--device="iPhone 13"\`, \`--viewport-size=800,600\`, \`--color-scheme=dark\`, \`--lang\`, \`--timezone\`, \`--test-id-attribute=data-test\`, \`--save-storage=auth.json\` / \`--load-storage=auth.json\`, \`-o tests/recorded.spec.ts\`.
 
-**VS Code extension** (Microsoft, ID \`ms-playwright.playwright\`): green run buttons beside each test, Testing sidebar, choose projects, **Show browser**, **Pick locator**, **Record new** / **Record at cursor**, breakpoints and step debugging, and opening traces.
+- It opens a browser and the **Inspector**, a small window that shows the code. Every click and fill becomes code.
+- Toolbar buttons add **assertions** for visibility, text and value.
+- It prefers role, text and test-id locators. It improves each one until it matches exactly one element.
+- Useful flags: \`--device="iPhone 13"\`, \`--viewport-size=800,600\`, \`--color-scheme=dark\`, \`--lang\`, \`--timezone\`, \`--test-id-attribute=data-test\`, \`--save-storage=auth.json\` / \`--load-storage=auth.json\`, \`-o tests/recorded.spec.ts\`.
+
+**VS Code extension** (by Microsoft, ID \`ms-playwright.playwright\`). It adds green run buttons next to each test and a Testing sidebar.
+
+You can choose projects and turn on **Show browser**. It also has **Pick locator**, **Record new** and **Record at cursor**. You can set breakpoints, step through code and open traces.
 
 | Tool | Best for | Not for |
 |---|---|---|
-| UI mode | Exploring a suite, watch mode while writing, time-travel on failures locally | CI runs |
-| \`--debug\` (Inspector) | Pausing and stepping through one test, live-editing locators | Running many tests |
-| Codegen | First draft of a flow, discovering locators on an unfamiliar page | Final, maintainable tests as-is |
-| VS Code extension | Day-to-day writing, running one test, breakpoints | Headless CI |
+| UI mode | Exploring a suite; watch mode while writing; going back through a local failure step by step | CI runs |
+| \`--debug\` (Inspector) | Pausing one test and going step by step; trying locators live | Running many tests |
+| Codegen | A first draft of a flow; finding locators on a new page | Final tests as they are |
+| VS Code extension | Daily writing; running one test; breakpoints | Headless CI |
 
-**Codegen honesty for interviews:** recorded code is a **starting point**. You still remove duplicated steps, add meaningful assertions, replace typed test data with variables, and move repeated flows into page objects.`,
+**In an interview, say:** "Codegen gives me a starting point. I still remove repeated steps and add real assertions. I move test data into variables and put repeated flows into page objects."
+
+**Why testers care:** these tools show exactly what the browser did, so you fix tests faster.`,
       code: [
         {
           language: 'bash',
@@ -512,28 +648,49 @@ npx playwright codegen --load-storage=auth.json https://www.saucedemo.com/invent
         },
       ],
       keyPoints: [
-        'UI mode = run + watch + time-travel + pick locator, locally.',
-        'Codegen records actions and assertions; treat its output as a draft.',
-        'VS Code extension = run/debug/record/pick locator inside the editor.',
+        `UI mode = run, watch, step back through each action, and pick locators, on your laptop.`,
+        `Codegen records actions and assertions. Treat its code as a first draft.`,
+        `The VS Code extension runs, debugs, records and picks locators inside the editor.`,
       ],
       source: "Playwright docs — UI Mode; Playwright docs — Test generator; Playwright docs — Getting started VS Code; Debbie O'Brien — How to locate elements in Playwright",
     },
     {
       heading: 'The HTML report and test results',
-      body: `**Intuition:** the HTML report is the test execution report you would otherwise build by hand in a spreadsheet: every test, every browser, pass/fail/flaky, with screenshots and traces attached as evidence.
+      body: `**Example:** \`npx playwright show-report\`
+
+- It opens the last HTML report in your browser, at \`http://localhost:9323\`.
+- You see every test in every browser, marked passed, failed or flaky.
+- Failed tests have screenshots and traces attached.
+
+The HTML report is your test execution report. Without it, you would build one by hand in a spreadsheet.
 
 **How it works:**
-- With \`reporter: 'html'\`, each run writes \`playwright-report/index.html\`. By default it **opens automatically when something fails** (locally); on CI it just gets written so you can upload it as an artifact.
-- \`npx playwright show-report\` serves the last report (default \`http://localhost:9323\`).
-- Each test shows its **steps** (every action and assertion with timings), the error with a code frame, and **attachments**: screenshots, videos, and the **trace** (open it with one click to get the trace viewer).
-- Status values: **passed**, **failed**, **flaky** (failed, then passed on a retry), **skipped**.
-- Raw artifacts for each test live in \`test-results/<test-name>-<project>/\`; it is cleaned at the start of each run.
 
-**Reporters at a glance** (details in pw-debug-flaky): \`list\` (one line per test, local default), \`dot\` (compact, CI default), \`line\`, \`html\`, \`junit\` (XML for Jenkins/Azure DevOps), \`json\`, \`blob\` (for merging sharded runs), plus third-party ones like Allure. You can combine them: \`reporter: [['list'], ['html', { open: 'never' }]]\`.
+- With \`reporter: 'html'\`, each run writes \`playwright-report/index.html\`.
+- Locally, the report **opens by itself when a test fails**.
+- On CI it is only written. You upload it as a build **artifact**: a file the CI job keeps for you to download.
+- Each test shows its **steps**: every action and assertion, with timings.
+- It also shows the error, with the lines of code around it.
+- **Attachments** are screenshots, videos and the **trace**. One click opens the trace in the trace viewer.
+- Possible results: **passed**, **failed**, **flaky** (failed, then passed on a retry) and **skipped**.
+- Raw files for each test are in \`test-results/<test-name>-<project>/\`. This folder is emptied at the start of each run.
 
-**Common mistake:** setting \`trace: 'on'\` and \`video: 'on'\` for every test on CI "to be safe". It slows runs and bloats artifacts; \`trace: 'on-first-retry'\` (or \`retain-on-failure\`) gives evidence exactly when you need it.
+**Reporters at a glance.** A reporter decides the format of the results. More in pw-debug-flaky.
 
-**In interviews, say this:** "When CI fails, I download the HTML report artifact, open the failing test's trace, and look at the DOM snapshot and network tab at the failing step before I touch the code."`,
+- \`list\`: one line per test (local default).
+- \`dot\`: very short output (CI default).
+- \`line\`, \`html\` and \`json\`.
+- \`junit\`: XML for Jenkins or Azure DevOps.
+- \`blob\`: for joining results when tests are split across machines (sharding).
+- Third-party reporters, like Allure.
+
+You can use more than one: \`reporter: [['list'], ['html', { open: 'never' }]]\`.
+
+**Watch out:** don't set \`trace: 'on'\` and \`video: 'on'\` for every test on CI "just to be safe". It slows the run and makes huge files. \`trace: 'on-first-retry'\` (or \`retain-on-failure\`) saves proof only when you need it.
+
+**In an interview, say:** "When CI fails, I download the HTML report. I open the failing test's trace. I check the page snapshot and the network tab at the failing step. Only then do I change code."
+
+**Why testers care:** the report gives you proof for every failure, ready to attach to a bug.`,
       code: [
         {
           language: 'typescript',
@@ -560,29 +717,41 @@ export default defineConfig({
         },
       ],
       keyPoints: [
-        'HTML report = steps, errors, screenshots, videos, traces per test and project.',
-        '`show-report` serves it on port 9323; `test-results/` holds raw artifacts.',
-        'Collect heavy artifacts only on failure or retry.',
+        `HTML report = steps, errors, screenshots, videos and traces for each test and project.`,
+        `\`show-report\` serves it on port 9323. \`test-results/\` holds the raw files.`,
+        `Save heavy files (trace, video) only on failure or retry.`,
       ],
       source: 'Playwright docs — Reporters (HTML reporter); Playwright docs — Best practices (debugging on CI)',
     },
     {
       heading: 'TypeScript vs JavaScript in Playwright',
-      body: `**Intuition:** TypeScript is JavaScript with labels on every box. The labels do not change what the code does; they let your editor warn you before you run it ("\`fill\` needs a string", "this function returns a Promise").
+      body: `**Example:** \`await login(page, 'standard_user')\`
 
-**What Playwright does with TS:** it runs \`.ts\` test files directly, with no build step. But it only **strips** the types; it does **not type-check**. A test with a type error can still run (and fail in a confusing way). So:
+- The \`login\` helper needs three values, but this line gives only two.
+- In TypeScript, VS Code underlines the mistake before you run anything.
+- In plain JavaScript, you find out only when the test fails.
+
+TypeScript is JavaScript with labels on values, like "this is a string". The labels do not change what the code does. They let your editor warn you early.
+
+**What Playwright does with TypeScript:** it runs \`.ts\` test files directly. There is no build step.
+
+But it only **removes** the types. It does **not check** them. So a test with a type error can still run, and then fail in a confusing way.
 
 | Check | How |
 |---|---|
-| Type errors | \`npx tsc --noEmit\` in CI (needs a \`tsconfig.json\`) |
-| Missing \`await\` (floating promises) | ESLint rule \`@typescript-eslint/no-floating-promises\` |
-| Autocomplete for options and locators | Comes free in VS Code with TS |
+| Type errors | \`npx tsc --noEmit\` on CI (needs a \`tsconfig.json\`) |
+| Missing \`await\` (a "floating" Promise that nobody waits for) | ESLint rule \`@typescript-eslint/no-floating-promises\` |
+| Autocomplete for options and locators | Free in VS Code with TS |
 
-**Should a beginner choose TS?** Yes: the docs, codegen output and most job descriptions use TypeScript, and you only need *light* types (strings, numbers, \`Page\`, \`Locator\`). Everything you learned in JavaScript still applies; type annotations are optional in most places because TypeScript infers them.
+**Should a beginner choose TypeScript?** Yes. The docs, codegen and most job posts use it.
 
-**Choose JavaScript when** the team's codebase is plain JS and adding a TS toolchain would be friction. The Playwright API is identical.
+You only need simple types: strings, numbers, \`Page\` and \`Locator\`. Everything from the JavaScript topics still works. Most type labels are optional, because TypeScript can work them out.
 
-**Common mistake:** believing "it ran, so it type-checks". Add \`tsc --noEmit\` to the pipeline.`,
+**Choose JavaScript when** the team's code is plain JS and adding TypeScript would slow them down. The Playwright API is the same.
+
+**Watch out:** "it ran, so the types are fine" is wrong. Add \`tsc --noEmit\` to the pipeline.
+
+**Why testers care:** the editor catches typos and missing values before the test ever runs.`,
       code: [
         {
           language: 'typescript',
@@ -609,9 +778,9 @@ test('problem_user can still log in', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Playwright transpiles TS but does not type-check; run `tsc --noEmit` separately.',
-        'Lint `no-floating-promises` to catch missing awaits.',
-        'Same API in TS and JS; TS gives autocomplete and earlier errors.',
+        `Playwright runs TS files but does not check types. Run \`tsc --noEmit\` separately.`,
+        `The lint rule \`no-floating-promises\` catches a missing \`await\`.`,
+        `The API is the same in TS and JS. TS adds autocomplete and earlier errors.`,
       ],
       source: 'Playwright docs — TypeScript; Playwright docs — Best practices (lint your tests)',
     },
@@ -621,9 +790,9 @@ test('problem_user can still log in', async ({ page }) => {
       id: 'pw-setup-cc-1',
       title: 'Fix a config that is slow, noisy and unsafe for CI',
       context:
-        'A teammate copied this playwright.config.ts from an old blog post. The SauceDemo suite (120 tests) takes 25 minutes locally, CI sometimes ships with a `test.only`, every test records video, and `getByTestId(\'username\')` never finds anything.',
+        `A teammate copied this playwright.config.ts from an old blog post. Now there are four problems. The SauceDemo suite (120 tests) takes 25 minutes locally. CI sometimes runs with a forgotten \`test.only\`. Every test records a video. And \`getByTestId('username')\` never finds anything.`,
       task:
-        'Rewrite the config so it is fast locally, strict and evidence-rich on CI, runs Chromium, Firefox and WebKit, and makes `getByTestId` work with SauceDemo markup. Keep defaults where defaults are good.',
+        `Rewrite the config. It should be fast locally, and strict on CI with good proof of failures. It should run Chromium, Firefox and WebKit. And \`getByTestId\` should work with SauceDemo's HTML. Keep the defaults where they are already good.`,
       starter: {
         language: 'typescript',
         title: 'playwright.config.ts (before)',
@@ -652,9 +821,9 @@ export default defineConfig({
 // and await page.getByTestId('username').fill('standard_user'); // never matches`,
       },
       hints: [
-        'Which options should depend on `process.env.CI`? Think about `forbidOnly`, `retries` and `workers`.',
-        'SauceDemo uses `data-test`, while `getByTestId` reads `data-testid` by default. Where is that configured?',
-        'Artifacts: which `trace` / `video` / `screenshot` modes record only when a test fails or retries? And what lets you write `page.goto(\'/inventory.html\')`?',
+        `Which settings should change when \`process.env.CI\` is set? Think about \`forbidOnly\`, \`retries\` and \`workers\`.`,
+        `SauceDemo uses \`data-test\`, but \`getByTestId\` reads \`data-testid\` by default. Which setting changes that?`,
+        `Which \`trace\`, \`video\` and \`screenshot\` modes save files only when a test fails or retries? And which setting lets you write \`page.goto('/inventory.html')\`?`,
       ],
       solution: {
         language: 'typescript',
@@ -686,25 +855,25 @@ export default defineConfig({
   ],
 });`,
       },
-      explanation: `**Fixes, one by one:**
+      explanation: `**The fixes, one by one:**
 
-- **\`fullyParallel: true\` + default workers locally:** each test already gets its own browser context, so parallel runs are safe. One worker turned a 4-minute suite into 25 minutes. If parallel runs are flaky, the tests share data, and that is the bug to fix.
-- **\`forbidOnly: !!process.env.CI\`:** a forgotten \`test.only\` silently skips the rest of the suite; this makes CI fail loudly instead.
-- **Retries only on CI:** three local retries hide real failures while you are developing. Two on CI absorb environment noise and label those tests **flaky** in the report.
-- **Timeout back to the 30s default:** a 5-minute timeout means a stuck test burns 5 minutes before telling you anything.
-- **\`baseURL\`:** removes hard-coded hosts from every test and lets you point the suite at staging with one change.
-- **\`testIdAttribute: 'data-test'\`:** SauceDemo's attribute is \`data-test\`, so \`getByTestId\` needed this to match.
-- **Artifacts on failure only:** \`trace: 'on'\` + \`video: 'on'\` for 120 tests × 3 browsers is slow and huge; \`on-first-retry\` / \`retain-on-failure\` keep exactly the evidence you debug with.
-- **Headless by default:** windows popping up slow the run; use \`--headed\` or \`--ui\` when you want to watch.
+- **\`fullyParallel: true\` and default workers locally:** each test already gets its own browser context, so running tests at the same time is safe. One worker turned a 4-minute suite into 25 minutes. If parallel runs fail, the tests share data. That is the real bug to fix.
+- **\`forbidOnly: !!process.env.CI\`:** a forgotten \`test.only\` quietly skips the rest of the suite. With this line, CI fails loudly instead.
+- **Retries only on CI:** three retries on your laptop hide real failures while you work. Two retries on CI absorb random environment problems. The report marks those tests **flaky**.
+- **Timeout back to the 30 s default:** with a 5-minute timeout, a stuck test wastes 5 minutes before it tells you anything.
+- **\`baseURL\`:** removes the full address from every test. You can point the suite at staging with one change.
+- **\`testIdAttribute: 'data-test'\`:** SauceDemo's attribute is \`data-test\`, so \`getByTestId\` needs this to match.
+- **Save files only on failure:** \`trace: 'on'\` and \`video: 'on'\` for 120 tests × 3 browsers is slow and huge. \`on-first-retry\` and \`retain-on-failure\` keep only the proof you need for debugging.
+- **Headless by default:** opening windows slows the run. Use \`--headed\` or \`--ui\` when you want to watch.
 - **Three engines:** WebKit catches Safari-only bugs that a Chromium-only suite misses.`,
       followUps: [
         {
           q: 'Why set workers to a small number on CI instead of leaving it undefined?',
-          a: 'CI runners often have few CPU cores and limited memory, and the app under test may be a shared staging server. A fixed, small worker count keeps runs predictable and avoids overloading the environment, which itself causes timeouts that look like flaky tests. To go faster on CI you usually add machines with `--shard` rather than more workers per machine.',
+          a: `CI machines often have few CPU cores and little memory. The app may also be a shared staging server. A small, fixed number of workers keeps runs steady. Too many workers overload the machine, and the timeouts then look like flaky tests. To go faster on CI, add more machines with \`--shard\`, not more workers per machine.`,
         },
         {
           q: 'What does "flaky" mean in the HTML report, and is it OK to ship with flaky tests?',
-          a: 'A test is marked flaky when it failed at least once and then passed on a retry within the same run. Retries keep the pipeline green, but flaky tests are a defect in the test or the app: they erode trust and hide real regressions. Track them, open the retry trace, fix the root cause (shared data, missing web-first assertion, race with the network), and consider `--fail-on-flaky-tests` once the suite is stable.',
+          a: `A test is flaky when it failed at least once and then passed on a retry in the same run. Retries keep the pipeline green, but a flaky test is still a bug in the test or the app. It makes people stop trusting the suite, and it can hide real problems. Track flaky tests and open the retry trace. Fix the cause: shared data, a missing web-first assertion, or a race with the network. Once the suite is stable, think about \`--fail-on-flaky-tests\`.`,
         },
       ],
     },
@@ -712,9 +881,9 @@ export default defineConfig({
       id: 'pw-setup-cc-2',
       title: 'A first test written like a manual script',
       context:
-        'A manual tester converted two SauceDemo test cases into Playwright. The run is green locally most of the time, red on CI, and red whenever the cart test is run alone with `npx playwright test -g "cart"`.',
+        `A manual tester turned two SauceDemo test cases into Playwright code. Locally the run is green most of the time. On CI it is red. It is also red whenever the cart test runs alone with \`npx playwright test -g "cart"\`.`,
       task:
-        'Refactor the file so each test is independent, waits correctly, and asserts what a user would see. Use the config from the previous challenge (baseURL and testIdAttribute: data-test).',
+        `Rewrite the file so each test stands alone, waits correctly, and checks what a user would see. Use the config from the previous challenge (baseURL and testIdAttribute: data-test).`,
       starter: {
         language: 'typescript',
         title: 'tests/shop.spec.ts (before)',
@@ -738,9 +907,9 @@ test('add backpack to cart', async () => {
 });`,
       },
       hints: [
-        'Each test receives a brand-new browser context. What happens to `loggedInPage` when the second test runs, especially alone or in another worker?',
-        'Find the line that is not awaited, and replace the fixed sleep with an assertion that waits for the inventory page.',
-        'Move the shared steps into `beforeEach` (or a helper) and use test-id / role locators plus web-first assertions instead of `page.$` and `innerText()`.',
+        `Each test gets a brand-new browser context. What happens to \`loggedInPage\` when the second test runs alone, or in another worker?`,
+        `Find the line with no \`await\`. Replace the fixed sleep with an assertion that waits for the inventory page.`,
+        `Move the shared steps into \`beforeEach\` (or a helper). Use test-id or role locators and web-first assertions instead of \`page.$\` and \`innerText()\`.`,
       ],
       solution: {
         language: 'typescript',
@@ -769,22 +938,22 @@ test.describe('Shopping as standard_user', () => {
   });
 });`,
       },
-      explanation: `**What was wrong and why the fix works:**
+      explanation: `**What was wrong, and why the fix works:**
 
-- **Shared state between tests:** \`loggedInPage\` belongs to test 1's context, which Playwright closes when test 1 ends. Test 2 then drives a dead page, and when run alone or in another worker the variable is \`undefined\`. Tests must be independent; \`beforeEach\` gives each one its own login.
-- **Missing \`await\` on the click:** the test moved on before the click happened, and only the sleep hid the race.
-- **\`waitForTimeout(3000)\`:** too long when the app is fast, too short on a slow CI machine. \`await expect(page).toHaveURL(...)\` waits exactly as long as needed (up to 5s).
-- **\`page.$\` + \`innerText()\` + generic \`expect\`:** \`page.$\` returns an ElementHandle snapshot (discouraged), and the generic assertion checks once without retrying. \`await expect(locator).toHaveText('1')\` retries until the badge updates.
-- **Hard-coded host and CSS ids:** \`baseURL\` and test-id/role locators make the tests portable and readable.
-- **Better assertions:** the solution also checks the button flips to Remove, which is what a user would notice.`,
+- **Tests shared state:** \`loggedInPage\` belongs to test 1's context. Playwright closes that context when test 1 ends. So test 2 drives a closed page. When test 2 runs alone or in another worker, the variable is \`undefined\`. Tests must stand alone, and \`beforeEach\` gives each one its own login.
+- **No \`await\` on the click:** the test moved on before the click happened. Only the sleep hid this.
+- **\`waitForTimeout(3000)\`:** too long when the app is fast, too short on a slow CI machine. \`await expect(page).toHaveURL(...)\` waits exactly as long as needed, up to 5 s.
+- **\`page.$\`, \`innerText()\` and a plain \`expect\`:** \`page.$\` returns an ElementHandle, a fixed pointer to one element, which is discouraged. The plain \`expect\` checks once and does not retry. \`await expect(locator).toHaveText('1')\` keeps checking until the badge updates.
+- **Full address and CSS ids in the test:** \`baseURL\` and test-id or role locators make tests easier to move and to read.
+- **Better checks:** the solution also checks that the button changes to Remove. A real user would notice that.`,
       followUps: [
         {
           q: 'Logging in through the UI before every test is slow. What would you do once the suite has 200 tests?',
-          a: 'Log in once in a setup project, save the session with `storageState`, and let the test projects start already authenticated by pointing `use.storageState` at that file. Every test still gets its own context, but each context is pre-loaded with the cookies, so isolation is kept and the login form is exercised only in the tests that are actually about login.',
+          a: `Log in once in a setup project and save the session with \`storageState\`, a file of cookies and local storage. Then point \`use.storageState\` at that file, so test projects start already logged in. Every test still gets its own context, but each context starts with the saved cookies. Tests stay separate, and only the real login tests use the login form.`,
         },
         {
           q: 'If two tests really must run in order (for example create then delete), how would you express that?',
-          a: 'First question whether they should: usually each test should create its own data, ideally through the API, so it can run alone. If order is genuinely required, put them in a `test.describe.serial` (or configure the describe mode to serial) so they run in one worker in order and later ones are skipped if an earlier one fails. Share data through variables declared in the describe, not through a page from another test.',
+          a: `First ask if they really must. Usually each test should create its own data, ideally through the API, so it can run alone. If the order really matters, put the tests in \`test.describe.serial\` (or set the describe mode to serial). Then they run in one worker, in order, and later tests are skipped if an earlier one fails. Share data through variables declared in the describe block, never through a page from another test.`,
         },
       ],
     },
@@ -793,200 +962,200 @@ test.describe('Shopping as standard_user', () => {
     {
       id: 'pw-setup-iq-01',
       difficulty: 'medium',
-      question: 'What is Playwright, and why would you pick it over Selenium or Cypress for a new web project?',
+      question: `What is Playwright? Why would you pick it over Selenium or Cypress for a new web project?`,
       context: 'A very common opener in 2025–2026 automation interviews (it appears in most published Playwright question banks, e.g. TestDino and Testleaf).',
       whatInterviewerLooksFor: [
-        'A clear one-line definition, not marketing',
-        'Concrete technical differences: auto-waiting, contexts, protocol connection, multi-tab/origin, WebKit',
-        'Balanced trade-offs and when Selenium or Cypress is still the better choice',
-        'Tie-in to tester pain points (flakiness, debugging, CI cost)',
+        `A clear one-line definition, not marketing words.`,
+        `Real technical differences: auto-waiting, a fresh context per test, a direct browser connection, many tabs and websites, WebKit.`,
+        `Fair trade-offs: when Selenium or Cypress is still the better choice.`,
+        `A link to tester problems: flaky tests, slow debugging, CI cost.`,
       ],
-      modelAnswer: `**Definition:** Playwright is an open-source, cross-browser end-to-end testing framework from Microsoft. With \`@playwright/test\` you get the browser automation API *and* a test runner (assertions, fixtures, parallel workers, retries, reporters) in one package.
+      modelAnswer: `**Definition:** Playwright is a free, open-source tool from Microsoft for end-to-end tests in many browsers. The \`@playwright/test\` package gives you browser control *and* a test runner in one: assertions, fixtures, parallel workers, retries and reports.
 
 **Why I would choose it for a new web project:**
 
-1. **Less flakiness by design.** Every action auto-waits for the element to be visible, enabled and stable, and \`expect(locator)\` assertions retry. In Selenium I would write explicit waits myself.
-2. **Cheap isolation.** Each test gets a new browser context, an incognito-like profile that takes milliseconds to create, so tests don't leak cookies into each other and can run in parallel.
-3. **Real cross-browser coverage.** Chromium, Firefox and WebKit from one API, including Safari's engine on Linux CI.
-4. **Scenarios Cypress struggles with:** multiple tabs, popups, several origins in one test, iframes via \`frameLocator\`.
-5. **Debugging and reporting:** UI mode, Inspector, trace viewer and the HTML report, all free. Parallelism and sharding are built in too.
-6. **One tool for UI + API:** the \`request\` fixture and \`page.route\` mocking.
+1. **Fewer flaky tests.** Every action waits by itself until the element is visible, enabled and still. \`expect(locator)\` assertions keep retrying. In Selenium I write these waits myself.
+2. **Cheap, clean state.** Each test gets a new browser context, a private profile made in milliseconds. Tests don't share cookies, so they can run at the same time.
+3. **Real cross-browser testing.** Chromium, Firefox and WebKit from one API. I can test Safari's engine on Linux CI.
+4. **Flows Cypress finds hard:** many tabs, popups, several websites in one test, and iframes with \`frameLocator\`.
+5. **Debugging and reports:** UI mode, the Inspector, the trace viewer and the HTML report, all free. Parallel runs and sharding are built in.
+6. **UI and API in one tool:** the \`request\` fixture, and \`page.route\` to fake network answers.
 
-**When I would not switch:** a large, healthy Selenium Java suite with a Java team and Grid infrastructure (rewriting costs more than it saves), a need for real mobile devices through Appium, or a front-end team already productive in Cypress testing a single-origin app.
+**When I would not switch:** a large, healthy Selenium Java suite with a Java team and a Grid. A rewrite would cost more than it saves. Also when we need real phones through Appium, or a Cypress team is already happy testing one website.
 
-**Example:** on SauceDemo, a login → add to cart → checkout flow in Playwright needs no waits at all; the same Selenium test typically needs explicit waits around the inventory page and cart badge.`,
+**Example:** on SauceDemo, a login → add to cart → checkout flow in Playwright needs no wait lines at all. The same Selenium test usually needs waits around the inventory page and the cart badge.`,
       followUps: [
         {
           q: 'Is Playwright built on top of WebDriver?',
-          a: 'No. Playwright keeps a direct, persistent connection to the browser using its own protocol layer: the Chrome DevTools Protocol for Chromium and patched builds of Firefox and WebKit that expose equivalent capabilities. That is why it downloads its own browser builds. Selenium uses the W3C WebDriver protocol through a separate driver executable, now increasingly with WebDriver BiDi for event-driven features.',
+          a: `No. Playwright keeps its own direct, always-open connection to each browser. For Chromium it uses the Chrome DevTools Protocol. For Firefox and WebKit it uses its own patched builds. That is why it downloads its own browsers. Selenium uses the W3C WebDriver standard through a separate driver program, and newer versions add WebDriver BiDi.`,
         },
         {
           q: 'Which languages can you use, and does the language matter?',
-          a: 'TypeScript/JavaScript, Python, Java and .NET share the same core automation API. The difference is the runner: TypeScript/JavaScript uses `@playwright/test` with fixtures, projects, UI mode, sharding and the HTML report out of the box, whereas Python, Java and .NET rely on pytest, JUnit/TestNG or NUnit/MSTest. I would pick the language the team maintains best, defaulting to TypeScript for web teams.',
+          a: `TypeScript/JavaScript, Python, Java and .NET all share the same core API. The difference is the runner. TypeScript/JavaScript uses \`@playwright/test\`, with fixtures, projects, UI mode, sharding and the HTML report built in. Python, Java and .NET use pytest, JUnit/TestNG or NUnit/MSTest. I pick the language the team knows best, and TypeScript by default for web teams.`,
         },
         {
           q: 'What is one real limitation of Playwright?',
-          a: 'It does not test native mobile apps (only mobile browser emulation, not real devices), it is not a load-testing tool, and the bundled browsers are not the exact branded Chrome or Safari your users run, although you can use `channel: \'chrome\'` or `\'msedge\'`. Another practical one: for Safari on real macOS devices you still need a device cloud or a Mac.',
+          a: `It does not test native mobile apps; it only emulates mobile browsers. It is not a load-testing tool. Its bundled browsers are not the exact branded Chrome or Safari your users have, although you can use \`channel: 'chrome'\` or \`'msedge'\`. And for Safari on a real Mac or iPhone you still need a device cloud or a Mac.`,
         },
       ],
       pitfalls: [
-        'Saying "Playwright is faster" without explaining why (protocol connection, contexts, parallel workers).',
-        'Calling Playwright a Selenium wrapper or saying it uses WebDriver.',
-        'Claiming Playwright is always better and dismissing Selenium/Cypress without trade-offs.',
+        `Saying "Playwright is faster" without saying why (direct connection, cheap contexts, parallel workers).`,
+        `Calling Playwright a Selenium wrapper, or saying it uses WebDriver.`,
+        `Saying Playwright is always better, with no trade-offs for Selenium or Cypress.`,
       ],
     },
     {
       id: 'pw-setup-iq-02',
       difficulty: 'medium',
-      question: 'Explain browser, browser context and page. Why does Playwright create a new context for every test?',
+      question: `Explain browser, browser context and page. Why does Playwright make a new context for every test?`,
       whatInterviewerLooksFor: [
-        'Correct hierarchy and what each object owns',
-        'Isolation explained in terms of cookies/storage, not hand-waving',
-        'Knows contexts are cheap compared with launching browsers',
-        'Can apply it: multi-user scenarios, popups',
+        `The correct order (browser → context → page) and what each one holds.`,
+        `Isolation explained with cookies and storage, not vague words.`,
+        `Knows a context is cheap and a new browser is slow.`,
+        `Can use it: two users in one test, popups.`,
       ],
-      modelAnswer: `**The hierarchy:**
+      modelAnswer: `**The three levels:**
 
-- **Browser:** one launched browser process (Chromium, Firefox or WebKit). Expensive to start, so each worker launches it once and reuses it.
-- **BrowserContext:** an isolated, incognito-like profile inside that browser. It owns cookies, localStorage, sessionStorage, cache, permissions, geolocation, viewport and other emulation settings.
-- **Page:** a single tab (or popup window) inside a context. Pages in the same context share the context's cookies.
+- **Browser:** one running browser (Chromium, Firefox or WebKit). It is slow to start, so each worker starts it once and reuses it.
+- **Browser context:** a private profile inside that browser, like an incognito window. It has its own cookies, local storage, session storage, cache and permissions. It also holds settings like location and screen size.
+- **Page:** one tab (or popup) inside a context. Pages in the same context share its cookies.
 
-**Why a new context per test:**
+**Why a new context for each test:**
 
-The built-in \`page\` fixture creates a fresh context for every test and closes it afterwards. So:
+The built-in \`page\` fixture makes a fresh context for every test and closes it at the end. So:
 
-1. A test that leaves items in the cart or a logged-in cookie can't affect the next test.
-2. Order doesn't matter, so tests can run in parallel and be sharded across machines.
-3. Any single test can be re-run alone to debug it.
+1. Items left in the cart, or a login cookie, cannot affect the next test.
+2. Order doesn't matter. Tests can run at the same time and be split across machines.
+3. You can run any single test alone to debug it.
 
-Playwright prefers **starting clean** over cleaning up after the fact, because cleanup code is easy to forget and some state cannot be undone. Contexts make this affordable: creating one takes milliseconds, while launching a new browser per test (the classic Selenium pattern) costs seconds.
+Playwright prefers **starting clean** to cleaning up afterwards. Cleanup code is easy to forget, and some things cannot be undone. A new context takes milliseconds. A new browser per test, the old Selenium way, takes seconds.
 
-**Applying it:**
-- *Buyer and seller chat:* \`browser.newContext()\` twice → two independent users in one test.
-- *"Terms" link opens a new tab:* same context, \`context.waitForEvent('page')\`, so the new tab shares the session.
-- *Faster logins:* save a context's state with \`storageState\` and load it into new contexts.`,
+**Using it:**
+- *Buyer and seller chat:* call \`browser.newContext()\` twice. Now there are two separate users in one test.
+- *A "Terms" link opens a new tab:* same context, with \`context.waitForEvent('page')\`. The new tab shares the login.
+- *Faster logins:* save a context's cookies with \`storageState\` and load them into new contexts.`,
       followUps: [
         {
           q: 'If contexts are isolated, how do you avoid logging in through the UI in every test?',
-          a: 'Log in once (in a setup project or global setup), call `context.storageState({ path })` to save cookies and local storage to a JSON file, and set `use.storageState` to that file. Every test still gets its own new context, but each context starts pre-loaded with that state. Isolation is kept, and only the dedicated login tests exercise the form.',
+          a: `Log in once, in a setup project or global setup. Call \`context.storageState({ path })\` to save the cookies and local storage to a JSON file. Then set \`use.storageState\` to that file. Every test still gets a new context, but it starts already logged in. Tests stay separate, and only the real login tests use the form.`,
         },
         {
           q: 'Do two tests in the same worker share the browser? Is that a problem?',
-          a: 'Yes, a worker reuses its browser process across the tests it runs, but each test gets its own context, so no cookies or storage leak between them. Things that live outside the browser, such as data in the application database, are not isolated by contexts; tests should create their own unique data to stay independent.',
+          a: `Yes. A worker reuses its browser for all the tests it runs. But each test gets its own context, so no cookies or storage leak between them. Contexts do not protect things outside the browser, such as rows in the app's database. Each test should create its own unique data to stay independent.`,
         },
       ],
       pitfalls: [
-        'Mixing up context and page (saying each tab has its own cookies).',
-        'Saying Playwright "clears cookies after each test" instead of creating a new context.',
-        'Thinking contexts also isolate server-side data such as database records.',
+        `Mixing up context and page (saying each tab has its own cookies).`,
+        `Saying Playwright "clears cookies after each test". It makes a new context instead.`,
+        `Thinking contexts also separate server data, like database records.`,
       ],
     },
     {
       id: 'pw-setup-iq-03',
       difficulty: 'easy',
-      question: 'Walk me through setting up Playwright from scratch for a new project and getting the first test green.',
+      question: `Walk me through setting up Playwright from scratch for a new project, up to the first green test.`,
       whatInterviewerLooksFor: [
-        'Prerequisites (Node LTS, editor) and the exact init command',
-        'Knows what files are generated and what each is for',
-        'Runs, views report, and mentions CI-specific install flags',
-        'Mentions sensible first config changes (baseURL, testIdAttribute)',
+        `What you need first (Node LTS, an editor) and the exact install command.`,
+        `Knows which files are created and what each one is for.`,
+        `Runs the tests, opens the report, and knows the CI install flag.`,
+        `Makes sensible first config changes (baseURL, testIdAttribute).`,
       ],
-      modelAnswer: `**1. Prerequisites:** install a current LTS version of Node.js and VS Code with the Playwright extension.
+      modelAnswer: `**1. Before starting:** install a current LTS version of Node.js, and VS Code with the Playwright extension.
 
-**2. Scaffold:** in an empty folder run \`npm init playwright@latest\`. I choose **TypeScript**, keep the \`tests\` folder, say **yes** to the GitHub Actions workflow and **yes** to installing browsers.
+**2. Create the project:** in an empty folder, run \`npm init playwright@latest\`. I choose **TypeScript**, keep the \`tests\` folder, and say **yes** to the GitHub Actions workflow and to installing browsers.
 
 **3. What I get:**
-- \`playwright.config.ts\`: runner and browser settings, with Chromium, Firefox and WebKit projects, the HTML reporter, retries on CI and \`trace: 'on-first-retry'\`;
-- \`tests/example.spec.ts\`: a sample test;
-- \`package.json\` with \`@playwright/test\`;
-- \`.github/workflows/playwright.yml\` if I opted in.
+- \`playwright.config.ts\`: runner and browser settings. It has Chromium, Firefox and WebKit projects, the HTML reporter, retries on CI and \`trace: 'on-first-retry'\`.
+- \`tests/example.spec.ts\`: a sample test.
+- \`package.json\` with \`@playwright/test\`.
+- \`.github/workflows/playwright.yml\`, if I said yes.
 
-**4. Run and inspect:** \`npx playwright test\` runs everything headless and in parallel; \`npx playwright show-report\` opens the HTML report. While I write tests I keep \`npx playwright test --ui\` open.
+**4. Run and look:** \`npx playwright test\` runs everything headless and in parallel. \`npx playwright show-report\` opens the HTML report. While writing tests, I keep \`npx playwright test --ui\` open.
 
-**5. First config changes for a real app** such as SauceDemo: \`baseURL: 'https://www.saucedemo.com'\` so tests use \`page.goto('/')\`, and \`testIdAttribute: 'data-test'\` because SauceDemo's attribute isn't the default \`data-testid\`.
+**5. First config changes for a real app like SauceDemo:** \`baseURL: 'https://www.saucedemo.com'\`, so tests can use \`page.goto('/')\`. And \`testIdAttribute: 'data-test'\`, because SauceDemo does not use the default \`data-testid\`.
 
-**6. First real test:** I take a manual case (valid login), use codegen once to see suggested locators, then write it cleanly: fill username/password, click Login, \`await expect(page).toHaveURL(/inventory/)\`.
+**6. First real test:** I take a manual case (valid login). I use codegen once to see good locators. Then I write it cleanly: fill username and password, click Login, and \`await expect(page).toHaveURL(/inventory/)\`.
 
-**7. Hygiene:** \`.gitignore\` for \`node_modules\`, \`test-results\`, \`playwright-report\`, \`playwright/.auth\`; npm scripts for common runs; on CI use \`npx playwright install --with-deps\` (or just \`chromium\`).`,
+**7. Housekeeping:** add \`node_modules\`, \`test-results\`, \`playwright-report\` and \`playwright/.auth\` to \`.gitignore\`. Add npm scripts for common runs. On CI, use \`npx playwright install --with-deps\` (or only \`chromium\`).`,
       followUps: [
         {
           q: 'The example test fails on a fresh Linux CI runner with missing shared libraries. Why?',
-          a: 'The browser binaries were downloaded, but the operating-system packages they depend on (fonts, graphics and media libraries) are missing on a bare Linux image. Run `npx playwright install --with-deps` (optionally just `chromium`) in the pipeline, or use the official Playwright Docker image, which already contains browsers and dependencies matching a specific Playwright version.',
+          a: `The browsers were downloaded, but the system packages they need are missing. These are things like fonts, graphics and media libraries, and a bare Linux image does not have them. Run \`npx playwright install --with-deps\` in the pipeline (optionally only \`chromium\`). Or use the official Playwright Docker image, which already has the browsers and these packages for one Playwright version.`,
         },
         {
           q: 'How do you upgrade Playwright safely?',
-          a: 'Bump the package with `npm install -D @playwright/test@latest`, then run `npx playwright install --with-deps` so the matching browser builds are downloaded, and confirm with `npx playwright --version`. Read the release notes for breaking changes, run the full suite on a branch, and pin the same version in the CI Docker image if you use one.',
+          a: `Update the package with \`npm install -D @playwright/test@latest\`. Then run \`npx playwright install --with-deps\` to download the matching browsers. Check with \`npx playwright --version\`. Read the release notes for breaking changes. Run the full suite on a branch first. If CI uses a Docker image, use the same version there.`,
         },
       ],
       pitfalls: [
-        'Installing the `playwright` library instead of `@playwright/test`.',
-        'Not knowing that browsers are separate downloads tied to the Playwright version.',
-        'Committing test-results or playwright-report folders to Git.',
+        `Installing the \`playwright\` library instead of \`@playwright/test\`.`,
+        `Not knowing that browsers are separate downloads, tied to the Playwright version.`,
+        `Committing the test-results or playwright-report folders to Git.`,
       ],
     },
     {
       id: 'pw-setup-iq-04',
       difficulty: 'hard',
-      question: 'Walk me through the important settings in playwright.config.ts. Which would you change for CI, and why?',
+      question: `Walk me through the important settings in playwright.config.ts. Which ones would you change for CI, and why?`,
       whatInterviewerLooksFor: [
-        'Distinguishes top-level runner options from `use` options',
-        'Knows key defaults (30s test, 5s expect, retries 0, workers half the cores)',
-        'CI reasoning: forbidOnly, retries, workers, reporters, trace strategy',
-        'Mentions projects for browsers and baseURL / environment switching',
+        `Separates top-level runner settings from \`use\` settings.`,
+        `Knows the main defaults: 30 s test, 5 s expect, 0 retries, workers = half the cores.`,
+        `Reasons about CI: forbidOnly, retries, workers, reporters, when to record traces.`,
+        `Mentions projects for browsers, and baseURL for switching environments.`,
       ],
       modelAnswer: `I split the config into two halves.
 
-**Runner (top level):**
-- \`testDir\` / \`testMatch\`: where tests are found (\`*.spec.ts\`, \`*.test.ts\` by default).
-- \`timeout\`: per test, **30s** default; \`expect.timeout\`: **5s** default for web-first assertions.
-- \`fullyParallel\`: also parallelise tests within a file.
-- \`workers\`: defaults to **half the logical CPU cores**.
-- \`retries\`: default **0**.
-- \`reporter\`: \`list\` locally / \`dot\` on CI by default; the template sets \`html\`.
-- \`projects\`: the browser/device matrix, and later setup projects for login.
-- \`webServer\`: starts the app before testing when it runs locally.
+**Runner settings (top level):**
+- \`testDir\` / \`testMatch\`: where tests are. By default, files named \`*.spec.ts\` or \`*.test.ts\`.
+- \`timeout\`: the limit for each test, **30 s** by default. \`expect.timeout\`: **5 s** by default, for web-first assertions.
+- \`fullyParallel\`: also run tests inside one file at the same time.
+- \`workers\`: by default, **half the logical CPU cores**.
+- \`retries\`: **0** by default.
+- \`reporter\`: \`list\` locally and \`dot\` on CI by default. The template sets \`html\`.
+- \`projects\`: the browsers and devices. Later also a setup project for login.
+- \`webServer\`: starts the app before the tests, when it runs locally.
 
-**Browser (\`use\`):** \`baseURL\`, \`trace\`, \`screenshot\`, \`video\`, \`headless\`, \`viewport\`, \`testIdAttribute\`, \`storageState\`, \`actionTimeout\`.
+**Browser settings (\`use\`):** \`baseURL\`, \`trace\`, \`screenshot\`, \`video\`, \`headless\`, \`viewport\`, \`testIdAttribute\`, \`storageState\`, \`actionTimeout\`.
 
-**What changes on CI (driven by \`process.env.CI\`):**
+**What changes on CI (using \`process.env.CI\`):**
 
 | Setting | Local | CI | Why |
 |---|---|---|---|
-| \`forbidOnly\` | false | true | A forgotten \`test.only\` must not silently skip the suite |
-| \`retries\` | 0 | 2 | Absorb infra noise; retried passes are labelled flaky |
-| \`workers\` | default | small fixed number | Small runners, shared staging; scale out with \`--shard\` |
-| \`reporter\` | list + html | dot + html (\`open: 'never'\`) + junit/blob | Artifacts for people and for Jenkins/merging |
-| \`trace\` | on-first-retry | on-first-retry | Evidence exactly for the retried failures |
+| \`forbidOnly\` | false | true | A forgotten \`test.only\` must not quietly skip the suite |
+| \`retries\` | 0 | 2 | Absorb random CI problems; a pass on retry is marked flaky |
+| \`workers\` | default | small fixed number | Small CI machines, shared staging; add machines with \`--shard\` |
+| \`reporter\` | list + html | dot + html (\`open: 'never'\`) + junit/blob | Files for people, for Jenkins and for merging |
+| \`trace\` | on-first-retry | on-first-retry | Proof exactly for the retried failures |
 | \`baseURL\` | localhost or staging | from an env variable | Same suite, many environments |
 
-**Example:** for SauceDemo I also set \`testIdAttribute: 'data-test'\`, and run Chromium on every PR but all three engines nightly by selecting projects with \`--project\`.`,
+**Example:** for SauceDemo I also set \`testIdAttribute: 'data-test'\`. I run Chromium on every pull request, and all three browsers every night, picking projects with \`--project\`.`,
       followUps: [
         {
           q: 'Where does the expect timeout live, and why not just raise the test timeout?',
-          a: 'It is a top-level option: `expect: { timeout: 10_000 }`, or per assertion with `{ timeout }`. The test timeout covers the whole test including hooks; raising it does not make individual assertions wait longer, since each assertion still gives up after the expect timeout. Raise the specific timeout that matches the slow thing, and preferably fix the slowness instead of hiding it.',
+          a: `It is a top-level setting: \`expect: { timeout: 10_000 }\`. You can also pass \`{ timeout }\` to one assertion. The test timeout covers the whole test, including hooks. Raising it does not make one assertion wait longer, because each assertion still stops at the expect timeout. Raise only the timeout for the slow thing. Better still, fix the slowness instead of hiding it.`,
         },
         {
           q: 'What is the difference between `trace: \'on-first-retry\'` and `\'retain-on-failure\'`?',
-          a: '`on-first-retry` records a trace only on the first retry of a failed test, so it requires `retries` greater than 0, and the original failing attempt has no trace. `retain-on-failure` records every test but keeps the trace only for those that failed, giving evidence from the first failure at the cost of recording overhead for every test. CI templates use on-first-retry as the cheaper default.',
+          a: `\`on-first-retry\` records a trace only on the first retry of a failed test. So it needs \`retries\` above 0, and the first failed attempt has no trace. \`retain-on-failure\` records every test but keeps the trace only for failed ones. You get proof from the very first failure, but recording every test costs time. CI templates use on-first-retry because it is cheaper.`,
         },
       ],
       pitfalls: [
-        'Putting `timeout` or `retries` inside `use`.',
-        'Setting retries high everywhere to make the pipeline green.',
-        'Recording video and trace for every test on CI by default.',
+        `Putting \`timeout\` or \`retries\` inside \`use\`.`,
+        `Setting high retries everywhere just to make the pipeline green.`,
+        `Recording video and trace for every test on CI by default.`,
       ],
     },
     {
       id: 'pw-setup-iq-05',
       difficulty: 'easy',
-      question: 'How do you run just one test, one file, one browser, or only the smoke tests from the command line?',
+      question: `How do you run just one test, one file, one browser, or only the smoke tests from the command line?`,
       whatInterviewerLooksFor: [
-        'Exact commands, not vague descriptions',
-        'Knows file-path filter vs `-g` title filter',
-        'Knows `--project`, `file:line`, `--last-failed`, `--headed`',
-        'Understands runs multiply by projects',
+        `Exact commands, not vague words.`,
+        `Knows the file-path filter vs the \`-g\` title filter.`,
+        `Knows \`--project\`, \`file:line\`, \`--last-failed\` and \`--headed\`.`,
+        `Knows that the number of runs is multiplied by the projects.`,
       ],
-      modelAnswer: `All through \`npx playwright test\` with filters:
+      modelAnswer: `Everything goes through \`npx playwright test\` plus filters:
 
 | Goal | Command |
 |---|---|
@@ -995,119 +1164,123 @@ Playwright prefers **starting clean** over cleaning up after the fact, because c
 | Files whose path contains "cart" | \`npx playwright test cart\` |
 | One test by line number | \`npx playwright test tests/cart.spec.ts:18\` |
 | Tests by title or tag | \`npx playwright test -g "@smoke"\` |
-| Exclude a tag | \`npx playwright test --grep-invert "@slow"\` |
+| Leave out a tag | \`npx playwright test --grep-invert "@slow"\` |
 | One browser | \`npx playwright test --project=chromium\` |
 | Watch it run | add \`--headed\` (or use \`--ui\`) |
 | Only what failed last time | \`npx playwright test --last-failed\` |
-| Preview without running | \`npx playwright test --list\` |
+| See the list without running | \`npx playwright test --list\` |
 
-**Key detail:** positional arguments are **regular expressions on file paths**, while \`-g\` is a regex on the **full test title** (describe titles + test title + tags). Filters combine, and the result is multiplied by the selected projects: 5 smoke tests × 3 browser projects = 15 runs unless I add \`--project\`.
+**Key detail:** a plain word after \`test\` is a pattern for **file paths**. \`-g\` is a pattern for the **full test title**: the describe titles, the test title and the tags.
 
-In the editor I mostly use the VS Code extension's run button or \`test.only\` temporarily (with \`forbidOnly\` on CI to stop it being merged). For the team, I wrap common runs in npm scripts such as \`"test:smoke": "playwright test -g @smoke --project=chromium"\`.`,
+Filters work together. Then the result is multiplied by the selected projects. For example, 5 smoke tests × 3 browser projects = 15 runs, unless I add \`--project\`.
+
+In the editor I mostly use the run button in the VS Code extension. Sometimes I add \`test.only\` for a moment, with \`forbidOnly\` on CI so it can't be merged. For the team, I add npm scripts like \`"test:smoke": "playwright test -g @smoke --project=chromium"\`.`,
       followUps: [
         {
           q: 'What is the risk of using `test.only` to run a single test?',
-          a: 'If it is committed, the runner executes only that test (and other `.only` tests) and reports success, so a whole suite silently stops running. Protect against it with `forbidOnly: !!process.env.CI`, which turns any `.only` into a failure on CI, and prefer CLI filters (`file:line`, `-g`) or the VS Code run button for local focus.',
+          a: `If someone commits it, the runner runs only that test (and other \`.only\` tests) and reports success. The rest of the suite quietly stops running. Protect against it with \`forbidOnly: !!process.env.CI\`, which makes any \`.only\` fail on CI. For local focus, prefer CLI filters (\`file:line\`, \`-g\`) or the VS Code run button.`,
         },
         {
           q: 'How does `--last-failed` know what failed?',
-          a: 'After each run Playwright writes a small last-run file in the output directory listing the failed tests. `--last-failed` reads it and runs only those. Because it lives in `test-results`, it reflects your local last run; on sharded CI each shard has its own file, which is why the docs show a custom `--last-failed-file` option for that case.',
+          a: `After each run, Playwright writes a small "last run" file in the output folder. It lists the failed tests. \`--last-failed\` reads that file and runs only those tests. The file lives in \`test-results\`, so it shows your own last local run. On split (sharded) CI runs, each machine has its own file. That is why the docs show a custom \`--last-failed-file\` option for that case.`,
         },
       ],
       pitfalls: [
-        'Thinking the positional argument matches test titles.',
-        'Forgetting that every selected project multiplies the run count.',
-        'Relying on `test.only` and committing it.',
+        `Thinking a plain word after \`test\` matches test titles.`,
+        `Forgetting that each selected project multiplies the number of runs.`,
+        `Using \`test.only\` and then committing it.`,
       ],
     },
     {
       id: 'pw-setup-iq-06',
       difficulty: 'medium',
-      question: 'Would you build your suite with codegen? When do you use codegen, UI mode, --debug and the VS Code extension?',
+      question: `Would you build your suite with codegen? When do you use codegen, UI mode, --debug and the VS Code extension?`,
       whatInterviewerLooksFor: [
-        'Understands codegen as a locator/draft tool, not a framework',
-        'Knows what each tool does and picks the right one per situation',
-        'Can explain post-recording clean-up (assertions, data, POM)',
-        'Mentions Pick locator and testIdAttribute for codegen',
+        `Sees codegen as a tool for locators and first drafts, not a framework.`,
+        `Knows what each tool does and picks the right one for each situation.`,
+        `Can explain the clean-up after recording: assertions, data, page objects.`,
+        `Mentions Pick locator, and the test id setting for codegen.`,
       ],
-      modelAnswer: `**Codegen** (\`npx playwright codegen <url>\`) records my clicks and typing as Playwright code and lets me add visibility/text/value assertions from the toolbar. It picks resilient locators (role, text, test id) and refines them until each matches exactly one element. I use it to **discover locators** on an unfamiliar page and to produce a **first draft** of a flow. I don't commit the output as-is: recorded scripts repeat setup steps, hard-code data, contain incidental clicks and have weak assertions. After recording I:
-1. keep the locators, delete the noise;
-2. add meaningful assertions (URL, heading, cart badge);
+      modelAnswer: `**Codegen** (\`npx playwright codegen <url>\`) records my clicks and typing as Playwright code. Its toolbar adds assertions for visibility, text and value. It picks strong locators (role, text, test id) and improves each one until it matches exactly one element.
+
+I use it to **find locators** on a new page and to get a **first draft** of a flow. I don't commit its code as it is. Recorded code repeats setup steps, uses fixed data, has extra clicks and weak assertions. After recording I:
+1. keep the locators and delete the noise;
+2. add real assertions (URL, heading, cart badge);
 3. move data into variables or fixtures;
-4. move repeated flows (login) into \`beforeEach\`, a page object or a setup project.
+4. move repeated flows, like login, into \`beforeEach\`, a page object or a setup project.
 
-For SauceDemo I run \`codegen --test-id-attribute=data-test\` so it suggests \`getByTestId('login-button')\` correctly.
+For SauceDemo I run \`codegen --test-id-attribute=data-test\`, so it suggests \`getByTestId('login-button')\` correctly.
 
-**Choosing tools:**
+**Choosing a tool:**
 
 | Situation | Tool |
 |---|---|
-| Writing tests, want instant feedback on save | UI mode with watch mode |
-| A failing test, need to see the DOM at each step | UI mode timeline locally, trace viewer for CI failures |
-| Step through one test, pause, try locators live | \`--debug\` (Inspector; headed, one worker, no timeout) |
-| Daily editing, run one test, breakpoints in my code | VS Code extension |
-| New page, which locator should I use? | Pick locator in UI mode / VS Code / codegen |`,
+| Writing tests, want quick feedback on save | UI mode with watch mode |
+| A failing test, need to see the page at each step | UI mode timeline locally; trace viewer for CI failures |
+| Pause one test, go step by step, try locators live | \`--debug\` (Inspector; visible browser, one worker, no timeout) |
+| Daily editing, running one test, breakpoints | VS Code extension |
+| New page, which locator should I use? | Pick locator in UI mode, VS Code or codegen |`,
       followUps: [
         {
           q: 'Codegen produced `page.locator(\'#root > div > div:nth-child(2) > input\')` for a field. What does that tell you?',
-          a: 'Codegen falls back to CSS structure when the element has no role with a usable accessible name, no label, no placeholder and no test id. That is a signal of poor accessibility or missing hooks in the markup. I would check whether a placeholder or label exists that I could target, and otherwise ask developers to add a proper label or a `data-testid` (which also improves the app for screen-reader users).',
+          a: `Codegen falls back to CSS structure when the element has nothing better. That means no role with a usable name, no label, no placeholder and no test id. This points to poor accessibility or missing test hooks in the HTML. I would look for a placeholder or label I could use. Otherwise I would ask the developers to add a proper label or a \`data-testid\`. A label also helps screen-reader users.`,
         },
         {
           q: 'What does `--debug` change compared with a normal run?',
-          a: 'It opens the Playwright Inspector, launches the browser headed, forces a single worker, and disables timeouts so you can pause indefinitely. You can step over each action, see the targeted element highlighted, and edit locators live in the Inspector. You can also run `npx playwright test file.spec.ts:10 --debug` to debug from one specific test, or call `await page.pause()` in code.',
+          a: `It opens the Playwright Inspector and shows the browser window. It uses only one worker and turns off timeouts, so you can pause as long as you like. You can step over each action, see the target element highlighted, and edit locators live. You can debug from one test with \`npx playwright test file.spec.ts:10 --debug\`, or call \`await page.pause()\` in the code.`,
         },
       ],
       pitfalls: [
-        'Saying "I record everything with codegen, so I do not need to code".',
-        'Committing recorded tests with no assertions.',
-        'Using UI mode or --headed in CI pipelines.',
+        `Saying "I record everything with codegen, so I don't need to code".`,
+        `Committing recorded tests that have no assertions.`,
+        `Using UI mode or --headed in CI pipelines.`,
       ],
     },
     {
       id: 'pw-setup-iq-07',
       difficulty: 'expert',
       question:
-        'Your company has 800 Selenium Java UI tests that take 3 hours and are 10% flaky. Your manager asks whether to migrate to Playwright. How do you answer?',
+        `Your company has 800 Selenium Java UI tests. They take 3 hours and 10% are flaky. Your manager asks: should we move to Playwright? How do you answer?`,
       whatInterviewerLooksFor: [
-        'Does not jump to "rewrite everything"',
-        'Separates tool problems from test-design problems',
-        'Proposes a measurable pilot with success criteria',
-        'Considers language, team skills, infrastructure and coverage overlap',
+        `Does not jump to "rewrite everything".`,
+        `Separates tool problems from test-design problems.`,
+        `Suggests a small, measured pilot with clear success numbers.`,
+        `Thinks about language, team skills, infrastructure and duplicate coverage.`,
       ],
-      modelAnswer: `I would treat it as a decision backed by data, not a fashion choice.
+      modelAnswer: `I would decide with data, not because a tool is popular.
 
-**1. Diagnose first.** Why is the suite slow and flaky? Sample 30 flaky failures: are they missing waits and stale elements (a tool/framework issue Playwright's auto-waiting and locators help with), or shared test data, unstable environments and UI-only setup (design issues that would follow us into any tool)? Why 3 hours: sequential runs, a new browser per test, UI logins everywhere?
+**1. Find the causes first.** Why is the suite slow and flaky? I would look at 30 flaky failures. Are they missing waits and stale elements? Playwright's auto-waiting and locators help with those. Or are they shared test data, unstable environments and setup done through the UI? Those problems follow us into any tool. Why 3 hours? Maybe tests run one by one, each opens a new browser, and each logs in through the UI.
 
-**2. Quick wins without migrating:** parallelise on Grid, create data via API, remove sleeps. If these fix most problems, migration is less urgent.
+**2. Quick wins without moving:** run tests in parallel on Grid, create data through the API, and remove sleeps. If this fixes most problems, moving is less urgent.
 
-**3. Pilot.** Pick one high-value flow area (for example checkout, ~40 tests) and write it in Playwright. Playwright has a Java binding, so the team could keep Java, or move to TypeScript if the developers and front-end codebase use it. Measure:
+**3. A pilot.** Pick one important area, for example checkout with about 40 tests, and write it in Playwright. Playwright has a Java version, so the team could keep Java. Or it could move to TypeScript if the developers use it. Measure:
 
 | Metric | Selenium today | Playwright pilot target |
 |---|---|---|
 | Runtime for the 40 tests | baseline | at least 2–3× faster with workers + storageState |
 | Flaky rate over 2 weeks | ~10% | under 2% |
-| Time to diagnose a CI failure | baseline | shorter with traces |
-| Effort per new test | baseline | similar or lower |
+| Time to understand a CI failure | baseline | shorter with traces |
+| Effort per new test | baseline | the same or lower |
 
-**4. Migration strategy if the pilot wins:** strangler pattern. New tests go to Playwright; old tests are migrated when they break or when their feature changes; both suites run in CI until coverage overlaps; delete duplicates and push lower-level checks down to API tests rather than porting everything 1:1.
+**4. If the pilot wins, move step by step.** New tests go to Playwright. Old tests move when they break or their feature changes. Both suites run on CI until coverage overlaps. Then delete duplicates. Move business-rule checks down to API tests instead of copying every UI test.
 
-**5. Risks:** team ramp-up (training plan), real-device or IE needs that still require Selenium/Appium, reporting integration (JUnit reporter covers Jenkins), and two suites to maintain during transition.
+**5. Risks:** the team must learn a new tool (plan training). Real-device or old-browser needs may still need Selenium or Appium. Reports must connect to CI (the JUnit reporter works with Jenkins). And for a while there are two suites to maintain.
 
-**My recommendation:** a time-boxed pilot with agreed numbers, then decide.`,
+**My recommendation:** a short pilot with agreed numbers, then decide.`,
       followUps: [
         {
           q: 'Which Playwright features would most directly attack the 3-hour runtime?',
-          a: 'Running many tests in parallel workers with a fresh context per test instead of a fresh browser, sharding across CI machines with `--shard`, reusing login via `storageState` and a setup project instead of logging in through the UI in every test, and creating test data through the `request` fixture rather than through the UI. Together these usually matter more than raw protocol speed.',
+          a: `Run many tests at the same time in parallel workers, with a fresh context per test instead of a fresh browser. Split the suite across CI machines with \`--shard\`. Log in once with \`storageState\` and a setup project, instead of logging in through the UI in every test. Create test data with the \`request\` fixture, not through the UI. Together these matter more than the raw speed of the browser connection.`,
         },
         {
           q: 'Would you port every Selenium test one-to-one?',
-          a: 'No. A migration is the right moment to delete duplicate or low-value UI tests, move business-rule checks down to API or unit tests, and keep only the user journeys that need a real browser. Porting 800 tests mechanically would carry over the same design problems and likely the same flakiness. I would map existing tests to risks and rebuild coverage deliberately.',
+          a: `No. A move is the right time to delete duplicate or low-value UI tests. Business-rule checks can move down to API or unit tests. Keep only the user journeys that need a real browser. Copying 800 tests one by one would bring the same design problems, and probably the same flakiness. I would map the tests to risks and rebuild coverage on purpose.`,
         },
       ],
       pitfalls: [
-        'Promising Playwright will fix flakiness caused by shared test data or unstable environments.',
-        'Proposing a big-bang rewrite with no pilot or metrics.',
-        'Ignoring the team\'s language skills and existing infrastructure.',
+        `Promising Playwright will fix flakiness caused by shared test data or unstable environments.`,
+        `Suggesting a full rewrite at once, with no pilot and no numbers.`,
+        `Ignoring the team's language skills and the existing setup.`,
       ],
     },
   ],
@@ -1134,15 +1307,15 @@ For SauceDemo I run \`codegen --test-id-attribute=data-test\` so it suggests \`g
       ],
       answer: `**(a) 36 · (b) 12 · (c) 12 · (d) 2 · (e) 3 · (f) 10 · (g) 0**, and (g) exits with an error because nothing matched.`,
       insight:
-        'Filters narrow the set of tests; projects multiply it. Most "why did it run 3 times?" confusion comes from forgetting the project multiplier, and most "why did nothing run?" from mixing up file-path filters with title filters.',
+        `Filters make the list of tests smaller. Projects multiply it. "Why did it run 3 times?" usually means you forgot the project multiplier. "Why did nothing run?" usually means you mixed up the file-path filter and the title filter.`,
       followUps: [
         {
           q: 'How can you check these numbers without running anything?',
-          a: 'Append `--list` to any command. Playwright prints every test that would run, prefixed with its project, and a total count, without launching browsers. It is the quickest way to verify a grep pattern, a tag strategy or a CI shard command before spending minutes on a real run.',
+          a: `Add \`--list\` to any command. Playwright prints every test that would run, with its project in front, and a total count. It does not open any browser. It is the quickest way to check a \`-g\` pattern, a tag plan or a CI shard command before a real run.`,
         },
         {
           q: 'How would you make @smoke tests run only on Chromium permanently, without remembering flags?',
-          a: 'Either add an npm script such as `"test:smoke": "playwright test -g @smoke --project=chromium"`, or define a dedicated project in the config, for example `{ name: \'smoke\', grep: /@smoke/, use: { ...devices[\'Desktop Chrome\'] } }`, and run it with `--project=smoke`. The config option is discoverable and works the same locally and in CI.',
+          a: `Add an npm script such as \`"test:smoke": "playwright test -g @smoke --project=chromium"\`. Or add a special project to the config, for example \`{ name: 'smoke', grep: /@smoke/, use: { ...devices['Desktop Chrome'] } }\`, and run it with \`--project=smoke\`. The config option is easy for the team to find and works the same locally and on CI.`,
         },
       ],
     },
@@ -1170,11 +1343,11 @@ For SauceDemo I run \`codegen --test-id-attribute=data-test\` so it suggests \`g
 | 2 CI fail→pass | 2 | **flaky** | attempt 2 | attempt 1 | written, not opened |
 | 3 CI always fails | 3 | failed | attempt 2 only | each attempt | written, not opened |`,
       insight:
-        '`on-first-retry` is cheap but gives you nothing locally (no retries) and only covers the first retry on CI. If you need a trace of the very first failure, use `retain-on-failure` or run once with `--trace on`.',
+        `\`on-first-retry\` is cheap. But it gives you nothing locally, where there are no retries. On CI it covers only the first retry. If you need a trace of the very first failure, use \`retain-on-failure\`, or run once with \`--trace on\`.`,
       followUps: [
         {
           q: 'Locally you want a trace for a failing test right now. What is the quickest way?',
-          a: 'Re-run just that test with tracing forced on: `npx playwright test tests/cart.spec.ts:12 --trace on`, then open it from the HTML report or with `npx playwright show-trace`. Alternatively run it in UI mode, which shows the same timeline, DOM snapshots and network log live without needing a trace file.',
+          a: `Run just that test again with tracing turned on: \`npx playwright test tests/cart.spec.ts:12 --trace on\`. Then open the trace from the HTML report, or with \`npx playwright show-trace\`. Or run the test in UI mode. It shows the same timeline, page snapshots and network calls live, with no trace file needed.`,
         },
       ],
     },
@@ -1197,11 +1370,11 @@ For SauceDemo I run \`codegen --test-id-attribute=data-test\` so it suggests \`g
       ],
       answer: `1 → \`page\` fixture · 2 → two \`browser.newContext()\` · 3 → same context, catch the new page event · 4 → same context, new page · 5 → two **projects** (separate browsers) · 6 → two contexts.`,
       insight:
-        'Ask "is this the same person?" Same person → same context (more pages). Different person → different context. Different browser engine → different project. You almost never launch a browser yourself in @playwright/test.',
+        `Ask: "Is this the same person?" Same person → same context, more pages. Different person → different context. Different browser engine → different project. In @playwright/test you almost never start a browser yourself.`,
       followUps: [
         {
           q: 'In scenario 2, how would you avoid logging both users in through the UI?',
-          a: 'Create one storageState file per role in a setup project (admin.json, customer.json), then in the test call `browser.newContext({ storageState: \'playwright/.auth/admin.json\' })` and the same for the customer. Each context starts already authenticated as its role, and the test focuses on the approval behaviour rather than on the login form.',
+          a: `In a setup project, make one storageState file per role, for example admin.json and customer.json. In the test, call \`browser.newContext({ storageState: 'playwright/.auth/admin.json' })\`, and do the same for the customer. Each context starts already logged in as its role. The test can then focus on the approval, not on the login form.`,
         },
       ],
     },
@@ -1210,22 +1383,22 @@ For SauceDemo I run \`codegen --test-id-attribute=data-test\` so it suggests \`g
     {
       id: 'pw-setup-mcq-01',
       difficulty: 'easy',
-      question: 'Which command scaffolds a new Playwright Test project with a config file, an example test and browser downloads?',
+      question: `Which command creates a new Playwright Test project with a config file, a sample test and the browsers?`,
       options: ['npm init playwright@latest', 'npm install playwright', 'npx playwright codegen', 'npx create-playwright-config'],
       correct: [0],
       explanation:
-        '`npm init playwright@latest` runs the official initializer: it asks TS or JS, the tests folder, whether to add a GitHub Actions workflow, and installs browsers. `npm install playwright` only adds the automation library (no runner, no config). `codegen` records tests in an existing setup, and `create-playwright-config` is not a real command.',
+        `\`npm init playwright@latest\` runs the official setup. It asks TS or JS, the tests folder and whether to add a GitHub Actions workflow, then installs the browsers. \`npm install playwright\` adds only the browser-control library: no runner, no config. \`codegen\` records tests in a project that already exists. \`create-playwright-config\` is not a real command.`,
       followUps: [
         {
           q: 'What extra step is needed on a fresh Linux CI image?',
-          a: 'Run `npx playwright install --with-deps` (or `npx playwright install chromium --with-deps`) so the browsers and the operating-system libraries they need are installed. Alternatively use the official Playwright Docker image that already contains them for a given version.',
+          a: `Run \`npx playwright install --with-deps\` (or \`npx playwright install chromium --with-deps\`). It installs the browsers and the system libraries they need. Or use the official Playwright Docker image, which already has them for one version.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-02',
       difficulty: 'easy',
-      question: 'In Playwright, what does a BrowserContext represent?',
+      question: `In Playwright, what is a BrowserContext?`,
       options: [
         'An isolated, incognito-like browser profile with its own cookies and storage',
         'A single browser tab inside a window',
@@ -1234,11 +1407,11 @@ For SauceDemo I run \`codegen --test-id-attribute=data-test\` so it suggests \`g
       ],
       correct: [0],
       explanation:
-        'A context is an isolated profile inside a running browser: its own cookies, localStorage, sessionStorage, cache and permissions. A tab is a Page (which lives inside a context). Playwright deliberately does not launch a new browser per test; contexts are the cheap alternative. Worker processes are a runner concept, separate from contexts.',
+        `A context is a private profile inside a running browser, like an incognito window. It has its own cookies, local storage, session storage, cache and permissions. A tab is a Page, and a page lives inside a context. Playwright does not start a new browser for each test; contexts are the cheap option. Worker processes belong to the test runner, not to contexts.`,
       followUps: [
         {
           q: 'Do two pages in the same context share the login session?',
-          a: 'Yes. Pages in one context share its cookies and storage, so a link that opens a new tab keeps the user logged in. To simulate two different users you create two contexts instead.',
+          a: `Yes. Pages in one context share its cookies and storage. So a link that opens a new tab keeps the user logged in. To act as two different users, make two contexts instead.`,
         },
       ],
     },
@@ -1266,18 +1439,18 @@ test('cart badge', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        'Without `await`, the test does not wait for the click; the next action starts at once. Here the next action auto-waits for the add-to-cart button, so it might still pass, which is exactly what makes missing awaits sneaky and flaky. Playwright has no hidden queue, TypeScript does not require await (a lint rule does), and an un-awaited click does not throw synchronously.',
+        `Without \`await\`, the test does not wait for the login click. The next line starts at once. Here the next action waits by itself for the add-to-cart button, so the test may still pass. That is why a missing \`await\` is sneaky and makes tests flaky. Playwright has no hidden queue. TypeScript does not force \`await\` (a lint rule does). And a click without \`await\` does not throw right away.`,
       followUps: [
         {
           q: 'How do you catch this class of bug automatically?',
-          a: 'Enable the ESLint rule `@typescript-eslint/no-floating-promises` (recommended in the Playwright best-practices docs) and run it in CI. It flags any Promise that is neither awaited nor handled, including un-awaited Playwright actions and assertions.',
+          a: `Turn on the ESLint rule \`@typescript-eslint/no-floating-promises\` and run it on CI. The Playwright best-practices page recommends it. It flags any Promise that nobody awaits or handles, including Playwright actions and assertions without \`await\`.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-04',
       difficulty: 'medium',
-      question: 'Without any timeout settings in playwright.config.ts, which defaults apply? Select ALL that apply.',
+      question: `playwright.config.ts has no timeout settings at all. Which defaults apply? Select ALL that apply.`,
       options: [
         'Each test may run for up to 30 seconds',
         'Web-first assertions like toBeVisible retry for up to 5 seconds',
@@ -1287,11 +1460,11 @@ test('cart badge', async ({ page }) => {
       ],
       correct: [0, 1, 4],
       explanation:
-        'Defaults: 30s per test, 5s for `expect` assertions, and workers equal to half the logical CPU cores. Actions have no separate timeout by default (0 = limited only by the test timeout), so the 10-second option is wrong. `retries` defaults to 0; the "2 on CI" value comes from the generated template, not from Playwright defaults.',
+        `The defaults are: 30 s per test, 5 s for \`expect\` assertions, and workers = half the logical CPU cores. Actions have no time limit of their own by default (0 means only the test timeout applies), so the 10-second option is wrong. \`retries\` is 0 by default. The "2 on CI" value comes from the generated template, not from Playwright itself.`,
       followUps: [
         {
           q: 'How do you give a single slow assertion more time without changing the global setting?',
-          a: 'Pass a timeout to that assertion, for example `await expect(page.getByTestId(\'title\')).toHaveText(\'Products\', { timeout: 10_000 })`. For a whole slow test use `test.slow()` (triples the timeout) or `test.setTimeout(ms)` inside the test.',
+          a: `Give that one assertion its own timeout: \`await expect(page.getByTestId('title')).toHaveText('Products', { timeout: 10_000 })\`. For a whole slow test, use \`test.slow()\` (it triples the timeout) or \`test.setTimeout(ms)\` inside the test.`,
         },
       ],
     },
@@ -1299,7 +1472,7 @@ test('cart badge', async ({ page }) => {
       id: 'pw-setup-mcq-05',
       difficulty: 'medium',
       question:
-        'Your suite has `tests/checkout.spec.ts` and a test titled "checkout shows total" inside `tests/cart.spec.ts`. Which command runs ONLY the test titled "checkout shows total"?',
+        `Your suite has \`tests/checkout.spec.ts\`. It also has a test titled "checkout shows total" inside \`tests/cart.spec.ts\`. Which command runs ONLY the test titled "checkout shows total"?`,
       options: [
         'npx playwright test -g "checkout shows total"',
         'npx playwright test checkout',
@@ -1308,18 +1481,18 @@ test('cart badge', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        '`-g`/`--grep` filters by test title. A positional argument such as `checkout` is a regex on file paths, so it would run every test in checkout.spec.ts and not the test in cart.spec.ts. `--project` selects config projects (browsers), and `--only` is not a CLI flag (`test.only` is a code-level modifier).',
+        `\`-g\` (or \`--grep\`) filters by test title. A plain word like \`checkout\` is a pattern for file paths. It would run every test in checkout.spec.ts, and not the test in cart.spec.ts. \`--project\` picks config projects (browsers). \`--only\` is not a command-line flag; \`test.only\` is something you write in code.`,
       followUps: [
         {
           q: 'How could you run the same test by location instead of title?',
-          a: 'Use the file:line syntax: `npx playwright test tests/cart.spec.ts:24`, where 24 is the line where the test is declared. It is handy when titles are long or similar, and the VS Code extension uses the same idea behind its run buttons.',
+          a: `Use the file:line form: \`npx playwright test tests/cart.spec.ts:24\`, where 24 is the line where the test starts. It helps when titles are long or look alike. The VS Code run buttons use the same idea.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-06',
       difficulty: 'medium',
-      question: 'Which statements about Playwright compared with Cypress and Selenium are accurate? Select ALL that apply.',
+      question: `Which statements comparing Playwright with Cypress and Selenium are correct? Select ALL that apply.`,
       options: [
         'Playwright can drive several tabs and several origins in one test; Cypress does not support multiple tabs',
         'Selenium talks to browsers through the W3C WebDriver protocol via a browser driver',
@@ -1329,26 +1502,26 @@ test('cart badge', async ({ page }) => {
       ],
       correct: [0, 1, 4],
       explanation:
-        'Playwright handles multi-tab and multi-origin flows natively, while Cypress has no multi-tab support. Selenium uses WebDriver through a driver (now managed by Selenium Manager). Cypress tests are JavaScript/TypeScript only. Playwright downloads its own browser builds and needs no chromedriver, and its WebKit build runs on all major OSes.',
+        `Playwright handles many tabs and many websites in one test. Cypress has no multi-tab support. Selenium talks to browsers through WebDriver and a driver program (now managed by Selenium Manager). Cypress tests are JavaScript or TypeScript only, so the Java/Python/C# option is wrong. Playwright downloads its own browsers and needs no chromedriver. Its WebKit build runs on all major operating systems.`,
       followUps: [
         {
           q: 'Is testing on Playwright\'s WebKit the same as testing on real Safari?',
-          a: 'Close but not identical: it is the same rendering and JavaScript engine family, built from WebKit sources, so it catches most Safari-specific layout and behaviour bugs. It is not Apple\'s branded Safari on macOS or iOS, so critical flows may still need a check on real Safari through a device cloud or a Mac.',
+          a: `Close, but not the same. It is built from the same WebKit engine, so it catches most Safari-only layout and behaviour bugs. But it is not Apple's own Safari on macOS or iOS. Important flows may still need a check on real Safari, through a device cloud or a Mac.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-07',
       difficulty: 'easy',
-      question: 'Which file controls where tests live, how many workers run, retries, reporters and the browser projects?',
+      question: `Which file sets where tests live, how many workers run, retries, reporters and the browser projects?`,
       options: ['playwright.config.ts', 'package.json', 'tsconfig.json', 'tests/example.spec.ts'],
       correct: [0],
       explanation:
-        '`playwright.config.ts` holds runner options (testDir, workers, retries, reporter, projects) and browser options under `use`. package.json lists dependencies and scripts, tsconfig.json configures the TypeScript compiler (Playwright does not type-check with it at run time), and spec files contain tests.',
+        `\`playwright.config.ts\` holds the runner settings (testDir, workers, retries, reporter, projects) and the browser settings under \`use\`. package.json lists packages and scripts. tsconfig.json sets up the TypeScript compiler; Playwright does not use it to check types when tests run. Spec files hold the tests themselves.`,
       followUps: [
         {
           q: 'Can you use a different config file for a special run?',
-          a: 'Yes, with `-c` or `--config`, for example `npx playwright test -c playwright.smoke.config.ts`. Teams sometimes keep a separate config for visual tests or a different environment, although projects inside one config are usually easier to maintain.',
+          a: `Yes, with \`-c\` or \`--config\`, for example \`npx playwright test -c playwright.smoke.config.ts\`. Some teams keep a separate config for visual tests or another environment. But projects inside one config are usually easier to maintain.`,
         },
       ],
     },
@@ -1377,33 +1550,33 @@ export default defineConfig({
       ],
       correct: [0],
       explanation:
-        'getByTestId uses `data-testid` unless `use.testIdAttribute` is set, and SauceDemo marks fields with `data-test`, so the locator matches nothing. Also, `on-first-retry` only records on a retry, and retries default to 0. baseURL normally includes the scheme and trace belongs in `use`, relative testDir is fine and projects are optional, and getByTestId does not prefix-match attributes.',
+        `\`getByTestId\` looks for \`data-testid\` unless \`use.testIdAttribute\` says otherwise. SauceDemo uses \`data-test\`, so the locator finds nothing. Also, \`on-first-retry\` records only on a retry, and retries are 0 by default, so no trace is ever made. The other options are wrong: baseURL normally includes \`https://\`, trace belongs in \`use\`, a relative testDir is fine, projects are optional, and getByTestId does not match attribute prefixes.`,
       followUps: [
         {
           q: 'Besides the config, how else can you change the test id attribute?',
-          a: 'Call `selectors.setTestIdAttribute(\'data-test\')` (import `selectors` from @playwright/test) before tests run, for example in a fixture or global setup. The config option is clearer and is applied per project, so it is the usual choice. Codegen has a matching `--test-id-attribute` flag.',
+          a: `Call \`selectors.setTestIdAttribute('data-test')\` (import \`selectors\` from @playwright/test) before tests run, for example in a fixture or global setup. The config option is clearer and can differ per project, so it is the usual choice. Codegen has a matching \`--test-id-attribute\` flag.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-09',
       difficulty: 'medium',
-      question: 'You want to watch tests re-run every time you save a file, inspect a DOM snapshot for each action, and pick locators by hovering. Which command gives you that?',
+      question: `You want tests to run again each time you save a file. You want a page snapshot for each action. And you want to pick locators by hovering. Which command gives you all of this?`,
       options: ['npx playwright test --ui', 'npx playwright test --headed', 'npx playwright show-report', 'npx playwright test --list'],
       correct: [0],
       explanation:
-        'UI mode (`--ui`) provides watch mode, a timeline of actions with DOM snapshots (time travel) and a Pick locator tool. `--headed` only shows the browser window during a normal run. `show-report` serves the last HTML report, and `--list` prints tests without running them.',
+        `UI mode (\`--ui\`) has watch mode, a timeline with a page snapshot for each action, and a Pick locator tool. \`--headed\` only shows the browser window during a normal run. \`show-report\` opens the last HTML report. \`--list\` prints the tests without running them.`,
       followUps: [
         {
           q: 'How would you open UI mode from inside a Docker container or Codespace?',
-          a: 'Start it on a reachable host and port, for example `npx playwright test --ui-host=0.0.0.0 --ui-port=8080`, and open that address in your browser. Be careful: binding to 0.0.0.0 can expose traces and any secrets in them to other machines on the network.',
+          a: `Start it on an address you can reach, for example \`npx playwright test --ui-host=0.0.0.0 --ui-port=8080\`, and open that address in your browser. Be careful: 0.0.0.0 can let other machines on the network see your traces and any secrets in them.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-10',
       difficulty: 'hard',
-      question: 'Why does this second test fail when it runs, even though the first one passes?',
+      question: `The 'log in' test passes. Why does the 'inventory shows 6 items' test fail on SauceDemo?`,
       code: {
         language: 'typescript',
         code: `import { test, expect } from '@playwright/test';
@@ -1429,26 +1602,26 @@ test('inventory shows 6 items', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        'Each test receives its own browser context, so the login cookie from test 1 does not exist in test 2, and SauceDemo sends an unauthenticated visitor back to login. Tests in a file run in declaration order by default (not reversed), `toHaveCount` works with any locator, and deep links are fine once the user is logged in.',
+        `Each test gets its own browser context. So the login cookie from test 1 does not exist in test 2, and SauceDemo sends a visitor who is not logged in back to the login page. The other options are wrong: tests in a file run in the order they are written (not reversed), \`toHaveCount\` works with any locator, and deep links work fine once the user is logged in.`,
       followUps: [
         {
           q: 'Give two correct ways to make the second test pass.',
-          a: 'Log in inside the second test, ideally in a shared `test.beforeEach` or a helper so the steps are not duplicated. Or, for a large suite, log in once in a setup project, save the session with `storageState`, and configure the tests to start with it. Both keep tests independent of each other.',
+          a: `Log in inside the second test, ideally in a shared \`test.beforeEach\` or a helper, so the steps are not copied. Or, for a big suite, log in once in a setup project, save the session with \`storageState\`, and start the tests with it. Both ways keep the tests independent.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-11',
       difficulty: 'medium',
-      question: 'Which of these belong at the TOP LEVEL of defineConfig rather than inside `use`? Select ALL that apply.',
+      question: `Which of these go at the TOP LEVEL of defineConfig, not inside \`use\`? Select ALL that apply.`,
       options: ['retries', 'baseURL', 'workers', 'reporter', 'testIdAttribute'],
       correct: [0, 2, 3],
       explanation:
-        '`retries`, `workers` and `reporter` configure the test runner, so they are top-level options. `baseURL` and `testIdAttribute` change how each page/locator behaves, so they live under `use` (globally or per project). Mixing these up is one of the most common config mistakes, and TypeScript flags most of them.',
+        `\`retries\`, \`workers\` and \`reporter\` set up the test runner, so they go at the top level. \`baseURL\` and \`testIdAttribute\` change how each page and locator works, so they go under \`use\` (for all tests or per project). Mixing these up is a very common config mistake. TypeScript flags most of them.`,
       followUps: [
         {
           q: 'Can a single project override `use` options?',
-          a: 'Yes. Each project has its own `use` block that is merged over the global one, which is how a mobile project sets `...devices[\'iPhone 13\']` or a staging project sets a different `baseURL` while sharing the rest of the configuration.',
+          a: `Yes. Each project has its own \`use\` block, merged over the main one. That is how a mobile project sets \`...devices['iPhone 13']\`, or a staging project sets a different \`baseURL\`, while sharing everything else.`,
         },
       ],
     },
@@ -1456,7 +1629,7 @@ test('inventory shows 6 items', async ({ page }) => {
       id: 'pw-setup-mcq-12',
       difficulty: 'hard',
       question:
-        'A colleague says: "Our TypeScript tests ran fine in Playwright, so there are no type errors." Why is that reasoning wrong, and what should be added to CI?',
+        `A colleague says: "Our TypeScript tests ran fine in Playwright, so there are no type errors." Why is this wrong, and what should be added to CI?`,
       options: [
         'Playwright strips TypeScript types without type-checking, so add `npx tsc --noEmit` (and lint) to CI',
         'Playwright type-checks only files that fail, so add `--strict` to the test command',
@@ -1465,18 +1638,18 @@ test('inventory shows 6 items', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        'Playwright transpiles TS on the fly and does not type-check, so tests with non-critical type errors still run. The docs recommend running `tsc --noEmit` separately (plus ESLint rules such as no-floating-promises). There is no `--strict` CLI flag for type checking, there is no conversion to Python, and Playwright does not block type errors.',
+        `Playwright turns TS into JS on the fly but does not check the types. So tests with small type errors still run. The docs say to run \`tsc --noEmit\` separately, plus ESLint rules such as no-floating-promises. The other options are wrong: there is no \`--strict\` flag for type checking, nothing is turned into Python, and Playwright does not refuse to run tests with type errors.`,
       followUps: [
         {
           q: 'What else does ESLint catch that the type checker does not?',
-          a: 'The `@typescript-eslint/no-floating-promises` rule catches un-awaited Promises, such as a `click()` or an `expect(...).toBeVisible()` without `await`. The type checker considers those valid code, but they are one of the most common causes of flaky Playwright tests.',
+          a: `The \`@typescript-eslint/no-floating-promises\` rule catches Promises with no \`await\`, like a \`click()\` or an \`expect(...).toBeVisible()\` without \`await\`. The type checker sees nothing wrong there. But these are one of the most common causes of flaky Playwright tests.`,
         },
       ],
     },
     {
       id: 'pw-setup-mcq-13',
       difficulty: 'expert',
-      question: 'Which statements about codegen are true? Select ALL that apply.',
+      question: `Which statements about codegen are true? Select ALL that apply.`,
       options: [
         'It prefers role, text and test-id locators and refines them until they match a single element',
         'It can add assertions for visibility, text and value from its toolbar',
@@ -1486,11 +1659,11 @@ test('inventory shows 6 items', async ({ page }) => {
       ],
       correct: [0, 1, 2],
       explanation:
-        'Codegen chooses resilient locators, offers assertion buttons, and can save/load authentication state between recording sessions. Its output is a draft: it lacks structure, reusable data and meaningful assertions. It supports `--browser` choices (chromium, firefox, webkit) and emulation such as `--device`, `--viewport-size` and `--color-scheme`.',
+        `Codegen picks strong locators, has buttons to add assertions, and can save and load login state between recording sessions. Its code is only a draft: it has no structure, no reusable data and weak assertions, so "commit without edits" is wrong. It also supports other browsers with \`--browser\` (chromium, firefox, webkit) and emulation such as \`--device\`, \`--viewport-size\` and \`--color-scheme\`.`,
       followUps: [
         {
           q: 'Why should the saved auth.json from `--save-storage` never be committed?',
-          a: 'It contains real cookies and local storage for a logged-in session, effectively a password-equivalent token. Anyone with the file can impersonate that user until the session expires. Keep it in a git-ignored folder (for example playwright/.auth) and regenerate it as needed.',
+          a: `It holds real cookies and local storage for a logged-in session. That works like a password. Anyone with the file can act as that user until the session ends. Keep it in a folder that Git ignores (for example playwright/.auth) and create it again when needed.`,
         },
       ],
     },
@@ -1498,7 +1671,7 @@ test('inventory shows 6 items', async ({ page }) => {
       id: 'pw-setup-mcq-14',
       difficulty: 'hard',
       question:
-        'With `retries: 2` on CI and `trace: \'on-first-retry\'`, a test fails on attempt 1 and passes on attempt 2. What does the HTML report show?',
+        `CI has \`retries: 2\` and \`trace: 'on-first-retry'\`. A test fails on attempt 1 and passes on attempt 2. What does the HTML report show?`,
       options: [
         'Status "flaky", with a trace attached for the retry attempt',
         'Status "passed" with no record of the first failure',
@@ -1507,11 +1680,11 @@ test('inventory shows 6 items', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        'When a test fails and then passes on a retry, Playwright marks it flaky (not plain passed, not failed). With `on-first-retry`, tracing is turned on for the first retry, so the trace belongs to attempt 2, not attempt 1. The first attempt\'s error is still listed in the report under its result tab.',
+        `When a test fails and then passes on a retry, Playwright marks it flaky, not passed and not failed. With \`on-first-retry\`, tracing turns on for the first retry. So the trace belongs to attempt 2, not attempt 1. The error from the first attempt is still listed in the report, under its result tab.`,
       followUps: [
         {
           q: 'How can you make the pipeline fail when flaky tests appear?',
-          a: 'Run with `--fail-on-flaky-tests` (or the equivalent `failOnFlakyTests` config option). The run then exits non-zero if any test only passed on retry, which forces the team to fix flakiness instead of letting retries hide it. Many teams enable it once the suite is stable.',
+          a: `Run with \`--fail-on-flaky-tests\` (or the \`failOnFlakyTests\` config option). Then the run fails if any test passed only on a retry. This makes the team fix flaky tests instead of letting retries hide them. Many teams turn it on once the suite is stable.`,
         },
       ],
     },
@@ -1519,7 +1692,7 @@ test('inventory shows 6 items', async ({ page }) => {
       id: 'pw-setup-mcq-15',
       difficulty: 'expert',
       question:
-        'A chat app must be tested with a buyer and a seller exchanging messages in real time. Which approach correctly models this in @playwright/test?',
+        `A chat app must be tested with a buyer and a seller sending messages to each other live. Which approach models this correctly in @playwright/test?`,
       code: {
         language: 'typescript',
         code: `test('buyer and seller chat', async ({ browser }) => {
@@ -1542,11 +1715,11 @@ test('inventory shows 6 items', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        'Two different users need two isolated contexts; `browser.newContext()` twice gives them separate cookies and storage at the same time. Pages in one context share the session, so Option B would make both "users" the same person. Launching browsers is unnecessary and slower, and projects run separately (possibly in different workers), so they cannot talk to each other inside one test.',
+        `Two different users need two separate contexts. Calling \`browser.newContext()\` twice gives them their own cookies and storage at the same time. Pages in one context share the login, so Option B makes both "users" the same person. Starting browsers yourself is not needed and is slower. Projects run separately, maybe in different workers, so they cannot talk to each other inside one test.`,
       followUps: [
         {
           q: 'Who closes these contexts?',
-          a: 'Contexts you create yourself from the browser fixture are your responsibility: call `await buyer.close()` and `await seller.close()` at the end (or in a fixture teardown). The built-in `context` and `page` fixtures are closed by the runner automatically.',
+          a: `Contexts you make yourself from the browser fixture are your job to close. Call \`await buyer.close()\` and \`await seller.close()\` at the end, or close them in a fixture's clean-up step. The runner closes the built-in \`context\` and \`page\` fixtures for you.`,
         },
       ],
     },

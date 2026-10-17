@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 2,
   title: 'Page Objects & Test Data',
   subtitle:
-    'Structure a real framework: page and component objects for SauceDemo, page objects delivered by fixtures, a sensible folder layout, and test data that is environment-aware, data-driven, unique per test and cleaned up through the API.',
+    'Build a real framework: page objects and component objects for SauceDemo, page objects given to tests by fixtures, a clear folder layout, and test data that is unique, works per environment, drives many tests and is cleaned up through the API.',
   estimatedMinutes: 95,
   sources: [
     'Playwright docs — Page object models (playwright.dev/docs/pom)',
@@ -22,40 +22,50 @@ const topic: Topic = {
   ],
   tags: ['playwright', 'page-object-model', 'component-object', 'fixtures', 'test-data', 'faker', 'data-driven', 'parameterize', 'cleanup', 'framework-structure'],
   cheatSheet: [
-    'Page object = a class that wraps one page: constructor(page), readonly Locator fields, async methods named after user intent (login, addToCart). Selectors live in ONE place.',
-    'Locators are lazy, so creating them in the constructor is safe before the page loads; never store innerText()/count() results in fields.',
-    'Expose locators so tests can assert with web-first expect(); avoid boolean helpers like isLoggedIn() returning isVisible().',
-    'Assertions: keep business outcomes in tests; page objects may only assert "this page/step is ready" (wait for title, URL).',
-    'Deliver page objects with fixtures: base.extend({ loginPage: async ({ page }, use) => use(new LoginPage(page)) }) so tests just write ({ loginPage }).',
-    'Component objects wrap repeated UI parts (header, product card, modal) and are composed into page objects; scope their locators to a root locator.',
-    'Folder layout: pages/ (POM), components/, fixtures/, data/, utils/ (api helpers), tests/ (specs by feature), playwright.config.ts, .env (gitignored).',
-    'Test data: static JSON for reference data, env-specific files picked by TEST_ENV, secrets only in env vars, Faker for unique dynamic data (faker.seed(n) to reproduce).',
-    'Data-driven tests: for (const row of rows) test(`... ${row.name}`, ...) at file level; titles must be unique; hooks outside the loop run once per test as usual.',
-    'Unique data per test (Faker, testInfo.testId) avoids parallel collisions; never mutate imported JSON (modules are cached per worker).',
-    'Clean up in fixture teardown via API (runs even on failure); Restful Booker: POST /auth → token, DELETE /booking/:id with Cookie token=… → 201.',
+    'Page object = a class for one page: constructor(page), readonly Locator fields, and async methods named after what the user does (login, addToCart). Selectors live in ONE place.',
+    'Locators are lazy: they search the page only when used. So creating them in the constructor is safe. Never store innerText() or count() results in fields.',
+    'Expose locators so tests can check them with web-first expect(), which retries. Avoid true/false helpers like isLoggedIn() that return isVisible().',
+    'Assertions: business results belong in tests. Page objects may only check "this page is ready" (title, URL).',
+    'Give page objects to tests with fixtures: base.extend({ loginPage: async ({ page }, use) => use(new LoginPage(page)) }). Tests then just write ({ loginPage }).',
+    'Component objects wrap repeated UI parts (header, product card, modal). Pages contain them. Build their locators from one root locator.',
+    'Folders: pages/ (page objects), components/, fixtures/, data/, utils/ (API helpers), tests/ (specs by feature), playwright.config.ts, .env (gitignored).',
+    'Test data: static JSON for fixed data, one file per environment picked by TEST_ENV, secrets only in env vars, Faker for unique random data (faker.seed(n) to repeat it).',
+    'Data-driven tests: for (const row of rows) test(`... ${row.name}`, ...) at file level. Titles must be unique. Hooks outside the loop run around each test as usual.',
+    'Unique data per test (Faker, testInfo.testId) stops clashes in parallel runs. Never change imported JSON: all tests in a worker share one cached copy.',
+    'Clean up in fixture teardown through the API; it runs even on failure. Restful Booker: POST /auth → token, DELETE /booking/:id with Cookie token=… → 201.',
   ],
   sections: [
     {
       heading: 'Page Object Model: what it is and why teams use it',
-      body: `**Intuition:** a page object is a TV remote for one screen of your app. Tests press buttons named "login" or "add to cart"; they do not care which wires (selectors) are behind each button. When the wiring changes, you fix the remote once, not every test.
+      body: `**Example:**
 
-**Definition.** The Page Object Model (POM) is a design pattern where each page (or significant part of a page) gets a class that:
-- holds the **locators** for that page, defined once;
-- exposes **methods** that perform user actions on that page (\`login(user, pass)\`, \`addToCart(name)\`);
-- hides HTML details from the tests, so specs read like test cases.
+- Without POM: \`await page.locator('#user-name').fill('standard_user')\` → this selector is copied into 40 tests.
+- With POM: \`await loginPage.login('standard_user', password)\` → the test says what the user does. The selector lives in one class.
 
-The Playwright docs give two reasons: page objects **simplify authoring** (a higher-level API that fits your app) and **simplify maintenance** (selectors in one place). Martin Fowler's original description adds a useful rule: a page object should model what a *user* can do and see, not the HTML structure.
+A page object is like a TV remote for one screen of your app. Tests press buttons named "login" or "add to cart". They do not care which wires (selectors) sit behind each button. When the wiring changes, you fix the remote once.
+
+The **Page Object Model (POM)** is a design pattern. Each page, or big part of a page, gets its own class. The class:
+
+- holds the **locators** for that page, written once;
+- has **methods** for user actions on that page, like \`login(user, pass)\` or \`addToCart(name)\`;
+- hides HTML details from tests, so specs read like test cases.
+
+The Playwright docs give two reasons to use it. Page objects make tests **easier to write**, because you get simple methods for your app. They make tests **easier to maintain**, because selectors live in one place.
+
+Martin Fowler adds a useful rule. A page object should model what a *user* can do and see, not the HTML structure.
 
 | Without POM | With POM |
 |---|---|
 | \`#user-name\` copied into 40 specs | one \`username\` locator in \`LoginPage\` |
-| Login selector change → 40 edits | Login selector change → 1 edit |
-| Specs read like DOM scripts | Specs read like \`loginPage.login(user)\` |
-| Hard for manual testers to review | Reviewable as test steps |
+| Login selector changes → 40 edits | Login selector changes → 1 edit |
+| Specs read like page scripts | Specs read like \`loginPage.login(user)\` |
+| Hard for manual testers to review | Easy to review as test steps |
 
-**When NOT to over-engineer:** a 10-test suite on one page does not need a class hierarchy. Start with one class per page; extract components and base classes only when duplication appears.
+**Watch out:** do not over-build. A 10-test suite on one page does not need many layers of classes. Start with one class per page. Pull out components and shared classes only when you see repeated code.
 
-**In interviews, say this:** "POM separates *what* the test checks from *how* the page is driven. Locators and actions live in page classes, assertions about the business outcome live in the spec, and fixtures hand the page objects to tests."`,
+**In an interview, say:** "POM separates *what* the test checks from *how* it drives the page. Locators and actions live in page classes. Checks on the business result live in the spec. Fixtures give the page objects to the tests."
+
+**Why testers care:** when a developer renames a field, you fix one line, not 40 tests.`,
       diagram: `   spec (what to verify)            page objects (how to drive the UI)
  +------------------------+       +---------------------------+
  | test('checkout works') | ----> | LoginPage.login(user)     |
@@ -67,28 +77,41 @@ The Playwright docs give two reasons: page objects **simplify authoring** (a hig
                                                 |
                                          SauceDemo DOM`,
       keyPoints: [
-        'One class per page/area: locators + user-intent methods.',
-        'Selectors change in one place; specs stay readable.',
-        'Do not build deep hierarchies before duplication appears.',
+        'One class per page or area: locators + methods named after user actions.',
+        'Selectors change in one place, and specs stay readable.',
+        'Do not build deep class layers before you see repeated code.',
       ],
       source: 'Playwright docs — Page object models; Martin Fowler — PageObject',
     },
     {
       heading: 'Building a LoginPage for SauceDemo',
-      body: `**Intuition:** start with the screen every test touches first.
+      body: `**Example:**
 
-The usual Playwright shape (it matches the official POM guide):
-- \`constructor(page: Page)\` stores the page and creates **\`readonly\` Locator fields**.
-- **Async methods** for actions (\`goto\`, \`login\`).
-- Locators exposed as public fields so a test can assert on them.
+- \`this.username = page.getByPlaceholder('Username')\` → in the constructor, save how to find the Username box.
+- \`await loginPage.login('locked_out_user', password)\` → in the test, fill both boxes and click Login with one call.
 
-Why locators in the constructor are safe: a Locator is **lazy**. \`page.getByPlaceholder('Username')\` does not search the DOM when it is created; it searches every time you act or assert. So you can build all locators before \`goto()\`.
+Start with the screen every test touches first: the login page.
 
-SauceDemo details worth knowing: the inputs have placeholders "Username" and "Password", the button is an \`<input type="submit" value="Login">\` (so \`getByRole('button', { name: 'Login' })\` works), and every element also has a \`data-test\` attribute. Setting \`testIdAttribute: 'data-test'\` in the config lets you use \`getByTestId('username')\`.
+The usual Playwright shape, as in the official POM guide:
+
+- \`constructor(page: Page)\` stores the page and creates **\`readonly\` Locator fields**. \`readonly\` means the field is set once and never replaced.
+- **Async methods** do the actions (\`goto\`, \`login\`).
+- Locators are public fields, so a test can check them.
+
+**Why the constructor is a safe place:** a locator is **lazy**. \`page.getByPlaceholder('Username')\` does not search the page when you create it. It searches each time you act or check. So you can build all locators before \`goto()\`.
+
+SauceDemo details:
+
+- The inputs have the placeholders "Username" and "Password".
+- The button is \`<input type="submit" value="Login">\`. So \`getByRole('button', { name: 'Login' })\` works.
+- Every element also has a \`data-test\` attribute. Set \`testIdAttribute: 'data-test'\` in the config to use \`getByTestId('username')\`.
 
 **Common mistakes:**
-- Storing text instead of locators: \`this.errorText = await page.locator('...').textContent()\` (you cannot await in a constructor, and the value would be stale).
-- Methods that return booleans for assertions (\`isErrorShown()\` → \`isVisible()\`), which do not auto-wait. Expose the locator and let the test use \`expect(loginPage.error).toBeVisible()\`.`,
+
+- Storing text instead of locators: \`this.errorText = await page.locator('...').textContent()\`. You cannot use await in a constructor. And the saved value would soon be out of date.
+- Methods that return true/false for checks, like \`isErrorShown()\` returning \`isVisible()\`. These do not wait. Expose the locator instead. Let the test write \`expect(loginPage.error).toBeVisible()\`.
+
+**Why testers care:** the same \`login()\` method works for the happy path and for the locked-out user. One class serves both tests.`,
       code: [
         {
           language: 'typescript',
@@ -139,23 +162,37 @@ test('locked out user sees an error', async ({ page }) => {
       ],
       keyPoints: [
         'constructor(page) + readonly locators + async action methods.',
-        'Locators are lazy: safe to create before navigation.',
-        'Expose locators for web-first assertions; avoid boolean helpers.',
+        'Locators are lazy: safe to create before the page opens.',
+        'Expose locators for web-first assertions. Avoid true/false helpers.',
       ],
       source: 'Playwright docs — Page object models; Locators (lazy evaluation)',
     },
     {
       heading: 'InventoryPage and CartPage: methods that model user intent',
-      body: `**Intuition:** name methods after what a user wants ("add the backpack"), not after what the code does ("click the third button").
+      body: `**Example:**
 
-Design guidelines for action methods:
-- **Parameterise by business data**, not by index: \`addToCart('Sauce Labs Backpack')\` beats \`clickAddButton(0)\`.
-- **Find rows by text then act inside them**: \`items.filter({ hasText: name }).getByRole('button', { name: 'Add to cart' })\`. This survives re-ordering.
-- **Return data when the test needs it** (\`itemNames()\` returning \`allTextContents()\`), but keep checks in the test.
-- **Return the next page object** only if it makes flows clearer (\`openCart(): Promise<CartPage>\`). It is optional; with fixtures most teams simply request both page objects.
-- **Wait for readiness, not for time.** If a method navigates, end it by waiting for something that proves the new page is ready (e.g. the title). Never \`waitForTimeout\`.
+- \`await inventoryPage.addToCart('Sauce Labs Backpack')\` → find the card with that name, then click its "Add to cart" button.
+- \`clickAddButton(0)\` → clicks the first button. It breaks when the product order changes.
 
-SauceDemo facts used below: product cards are \`[data-test="inventory-item"]\`, names \`[data-test="inventory-item-name"]\`, the page title \`[data-test="title"]\` reads "Products" or "Your Cart", the cart link is \`[data-test="shopping-cart-link"]\` and the badge \`[data-test="shopping-cart-badge"]\`.`,
+Name methods after what the user wants ("add the backpack"). Do not name them after what the code does ("click the third button").
+
+Guidelines for action methods:
+
+- **Take business data, not positions.** \`addToCart('Sauce Labs Backpack')\` is better than \`clickAddButton(0)\`.
+- **Find the row by text, then act inside it.** Use \`items.filter({ hasText: name }).getByRole('button', { name: 'Add to cart' })\`. This keeps working when items are re-ordered.
+- **Return data when the test needs it.** For example, \`itemNames()\` returns \`allTextContents()\`. But keep the checks in the test.
+- **Return the next page object only if it makes the flow clearer**, like \`openCart(): Promise<CartPage>\`. This is optional. With fixtures, most teams just ask for both page objects.
+- **Wait for the page to be ready, not for time.** If a method opens a new page, end it by waiting for proof, like the page title. Never use \`waitForTimeout\`.
+
+SauceDemo locators used below:
+
+- Product cards: \`[data-test="inventory-item"]\`.
+- Product names: \`[data-test="inventory-item-name"]\`.
+- Page title: \`[data-test="title"]\`. It reads "Products" or "Your Cart".
+- Cart link: \`[data-test="shopping-cart-link"]\`.
+- Cart badge: \`[data-test="shopping-cart-badge"]\`.
+
+**Why testers care:** tests that use product names keep passing when the shop adds or re-orders products.`,
       code: [
         {
           language: 'typescript',
@@ -208,25 +245,35 @@ export class CartPage {
         },
       ],
       keyPoints: [
-        'Methods take business data (product name), not indexes.',
-        'filter({ hasText }) + scoped getByRole survives layout changes.',
-        'Navigation methods end with a readiness wait, never a sleep.',
+        'Methods take business data (a product name), not positions.',
+        'filter({ hasText }) plus a getByRole inside it survives layout changes.',
+        'Methods that open a page end with a "page is ready" check, never a sleep.',
       ],
       source: 'Playwright docs — Page object models; Locators: filtering',
     },
     {
       heading: 'Wiring page objects into fixtures',
-      body: `**Intuition:** instead of every test saying "build me a LoginPage, build me an InventoryPage", the fixture is a waiter who brings the page objects you ordered.
+      body: `**Example:**
 
-Writing \`new LoginPage(page)\` in each test is repetitive. Combine POM with fixtures (the pattern the Playwright fixtures guide and Checkly's article recommend):
+- \`test('added product appears in the cart', async ({ inventoryPage, cartPage }) => { ... })\` → the test gets a logged-in products page and a cart page. It never writes \`new InventoryPage(page)\`.
+
+Think of the fixture as a waiter. You order the page objects you want, and it brings them ready to use.
+
+Writing \`new LoginPage(page)\` in every test is repetitive. So combine POM with fixtures. Both the Playwright fixtures guide and Checkly's article recommend this:
 
 1. In \`fixtures/pages.ts\`, extend the base test with one fixture per page object.
-2. A fixture can do setup too: \`inventoryPage\` can log in and navigate before handing the object over.
-3. Specs import \`test\`/\`expect\` from the fixtures file and destructure what they need.
+2. A fixture can also do setup. For example, \`inventoryPage\` can log in and open the page before handing the object over.
+3. Specs import \`test\` and \`expect\` from the fixtures file. They ask for what they need.
 
-Benefits: zero boilerplate in specs, lazy creation (a test that only needs \`cartPage\` never builds the others), and one place to change how pages are prepared, for example switching from UI login to \`storageState\` later without touching tests.
+Benefits:
 
-**Tip:** keep page objects as **plain classes** with no knowledge of fixtures. Fixtures own construction and lifecycle; page objects own selectors and actions. That keeps each piece simple and testable.`,
+- No repeated setup lines in specs.
+- Lazy creation: a test that only needs \`cartPage\` never builds the others.
+- One place to change how pages are prepared. Later you can switch from UI login to \`storageState\` (a saved login file) without touching tests.
+
+**Tip:** keep page objects as **plain classes** that know nothing about fixtures. Fixtures create and prepare them. Page objects hold selectors and actions. Each piece stays simple.
+
+**Why testers care:** specs become short and readable. A login change touches one fixture, not every spec.`,
       code: [
         {
           language: 'typescript',
@@ -273,21 +320,29 @@ test('added product appears in the cart', async ({ inventoryPage, cartPage }) =>
         },
       ],
       keyPoints: [
-        'One fixture per page object; specs destructure what they need.',
-        'Fixtures can depend on each other (inventoryPage uses loginPage).',
-        'Page objects stay plain classes; fixtures own lifecycle.',
+        'One fixture per page object. Specs ask for what they need.',
+        'Fixtures can use each other (inventoryPage uses loginPage).',
+        'Page objects stay plain classes; fixtures create and prepare them.',
       ],
       source: 'Playwright docs — Fixtures (todoPage example); Checkly blog — POM + fixtures',
     },
     {
       heading: 'Component objects: header, product card, modals',
-      body: `**Intuition:** pages share furniture. The SauceDemo header (menu, cart icon) is on every page, and every product card has the same name/price/button layout. Model the furniture once.
+      body: `**Example:**
 
-A **component object** is a small class wrapping a reusable UI part. Two rules make components robust:
-1. **Scope to a root locator.** The component receives a \`Locator\` (its root) and builds child locators from it, so \`card.addButton\` can never click a button in another card.
-2. **Compose, don't inherit.** A page *has a* header (\`this.header = new Header(page)\`); avoid deep \`BasePage → AuthedPage → InventoryPage\` inheritance chains where it is unclear what comes from where.
+- \`new ProductCard(this.items.filter({ hasText: 'Sauce Labs Backpack' }))\` → a small object for one product card.
+- \`card.addButton\` → this button is searched only inside that card. It can never click a button in another card.
 
-When to create a component: the same group of elements appears on 2+ pages, or a list of repeated items (cards, table rows) needs per-item actions.`,
+Pages share furniture. The SauceDemo header (menu, cart icon) is on every page. Every product card has the same name, price and button layout. Model this furniture once.
+
+A **component object** is a small class for a reusable part of the UI. Two rules make components solid:
+
+1. **Start from a root locator.** The component gets a \`Locator\` for its outer element (its root). It builds the child locators from that root.
+2. **Contain, don't inherit.** A page *has a* header: \`this.header = new Header(page)\`. Avoid long chains like \`BasePage → AuthedPage → InventoryPage\`, where nobody knows what comes from where. This idea is called **composition over inheritance**.
+
+Create a component when the same group of elements appears on 2 or more pages. Also create one when a list of repeated items (cards, table rows) needs actions on each item.
+
+**Why testers care:** the header is fixed in one class. Card-level locators stop "clicked the wrong product" bugs in tests.`,
       code: [
         {
           language: 'typescript',
@@ -329,57 +384,86 @@ export class ProductCard {
         },
       ],
       keyPoints: [
-        'Components wrap repeated UI and are composed into pages.',
-        'Scope child locators to the component root locator.',
-        'Prefer composition over deep BasePage inheritance.',
+        'Components wrap repeated UI. Pages contain them.',
+        'Build child locators from the component root locator.',
+        'Prefer containing components over deep BasePage inheritance.',
       ],
       source: 'Playwright docs — Locators: chaining and filtering; Martin Fowler — PageObject (page objects for fragments)',
     },
     {
       heading: 'Assertions in page objects: the debate',
-      body: `**Intuition:** a page object is a driver, the test is the judge. Drivers can check "the road is open" before driving; only the judge decides if the trip met the goal.
+      body: `**Example:**
+
+- \`await expect(this.title).toHaveText('Products')\` inside \`InventoryPage.goto()\` → OK. It only checks that the page is ready.
+- \`await expect(this.page.locator('.total')).toHaveText('$32.39')\` inside a page method → not OK. That check is the test's job.
+
+A page object is the driver. The test is the judge. The driver may check "the road is open" before driving. Only the judge decides if the trip met its goal.
 
 | Approach | For | Against |
 |---|---|---|
-| **No assertions in page objects** (Fowler's view) | single responsibility; tests show every check; page objects reusable for positive and negative tests | readiness waits must still happen somewhere |
-| **Assertions inside page methods** | shorter specs; the official POM guide's \`getStarted()\` asserts a heading | hidden checks; a \`login()\` that asserts success cannot be reused for the "wrong password" test |
-| **Middle ground (most teams)** | page methods may assert **readiness** ("cart page loaded"), tests assert **business outcomes** | needs a team convention |
+| **No assertions in page objects** (Fowler's view) | each class has one job; tests show every check; page objects work for positive and negative tests | ready-checks must still happen somewhere |
+| **Assertions inside page methods** | shorter specs; the official POM guide's \`getStarted()\` checks a heading | hidden checks; a \`login()\` that checks success cannot be reused for the "wrong password" test |
+| **Middle ground (most teams)** | page methods may check **readiness** ("cart page loaded"); tests check **business results** | the team must agree on the rule |
 
 The middle ground in practice:
-- \`InventoryPage.goto()\` ends with \`expect(this.title).toHaveText('Products')\`: a readiness guard that makes later steps reliable.
-- \`LoginPage.login()\` does **not** assert success, because the locked-out test reuses it.
-- The spec asserts what the test case is about: cart contents, error text, sort order.
-- Page objects **expose locators** so specs can assert with web-first \`expect()\` and the failure message points at the spec line.
 
-**Red flags in page objects:** \`waitForTimeout\`, \`try { ... } catch {}\` that swallows failures, methods returning \`isVisible()\` booleans, test data hard-coded inside methods, \`expect\` on business values ("total is $32.39").
+- \`InventoryPage.goto()\` ends with \`expect(this.title).toHaveText('Products')\`. This ready-check makes the next steps reliable.
+- \`LoginPage.login()\` does **not** check for success, because the locked-out test reuses it.
+- The spec checks what the test case is about: cart contents, error text, sort order.
+- Page objects **expose locators**. Specs then use web-first \`expect()\`, and the failure points at the spec line.
 
-**In interviews, say this:** "Business assertions live in the test so the test reads as a test case. A page object may verify it reached the right page, because that is part of performing the action reliably."`,
+**Red flags in page objects:**
+
+- \`waitForTimeout\`.
+- \`try { ... } catch {}\` that hides failures.
+- Methods that return \`isVisible()\` true/false values.
+- Test data typed inside methods.
+- \`expect\` on business values ("total is $32.39").
+
+**In an interview, say:** "Business checks live in the test, so the test reads as a test case. A page object may check it reached the right page. That is part of doing the action reliably."
+
+**Why testers care:** methods without hidden checks can be reused for negative tests, like a wrong password.`,
       keyPoints: [
-        'Tests own business assertions; page objects may assert readiness.',
-        'A login() that asserts success cannot serve negative tests.',
-        'Expose locators; avoid boolean isX() helpers.',
+        'Tests own business checks. Page objects may check that a page is ready.',
+        'A login() that checks for success cannot serve negative tests.',
+        'Expose locators. Avoid true/false isX() helpers.',
       ],
       source: 'Martin Fowler — PageObject; Playwright docs — Page object models',
     },
     {
       heading: 'Framework folder structure',
-      body: `**Intuition:** a good folder structure is like a well-labelled kitchen: anyone new can find the knives without asking.
+      body: `**Example:**
 
-A layout that scales for a SauceDemo UI + Restful Booker API framework:
+- \`pages/LoginPage.ts\` → a page object.
+- \`tests/cart/add-to-cart.spec.ts\` → a spec, grouped by feature.
+- \`.env\` → local secrets, never committed to git.
+
+A good folder structure is like a well-labelled kitchen. Anyone new can find the knives without asking.
+
+A layout that grows well for a SauceDemo UI + Restful Booker API framework:
 
 | Folder / file | Holds | Rule |
 |---|---|---|
-| \`tests/\` | specs grouped by feature (\`auth/\`, \`cart/\`, \`checkout/\`, \`api/\`) | only test logic and assertions |
+| \`tests/\` | specs grouped by feature (\`auth/\`, \`cart/\`, \`checkout/\`, \`api/\`) | only test steps and checks |
 | \`pages/\` | page objects | locators + actions, no test data |
-| \`components/\` | header, product card, modals | scoped to a root locator |
+| \`components/\` | header, product card, modals | built from a root locator |
 | \`fixtures/\` | \`test.extend\` files, merged into one \`index.ts\` | specs import \`test\` from here |
-| \`data/\` | static JSON (products, users without passwords), per-env files | no secrets |
-| \`utils/\` or \`api/\` | API clients, data builders, Faker factories | pure helpers |
-| \`playwright.config.ts\` | runner config and projects | env-driven values |
-| \`.env\` / \`.env.example\` | local secrets / documented keys | \`.env\` gitignored |
+| \`data/\` | static JSON (products, users without passwords), files per environment | no secrets |
+| \`utils/\` or \`api/\` | API clients, data builders, Faker factories | small helper functions |
+| \`playwright.config.ts\` | runner settings and projects | values come from env vars |
+| \`.env\` / \`.env.example\` | local secrets / list of needed keys | \`.env\` is gitignored |
 | \`playwright/.auth/\` | saved storageState files | gitignored |
 
-Conventions that keep it healthy: one page object per file named after the page, specs named \`*.spec.ts\`, setup files \`*.setup.ts\`, no spec imports another spec, and no relative-path spaghetti (a TS path alias like \`@pages/*\` helps).`,
+"Gitignored" means git never saves the file. So secrets stay out of the shared repo.
+
+Habits that keep it healthy:
+
+- One page object per file, named after the page.
+- Specs end in \`*.spec.ts\`. Setup files end in \`*.setup.ts\`.
+- A spec never imports another spec.
+- Avoid long relative paths like \`../../../pages\`. A TypeScript path alias like \`@pages/*\` helps.
+
+**Why testers care:** a new team member can add a test in minutes, because every file has an obvious home.`,
       diagram: `qa-framework/
 |-- playwright.config.ts
 |-- .env.example            (SAUCE_USER=, SAUCE_PASS=, TEST_ENV=)
@@ -397,28 +481,42 @@ Conventions that keep it healthy: one page object per file named after the page,
 |   '-- api/    booking.spec.ts
 '-- playwright/.auth/       (gitignored)`,
       keyPoints: [
-        'Specs by feature; pages, components, fixtures, data, utils separated.',
-        'Secrets in env vars; .env and .auth gitignored.',
-        'Specs import test from fixtures/index.ts (mergeTests).',
+        'Specs by feature. Pages, components, fixtures, data and utils kept apart.',
+        'Secrets in env vars. .env and .auth are gitignored.',
+        'Specs import test from fixtures/index.ts (made with mergeTests).',
       ],
       source: 'Playwright docs — Fixtures (mergeTests), Authentication (.auth gitignore); community framework write-ups',
     },
     {
       heading: 'Test data management: JSON, environment data and Faker',
-      body: `**Intuition:** test data comes in three flavours, like ingredients: pantry staples (static reference data), recipes that change by kitchen (environment data), and fresh produce bought per meal (dynamic unique data).
+      body: `**Example:**
+
+- \`buildBooking({ depositpaid: false })\` → a booking full of realistic random values. The test sets only \`depositpaid\`.
+- \`faker.person.firstName()\` → a random first name, like 'Maya'.
+
+Test data comes in kinds, like kitchen ingredients. Pantry staples never change (static data). Recipes change by kitchen (environment data). Fresh produce is bought for each meal (unique data per test).
 
 | Kind | Example | Store it in | Watch out |
 |---|---|---|---|
-| Static reference | product names and prices on SauceDemo | \`data/products.json\` | update when the product catalogue changes |
-| Environment-specific | base URLs, existing customer ids on QA vs staging | \`data/env/qa.json\`, chosen by \`TEST_ENV\` | never secrets in JSON |
+| Static reference | product names and prices on SauceDemo | \`data/products.json\` | update it when the product list changes |
+| Per environment | base URLs, existing customer ids on QA vs staging | \`data/env/qa.json\`, picked by \`TEST_ENV\` | never put secrets in JSON |
 | Secrets | passwords, API keys | env vars (\`.env\` locally, CI secrets in pipelines) | \`.env\` must be gitignored |
-| Dynamic / unique | new booking names, emails | generated per test (Faker, \`testInfo.testId\`) | log it so failures are reproducible |
+| Dynamic / unique | new booking names, emails | made per test (Faker, \`testInfo.testId\`) | log it so you can repeat a failure |
 
-**Faker** (\`@faker-js/faker\`) generates realistic data: \`faker.person.firstName()\`, \`faker.internet.email()\`, \`faker.string.uuid()\`, \`faker.date.soon()\`, \`faker.helpers.arrayElement([...])\`. Use the \`person\` module for names (older tutorials use \`faker.name\`, which belongs to older versions). \`faker.seed(123)\` makes the sequence repeatable, handy to reproduce a failure, but a fixed seed in every worker gives every worker the **same** values, so do not rely on a seed for uniqueness.
+**Faker** (\`@faker-js/faker\`) is a library that makes realistic random data:
 
-**Data builders / factories** wrap Faker so tests only override what matters: \`buildBooking({ depositpaid: false })\`.
+- \`faker.person.firstName()\`, \`faker.internet.email()\` and \`faker.string.uuid()\`.
+- \`faker.date.soon()\` and \`faker.helpers.arrayElement([...])\`.
 
-**Trap:** \`import products from '../data/products.json'\` gives every test in a worker the **same object** (modules are cached). If one test mutates it, later tests in that worker see the change. Treat imported data as read-only, or copy it with \`structuredClone()\` before changing.`,
+Use the \`person\` module for names. Older tutorials use \`faker.name\`, which belongs to older versions.
+
+\`faker.seed(123)\` makes the values repeat in the same order. That helps you reproduce a failure. But a fixed seed gives every worker the **same** values. So do not use a seed to get unique data.
+
+**Data builders** (also called factories) wrap Faker. Tests change only the fields that matter: \`buildBooking({ depositpaid: false })\`.
+
+**Watch out:** \`import products from '../data/products.json'\` gives every test in a worker the **same object**. Node loads a file once and caches it. If one test changes the object, later tests in that worker see the change. Treat imported data as read-only. Or copy it with \`structuredClone()\` before you change it.
+
+**Why testers care:** unique, realistic data stops tests from clashing. Data files per environment make the switch from QA to staging a one-word change.`,
       code: [
         {
           language: 'typescript',
@@ -457,26 +555,35 @@ export function buildBooking(overrides: Partial<Booking> = {}): Booking {
         },
       ],
       keyPoints: [
-        'Static JSON, per-env JSON (TEST_ENV), secrets in env vars, dynamic data via Faker.',
-        'Factories with overrides keep tests short and intention-revealing.',
-        'Imported JSON is a shared cached object per worker: never mutate it.',
+        'Static JSON, per-environment JSON (TEST_ENV), secrets in env vars, random data from Faker.',
+        'Builders with overrides keep tests short and show what matters.',
+        'Imported JSON is one shared copy per worker: never change it.',
       ],
       source: 'Faker.js docs — Usage; Playwright docs — Parameterize tests (env variables)',
     },
     {
       heading: 'Data-driven and parameterised tests',
-      body: `**Intuition:** one test recipe, many ingredient lists. Instead of writing "login as standard_user", "login as problem_user", "login as performance_glitch_user" by hand, loop over a table.
+      body: `**Example:**
 
-**How Playwright does it (official parameterize guide):**
-- Loop at **file level** (or inside a describe) with \`for...of\` or \`forEach\`, calling \`test()\` once per row. Each row becomes a separate test in the report, retried and parallelised independently.
-- **Titles must be unique**: put the row's key in the title, e.g. a title template like \`login as \${user}\` (written with backticks in code). Duplicate titles cause an error.
-- Hooks declared outside the loop behave normally (beforeEach runs before each generated test). To get hooks per row, wrap each iteration in its own \`test.describe\`.
-- Data can come from an inline array, a JSON file or a CSV (parse it with \`csv-parse/sync\`, \`columns: true\`).
-- For whole-suite variations (run everything as admin and as user), use **parameterised projects**: an option fixture (\`[default, { option: true }]\`) set differently per project.
+- \`for (const c of cases) { test('login as ' + c.user, async ({ loginPage }) => { ... }) }\` → one separate test for each row of data.
+- 5 rows in \`cases\` → 5 tests in the report, each with its own pass or fail.
 
-**Do not** loop *inside* one test over 20 rows: the first failure stops the rest, the report shows one test, and retries repeat all rows.
+One test recipe, many lists of ingredients. Do not write "login as standard_user", "login as problem_user" and so on by hand. Loop over a table instead. This is called a **data-driven** (or **parameterised**) test.
 
-**Worked example:** SauceDemo login outcomes as a decision table. Note \`performance_glitch_user\` logs in slowly, so its expected result is still "Products" (auto-waiting handles the delay; the test timeout is the limit).`,
+How Playwright does it, from the official guide:
+
+- Loop at **file level** (or inside a describe) with \`for...of\` or \`forEach\`. Call \`test()\` once per row.
+- Each row becomes a separate test in the report. It is retried and run in parallel on its own.
+- **Titles must be unique.** Put the row's key in the title, like \`login as \${user}\` (written with backticks in code). Two tests with the same title cause an error.
+- Hooks outside the loop work as usual: beforeEach runs before each generated test. To get hooks per row, wrap each row in its own \`test.describe\`.
+- Data can come from an inline array, a JSON file or a CSV file. Read CSV with \`csv-parse/sync\` and \`columns: true\`.
+- To run the whole suite in different ways (as admin and as user), use **parameterised projects**. That means an option fixture (\`[default, { option: true }]\`) set differently in each project.
+
+**Watch out:** do not loop over 20 rows *inside* one test. The first failure stops the rest. The report shows only one test. A retry repeats all rows.
+
+**Real example:** SauceDemo login results as a decision table. \`performance_glitch_user\` logs in slowly, but its expected result is still "Products". Auto-waiting handles the delay; the test timeout is the limit.
+
+**Why testers care:** one loop turns a decision table from your manual test design into many clear, separate tests.`,
       code: [
         {
           language: 'typescript',
@@ -506,28 +613,43 @@ for (const c of cases) {
         },
       ],
       keyPoints: [
-        'One test() per data row at file/describe level; unique titles.',
-        'Each row is independent: own retry, own report line, can run in parallel.',
-        'Suite-wide variations → parameterised projects with option fixtures.',
+        'One test() per data row, at file or describe level, with unique titles.',
+        'Each row is separate: its own retry, its own report line, and it can run in parallel.',
+        'To vary the whole suite, use parameterised projects with option fixtures.',
       ],
       source: 'Playwright docs — Parameterize tests (forEach, CSV, parameterized projects)',
     },
     {
       heading: 'Unique data per test and cleanup via API',
-      body: `**Intuition:** in a shared kitchen, label your food with your name and throw away your leftovers. Parallel tests share one backend; unique names prevent collisions and cleanup prevents the database from filling with junk.
+      body: `**Example:**
 
-**Unique data rules:**
-- Generate names per test (Faker, \`testInfo.testId\`), with a recognisable prefix (\`qa-\`) so leftover data can be found and swept.
-- Never search for "the first booking"; search for *your* booking by its unique field or id.
-- Per-worker resources (accounts) use \`parallelIndex\`; per-test data uses unique values.
+- \`buildBooking()\` → a booking with a unique lastname, like 'qa-x8K2pQ1z'.
+- \`await use(...)\` and then \`request.delete(...)\` in the fixture → the booking is deleted after the test, even if the test failed.
 
-**Cleanup rules:**
-- **Prefer API over UI** for setup and cleanup: it is faster and not flaky.
-- Put cleanup in **fixture teardown** (after \`await use()\`) or \`afterEach\`. Both run when the test fails; the last line of a test does not.
-- Make cleanup **tolerant**: if the test already deleted the record, a 404 in teardown is fine.
+In a shared kitchen, you label your food with your name. You throw away your own leftovers. Parallel tests share one server. Unique names stop tests from clashing. Clean-up stops the database from filling with junk.
+
+**Rules for unique data:**
+
+- Make names per test (Faker, \`testInfo.testId\`). Add a clear prefix like \`qa-\`, so leftover data is easy to find and delete.
+- Never search for "the first booking". Search for *your* booking by its unique field or id.
+- For things per worker (like accounts), use \`parallelIndex\`. For data per test, use unique values.
+
+**Rules for clean-up:**
+
+- **Use the API, not the UI**, for setup and clean-up. It is faster and more stable.
+- Put clean-up in **fixture teardown** (the code after \`await use()\`) or in \`afterEach\`. Both run when the test fails. The last line of a test does not.
+- Make clean-up **forgiving**. If the test already deleted the record, a 404 in teardown is fine.
 - Add a **safety net**: a teardown project or nightly job that deletes everything with the \`qa-\` prefix.
 
-**Restful Booker specifics** (from its API docs): \`POST /auth\` with \`{ "username": "admin", "password": "password123" }\` returns \`{ token }\`; \`POST /booking\` returns \`{ bookingid, booking }\`; \`DELETE /booking/:id\` needs \`Cookie: token=<token>\` (or Basic auth) and answers **201 Created** (a quirk worth knowing); a deleted booking then returns 404. Admin credentials should still come from env vars in a real framework.`,
+**Restful Booker facts** (from its API docs):
+
+- \`POST /auth\` with \`{ "username": "admin", "password": "password123" }\` returns \`{ token }\`.
+- \`POST /booking\` returns \`{ bookingid, booking }\`.
+- \`DELETE /booking/:id\` needs \`Cookie: token=<token>\` (or Basic auth). It answers **201 Created**, which is unusual but true.
+- After that, the deleted booking returns 404.
+- In a real framework, the admin login should still come from env vars.
+
+**Why testers care:** without clean-up, leftover data grows every run. Lists get slow and searches find the wrong records. Tests become **flaky**: they pass sometimes and fail sometimes.`,
       code: [
         {
           language: 'typescript',
@@ -568,8 +690,8 @@ export { expect };`,
         },
       ],
       keyPoints: [
-        'Unique, prefixed data per test; find records by id, not position.',
-        'Cleanup in fixture teardown/afterEach, via API, tolerant of 404.',
+        'Unique, prefixed data per test. Find records by id, not by position.',
+        'Clean up in fixture teardown or afterEach, through the API. Accept a 404.',
         'Restful Booker DELETE needs Cookie token=… and returns 201.',
       ],
       source: 'Restful Booker API docs; Playwright docs — Parallelism (unique data), Fixtures (worker scope)',
@@ -580,9 +702,9 @@ export { expect };`,
       id: 'pw-pom-data-cc-1',
       title: 'The god page object with assertions and sleeps',
       context:
-        'A junior engineer wrote one "SaucePage" class used by every spec. It is 400 lines long; here is a representative slice. Tests using it are slow and randomly fail, and the locked-out-user test cannot reuse login().',
+        'A junior engineer wrote one "SaucePage" class that every spec uses. It is 400 lines long; here is a typical slice. Tests that use it are slow and fail at random. The locked-out-user test cannot reuse login().',
       task:
-        'Split it into focused page objects with lazy locators, remove the sleeps and hidden business assertions, stop hard-coding credentials, and make the methods reusable for both positive and negative tests.',
+        'Split it into small page objects with lazy locators. Remove the sleeps and the hidden business checks. Stop typing credentials into the code. Make the methods work for both positive and negative tests.',
       starter: {
         language: 'typescript',
         title: 'pages/SaucePage.ts (before)',
@@ -618,9 +740,9 @@ export class SaucePage {
 }`,
       },
       hints: [
-        'Which parts belong to which screen? Login, inventory and cart are different pages; the cart badge is a header component.',
-        'Make locators readonly fields built in the constructor, and let methods accept data (username, password, product name).',
-        'Replace every waitForTimeout with a web-first wait for the thing that proves the next state, and move the business assertions to the spec. Return locators instead of booleans.',
+        'Which parts belong to which screen? Login, inventory and cart are different pages. The cart badge belongs to a header component.',
+        'Make locators readonly fields built in the constructor. Let methods take data (username, password, product name).',
+        'Replace every waitForTimeout with a web-first wait for the thing that proves the next state. Move the business checks to the spec. Return locators instead of true/false values.',
       ],
       solution: {
         language: 'typescript',
@@ -669,20 +791,20 @@ export class InventoryPage {
 //   await expect(inventory.cartBadge).toHaveText('1');
 // });`,
       },
-      explanation: `- **Split by page:** \`LoginPage\` and \`InventoryPage\` (a \`Header\` component is the next refactor) instead of one 400-line class. Smaller classes are easier to review and change.
-- **Lazy readonly locators** defined once; user-facing locators (\`getByPlaceholder\`, \`getByRole\`) and \`data-test\` attributes replace the positional XPath \`(//button...)[1]\`, which breaks when products are re-ordered.
-- **Data in, not hard-coded:** \`login(user, pass)\` serves standard, locked-out and invalid-password tests. Credentials come from env vars.
-- **No sleeps:** 6 s of \`waitForTimeout\` per flow removed. Playwright auto-waits for actions, and \`openCart\` waits for the "Your Cart" title.
-- **No hidden business assertions / no booleans:** \`isCartCount()\` returned a one-shot boolean (no retry) and \`isVisible()\` does not wait. Tests now assert \`expect(inventory.cartBadge).toHaveText('1')\`, which retries and gives a clear failure message.
-- **Deprecated-style calls removed:** \`page.fill(selector)\`, \`page.click(selector)\`, \`page.isVisible(selector)\` are discouraged in favour of locators.`,
+      explanation: `- **Split by page:** \`LoginPage\` and \`InventoryPage\` replace one 400-line class. A \`Header\` component is the next step. Small classes are easier to review and change.
+- **Lazy readonly locators**, defined once. User-facing locators (\`getByPlaceholder\`, \`getByRole\`) and \`data-test\` attributes replace the position-based XPath \`(//button...)[1]\`. That XPath breaks when products are re-ordered.
+- **Data in, not typed in:** \`login(user, pass)\` serves the standard, locked-out and wrong-password tests. Credentials come from env vars.
+- **No sleeps:** 6 s of \`waitForTimeout\` per flow is gone. Playwright waits automatically before actions, and \`openCart\` waits for the "Your Cart" title.
+- **No hidden business checks, no true/false helpers:** \`isCartCount()\` returned a one-time true/false with no retry. \`isVisible()\` does not wait. Tests now write \`expect(inventory.cartBadge).toHaveText('1')\`, which retries and gives a clear failure message.
+- **Old-style calls removed:** \`page.fill(selector)\`, \`page.click(selector)\` and \`page.isVisible(selector)\` are discouraged. Use locators instead.`,
       followUps: [
         {
           q: 'Should openCart() return a CartPage object?',
-          a: 'It can: "fluent" page objects make the flow explicit (inventory.openCart() returns a CartPage). With fixtures, many teams skip it and just request cartPage, which avoids constructing objects inside other objects. Either is fine if the team is consistent; avoid deep chains that hide which page you are on.',
+          a: 'It can. "Fluent" page objects make the flow clear: inventory.openCart() returns a CartPage. With fixtures, many teams skip this and just ask for cartPage, so objects are not built inside other objects. Either way is fine if the team is consistent. Avoid long chains that hide which page you are on.',
         },
         {
           q: 'Where would you put a check that the cart total is correct?',
-          a: 'In the spec, because it is the business outcome of that test case. The page object can expose a total locator or a method that returns the parsed number, and the test asserts it. Keeping it out of the page object means negative or edge-case tests can reuse the same methods.',
+          a: 'In the spec, because it is the business result of that test case. The page object can expose a total locator, or a method that returns the number, and the test checks it. Keeping it out of the page object lets negative and edge-case tests reuse the same methods.',
         },
       ],
     },
@@ -690,9 +812,9 @@ export class InventoryPage {
       id: 'pw-pom-data-cc-2',
       title: 'Hard-coded shared booking that leaks and collides',
       context:
-        'Three API-backed specs use the same hard-coded booking data. With 4 workers they fail randomly ("expected Jim, got Sally"), and the shared Restful Booker instance fills up with "Jim Brown" bookings because cleanup only runs when everything passes.',
+        'Three API-backed specs use the same typed-in booking data. With 4 workers they fail at random ("expected Jim, got Sally"). The shared Restful Booker server also fills up with "Jim Brown" bookings, because clean-up only runs when everything passes.',
       task:
-        'Make every test create its own unique booking, clean it up even when the test fails, take the admin credentials out of the code, and stop tests from editing a shared data object.',
+        'Make every test create its own unique booking. Clean it up even when the test fails. Take the admin login out of the code. Stop tests from changing a shared data object.',
       starter: {
         language: 'typescript',
         title: 'tests/api/booking.spec.ts (before)',
@@ -719,9 +841,9 @@ test('update first name', async ({ request }) => {
 });`,
       },
       hints: [
-        'Which data here is identical for every test and every worker? How could two workers confuse each other\'s bookings?',
-        'Generate a unique booking per test with a factory, and keep the id that the create call returns.',
-        'Move create + delete into a fixture so the delete runs after await use() even on failure; fetch the token once per worker from env vars.',
+        'Which data here is the same for every test and every worker? How could two workers mix up each other\'s bookings?',
+        'Make a unique booking per test with a factory. Keep the id that the create call returns.',
+        'Move create and delete into a fixture, so the delete runs after await use() even on failure. Get the token once per worker, using env vars.',
       ],
       solution: {
         language: 'typescript',
@@ -749,20 +871,20 @@ test('update first name', async ({ request, booking, apiToken }) => {
   // no cleanup here: the booking fixture deletes it in teardown, pass or fail
 });`,
       },
-      explanation: `- **Unique data:** the \`booking\` fixture builds data with the Faker factory (\`qa-\` + random lastname), so four workers never fight over "Jim Brown".
-- **Lookup by id:** the test reads \`/booking/:id\` for its own record instead of \`?firstname=Jim\`, which could match any worker's (or any stranger's) booking on a public API.
-- **No shared mutation:** the imported JSON was a cached module object; mutating it changed data for every later test in the worker. Now the test spreads a copy.
-- **Guaranteed cleanup:** the delete lives after \`await use()\` in the fixture, so it runs even when an assertion fails. It accepts 201 (Restful Booker's delete status) or 404.
-- **Secrets out of code:** the worker-scoped \`apiToken\` fixture reads \`RB_USER\`/\`RB_PASS\` from env vars and authenticates once per worker instead of once per test.
-- **Status checks:** the PUT status is asserted, so a 403 from a bad token fails at the right line.`,
+      explanation: `- **Unique data:** the \`booking\` fixture builds data with the Faker factory (\`qa-\` + a random lastname). So four workers never fight over "Jim Brown".
+- **Look up by id:** the test reads \`/booking/:id\` for its own record. \`?firstname=Jim\` could match any worker's booking, or a stranger's, on a public API.
+- **No shared changes:** the imported JSON was one cached object. Changing it changed the data for every later test in that worker. Now the test makes a copy with spread (\`{ ...booking.data }\`).
+- **Clean-up always runs:** the delete sits after \`await use()\` in the fixture, so it runs even when a check fails. It accepts 201 (Restful Booker's delete status) or 404.
+- **Secrets out of code:** the worker-scoped \`apiToken\` fixture reads \`RB_USER\` and \`RB_PASS\` from env vars. It logs in once per worker, not once per test.
+- **Status checks:** the PUT status is checked. So a 403 from a bad token fails at the right line.`,
       followUps: [
         {
           q: 'How would you clean up data left behind by a crashed run?',
-          a: 'Because every record carries the qa- prefix, a teardown project (project dependencies with teardown) or a nightly CI job can list bookings and delete those whose lastname starts with qa- and are older than an hour. The per-test fixture handles the normal case; the sweep is the safety net.',
+          a: 'Every record has the qa- prefix. So a teardown project (project dependencies with teardown) or a nightly CI job can list bookings. It deletes those whose lastname starts with qa- and that are older than an hour. The per-test fixture handles the normal case; the sweep is the safety net.',
         },
         {
           q: 'Why authenticate in a worker-scoped fixture rather than in each test?',
-          a: 'The token is the same for every test in that worker, so fetching it once saves a request per test and keeps tests focused. It must not depend on test-scoped fixtures, so it builds its own APIRequestContext from the playwright fixture and disposes it at worker shutdown.',
+          a: 'The token is the same for every test in that worker. Fetching it once saves one request per test and keeps tests focused. It must not use test-scoped fixtures. So it builds its own API client from the playwright fixture and closes it when the worker stops.',
         },
       ],
     },
@@ -773,40 +895,42 @@ test('update first name', async ({ request, booking, apiToken }) => {
       difficulty: 'easy',
       question: 'What is the Page Object Model? Write a LoginPage class for SauceDemo and show a test that uses it.',
       whatInterviewerLooksFor: [
-        'Explains the why: maintenance and readability',
-        'Correct TS class with Page, readonly Locators, async methods',
-        'Uses modern locators, no sleeps',
-        'Keeps the assertion in the test',
+        'Explains why: easier upkeep and readable tests',
+        'Correct TS class with Page, readonly Locators and async methods',
+        'Uses modern locators and no sleeps',
+        'Keeps the check in the test',
       ],
-      modelAnswer: `**POM** is a design pattern where each page of the application gets a class holding its locators and the actions a user can perform there. Tests call those methods instead of touching selectors. Benefits: when the UI changes I fix one class, and specs read like manual test steps.
+      modelAnswer: `**Example:** \`await loginPage.login('standard_user', process.env.SAUCE_PASS!)\` → one readable line instead of three selector lines.
+
+**POM** is a design pattern. Each page of the app gets a class. The class holds that page's locators and the actions a user can do there. Tests call those methods instead of touching selectors. When the UI changes, I fix one class. Specs read like manual test steps.
 
 For SauceDemo:
-- \`LoginPage\` has \`constructor(page)\`, readonly locators \`username = page.getByPlaceholder('Username')\`, \`password = page.getByPlaceholder('Password')\`, \`loginButton = page.getByRole('button', { name: 'Login' })\`, \`error = page.locator('[data-test="error"]')\`.
-- Methods: \`goto()\` → \`page.goto('/')\` using baseURL; \`login(user, pass)\` fills both fields and clicks.
+- \`LoginPage\` has \`constructor(page)\` and readonly locators: \`username = page.getByPlaceholder('Username')\`, \`password = page.getByPlaceholder('Password')\`, \`loginButton = page.getByRole('button', { name: 'Login' })\` and \`error = page.locator('[data-test="error"]')\`.
+- Methods: \`goto()\` calls \`page.goto('/')\`, using baseURL. \`login(user, pass)\` fills both fields and clicks.
 
 Test:
 - \`const loginPage = new LoginPage(page)\`, \`await loginPage.goto()\`, \`await loginPage.login('standard_user', process.env.SAUCE_PASS!)\`, then \`await expect(page).toHaveURL(/inventory/)\`.
-- Negative test reuses the same method with \`locked_out_user\` and asserts \`expect(loginPage.error).toContainText('locked out')\`.
+- A negative test reuses the same method with \`locked_out_user\`. It checks \`expect(loginPage.error).toContainText('locked out')\`.
 
 Design choices I would point out:
-- Locators are created in the constructor; this is safe because locators are lazy.
+- Locators are created in the constructor. That is safe because locators are lazy.
 - \`login()\` has **no assertion**, so it serves positive and negative tests.
-- Credentials come from env vars even though SauceDemo's are public, because that is the habit for real apps.
-- In the full framework I would not even write \`new LoginPage(page)\` in tests; a fixture provides \`loginPage\`.`,
+- Credentials come from env vars, even though SauceDemo's are public. That is the right habit for real apps.
+- In the full framework, tests would not even write \`new LoginPage(page)\`. A fixture provides \`loginPage\`.`,
       followUps: [
         {
           q: 'Why readonly?',
-          a: 'readonly tells TypeScript that the locator field is assigned once in the constructor and never replaced. It documents intent and prevents a test from accidentally overwriting loginPage.username with something else. It has no runtime cost; it is a compile-time check.',
+          a: 'readonly tells TypeScript that the locator field is set once in the constructor and never replaced. It shows intent and stops a test from overwriting loginPage.username by mistake. It costs nothing at run time; it is only a compile-time check.',
         },
         {
           q: 'Would you add an isLoggedIn() method?',
-          a: 'Not as a boolean based on isVisible(), because isVisible() checks once without waiting and leads to flaky expect(...).toBe(true) checks. I would expose a locator (for example inventory.title) and let the test assert with toBeVisible() or toHaveText(), which auto-retries.',
+          a: 'Not as a true/false method based on isVisible(). isVisible() checks once without waiting, which leads to flaky expect(...).toBe(true) checks. I would expose a locator, like inventory.title. The test then checks it with toBeVisible() or toHaveText(), which retry automatically.',
         },
       ],
       pitfalls: [
         'Putting waitForTimeout in page methods',
-        'Asserting login success inside login(), breaking negative tests',
-        'Using absolute XPath copied from DevTools',
+        'Checking login success inside login(), which breaks negative tests',
+        'Using long XPath copied from DevTools',
       ],
     },
     {
@@ -815,71 +939,75 @@ Design choices I would point out:
       question: 'Should page objects contain assertions? Defend your position.',
       whatInterviewerLooksFor: [
         'Knows both sides of the debate',
-        'Distinguishes readiness checks from business assertions',
-        'Gives a concrete example of reuse breaking',
+        'Separates ready-checks from business checks',
+        'Gives a real example where reuse breaks',
         'Mentions exposing locators for web-first assertions',
       ],
-      modelAnswer: `There are two schools:
-- **No assertions in page objects** (Martin Fowler's view): page objects drive the UI; tests decide pass/fail. This keeps page objects reusable and makes each test's checks visible.
-- **Assertions allowed**: the official Playwright POM example asserts a heading inside \`getStarted()\`, and some teams like short specs.
+      modelAnswer: `**Example:** if \`login()\` checked "landed on the products page", the wrong-password test could not use it.
+
+There are two schools of thought:
+- **No assertions in page objects** (Martin Fowler's view). Page objects drive the UI; tests decide pass or fail. Page objects stay reusable, and each test's checks are visible.
+- **Assertions allowed.** The official Playwright POM example checks a heading inside \`getStarted()\`. Some teams like short specs.
 
 My position is the **middle ground**:
-1. **Business assertions live in the test.** "Cart contains the backpack", "error says locked out", "total is $32.39" are the point of the test case, so they must be visible in the spec.
-2. **Readiness checks may live in the page object.** \`InventoryPage.goto()\` ends with \`expect(this.title).toHaveText('Products')\`. That is not the test's purpose; it guarantees the page is ready before the next action, which removes flakiness.
+1. **Business checks live in the test.** "Cart contains the backpack", "error says locked out" and "total is $32.39" are the point of the test case. So they must be visible in the spec.
+2. **Ready-checks may live in the page object.** \`InventoryPage.goto()\` ends with \`expect(this.title).toHaveText('Products')\`. That is not the test's goal. It makes sure the page is ready before the next action, which removes flakiness.
 
-Concrete reason: if \`login()\` asserted "landed on inventory", I could not reuse it for the locked-out-user or wrong-password tests; I would end up with \`login()\`, \`loginExpectingError()\`, \`loginWithoutCheck()\`.
+A real reason: if \`login()\` checked for success, I could not reuse it for the locked-out or wrong-password tests. I would end up with \`login()\`, \`loginExpectingError()\` and \`loginWithoutCheck()\`.
 
-To make test-side assertions easy, page objects **expose locators** (\`cartPage.items\`, \`header.cartBadge\`) so tests use web-first \`expect(locator)\` with auto-retry. I avoid methods returning booleans from \`isVisible()\` or \`textContent()\`, because they check once and fail unpredictably.`,
+To make checks easy in tests, page objects **expose locators** (\`cartPage.items\`, \`header.cartBadge\`). Tests use web-first \`expect(locator)\`, which retries. I avoid methods that return true/false from \`isVisible()\` or \`textContent()\`. They check once and fail at random.`,
       followUps: [
         {
           q: 'What if the team already has assertions everywhere in page objects?',
-          a: 'I would not rewrite everything at once. New code follows the convention, and when a page object blocks a negative test, I split the assertion out at that point. I would also write the convention into the framework README so code reviews can enforce it consistently.',
+          a: 'I would not rewrite everything at once. New code follows the rule. When a page object blocks a negative test, I move that check out at that point. I would also write the rule in the framework README, so code reviews apply it the same way.',
         },
         {
           q: 'Is expect.soft useful in page objects?',
-          a: 'Rarely. Soft assertions are useful in a test that checks many independent fields on one screen. Hiding them in page objects makes failures surprising because the method appears to succeed. Keep soft checks in the spec where readers can see them.',
+          a: 'Rarely. Soft assertions help in a test that checks many separate fields on one screen. Hidden in page objects, they make failures surprising, because the method seems to pass. Keep soft checks in the spec, where readers can see them.',
         },
       ],
       pitfalls: [
-        'Answering only "never" or "always" without nuance',
-        'Not knowing the official example asserts inside a method',
+        'Answering only "never" or "always", with no nuance',
+        'Not knowing that the official example checks inside a method',
         'Ignoring reuse for negative tests',
       ],
     },
     {
       id: 'pw-pom-data-iq-03',
       difficulty: 'medium',
-      question: 'How do you combine page objects with Playwright fixtures, and why is it better than creating page objects in each test?',
+      question: 'How do you combine page objects with Playwright fixtures? Why is it better than creating page objects in each test?',
       whatInterviewerLooksFor: [
         'test.extend with page-object fixtures',
-        'Fixture dependencies (inventoryPage uses loginPage)',
-        'Lazy creation and single place for setup',
-        'Import discipline (test from fixtures file)',
+        'Fixtures that use other fixtures (inventoryPage uses loginPage)',
+        'Lazy creation and one place for setup',
+        'Import rule: test comes from the fixtures file',
       ],
-      modelAnswer: `I create \`fixtures/pages.ts\`:
+      modelAnswer: `**Example:** \`test('adds item', async ({ inventoryPage, cartPage }) => { ... })\` → the test gets ready page objects. It never writes \`new XPage(page)\`.
+
+I create \`fixtures/pages.ts\`:
 - \`base.extend<{ loginPage: LoginPage; inventoryPage: InventoryPage; cartPage: CartPage }>({...})\`
 - \`loginPage: async ({ page }, use) => use(new LoginPage(page))\`
 - \`inventoryPage: async ({ page, loginPage }, use) => { await loginPage.goto(); await loginPage.login(env user, env pass); await use(new InventoryPage(page)); }\`
 - export \`test\` and \`expect\`.
 
-Specs then import from that file: \`test('adds item', async ({ inventoryPage, cartPage }) => { ... })\`.
+Specs then import from that file.
 
 Why it is better:
-1. **No boilerplate:** no \`new XPage(page)\` lines in 100 specs.
-2. **Setup in one place:** \`inventoryPage\` arrives logged in. When we switch to storageState, I change the fixture, not the specs.
+1. **No repeated lines:** no \`new XPage(page)\` in 100 specs.
+2. **Setup in one place:** \`inventoryPage\` arrives logged in. When we move to storageState, I change the fixture, not the specs.
 3. **Lazy:** a test that only asks for \`loginPage\` never logs in.
-4. **Composable:** fixtures depend on fixtures; I can merge page fixtures with data fixtures using \`mergeTests\`.
+4. **Combinable:** fixtures can use fixtures. I can merge page fixtures with data fixtures using \`mergeTests\`.
 5. **Typed:** the editor autocompletes \`inventoryPage.addToCart\`.
 
-Two rules I follow: page objects stay plain classes (no fixture knowledge), and specs never import \`test\` from \`@playwright/test\` directly, or they lose the custom fixtures. A lint rule (no-restricted-imports) can enforce that.`,
+Two rules I follow. Page objects stay plain classes that know nothing about fixtures. And specs never import \`test\` from \`@playwright/test\` directly, or they lose the custom fixtures. A lint rule (no-restricted-imports) can enforce that.`,
       followUps: [
         {
           q: 'What does mergeTests do?',
-          a: 'mergeTests(a, b) combines several extended test objects into one, so fixtures from pages.ts and data.ts are available together. You export the merged test from fixtures/index.ts and every spec imports from there, keeping fixture files small and focused.',
+          a: 'mergeTests(a, b) joins several extended test objects into one. Then fixtures from pages.ts and data.ts are available together. You export the merged test from fixtures/index.ts, and every spec imports from there. Each fixture file stays small and focused.',
         },
         {
           q: 'Would you make page-object fixtures worker-scoped to save time?',
-          a: 'No. Page objects wrap a page, which is test-scoped and recreated each test; a worker-scoped page object would share one page across tests and break isolation. Constructing a page object is nearly free; the expensive part, login, is better solved with storageState.',
+          a: 'No. Page objects wrap a page, which is test-scoped and made fresh for each test. A worker-scoped page object would share one page across tests and break their separation. Building a page object costs almost nothing. The slow part, login, is better solved with storageState.',
         },
       ],
       pitfalls: [
@@ -891,39 +1019,41 @@ Two rules I follow: page objects stay plain classes (no fixture knowledge), and 
     {
       id: 'pw-pom-data-iq-04',
       difficulty: 'medium',
-      question: 'How do you manage test data in your framework, including data that differs between QA and staging environments?',
+      question: 'How do you manage test data in your framework, including data that differs between QA and staging?',
       whatInterviewerLooksFor: [
-        'Categorises data (static, env-specific, secret, dynamic)',
-        'Secrets in env vars / CI secrets, never committed',
-        'Env selection mechanism (TEST_ENV)',
-        'Dynamic unique data with Faker/factories and cleanup',
+        'Sorts data into kinds (static, per environment, secret, dynamic)',
+        'Secrets in env vars or CI secrets, never committed',
+        'A way to pick the environment (TEST_ENV)',
+        'Unique dynamic data with Faker or factories, plus clean-up',
       ],
-      modelAnswer: `I split data into four kinds:
+      modelAnswer: `**Example:** \`TEST_ENV=staging npx playwright test\` → the tests load \`data/env/staging.json\`, and the config uses the staging baseURL.
 
-1. **Static reference data**, the same everywhere: product names/prices for SauceDemo, in \`data/products.json\`. Read-only.
-2. **Environment-specific data**: base URL, an existing customer id, feature flags. One file per env (\`data/env/qa.json\`, \`staging.json\`), picked by a \`TEST_ENV\` variable; the config also reads \`TEST_ENV\` to set \`baseURL\`.
-3. **Secrets**: passwords, API keys. Only in environment variables: a gitignored \`.env\` loaded with dotenv locally, and CI secrets in the pipeline. A committed \`.env.example\` documents the keys.
-4. **Dynamic data**: anything a test creates (bookings, users, orders). Generated per test with Faker through **factories** like \`buildBooking(overrides)\`, with a \`qa-\` prefix so leftovers are identifiable.
+I split data into four kinds:
 
-Lifecycle:
-- Create through the **API** in a fixture, hand it to the test, delete it in the fixture's teardown so cleanup runs on failure too.
-- Log generated values (or attach them to the report) so a failure is reproducible; \`faker.seed()\` can replay a sequence when debugging.
+1. **Static reference data**, the same everywhere. Example: SauceDemo product names and prices in \`data/products.json\`. Read-only.
+2. **Per-environment data**: base URL, an existing customer id, feature flags. One file per environment (\`data/env/qa.json\`, \`staging.json\`), picked by a \`TEST_ENV\` variable. The config also reads \`TEST_ENV\` to set \`baseURL\`.
+3. **Secrets**: passwords and API keys. Only in environment variables. Locally, a gitignored \`.env\` loaded with dotenv. In the pipeline, CI secrets. A committed \`.env.example\` lists the keys.
+4. **Dynamic data**: anything a test creates (bookings, users, orders). Made per test with Faker through **factories** like \`buildBooking(overrides)\`. A \`qa-\` prefix makes leftovers easy to find.
 
-Things I avoid: hard-coded ids that exist only in one environment, tests that depend on data created by other tests, and mutating imported JSON (it is a cached shared object per worker).`,
+Life cycle:
+- Create data through the **API** in a fixture. Hand it to the test. Delete it in the fixture's teardown, so clean-up runs on failure too.
+- Log the generated values, or attach them to the report, so a failure can be repeated. \`faker.seed()\` can replay values while debugging.
+
+What I avoid: ids that exist in only one environment, tests that need data from other tests, and changing imported JSON. Imported JSON is one shared cached object per worker.`,
       followUps: [
         {
           q: 'A test needs an order in "shipped" status, and the UI flow to get there takes 3 minutes. What do you do?',
-          a: 'Create the order directly in that state through an API (or a test-only endpoint or DB seed if the team provides one) inside a fixture, then test only the behaviour that matters in the UI. The long flow gets its own end-to-end test, so it is covered once rather than repeated as setup in many tests.',
+          a: 'Create the order directly in that state through an API, inside a fixture. A test-only endpoint or a database seed also works, if the team provides one. Then test only the behaviour that matters in the UI. The long flow gets its own end-to-end test, so it is covered once, not repeated as setup in many tests.',
         },
         {
           q: 'Where do you keep data for data-driven tests?',
-          a: 'Small tables inline in the spec, because that is most readable. Larger sets in JSON or CSV under data/, loaded at file level and looped to create one test per row with a unique title. If business users maintain the data, CSV works well, parsed with csv-parse/sync.',
+          a: 'Small tables go inline in the spec, because that is easiest to read. Larger sets go in JSON or CSV under data/. They are loaded at file level and looped, one test per row, each with a unique title. If business users maintain the data, CSV works well, read with csv-parse/sync.',
         },
       ],
       pitfalls: [
         'Committing .env or passwords in JSON',
         'Relying on fixed records that someone else may change',
-        'No cleanup strategy',
+        'No clean-up plan',
       ],
     },
     {
@@ -931,81 +1061,83 @@ Things I avoid: hard-coded ids that exist only in one environment, tests that de
       difficulty: 'medium',
       question: 'How do you write data-driven tests in Playwright? What can go wrong?',
       whatInterviewerLooksFor: [
-        'Loop that creates one test per row',
-        'Unique titles requirement',
-        'Hook behaviour with loops',
-        'Parameterised projects for suite-level variation',
+        'A loop that creates one test per row',
+        'Knows titles must be unique',
+        'Knows how hooks behave with loops',
+        'Parameterised projects for suite-wide variations',
       ],
-      modelAnswer: `Playwright has no special decorator; you generate tests with a normal loop at file or describe level:
+      modelAnswer: `**Example:** \`for (const row of rows) { test('login as ' + row.user, async ({ page }) => { ... }) }\` → one test per row. A template-literal title works too.
 
-- \`for (const row of rows) { test('login as ' + row.user, async ({ page }) => { ... }) }\` (or a template-literal title)
+Playwright has no special syntax for this. You make tests with a normal loop at file or describe level.
 
-Each row becomes a **separate test**: own report line, own retry, can run in parallel with \`fullyParallel\`.
+Each row becomes a **separate test**. It has its own report line and its own retry. It can run in parallel with \`fullyParallel\`.
 
-Data sources: inline arrays (most readable), JSON imports, or CSV parsed with \`csv-parse/sync\` (\`columns: true, skip_empty_lines: true\`), which is what the official guide shows.
+Data sources: inline arrays (easiest to read), JSON imports, or CSV. The official guide reads CSV with \`csv-parse/sync\` (\`columns: true, skip_empty_lines: true\`).
 
 What can go wrong:
-1. **Duplicate titles.** Two rows producing the same title cause an error. Include the distinguishing field in the title.
-2. **Looping inside one test.** \`for (row of rows)\` inside a single test stops at the first failure, reports one test, and retries every row. Generate tests instead.
-3. **Hooks.** Hooks outside the loop run around each generated test as usual. If each row needs its own beforeEach/beforeAll, wrap the iteration in a \`test.describe\`.
-4. **Async data loading.** Test files are evaluated synchronously when collecting tests, so read the data synchronously (\`fs.readFileSync\` or JSON import), not from an API call at file level.
-5. **Shared rows.** Rows are shared objects; do not mutate them in tests.
+1. **Duplicate titles.** Two rows that give the same title cause an error. Put the field that differs in the title.
+2. **A loop inside one test.** \`for (row of rows)\` inside a single test stops at the first failure. It reports one test and retries every row. Make separate tests instead.
+3. **Hooks.** Hooks outside the loop run around each generated test as usual. If each row needs its own beforeEach or beforeAll, wrap that row in a \`test.describe\`.
+4. **Loading data with await.** Playwright reads test files synchronously when it collects tests. So read the data synchronously (\`fs.readFileSync\` or a JSON import). Do not fetch it from an API at file level.
+5. **Shared rows.** Rows are shared objects. Do not change them in tests.
 
-For suite-wide variations (run all tests as two different users or against two locales), I use **parameterised projects**: an option fixture \`[default, { option: true }]\` overridden per project in the config.`,
+To vary the whole suite (run all tests as two users, or in two languages), I use **parameterised projects**. An option fixture \`[default, { option: true }]\` is set differently per project in the config.`,
       followUps: [
         {
           q: 'How do you pass a parameter to every test in a project?',
-          a: "Declare an option fixture: base.extend<{ userRole: string }>({ userRole: ['user', { option: true }] }). In the config, project A sets use: { userRole: 'admin' } and project B sets use: { userRole: 'user' }. Tests and fixtures read userRole like any fixture.",
+          a: "Declare an option fixture: base.extend<{ userRole: string }>({ userRole: ['user', { option: true }] }). In the config, project A sets use: { userRole: 'admin' } and project B sets use: { userRole: 'user' }. Tests and fixtures read userRole like any other fixture.",
         },
         {
-          q: 'Your CSV has 500 rows. Is generating 500 UI tests a good idea?',
-          a: 'Usually not. Use equivalence partitioning and boundary values to pick representative rows for the UI, and push the full matrix down to API or unit level where each check costs milliseconds. Hundreds of UI tests for one form slow the pipeline without finding many more bugs.',
+          q: 'Your CSV has 500 rows. Is making 500 UI tests a good idea?',
+          a: 'Usually not. Use equivalence partitioning and boundary values to pick a few representative rows for the UI. Push the full set down to API or unit tests, where each check takes milliseconds. Hundreds of UI tests for one form slow the pipeline but find few extra bugs.',
         },
       ],
       pitfalls: [
         'Loop inside a single test',
-        'Non-unique titles',
-        'Fetching test data asynchronously at file level',
+        'Titles that are not unique',
+        'Fetching test data with await at file level',
       ],
     },
     {
       id: 'pw-pom-data-iq-06',
       difficulty: 'hard',
       question:
-        'Your API-backed UI tests pass alone but fail in CI with 6 workers, and the shared QA database keeps filling with test records. Walk me through a fix.',
+        'Your API-backed UI tests pass alone but fail in CI with 6 workers. The shared QA database also keeps filling with test records. Walk me through a fix.',
       context: 'The tests create Restful Booker bookings and then look for them in an admin UI list.',
       whatInterviewerLooksFor: [
-        'Identifies non-unique data and lookup-by-position as collision causes',
-        'Unique per-test data and id-based lookup',
-        'Cleanup in teardown that survives failures',
-        'Safety-net sweep and observability',
+        'Spots shared data and "pick the first row" as causes of clashes',
+        'Unique data per test and lookup by id',
+        'Clean-up in teardown that survives failures',
+        'A safety-net sweep and logging',
       ],
-      modelAnswer: `**Diagnose first.** I would open the trace of a failing test and check which record it read. Typical root causes:
-- All tests create "Jim Brown", then pick "the first row" or search by that name, which could be any worker's record.
-- Tests assume an empty list ("expect 1 booking") while other workers are adding records.
-- Cleanup sits at the end of the test body, so any failure skips it and data leaks; over many runs the list grows and pagination or slowness causes more failures.
+      modelAnswer: `**Example:** six workers all create "Jim Brown". Then each test clicks "the first Jim Brown" in the list. Often that row belongs to another worker.
+
+**Find the cause first.** I would open the trace of a failing test and check which record it read. Typical root causes:
+- All tests create "Jim Brown", then pick "the first row" or search by that name. That could be any worker's record.
+- Tests expect an empty list ("expect 1 booking") while other workers add records.
+- Clean-up sits at the end of the test body. Any failure skips it, so data leaks. Over many runs the list grows, and paging or slowness causes more failures.
 
 **Fix:**
-1. **Unique data per test.** A factory with Faker generates \`lastname = qa-<random>\` (or includes \`testInfo.testId\`). Log it.
-2. **Find by unique key or id.** Search the UI for the exact unique lastname, or go straight to \`/booking/:id\`. Assert relative facts ("my row exists with these values"), not global counts.
-3. **Cleanup in fixture teardown.** A \`booking\` fixture creates the record via API, \`await use()\`, then deletes it with the token cookie. Teardown runs even when the test fails; it tolerates 404.
-4. **Token once per worker** with a worker-scoped fixture, credentials from env vars.
-5. **Safety net.** A teardown project or nightly job deletes records with the \`qa-\` prefix older than X hours, in case a worker crashed.
-6. **Verify:** run with \`--repeat-each=5 --workers=6\` to prove the collisions are gone.
+1. **Unique data per test.** A Faker factory makes \`lastname = qa-<random>\` (or uses \`testInfo.testId\`). Log it.
+2. **Find by unique key or id.** Search the UI for the exact unique lastname, or go straight to \`/booking/:id\`. Check facts about my own row, not global counts.
+3. **Clean-up in fixture teardown.** A \`booking\` fixture creates the record through the API, calls \`await use()\`, then deletes it with the token cookie. Teardown runs even when the test fails, and it accepts a 404.
+4. **Token once per worker**, with a worker-scoped fixture and credentials from env vars.
+5. **Safety net.** A teardown project or nightly job deletes \`qa-\` records older than X hours, in case a worker crashed.
+6. **Check the fix:** run with \`--repeat-each=5 --workers=6\` to prove the clashes are gone.
 
-If the app cannot isolate data at all (a single shared cart per account), I give each worker its own account using \`parallelIndex\`.`,
+If the app cannot separate data at all (one shared cart per account), I give each worker its own account using \`parallelIndex\`.`,
       followUps: [
         {
           q: 'Why not just set workers to 1 in CI?',
-          a: 'It hides the bug and multiplies runtime by the worker count. The suite would still break the moment someone runs it in parallel locally or the team adds sharding. Data isolation is a design property of the tests; fixing it once lets the suite scale.',
+          a: 'It hides the bug and makes the run several times slower. The suite would still break as soon as someone runs it in parallel locally, or the team adds sharding. Separate data is a design property of the tests. Fix it once and the suite can grow.',
         },
         {
           q: 'How does --repeat-each help here?',
-          a: 'It runs every test N times in the same run. Combined with several workers it massively increases the chance that two copies of the same test run at the same time, so collisions show up reliably before the change is merged, instead of once a week in CI.',
+          a: 'It runs every test N times in the same run. With several workers, two copies of the same test are much more likely to run at the same time. So clashes show up reliably before the change is merged, not once a week in CI.',
         },
       ],
       pitfalls: [
-        'Blaming the app or CI machine without checking data',
+        'Blaming the app or CI machine without checking the data',
         'Cleaning up in the last line of the test',
         'Using global counts in assertions',
       ],
@@ -1017,46 +1149,48 @@ If the app cannot isolate data at all (a single shared cart per account), I give
         'You are the first SDET on a team. Design a Playwright framework from scratch for a web shop (UI) plus its REST API. What folders, layers and conventions do you set up in week one?',
       whatInterviewerLooksFor: [
         'Clear layers: specs, page/component objects, fixtures, data, API clients, config',
-        'Auth reuse and environment strategy',
-        'Conventions that scale (naming, imports, tags, lint)',
-        'Pragmatism: start small, CI early',
+        'A plan for login reuse and environments',
+        'Rules that scale (naming, imports, tags, lint)',
+        'Practical: start small, add CI early',
       ],
-      modelAnswer: `**Week-one structure**
-- \`playwright.config.ts\`: baseURL from \`TEST_ENV\`, retries/trace on CI, projects for setup + chromium (+ firefox later), \`testIdAttribute\`.
-- \`tests/\` grouped by feature (\`auth/\`, \`catalog/\`, \`cart/\`, \`checkout/\`, \`api/\`), plus \`auth.setup.ts\`.
-- \`pages/\` and \`components/\`: plain classes, lazy locators, user-intent methods, readiness checks only.
-- \`fixtures/\`: \`pages.ts\` (page objects), \`data.ts\` (API-created entities with teardown), \`index.ts\` merging them with \`mergeTests\`.
-- \`api/\`: thin typed clients for setup/cleanup (\`BookingApi.create()\`), used by fixtures and API specs.
-- \`data/\`: static JSON + per-env files; \`utils/factories.ts\` with Faker builders.
-- \`.env.example\`, gitignored \`.env\` and \`playwright/.auth/\`.
+      modelAnswer: `**Example:** by the end of week one, a new tester can copy \`tests/cart/add-to-cart.spec.ts\`, change two lines and have a working test.
 
-**Conventions**
-- Specs import \`test\` only from \`fixtures/index.ts\` (lint rule).
-- Locator priority: role/label/test id; no XPath without a comment.
-- No \`waitForTimeout\`, no shared mutable state, every test independent and parallel-safe.
-- Business assertions in specs; tags \`@smoke\`, \`@regression\`; \`test.step\` for business actions.
-- Unique \`qa-\` prefixed data, API setup/cleanup.
+**Week-one structure**
+- \`playwright.config.ts\`: baseURL from \`TEST_ENV\`, retries and trace on CI, projects for setup + chromium (+ firefox later), \`testIdAttribute\`.
+- \`tests/\` grouped by feature (\`auth/\`, \`catalog/\`, \`cart/\`, \`checkout/\`, \`api/\`), plus \`auth.setup.ts\`.
+- \`pages/\` and \`components/\`: plain classes, lazy locators, methods named after user actions, ready-checks only.
+- \`fixtures/\`: \`pages.ts\` (page objects), \`data.ts\` (API-created data with teardown), and \`index.ts\` merging them with \`mergeTests\`.
+- \`api/\`: thin typed clients for setup and clean-up (\`BookingApi.create()\`), used by fixtures and API specs.
+- \`data/\`: static JSON and per-environment files; \`utils/factories.ts\` with Faker builders.
+- \`.env.example\`, plus a gitignored \`.env\` and \`playwright/.auth/\`.
+
+**Rules**
+- Specs import \`test\` only from \`fixtures/index.ts\` (enforced by a lint rule).
+- Locator order: role, label, test id. No XPath without a comment.
+- No \`waitForTimeout\` and no shared changing state. Every test is independent and safe to run in parallel.
+- Business checks in specs. Tags \`@smoke\` and \`@regression\`. \`test.step\` for business actions.
+- Unique \`qa-\` prefixed data, with API setup and clean-up.
 
 **Delivery**
-- Day 1–2: config, login via storageState setup project, 3 smoke tests on the critical path (login, add to cart, checkout).
-- Day 3: GitHub Actions running smoke on every PR with HTML report and traces as artifacts.
-- Then grow coverage feature by feature, extracting components only when duplication appears.
+- Day 1–2: config, login through a storageState setup project, and 3 smoke tests on the main path (login, add to cart, checkout).
+- Day 3: GitHub Actions runs smoke on every PR. The HTML report and traces are saved as artifacts (files kept after the CI run).
+- Then grow coverage feature by feature. Pull out components only when code repeats.
 
-The point is not the perfect tree; it is that a new tester can add a test in 15 minutes by copying a pattern.`,
+The goal is not the perfect folder tree. The goal is that a new tester can add a test in 15 minutes by copying a pattern.`,
       followUps: [
         {
           q: 'How do you keep the framework consistent as 5 more testers join?',
-          a: 'A short CONTRIBUTING guide with one example of each pattern, ESLint with eslint-plugin-playwright (missing await, no waitForTimeout, no focused tests), TypeScript strict mode, PR reviews with a checklist, and CI that fails on test.only via forbidOnly. Conventions enforced by tools survive; conventions in people\'s heads do not.',
+          a: 'A short CONTRIBUTING guide with one example of each pattern. ESLint with eslint-plugin-playwright (missing await, no waitForTimeout, no focused tests). TypeScript strict mode. PR reviews with a checklist. CI that fails on test.only via forbidOnly. Rules enforced by tools survive; rules kept in people\'s heads do not.',
         },
         {
           q: 'Would you use Cucumber/BDD on top?',
-          a: 'Only if business stakeholders will actually read or write the feature files. Otherwise it adds a translation layer and step-definition maintenance with little benefit. Playwright test titles, tags and test.step already produce readable reports. If BDD is required, playwright-bdd integrates with the Playwright runner and keeps fixtures.',
+          a: 'Only if business people will really read or write the feature files. Otherwise it adds a translation layer and step definitions to maintain, with little benefit. Playwright titles, tags and test.step already make readable reports. If BDD is required, playwright-bdd works with the Playwright runner and keeps fixtures.',
         },
       ],
       pitfalls: [
         'Designing a huge abstract framework before writing a single test',
-        'No plan for auth, environments or data cleanup',
-        'Ignoring CI until the end',
+        'No plan for login, environments or data clean-up',
+        'Leaving CI until the end',
       ],
     },
   ],
@@ -1080,18 +1214,18 @@ The point is not the perfect tree; it is that a new tester can add a test in 15 
       answer:
         '**pages/** LoginPage.ts · **components/** Header.ts · **fixtures/** pages.ts, index.ts · **data/** products.json · **data/env/** staging.json · **utils/** factories.ts · **api/** bookingApi.ts · **tests/** auth.setup.ts, checkout/checkout.spec.ts · **playwright/.auth/** user.json · **root** .env, .env.example. Gitignored: **.env** and **playwright/.auth/**.',
       insight:
-        'Each folder has one job; secrets and session cookies stay out of git, while .env.example documents what each developer must set.',
+        'Each folder has one job. Secrets and saved login cookies stay out of git, and .env.example lists what each developer must set.',
       followUps: [
         {
           q: 'Where would you put a helper that waits for a toast message on any page?',
-          a: 'In components/Toast.ts as a small component object (root locator plus a method or exposed locator), composed into page objects that show toasts. It is UI, so it does not belong in utils/, and it is shared, so it does not belong in one page object.',
+          a: 'In components/Toast.ts, as a small component object (a root locator plus a method or exposed locator). Page objects that show toasts contain it. It is UI, so it does not belong in utils/. It is shared, so it does not belong in one page object.',
         },
       ],
     },
     {
       id: 'pw-pom-data-drill-2',
       question:
-        'A data-driven spec loops over 6 SauceDemo users × 3 sort options, generating one test per combination. The config has 2 projects (chromium, firefox), fullyParallel, 3 workers, average 9 s per test, retries 1, and 10% of tests fail once then pass. Estimate test count and wall time. Then estimate again if you cut the matrix with pairwise thinking to 8 combinations.',
+        'A data-driven spec loops over 6 SauceDemo users × 3 sort options, making one test per combination. The config has 2 projects (chromium, firefox), fullyParallel, 3 workers, 9 s per test on average, and retries: 1. 10% of tests fail once, then pass. Estimate the test count and wall time. Then estimate again after you cut the matrix to 8 combinations with pairwise thinking.',
       assumptions: [
         'Tests distribute evenly over workers; ignore startup time.',
         'A retried test costs one extra 9 s run.',
@@ -1107,11 +1241,11 @@ The point is not the perfect tree; it is that a new tester can add a test in 15 
       answer:
         'Full matrix: **36 tests, ~40 runs, about 2 minutes** wall time. Pairwise-reduced: **16 tests, about 1 minute**, with every user and every sort option still covered.',
       insight:
-        'Data-driven loops multiply quickly (rows × options × projects). Use test design techniques to pick rows, and remember retries add to the bill.',
+        'Data-driven loops grow fast (rows × options × projects). Use test design techniques to pick rows, and remember that retries add time too.',
       followUps: [
         {
           q: 'What must the test titles contain here?',
-          a: 'Both loop variables, e.g. `sort ${sort} as ${user}`, so all 18 titles are unique within the file. The project name is added by Playwright automatically in reports, so it does not need to be in the title.',
+          a: 'Both loop variables, e.g. `sort ${sort} as ${user}`, so all 18 titles in the file are unique. Playwright adds the project name in reports by itself, so it does not need to be in the title.',
         },
       ],
     },
@@ -1134,11 +1268,11 @@ The point is not the perfect tree; it is that a new tester can add a test in 15 
       answer:
         'Before: **~192 leaked bookings per day, ~5,760 per month**. After teardown: **~5 per day (~144 per month)**, and a nightly sweep of `qa-` records brings it to effectively zero.',
       insight:
-        'Cleanup at the end of a test body only works for passing tests, which is exactly when you least need it. Teardown plus a prefixed sweep is the reliable pattern.',
+        'Clean-up at the end of a test body only runs for passing tests, which is exactly when you need it least. Teardown plus a prefixed sweep is the pattern that works.',
       followUps: [
         {
           q: 'Why does leaked data cause more test failures over time?',
-          a: 'Lists grow and paginate, searches return many matches, and endpoints slow down, so tests that look for "a booking" or count rows start failing or timing out. Leaked data is a source of flakiness, not just untidiness.',
+          a: 'Lists grow and split into pages, searches return many matches, and endpoints slow down. Tests that look for "a booking" or count rows start failing or timing out. Leaked data causes flaky tests, not just mess.',
         },
       ],
     },
@@ -1151,11 +1285,11 @@ The point is not the perfect tree; it is that a new tester can add a test in 15 
       options: ['50, one per test', 'One: the locator in LoginPage', 'None: Playwright updates selectors automatically', 'Two: LoginPage and playwright.config.ts'],
       correct: [1],
       explanation:
-        'Keeping selectors in one class is the main maintenance benefit of POM: a UI change is fixed in one locator. Editing 50 tests is the situation POM prevents. Playwright does not auto-heal selectors, and the config does not hold page selectors.',
+        'Keeping selectors in one class is the main upkeep benefit of POM: a UI change is fixed in one locator. Editing 50 tests is exactly what POM prevents. Playwright does not fix selectors by itself, and the config does not hold page selectors.',
       followUps: [
         {
           q: 'What else does POM improve besides maintenance?',
-          a: 'Readability: specs read like test steps (loginPage.login, inventory.addToCart), so manual testers and reviewers can follow them. It also makes reuse natural across positive and negative tests.',
+          a: 'Readability. Specs read like test steps (loginPage.login, inventory.addToCart), so manual testers and reviewers can follow them. It also makes it natural to reuse methods in positive and negative tests.',
         },
       ],
     },
@@ -1171,18 +1305,18 @@ The point is not the perfect tree; it is that a new tester can add a test in 15 
       ],
       correct: [0],
       explanation:
-        'The official POM guide creates locators in the constructor and stores them as readonly fields. This works because locators are lazy and resolve only when used. Passing selectors from tests defeats the pattern, the config has no locator section, and beforeAll cannot use page.',
+        'The official POM guide creates locators in the constructor and saves them as readonly fields. This works because locators are lazy: they search the page only when used. Passing selectors from tests defeats the pattern. The config has no locator section, and beforeAll cannot use page.',
       followUps: [
         {
           q: 'Why is it safe to create them before page.goto()?',
-          a: 'A Locator is only a description of how to find elements. It queries the DOM each time an action or assertion runs, so creating it early costs nothing and never goes stale.',
+          a: 'A Locator is only a description of how to find elements. It searches the page each time an action or assertion runs. So creating it early costs nothing, and it never goes out of date.',
         },
       ],
     },
     {
       id: 'pw-pom-data-mcq-03',
       difficulty: 'medium',
-      question: 'Running this spec fails before any test starts. Why?',
+      question: 'This spec fails before any test starts. Why?',
       code: {
         language: 'typescript',
         code: `const users = ['standard_user', 'problem_user', 'standard_user'];
@@ -1203,11 +1337,11 @@ for (const user of users) {
       ],
       correct: [1],
       explanation:
-        'standard_user appears twice, so two tests share the title "inventory loads for standard_user", and Playwright reports duplicate titles as an error. File-level loops are the documented way to parameterise, env vars are readable anywhere, and fixtures work in generated tests.',
+        'standard_user appears twice. So two tests share the title "inventory loads for standard_user", and Playwright reports duplicate titles as an error. File-level loops are the documented way to parameterise. Env vars can be read anywhere, and fixtures work in generated tests.',
       followUps: [
         {
           q: 'How would you guard against this when the data comes from a CSV?',
-          a: 'Include a unique column (a test case id) in the title, for example `${row.id}: ${row.user}`, and validate the CSV for duplicate ids when loading it so the error message is clear.',
+          a: 'Put a unique column (a test case id) in the title, for example `${row.id}: ${row.user}`. Also check the CSV for duplicate ids when you load it, so the error message is clear.',
         },
       ],
     },
@@ -1233,11 +1367,11 @@ expect(await inventoryPage.isLoaded()).toBe(true);`,
       ],
       correct: [1],
       explanation:
-        'isVisible() returns the state at that instant without waiting, so the boolean is often false while the page is still rendering. A web-first assertion on the locator retries until the timeout. Sleeps slow the suite and still race, a manual retry is a weak copy of auto-waiting, and toBeTruthy() checks the same one-shot boolean.',
+        'isVisible() returns the state at that moment, without waiting. So it is often false while the page is still loading. A web-first assertion on the locator retries until the timeout. A sleep slows the suite and can still lose the race. A manual retry is a weak copy of auto-waiting, and toBeTruthy() checks the same one-time value.',
       followUps: [
         {
           q: 'When is isVisible() appropriate?',
-          a: 'For branching logic where you do not want to wait, for example closing an optional cookie banner if it is already shown. For checking expected behaviour, always use expect(locator) assertions.',
+          a: 'For branching logic where you do not want to wait. Example: close an optional cookie banner if it is already showing. To check expected behaviour, always use expect(locator) assertions.',
         },
       ],
     },
@@ -1254,11 +1388,11 @@ expect(await inventoryPage.isLoaded()).toBe(true);`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Locators, user-intent actions and a readiness wait at the end of navigation belong in page objects. The expected total is test-case data and belongs in the spec or data files. Fixed sleeps are an anti-pattern anywhere: they are slow and still race.',
+        'Locators, user actions and a "page is ready" wait at the end of navigation belong in page objects. The expected total is test-case data, so it belongs in the spec or a data file. A fixed sleep is bad anywhere: it is slow and can still lose the race.',
       followUps: [
         {
           q: 'Why is the readiness wait acceptable but the business assertion is not?',
-          a: 'The readiness wait is part of performing the navigation reliably and is the same for every test. The expected total is what a specific test case verifies; hiding it in the page object would make the method unusable for other cases.',
+          a: 'The ready-wait is part of doing the navigation reliably, and it is the same for every test. The expected total is what one specific test case checks. Hiding it in the page object would make the method useless for other cases.',
         },
       ],
     },
@@ -1270,18 +1404,18 @@ expect(await inventoryPage.isLoaded()).toBe(true);`,
       options: ['4', '7', '12', '64'],
       correct: [2],
       explanation:
-        'Each project runs every test in the matching files: 4 generated tests × 3 projects = 12. 4 ignores the projects, 7 adds instead of multiplying, and 64 (4 cubed) wrongly treats projects as an exponent.',
+        'Each project runs every test in the matching files: 4 generated tests × 3 projects = 12. The answer 4 ignores the projects. 7 adds instead of multiplying. 64 (4 cubed) wrongly treats projects as a power.',
       followUps: [
         {
           q: 'How would you run the matrix only on chromium?',
-          a: 'Either run npx playwright test --project=chromium, or restrict the file in config with testIgnore/testMatch on the other projects, or call test.skip(({ browserName }) => browserName !== "chromium") at file level.',
+          a: 'Run npx playwright test --project=chromium. Or limit the file in the config with testIgnore or testMatch on the other projects. Or call test.skip(({ browserName }) => browserName !== "chromium") at file level.',
         },
       ],
     },
     {
       id: 'pw-pom-data-mcq-07',
       difficulty: 'medium',
-      question: 'A test fails with random Faker data and you need to reproduce the exact same values while debugging. What helps most?',
+      question: 'A test fails with random Faker data. You need the exact same values again while debugging. What helps most?',
       options: [
         'Call faker.seed(n) with a fixed number before generating, and log the values used',
         'Switch to faker.name.firstName(), which is deterministic',
@@ -1290,11 +1424,11 @@ expect(await inventoryPage.isLoaded()).toBe(true);`,
       ],
       correct: [0],
       explanation:
-        'faker.seed(n) makes the sequence repeatable, and logging generated values in the report lets you replay a failure. faker.name is the old module name, not a deterministic mode. Moving generation into beforeAll does not make it repeatable, and repeating runs hoping for the same random data is guesswork.',
+        'faker.seed(n) makes the values repeat in the same order, and logging the generated values in the report lets you replay a failure. faker.name is the old module name, not a fixed-value mode. Moving data creation into beforeAll does not make it repeat. Re-running and hoping for the same random data is guesswork.',
       followUps: [
         {
           q: 'Why not seed Faker with the same number in every worker permanently?',
-          a: 'Every worker would then generate the same sequence, so parallel tests would create identical names and collide. Use seeding for debugging, and rely on randomness or testId for uniqueness in normal runs.',
+          a: 'Then every worker would make the same values, so parallel tests would create identical names and clash. Use a seed for debugging. In normal runs, rely on random values or testId for uniqueness.',
         },
       ],
     },
@@ -1310,11 +1444,11 @@ expect(await inventoryPage.isLoaded()).toBe(true);`,
       ],
       correct: [1],
       explanation:
-        'A component object wraps the shared UI once and each page has a header instance (composition). Copying duplicates selectors, and inheriting from InventoryPage would give CartPage inventory methods it should not have. The config is not a place for locators.',
+        'A component object wraps the shared UI once, and each page holds a header object (composition). Copying repeats selectors. Inheriting from InventoryPage would give CartPage inventory methods it should not have. The config is not a place for locators.',
       followUps: [
         {
           q: 'How do you keep a ProductCard component from clicking a button in another card?',
-          a: 'Give it a root locator (one inventory item, found with filter({ hasText: name })) and build every child locator from that root, so its button lookup is scoped to that card only.',
+          a: 'Give it a root locator: one inventory item, found with filter({ hasText: name }). Build every child locator from that root. Then its button search stays inside that one card.',
         },
       ],
     },
@@ -1342,18 +1476,18 @@ await expect(cartPage.badge).toHaveText('2');`,
       ],
       correct: [1],
       explanation:
-        'Locators are lazy and re-resolve on every action or assertion, so creating one before the element exists is fine; toHaveText then retries until the badge reads 2. There is no refresh() on locators, and timeout 0 would remove the retrying rather than help.',
+        'Locators are lazy and look up the element again on every action or assertion. So creating one before the element exists is fine. toHaveText then retries until the badge reads 2. Locators have no refresh() method. A timeout of 0 would turn off the retrying instead of helping.',
       followUps: [
         {
           q: 'What would break if the constructor stored await locator.textContent() instead?',
-          a: 'You cannot await in a constructor, and even in an async init method the stored string would be a snapshot of that moment (probably empty) and never update. Store locators, read values at the time of the check.',
+          a: 'You cannot use await in a constructor. Even in an async setup method, the saved string would be a snapshot of that moment (probably empty) and would never update. Save locators, and read values at the time of the check.',
         },
       ],
     },
     {
       id: 'pw-pom-data-mcq-10',
       difficulty: 'hard',
-      question: 'Select ALL places where cleanup of API-created test data will still run when the test fails an assertion.',
+      question: 'Select ALL places where clean-up of API-created test data still runs when the test fails an assertion.',
       options: [
         'Code after await use() in the fixture that created the data',
         'A test.afterEach hook in the same file',
@@ -1362,11 +1496,11 @@ await expect(cartPage.badge).toHaveText('2');`,
       ],
       correct: [0, 1, 3],
       explanation:
-        'Fixture teardown and afterEach run whether the test passed or failed, and a teardown project runs after the dependent projects finish. Code at the end of the test body is skipped as soon as an assertion throws, which is the classic cause of leaked data.',
+        'Fixture teardown and afterEach run whether the test passed or failed. A teardown project runs after the projects that depend on it finish. Code at the end of the test body is skipped as soon as an assertion fails. That is the classic cause of leaked data.',
       followUps: [
         {
           q: 'Which of these do you prefer and why?',
-          a: 'Fixture teardown, because creation and deletion live in one function and the test cannot forget it. The prefixed sweep is a safety net for crashes; afterEach works but splits setup and cleanup across the file.',
+          a: 'Fixture teardown, because creating and deleting live in one function, and the test cannot forget it. The prefixed sweep is a safety net for crashes. afterEach works, but it splits setup and clean-up across the file.',
         },
       ],
     },
@@ -1374,7 +1508,7 @@ await expect(cartPage.badge).toHaveText('2');`,
       id: 'pw-pom-data-mcq-11',
       difficulty: 'medium',
       question:
-        'Locally you run against QA; in CI the same suite must hit staging, where customer ids differ. Which approach is best?',
+        'Locally you run against QA. In CI the same suite must hit staging, where customer ids are different. Which approach is best?',
       options: [
         'Hard-code QA ids and comment them out in CI',
         'Keep data/env/qa.json and data/env/staging.json and pick one with a TEST_ENV variable',
@@ -1383,11 +1517,11 @@ await expect(cartPage.badge).toHaveText('2');`,
       ],
       correct: [1],
       explanation:
-        'Per-environment data files chosen by one environment variable keep tests identical across environments; the config can use the same TEST_ENV for baseURL. Commenting code in and out is error-prone, CI checks inside every test scatter environment logic, and reports are outputs, not inputs.',
+        'Data files per environment, picked by one environment variable, keep the tests the same everywhere. The config can use the same TEST_ENV for baseURL. Commenting code in and out leads to mistakes. CI checks inside every test spread environment logic everywhere. Reports are outputs, not inputs.',
       followUps: [
         {
           q: 'Would you put the staging admin password in staging.json?',
-          a: 'No. Passwords and tokens go in environment variables (CI secrets in pipelines, a gitignored .env locally). The JSON holds non-secret data such as ids and feature flags.',
+          a: 'No. Passwords and tokens go in environment variables: CI secrets in pipelines and a gitignored .env locally. The JSON holds only non-secret data, such as ids and feature flags.',
         },
       ],
     },
@@ -1404,11 +1538,11 @@ await expect(cartPage.badge).toHaveText('2');`,
       ],
       correct: [1],
       explanation:
-        'This is a design choice: fluent methods show which page you land on, while fixtures keep page objects independent and are lazily created. Playwright requires neither. Page objects are light wrappers around one shared page, so returning them leaks nothing, and fixtures happily give several page objects the same page.',
+        'This is a design choice. Fluent methods show which page you land on. Fixtures keep page objects separate and create them lazily. Playwright requires neither. Page objects are light wrappers around one shared page, so returning them leaks nothing. Fixtures can easily give several page objects the same page.',
       followUps: [
         {
           q: 'What is a risk of long fluent chains?',
-          a: 'Chains like login().addToCart().openCart().checkout() hide where failures happen and tie page objects to each other, so a change in one flow ripples through many classes. Short chains or fixtures plus test.step keep it readable.',
+          a: 'Chains like login().addToCart().openCart().checkout() hide where failures happen. They also tie page objects to each other, so a change in one flow spreads through many classes. Short chains, or fixtures plus test.step, keep it readable.',
         },
       ],
     },
@@ -1435,11 +1569,11 @@ await expect(cartPage.badge).toHaveText('2');`,
       ],
       correct: [0, 1, 2],
       explanation:
-        'Hard-coded secrets, a fixed sleep and an unrelated business assertion are real problems. getByRole with an accessible name is the recommended, resilient locator. Inline locators are a style choice that hurts reuse a little, but they are not the main defects here.',
+        'Typed-in secrets, a fixed sleep and an unrelated business check are real problems. getByRole with an accessible name is the recommended, sturdy locator. Inline locators are a style choice that slightly hurts reuse, but they are not the main defects here.',
       followUps: [
         {
           q: 'How would you rewrite it?',
-          a: 'login(user, pass) using readonly locators, credentials passed in from env vars by the caller or fixture, no sleep (or a readiness check on the next page title), and the total assertion moved into the checkout test that cares about it.',
+          a: 'login(user, pass) with readonly locators. The caller or a fixture passes in credentials from env vars. No sleep, or a ready-check on the next page title instead. The total check moves into the checkout test that cares about it.',
         },
       ],
     },
@@ -1469,11 +1603,11 @@ test('B: product prices', async ({ page }) => {
       ],
       correct: [1],
       explanation:
-        'A module is evaluated once per worker and every import gets the same object, so A\'s mutation is visible to B in that worker. The file on disk is untouched, Playwright does not reload modules between tests, and a JSON import is not a promise.',
+        'A module is loaded once per worker, and every import gets the same object. So A\'s change is visible to B in that worker. The file on disk is not touched. Playwright does not reload modules between tests, and a JSON import is not a promise.',
       followUps: [
         {
           q: 'Fix it in one line in test A.',
-          a: 'Work on a copy: const item = structuredClone(products[0]); item.price *= 0.9. Better still, treat data files as read-only by convention, or freeze them (Object.freeze) in a data module so accidental mutation throws.',
+          a: 'Work on a copy: const item = structuredClone(products[0]); item.price *= 0.9. Better still, treat data files as read-only by team rule. Or freeze them (Object.freeze) in a data module, so an accidental change throws an error.',
         },
       ],
     },
@@ -1489,11 +1623,11 @@ test('B: product prices', async ({ page }) => {
       ],
       correct: [0],
       explanation:
-        'Custom fixtures exist only on the extended test object exported from your fixtures file. Importing the base test from @playwright/test means the runner does not know inventoryPage. The other options would cause different errors, or none at all.',
+        'Custom fixtures exist only on the extended test object exported from your fixtures file. If the spec imports the base test from @playwright/test, the runner does not know inventoryPage. The other options would cause different errors, or none at all.',
       followUps: [
         {
           q: 'How do you stop this from happening again?',
-          a: "Add an ESLint no-restricted-imports rule that forbids importing test from '@playwright/test' in tests/, pointing developers to fixtures/index.ts.",
+          a: "Add an ESLint no-restricted-imports rule. It forbids importing test from '@playwright/test' in tests/ and points developers to fixtures/index.ts.",
         },
       ],
     },

@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 3,
   title: 'Actions: Clicking, Typing, Dialogs, Tabs, Frames and Tables',
   subtitle:
-    'Everything a user does with mouse and keyboard, expressed as Playwright actions: navigation, clicks, typing, dropdowns, drag and drop, uploads and downloads, browser dialogs, new tabs, iframes and data tables.',
+    'How to do in code what a user does with mouse and keyboard: open pages, click, type, pick from dropdowns, drag, upload, download, answer pop-up dialogs, handle new tabs, work in iframes and read tables.',
   estimatedMinutes: 110,
   sources: [
     'Playwright docs — Actions (playwright.dev/docs/input)',
@@ -23,34 +23,38 @@ const topic: Topic = {
   ],
   tags: ['playwright', 'actions', 'click', 'fill', 'selectOption', 'dialogs', 'popups', 'iframes', 'upload', 'download', 'tables', 'drag-and-drop'],
   cheatSheet: [
-    'Every action is async: always `await locator.click()`. An action resolves the locator, waits for actionability, scrolls into view, then acts. No default action timeout: it waits until the 30s test timeout unless you set `actionTimeout`.',
-    '`page.goto(url)` waits for `load` by default; `waitUntil` can be `load` | `domcontentloaded` | `commit` | `networkidle` (discouraged). Use `page.waitForURL(\'**/inventory.html\')` after a click that navigates.',
-    '`fill()` replaces the value in one go (preferred). `pressSequentially(text, { delay })` types key by key for autocomplete/keystroke handlers. `press(\'Enter\')` sends one key. `page.type` is deprecated.',
-    'Clicks: `click()`, `dblclick()`, `click({ button: \'right\' })`, `click({ modifiers: [\'Shift\'] })`, `hover()`. `{ force: true }` skips checks and can hide real bugs (an overlay a user cannot click through).',
-    'Native `<select>` → `selectOption(\'value\')`, `selectOption({ label })`, `selectOption({ index })`, or an array for multi-select. Custom div dropdowns → click the trigger, then click `getByRole(\'option\', { name })`.',
-    '`check()` / `uncheck()` / `setChecked(bool)` for checkboxes and radios; they verify the state actually changed.',
+    'Always `await` an action. Each action finds the element, waits until it is ready, scrolls to it, then acts. Actions have no time limit of their own: the 30 s test timeout stops them, unless you set `actionTimeout`.',
+    '`page.goto(url)` waits for the `load` event by default. `waitUntil` can be `load`, `domcontentloaded`, `commit` or `networkidle` (not recommended). After a click that opens a page, use `page.waitForURL(\'**/inventory.html\')`.',
+    '`fill()` puts in the whole text at once (use this by default). `pressSequentially(text, { delay })` types key by key, for autocomplete. `press(\'Enter\')` sends one key. `page.type` is old; do not use it.',
+    'Clicks: `click()`, `dblclick()`, `click({ button: \'right\' })`, `click({ modifiers: [\'Shift\'] })`, `hover()`. `{ force: true }` skips the safety checks and can hide real bugs, like a banner a user cannot click through.',
+    'Real `<select>` → `selectOption(\'value\')`, `selectOption({ label })`, `selectOption({ index })`, or a list for multi-select. Custom div dropdowns → click the dropdown, then click `getByRole(\'option\', { name })`.',
+    '`check()` / `uncheck()` / `setChecked(bool)` for checkboxes and radio buttons. They confirm the box really changed.',
     'Upload: `setInputFiles(path | path[] | [] | { name, mimeType, buffer })`. Download: `const p = page.waitForEvent(\'download\'); await click; const d = await p; await d.saveAs(...)`.',
-    'Dialogs are auto-dismissed if no listener exists. Register `page.once(\'dialog\', d => d.accept())` BEFORE the click; a listener that never calls accept()/dismiss() makes the click hang.',
-    'New tab: `const p = context.waitForEvent(\'page\')` (or `page.waitForEvent(\'popup\')`) BEFORE the click, then `const tab = await p`. Awaiting after the click races and can miss the event.',
-    'Iframes: `page.frameLocator(\'#mce_0_ifr\').locator(\'#tinymce\')` or `page.locator(\'iframe\').contentFrame()`. Page-level locators never look inside frames.',
-    'Tables: `page.locator(\'#table1 tbody tr\').filter({ hasText: \'Bach\' })` finds a row by content; then read a cell with `.locator(\'td\').nth(3)`. `allTextContents()` returns a snapshot array.',
-    'Drag: `source.dragTo(target)`; fallback is `hover → mouse.down → hover target (twice for dragover) → mouse.up`. Scrolling is automatic; `mouse.wheel(0, 500)` for infinite lists.',
+    'With no listener, dialogs close by themselves (Cancel for a confirm). Add `page.once(\'dialog\', d => d.accept())` BEFORE the click. A listener that never calls accept() or dismiss() makes the click hang.',
+    'New tab: start `const p = context.waitForEvent(\'page\')` (or `page.waitForEvent(\'popup\')`) BEFORE the click, then `const tab = await p`. If you start waiting after the click, you can miss the tab.',
+    'Iframes: `page.frameLocator(\'#mce_0_ifr\').locator(\'#tinymce\')` or `page.locator(\'iframe\').contentFrame()`. Normal page locators never look inside an iframe.',
+    'Tables: `page.locator(\'#table1 tbody tr\').filter({ hasText: \'Bach\' })` finds a row by its text. Then read a cell with `.locator(\'td\').nth(3)`. `allTextContents()` reads the list right now and does not wait.',
+    'Drag: `source.dragTo(target)`. If the page is picky: hover source, `mouse.down()`, hover target twice, `mouse.up()`. Actions scroll by themselves; use `mouse.wheel(0, 500)` for endless lists.',
   ],
   sections: [
     {
       heading: 'What happens when you call an action',
-      body: `**Intuition:** an action is a polite robot finger. Before it presses a button it looks for the button, waits until it can actually be pressed (visible, not moving, not covered, not disabled), scrolls it into view, and only then presses. A manual tester does the same without thinking about it.
+      body: `**Example:** \`await page.getByRole('button', { name: 'Login' }).click()\` → Playwright finds the Login button. It waits until the button can be clicked. Then it clicks it.
 
-Every call like \`await page.getByRole('button', { name: 'Login' }).click()\` goes through four stages:
+An **action** is something a user does: click, type, pick, drag. Think of it as a careful robot finger. A manual tester does the same steps without thinking.
 
-1. **Resolve** the locator to exactly one element (strict mode: two matches is an error, not a guess).
-2. **Wait for actionability**: the checks depend on the action (a click needs visible, stable, receives events and enabled; \`fill\` needs visible, enabled and editable). The full table lives in the next topic, *Assertions and waiting*.
-3. **Scroll** the element into view if needed.
-4. **Perform** the real input event (mouse move + down + up for a click, an \`input\` event for \`fill\`).
+Every action goes through four steps:
 
-If the element never becomes actionable, the action keeps retrying. Playwright has **no default action timeout**, so the wait is bounded only by the **test timeout (30s)** unless you set \`use: { actionTimeout: 10_000 }\` in the config or pass \`{ timeout }\` to the call.
+1. **Find** the element. The locator must match exactly one element. Two matches is an error, not a guess. This rule is called **strict mode**.
+2. **Wait** until the element is ready. For a click, it must be visible, not moving, enabled and not covered. These checks are called **actionability checks**. The next topic, *Assertions and waiting*, lists them all.
+3. **Scroll** the element into view, if needed.
+4. **Do** the real action, like a mouse press and release.
 
-**Every action returns a Promise.** Forgetting \`await\` is the number one beginner bug: the next line runs before the click has happened, and the test may even finish before the action fails.
+How long does it wait? An action has **no time limit of its own**. It keeps trying until the **test timeout (30 seconds)** runs out. You can set a shorter limit with \`actionTimeout\` in the config, or pass \`{ timeout }\` to one call.
+
+**Every action returns a Promise, so always use \`await\`.** Without \`await\`, the next line runs before the click happens. This is the most common beginner bug.
+
+**Watch out:** an action does not check the result. A click only clicks. An assertion with \`expect\` proves the page changed.
 
 | Want to do | Use | Avoid |
 |---|---|---|
@@ -61,7 +65,9 @@ If the element never becomes actionable, the action keeps retrying. Playwright h
 | Pick from \`<select>\` | \`locator.selectOption('2')\` | Clicking \`<option>\` elements |
 | Tick a box | \`locator.check()\` | \`click()\` (does not verify the state) |
 
-**In interviews, say this:** "Playwright actions auto-wait for the element to be actionable, so I do not add sleeps before clicks. I use locator-based actions, I always await them, and I keep \`force: true\` for rare, justified cases."`,
+**In an interview, say:** "Playwright actions wait for the element to be ready. So I never add sleeps before a click. I always await actions. I use \`force: true\` only in rare cases, with a reason."
+
+**Why testers care:** auto-waiting removes most fixed sleeps, so tests run faster and fail less.`,
       code: [
         {
           language: 'typescript',
@@ -71,7 +77,7 @@ If the element never becomes actionable, the action keeps retrying. Playwright h
 test('standard user can log in', async ({ page }) => {
   await page.goto('https://www.saucedemo.com/');
 
-  // fill(): waits for the input to be visible, enabled and editable, then sets the value
+  // fill(): waits until the input is visible, enabled and editable, then sets the value
   await page.getByPlaceholder('Username').fill('standard_user');
   await page.getByPlaceholder('Password').fill('secret_sauce');
 
@@ -95,33 +101,38 @@ test('standard user can log in', async ({ page }) => {
         v
   [3 scroll into view]  -->  [4 mouse move, down, up]  -->  resolves`,
       keyPoints: [
-        'Actions resolve, wait for actionability, scroll, then act.',
-        'No default action timeout: the 30s test timeout is the usual limit.',
-        'Always await; actions do not verify outcomes, assertions do.',
+        'An action finds the element, waits until it is ready, scrolls, then acts.',
+        'Actions have no time limit of their own; the 30 s test timeout stops them.',
+        'Always await actions. Actions do not check results; assertions do.',
       ],
       source: 'Playwright docs — Actions; Auto-waiting (actionability)',
     },
     {
       heading: 'Navigation: goto, waitUntil, reload and history',
-      body: `**Intuition:** \`goto\` is typing a URL and pressing Enter, then waiting for the browser's loading spinner to stop.
+      body: `**Example:** \`await page.goto('https://www.saucedemo.com/')\` → the browser opens the page. Playwright waits until the page has fully loaded, then moves on.
 
-- \`page.goto(url)\` resolves when the page fires the **\`load\`** event (all images, scripts and styles loaded). It returns the main response, so you can check the status.
-- \`waitUntil\` changes what "loaded" means:
+\`goto\` is like typing a URL and pressing Enter. By default it waits for the **\`load\`** event. That means images, scripts and styles have all loaded.
+
+\`goto\` also returns the server's answer (the response). So you can check the status code, like 200.
+
+The \`waitUntil\` option changes what "loaded" means:
 
 | \`waitUntil\` | Resolves when | Use it |
 |---|---|---|
 | \`'load'\` (default) | \`load\` event fired | Almost always |
 | \`'domcontentloaded'\` | HTML parsed, before images | Heavy pages where you only need the DOM |
 | \`'commit'\` | Response received, document starts loading | Rare: testing very early page state |
-| \`'networkidle'\` | No network traffic for 500 ms | **Discouraged** by the docs: analytics and polling can keep it from ever settling; assert on the UI instead |
+| \`'networkidle'\` | No network traffic for 500 ms | **Not recommended** by the docs: background requests can stop it from ever finishing; check the page content instead |
 
-- With \`baseURL\` in the config, write \`page.goto('/inventory.html')\`.
-- \`page.reload()\`, \`page.goBack()\`, \`page.goForward()\` mirror the browser buttons.
-- After a click that triggers navigation, you do **not** need \`waitForNavigation\` (deprecated). Either assert on the destination with \`await expect(page).toHaveURL(...)\`, or use \`await page.waitForURL('**/checkout-step-one.html')\` when you need to be on the new page before acting.
+Other helpers:
+- If \`baseURL\` is set in the config, you can write just \`page.goto('/inventory.html')\`.
+- \`page.reload()\`, \`page.goBack()\` and \`page.goForward()\` work like the browser buttons.
 
-**Common mistake:** adding \`waitUntil: 'networkidle'\` "to be safe". It slows every test and can still be wrong for single-page apps that render after the network quietens. Wait for what the user waits for: the content.
+What if a click opens a new page? You do **not** need \`waitForNavigation\`. It is old (deprecated). Check the new address with \`await expect(page).toHaveURL(...)\`. Or use \`await page.waitForURL('**/checkout-step-one.html')\` before your next step.
 
-**Worked example (manual tester's view):** the regression case "Back button returns to the product list with filters kept" becomes \`goBack()\` plus an assertion on the sort dropdown's value.`,
+**Watch out:** do not add \`waitUntil: 'networkidle'\` "to be safe". It makes every test slower. It can still be wrong for modern apps. Wait for what the user waits for: the content.
+
+**Why testers care:** a manual case like "Back button returns to the product list" becomes \`goBack()\` plus one check.`,
       code: [
         {
           language: 'typescript',
@@ -149,15 +160,17 @@ test('back button returns to the product list', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'goto waits for load by default and returns the response.',
-        'networkidle is discouraged; assert on visible content instead.',
-        'Use toHaveURL or waitForURL after navigation clicks, not waitForNavigation.',
+        'goto waits for the load event by default and returns the response.',
+        'Avoid networkidle; check the visible content instead.',
+        'After a click that opens a page, use toHaveURL or waitForURL.',
       ],
       source: 'Playwright docs — Navigations; API reference page.goto',
     },
     {
       heading: 'Clicking, hovering and the force option',
-      body: `**Intuition:** most clicks are just \`click()\`. The variants exist because real users also double-click, right-click, Shift-click and hover.
+      body: `**Example:** \`await row.click({ button: 'right' })\` → Playwright right-clicks the row. The page's context menu opens.
+
+Most clicks are just \`click()\`. But real users also double-click, right-click, Shift-click and hover. Playwright has an option for each one.
 
 | Need | Code |
 |---|---|
@@ -170,13 +183,17 @@ test('back button returns to the product list', async ({ page }) => {
 | Skip actionability checks | \`await btn.click({ force: true })\` |
 | Fire a DOM event only | \`await btn.dispatchEvent('click')\` |
 
-**About \`force: true\`.** It skips the non-essential checks, including "receives events". That means Playwright will click **even if a cookie banner covers the button**. A real user cannot do that, so a forced click can turn a real defect (overlay blocks checkout) into a passing test. Legitimate uses are rare: an element that is intentionally covered by a transparent styled layer (custom checkbox), or a known third-party quirk, always with a comment explaining why.
+**About \`force: true\`.** It skips the safety checks before the click. One check is "is something covering the button?". So a forced click works **even if a cookie banner covers the button**. A real user cannot do that. The forced test passes, but a real bug stays hidden.
 
-**\`dispatchEvent('click')\`** does not move the mouse at all; it only fires the event on the element. Useful for testing an event handler in isolation, not for simulating a user.
+Use \`force\` only in rare cases. Example: a styled checkbox that hides the real input on purpose. Always add a comment that says why.
 
-**Hover menus:** \`hover()\` then click the revealed item. If the menu closes when the mouse leaves, do not interleave other actions between the two lines.
+**\`dispatchEvent('click')\`** does not move the mouse. It only sends a click signal to the element. It does not act like a real user.
 
-**In interviews, say this:** "If a click fails with 'element intercepts pointer events', my first question is whether a user would also be blocked. If yes, that is a bug to report, not something to force."`,
+**Hover menus:** call \`hover()\`, then click the item that appears. Do not put other actions between those two lines.
+
+**In an interview, say:** "If a click fails because another element covers it, I ask: is a real user blocked too? If yes, I report a bug. I do not force the click."
+
+**Why testers care:** a forced click can hide a real overlay bug that blocks customers.`,
       code: [
         {
           language: 'typescript',
@@ -207,15 +224,20 @@ test('overlay: dismiss it like a user, do not force', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Use options (button, modifiers, position) instead of low-level mouse code.',
-        'force: true can hide overlay bugs; justify every use in a comment.',
-        'dispatchEvent fires an event without a real pointer interaction.',
+        'Use click options (button, modifiers, position) instead of raw mouse code.',
+        'force: true can hide overlay bugs; explain every use in a comment.',
+        'dispatchEvent sends a click signal without moving a real mouse.',
       ],
       source: 'Playwright docs — Actions: mouse click, forcing actions',
     },
     {
       heading: 'Typing: fill vs pressSequentially vs press',
-      body: `**Intuition:** \`fill\` is pasting a value, \`pressSequentially\` is typing it one key at a time, \`press\` is hitting a single key or shortcut.
+      body: `**Example:** \`await page.getByPlaceholder('Username').fill('standard_user')\` → Playwright clears the box and puts in the whole text at once.
+
+Three ways to type:
+- \`fill\` is like pasting a value.
+- \`pressSequentially\` types one key at a time.
+- \`press\` hits one key or shortcut, like Enter.
 
 | Method | What it does | When |
 |---|---|---|
@@ -227,13 +249,16 @@ test('overlay: dismiss it like a user, do not force', async ({ page }) => {
 | \`page.type()\` | Deprecated | Never in new code |
 
 Key facts:
-- \`fill\` throws if the target is not an \`<input>\`, \`<textarea>\` or \`[contenteditable]\` (a \`<label>\` pointing at a control is allowed; the control is filled).
-- \`fill\` waits for **visible, enabled and editable**, so a \`readonly\` field makes it wait and fail. That is a correct failure: the user cannot type there either.
-- Key names: \`Enter\`, \`Tab\`, \`Backspace\`, \`Escape\`, \`ArrowDown\`, \`F2\`, \`Shift+A\`. \`ControlOrMeta\` is Ctrl on Windows/Linux and Cmd on macOS, so one test works on both.
+- \`fill\` works on an input, a textarea or an editable area. On anything else it throws an error. (A label linked to an input is fine.)
+- \`fill\` waits until the field is **visible, enabled and editable**. A read-only field makes it fail. That is correct: a user cannot type there either.
+- Key names: \`Enter\`, \`Tab\`, \`Backspace\`, \`Escape\`, \`ArrowDown\`, \`Shift+A\`.
+- \`ControlOrMeta\` means Ctrl on Windows and Linux, and Cmd on Mac. One test works on both.
 
-**Worked example:** testing a search box that suggests results as you type. \`fill('lap')\` sets the value but some widgets only listen for \`keyup\`, so no suggestions appear. Switch to \`pressSequentially('lap')\`, then pick a suggestion with \`ArrowDown\` + \`Enter\`.
+**When to switch:** some search boxes show suggestions only on key presses. \`fill('lap')\` sets the text, but no suggestions appear. Use \`pressSequentially('lap')\` instead. Then pick a suggestion with \`ArrowDown\` and \`Enter\`.
 
-**Common mistake:** using \`pressSequentially\` everywhere "because it is more realistic". It is slower and adds no coverage for ordinary inputs.`,
+**Watch out:** do not use \`pressSequentially\` everywhere "to be realistic". It is slower and tests nothing extra on normal fields.
+
+**Why testers care:** the right typing method makes autocomplete and search tests work the first time.`,
       code: [
         {
           language: 'typescript',
@@ -268,19 +293,21 @@ test('select all and replace using a cross-platform shortcut', async ({ page }) 
         },
       ],
       keyPoints: [
-        'fill is the default; pressSequentially only for per-key behaviour.',
-        'press handles keys and chords; ControlOrMeta is cross-platform.',
-        'page.type is deprecated.',
+        'Use fill by default; use pressSequentially only when keys matter.',
+        'press sends one key or shortcut; ControlOrMeta works on every OS.',
+        'page.type is old (deprecated); do not use it.',
       ],
       source: 'Playwright docs — Actions: text input, type characters, keys and shortcuts',
     },
     {
       heading: 'Checkboxes, radios and dropdowns (native vs custom)',
-      body: `**Intuition:** a native dropdown is a real \`<select>\` element the browser draws; a custom dropdown is a pile of \`div\`s that only *looks* like one. Playwright treats them very differently.
+      body: `**Example:** \`await sort.selectOption('lohi')\` → Playwright picks the option whose value is \`lohi\`. On SauceDemo, that is "Price (low to high)".
 
-**Checkboxes and radios.** \`check()\`, \`uncheck()\` and \`setChecked(true | false)\` click only if needed and then **verify** the state changed (they throw if the page ignores the click). \`click()\` toggles blindly, so prefer \`check()\`.
+**Checkboxes and radio buttons.** Use \`check()\`, \`uncheck()\` or \`setChecked(true | false)\`. They click only if needed. Then they confirm the box really changed. If the page ignores the click, they throw an error. A plain \`click()\` just flips the box and checks nothing. So prefer \`check()\`.
 
-**Native \`<select>\`**: use \`selectOption\`. It waits for the select to be visible and enabled and for the requested options to exist, selects them, fires \`input\` and \`change\`, and returns the selected values.
+**Two kinds of dropdown.** A **native** dropdown is a real \`<select>\` element. A **custom** dropdown is a group of \`div\`s that only looks like one. Playwright handles them differently.
+
+**Native \`<select>\`:** use \`selectOption\`. It waits for the dropdown and the option. It picks the option and tells the page the value changed.
 
 | Call | Selects by |
 |---|---|
@@ -291,9 +318,11 @@ test('select all and replace using a cross-platform shortcut', async ({ page }) 
 
 SauceDemo's sort dropdown is \`[data-test="product-sort-container"]\` with values \`az\`, \`za\`, \`lohi\`, \`hilo\`. On the-internet \`/dropdown\`, \`#dropdown\` has options valued \`1\` and \`2\`.
 
-**Custom dropdowns** (React Select, MUI, Angular Material): there is no \`<select>\`, so \`selectOption\` throws "Element is not a select". Do what the user does: click the trigger, then click the option. Good components expose \`role="combobox"\` and \`role="option"\`, so \`getByRole\` works. Assert on the trigger's displayed text.
+**Custom dropdowns** (React Select, MUI, Angular Material): there is no \`<select>\`. So \`selectOption\` throws "Element is not a select". Do what the user does. Click the dropdown to open it. Then click the option. Good dropdowns have the roles \`combobox\` and \`option\`, so \`getByRole\` works. Then check the text shown in the dropdown.
 
-**In interviews, say this:** "First I inspect the DOM. If it is a real \`<select>\` I use \`selectOption\` by value or label and assert with \`toHaveValue\`. If it is a custom widget I click the combobox and then the option by role and name."`,
+**In an interview, say:** "First I inspect the HTML. For a real \`<select>\`, I use \`selectOption\` and check with \`toHaveValue\`. For a custom dropdown, I click the combobox, then the option by role and name."
+
+**Why testers care:** picking the right method stops "Element is not a select" errors on modern apps.`,
       code: [
         {
           language: 'typescript',
@@ -342,24 +371,28 @@ test('choose a country in a custom combobox', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'check/uncheck/setChecked verify the result; click does not.',
-        'selectOption only works on a real <select>; by value, label, index or array.',
-        'Custom dropdowns: click the combobox, click the option by role.',
+        'check, uncheck and setChecked confirm the new state; click does not.',
+        'selectOption works only on a real <select>: by value, label, index or a list.',
+        'Custom dropdowns: click the combobox, then click the option by role.',
       ],
       source: 'Playwright docs — Actions: checkboxes and radio buttons, select options',
     },
     {
       heading: 'Drag and drop, mouse and scrolling',
-      body: `**Intuition:** dragging is "press, move, release". Playwright can do it in one call, or step by step when a page is picky.
+      body: `**Example:** \`await a.dragTo(b)\` → Playwright presses the mouse on box A, moves to box B and lets go.
 
-- **High level:** \`await source.dragTo(target)\` hovers the source, presses the mouse, moves to the target and releases. Options \`sourcePosition\` / \`targetPosition\` pick exact points.
-- **Manual fallback:** \`source.hover()\`, \`page.mouse.down()\`, \`target.hover()\`, \`page.mouse.up()\`. Some pages only react to the \`dragover\` event after the pointer has moved over the target once, so the docs suggest hovering the target **twice**.
-- **Scrolling:** actions scroll automatically. Explicit scrolling is only needed for behaviour triggered *by* scrolling: infinite lists, "back to top" buttons, lazy images. Use \`locator.scrollIntoViewIfNeeded()\` or \`page.mouse.wheel(0, 800)\` after hovering the scroll container.
-- **Raw mouse/keyboard** (\`page.mouse.move/down/up\`, \`page.keyboard.down('Shift')\`) is for canvases, sliders and drawing apps where there is no element to target.
+Dragging is "press, move, release". Playwright can do it in one call. It can also do it step by step for picky pages.
 
-**Worked example (the-internet \`/drag_and_drop\`):** two boxes, \`#column-a\` (header "A") and \`#column-b\` (header "B"). After dragging A onto B, the headers swap: the first column shows "B". That swap is your expected result, exactly as you would write it in a manual test case.
+- **One call:** \`source.dragTo(target)\`. This is the normal way.
+- **Step by step:** \`source.hover()\`, \`page.mouse.down()\`, \`target.hover()\`, \`page.mouse.up()\`. Some pages need the mouse to move over the target before they accept a drop. So the docs suggest hovering the target **twice**.
+- **Scrolling:** actions scroll by themselves. Scroll on purpose only to test scrolling itself. Examples: endless lists, "back to top" buttons. Use \`page.mouse.wheel(0, 800)\` or \`locator.scrollIntoViewIfNeeded()\`.
+- **Raw mouse and keyboard** (\`page.mouse\`, \`page.keyboard\`) are for drawing areas and sliders. Use them when there is no element to target.
 
-**Common mistake:** asserting nothing after a drag. The drag "succeeding" only means the mouse moved; the assertion proves the app reacted.`,
+**Practice page:** the-internet \`/drag_and_drop\` has two boxes, A and B. After you drag A onto B, they swap. The first box now shows "B". That swap is your expected result.
+
+**Watch out:** always check the result after a drag. A drag that "works" only proves the mouse moved.
+
+**Why testers care:** drag tests catch broken sorting, Kanban boards and file drop zones.`,
       code: [
         {
           language: 'typescript',
@@ -396,17 +429,19 @@ test('infinite scroll loads more paragraphs', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'dragTo first; manual mouse steps when the app needs dragover.',
-        'Scrolling is automatic for actions; scroll explicitly only to trigger behaviour.',
-        'Always assert the visible outcome of a drag.',
+        'Try dragTo first; use mouse steps (with two hovers) for picky pages.',
+        'Actions scroll by themselves; scroll on purpose only to test scrolling.',
+        'Always check the visible result of a drag.',
       ],
       source: 'Playwright docs — Actions: drag and drop, scrolling',
     },
     {
       heading: 'Uploading and downloading files',
-      body: `**Intuition:** you cannot click through the operating system's file picker in a test, so Playwright hands the file straight to the \`<input type="file">\`. For downloads, you listen for the browser's "download started" event and then decide where to save it.
+      body: `**Example:** \`await page.locator('#file-upload').setInputFiles('tests/data/invoice.pdf')\` → Playwright attaches the file. No file picker window opens.
 
-**Upload with \`setInputFiles\`** (no actionability checks; works even on a hidden input):
+A test cannot click through your computer's file picker window. So Playwright gives the file straight to the \`<input type="file">\` element.
+
+**Upload with \`setInputFiles\`.** It does not wait for the usual checks. It works even on a hidden input.
 
 | Form | Example |
 |---|---|
@@ -415,17 +450,17 @@ test('infinite scroll loads more paragraphs', async ({ page }) => {
 | Clear selection | \`setInputFiles([])\` |
 | In-memory file | \`setInputFiles({ name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') })\` |
 
-When the input is created dynamically only after a click (no input exists up front), use the **filechooser** event: start \`page.waitForEvent('filechooser')\`, click the upload button, then \`fileChooser.setFiles(...)\`.
+Sometimes the file input appears only after a click. Then use the **filechooser** event. Start \`page.waitForEvent('filechooser')\`. Click the upload button. Then call \`fileChooser.setFiles(...)\`.
 
-**Download with the \`download\` event:**
+**Download.** You listen for the browser's "download started" signal (an **event**). Then you save the file.
 1. \`const downloadPromise = page.waitForEvent('download');\` (no \`await\` yet)
 2. Click the link.
 3. \`const download = await downloadPromise;\`
-4. Check \`download.suggestedFilename()\`, then \`await download.saveAs(path)\` if you need the file. Read it with Node's \`fs\` to verify contents.
+4. Check \`download.suggestedFilename()\`. Save with \`await download.saveAs(path)\` if you need the file.
 
-Downloaded files are temporary and **deleted when the browser context closes**, so save them if you need them later in the test.
+**Watch out:** downloaded files are temporary. They are **deleted when the test's browser session closes**. Save them if you need them.
 
-**Worked example test cases (manual → automated):** "Upload a .txt file, see its name on the success page" maps to the-internet \`/upload\`: \`#file-upload\`, \`#file-submit\`, success heading "File Uploaded!" and the filename in \`#uploaded-files\`.`,
+**Why testers care:** upload and download cases from your manual suite can be automated without touching the file picker.`,
       code: [
         {
           language: 'typescript',
@@ -459,22 +494,24 @@ test('download a file and check it is not empty', async ({ page }, testInfo) => 
         },
       ],
       keyPoints: [
-        'setInputFiles takes a path, an array, [] or an in-memory buffer object.',
+        'setInputFiles takes a path, a list of paths, [] to clear, or a file made in code.',
         'Use the filechooser event only when the input appears after a click.',
-        'Start waitForEvent(\'download\') before the click; saveAs before the context closes.',
+        'Start waitForEvent(\'download\') before the click; call saveAs before the test ends.',
       ],
       source: 'Playwright docs — Actions: upload files; Downloads',
     },
     {
       heading: 'JavaScript dialogs: alert, confirm, prompt',
-      body: `**Intuition:** a browser dialog freezes the page until someone presses OK or Cancel. Playwright needs to know in advance which button you want pressed.
+      body: `**Example:** \`page.once('dialog', d => d.accept())\` then \`await button.click()\` → the confirm box opens, and Playwright presses OK.
 
-**Defaults:** if no \`dialog\` listener is registered, Playwright **auto-dismisses** every dialog (OK for an alert; Cancel for a confirm; null for a prompt). The test continues, but a confirm would be cancelled, which may not be what you wanted.
+A browser dialog (alert, confirm, prompt) freezes the page. It waits until someone presses OK or Cancel. So Playwright must know in advance which button to press.
 
-**Handling one yourself:**
-- Register the listener **before** the action that opens the dialog: \`page.once('dialog', d => d.accept())\`.
-- The listener **must** call \`accept()\` or \`dismiss()\`. A listener that only logs \`dialog.message()\` leaves the dialog open and the triggering \`click()\` **hangs** until the test times out.
-- \`page.on\` stays registered for every later dialog in the test; \`page.once\` handles just the next one. \`once\` avoids a forgotten global handler silently accepting a later "Delete everything?" confirm.
+**If you do nothing:** Playwright **closes every dialog for you** (auto-dismiss). An alert just closes. A confirm gets Cancel. A prompt gets no answer. The test goes on, but maybe down the wrong path.
+
+**Handling it yourself:**
+- Add the **listener** (code that waits for the dialog) **before** the click that opens it.
+- The listener **must** call \`accept()\` or \`dismiss()\`. If it only logs the message, the dialog stays open. Then the \`click()\` **hangs** until the test timeout.
+- \`page.on\` handles every dialog in the test. \`page.once\` handles only the next one. Prefer \`once\`. Then a later "Delete everything?" box is not accepted by mistake.
 
 | Dialog API | Purpose |
 |---|---|
@@ -484,9 +521,11 @@ test('download a file and check it is not empty', async ({ page }, testInfo) => 
 | \`dialog.accept(text?)\` | OK; for prompts, the text to enter |
 | \`dialog.dismiss()\` | Cancel |
 
-**beforeunload** dialogs appear only when you close with \`page.close({ runBeforeUnload: true })\`; handle them with the same listener. Dialogs are different from HTML modals: a modal built with \`div\`s is part of the page and you click it with normal locators.
+**Not every popup is a dialog.** Many "popups" are HTML modals made of \`div\`s. They are part of the page. Click them with normal locators.
 
-**Worked example (the-internet \`/javascript_alerts\`):** three buttons; the \`#result\` paragraph shows "You successfully clicked an alert", "You clicked: Ok" / "You clicked: Cancel", or "You entered: <text>".`,
+**Practice page:** the-internet \`/javascript_alerts\` has three buttons. The \`#result\` text then shows "You clicked: Ok", "You clicked: Cancel" or "You entered: <text>".
+
+**Why testers care:** a wrong dialog choice can silently cancel a delete or payment step in your test.`,
       code: [
         {
           language: 'typescript',
@@ -523,34 +562,36 @@ test.describe('the-internet JavaScript alerts', () => {
         },
       ],
       keyPoints: [
-        'No listener → auto-dismiss. A listener that never accepts/dismisses → the action hangs.',
-        'Register the handler before the triggering action; prefer page.once.',
-        'Capture dialog.message() in the handler and assert after the click.',
+        'No listener: dialogs close by themselves. A listener that never accepts or dismisses: the click hangs.',
+        'Add the listener before the click; prefer page.once.',
+        'Save dialog.message() in the listener and check it after the click.',
       ],
       source: 'Playwright docs — Dialogs; API reference Dialog',
     },
     {
       heading: 'New tabs and popups',
-      body: `**Intuition:** clicking a \`target="_blank"\` link is like a waiter handing you a second menu. If you are not already holding out your hand when it arrives, you miss it.
+      body: `**Example:** \`const p = context.waitForEvent('page')\`, then \`await link.click()\`, then \`const newTab = await p\` → you start listening, click, then receive the new tab.
 
-In Playwright, every tab is a \`Page\` inside the same \`BrowserContext\` (same cookies and storage). To get the new tab you wait for an **event**:
+A link with \`target="_blank"\` opens a new tab. It is like a waiter handing you a second menu. If your hand is not already out, you miss it.
 
-- \`context.waitForEvent('page')\`: any new page in the context.
-- \`page.waitForEvent('popup')\`: only pages opened *by this page* (window.open or a \`_blank\` link). Both fire for a \`_blank\` link click.
+In Playwright, each tab is a \`Page\`. All tabs of one test live in the same **browser context** (one separate browser session with its own cookies). So tabs share cookies and login.
 
-**The ordering rule:** create the wait promise **before** the click, and await it **after**:
+You get the new tab by waiting for an **event** (a signal the browser sends):
+- \`context.waitForEvent('page')\`: any new tab in this session.
+- \`page.waitForEvent('popup')\`: only tabs opened by this page. A \`_blank\` link click fires both.
 
-1. \`const newTabPromise = context.waitForEvent('page');\` (no \`await\`)
-2. \`await link.click();\`
-3. \`const newTab = await newTabPromise;\`
+**The order rule:**
+1. Start waiting **before** the click. Do not \`await\` yet.
+2. \`await\` the click.
+3. Now \`await\` the wait to get the tab.
 
-If you write \`await link.click()\` first and only then start \`waitForEvent\`, the event may already have fired and your wait sits there until the timeout. Teams often write the same thing with \`Promise.all([context.waitForEvent('page'), link.click()])\`; both are fine.
+What if you click first and start waiting after? The tab may already be open. Your wait then looks for another tab and times out. \`Promise.all([context.waitForEvent('page'), link.click()])\` does the same job safely.
 
-The new page may still be loading. Locator actions and web-first assertions wait automatically, so usually you can go straight to \`await expect(newTab).toHaveTitle(...)\`; call \`await newTab.waitForLoadState()\` if you need to read something synchronously like \`newTab.url()\`.
+The new tab may still be loading. That is fine. Actions and \`expect\` checks wait by themselves.
 
-Other handy calls: \`context.pages()\` lists all open tabs, \`newTab.close()\` closes one, \`page.bringToFront()\` focuses a tab for screenshots or headed debugging.
+Handy calls: \`context.pages()\` lists open tabs. \`newTab.close()\` closes one.
 
-**Worked example (the-internet \`/windows\`):** the "Click Here" link opens \`/windows/new\` whose heading is "New Window". Expected results: new tab opens, original tab stays on "Opening a new window".`,
+**Why testers care:** "opens in a new tab" is a real requirement, and this pattern tests it without random failures.`,
       code: [
         {
           language: 'typescript',
@@ -592,28 +633,29 @@ test('same thing with the popup event', async ({ page }) => {
      ... waits for a 2nd tab ...    tab = await p   --> resolved
      ... timeout                    `,
       keyPoints: [
-        'Start waitForEvent before the click, await it after.',
-        'popup = opened by this page; page = any new page in the context.',
-        'Tabs share the context: same cookies and login.',
+        'Start waitForEvent before the click; await it after.',
+        'popup = opened by this page; page = any new tab in the context.',
+        'Tabs in one context share cookies and login.',
       ],
       source: 'Playwright docs — Pages: handling new pages, handling popups',
     },
     {
       heading: 'Working inside iframes',
-      body: `**Intuition:** an iframe is a web page inside a web page, with its own separate DOM. Page-level locators look only at the outer page, like searching one room of a house for keys that are in the room next door.
+      body: `**Example:** \`page.frameLocator('#mce_0_ifr').locator('#tinymce')\` → Playwright goes into the iframe first, then finds the editor inside it.
+
+An **iframe** is a web page inside a web page. A normal \`page\` locator looks only at the outer page. It never looks inside the iframe. It is like searching one room for keys that are in the next room.
 
 Ways in:
-- \`page.frameLocator('#mce_0_ifr')\` returns a FrameLocator; chain \`.locator()\`, \`.getByRole()\` etc. It is lazy and auto-waits like any locator.
-- \`page.locator('iframe[title="Rich Text Area"]').contentFrame()\` converts a normal locator for the \`<iframe>\` element into a FrameLocator (handy when you already have the iframe locator in a page object). The reverse is \`frameLocator.owner()\`.
-- \`page.frame({ name: 'frame-middle' })\` or \`page.frame({ url: /checkout/ })\` returns a \`Frame\` object for older-style code; prefer frame locators in tests.
+- \`page.frameLocator('#mce_0_ifr')\`. Then chain \`.locator()\` or \`.getByRole()\` as usual. It waits like any locator.
+- \`page.locator('iframe').contentFrame()\`. Use this when you already have a locator for the \`<iframe>\` tag.
 
-**Nested frames** chain: outer frame locator, then inner. On the-internet \`/nested_frames\`, the top frame (\`name="frame-top"\`) contains \`frame-left\`, \`frame-middle\` and \`frame-right\`; the middle one shows "MIDDLE" in \`#content\`.
+**Iframes inside iframes:** chain them, outer first, then inner. On the-internet \`/nested_frames\`, the middle frame shows "MIDDLE".
 
-**Common iframe sources in real apps:** payment widgets (Stripe, Razorpay card fields), rich-text editors, embedded videos, chat widgets, reCAPTCHA (do not automate CAPTCHA; ask for a test bypass).
+**Where you meet iframes:** card fields from payment providers, text editors, videos, chat widgets. Do not automate CAPTCHA. Ask the developers for a test bypass.
 
-**In interviews, say this:** "If a locator times out even though I can see the element, I check whether it is inside an iframe in DevTools. If yes, I go through \`frameLocator\` or \`contentFrame()\`; there is no 'switch to frame' state to undo like in Selenium."
+**In an interview, say:** "If a locator times out but I can see the element, I check DevTools for an iframe. Then I use \`frameLocator\` or \`contentFrame()\`. Unlike Selenium, there is no 'switch to frame' to undo."
 
-The locator details of frames (strictness, \`frameLocator\` in the locators topic) are covered there; this section focuses on acting inside them.`,
+**Why testers care:** payment and editor tests fail with timeouts until you enter the right iframe.`,
       code: [
         {
           language: 'typescript',
@@ -645,25 +687,29 @@ test('contentFrame() from an existing iframe locator', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Page locators do not pierce iframes; use frameLocator or contentFrame().',
-        'Chain frame locators for nested frames.',
-        'No switchTo / switch-back state as in Selenium.',
+        'Page locators do not look inside iframes; use frameLocator or contentFrame().',
+        'For iframes inside iframes, chain frame locators.',
+        'No switch-to or switch-back step as in Selenium.',
       ],
       source: 'Playwright docs — Frames; API reference FrameLocator and Locator.contentFrame',
     },
     {
       heading: 'Web tables: find a row, read a cell',
-      body: `**Intuition:** you read a table the way you read a train timetable: find the row by something unique (the train number), then look across to the column you need. Never "the third row", because sorting changes row order.
+      body: `**Example:** \`rows.filter({ hasText: 'fbach@yahoo.com' }).locator('td').nth(3)\` → Playwright finds Frank's row by his email, then reads the 4th cell (Due).
 
-Recipe:
-1. Locate rows: \`page.locator('#table1 tbody tr')\` or \`page.getByRole('row')\`.
-2. Narrow to one row by content: \`.filter({ hasText: 'fbach@yahoo.com' })\`, or \`getByRole('row', { name: /Frank/ })\`.
-3. Read or act within that row: \`.locator('td').nth(3)\` for a cell, \`.getByRole('link', { name: 'edit' })\` for an action.
-4. For whole columns, \`allTextContents()\` returns a string array **snapshot** (it does not wait), so first assert the table is ready, for example with \`toHaveCount\`.
+Read a table like a train timetable. Find the row by something unique, like the train number. Then look across to the column you need. Never use "the third row". Sorting changes the row order.
 
-Column positions can change too. A robust helper finds the column index from the header text first, then reads \`td\` at that index.
+Steps:
+1. Find the rows: \`page.locator('#table1 tbody tr')\`.
+2. Pick one row by its text: \`.filter({ hasText: 'fbach@yahoo.com' })\`.
+3. Inside that row, read a cell with \`.locator('td').nth(3)\`. Or click a link in it.
+4. To read a whole column, use \`allTextContents()\`. It gives a list of texts.
 
-**Worked example (the-internet \`/tables\`, table 1):**
+**Watch out:** \`allTextContents()\` does not wait. It reads the table as it is right now. So first check the table has loaded, for example with \`toHaveCount\`.
+
+Columns can move too. A safer way: find the column number from the header text first.
+
+**Practice page (the-internet \`/tables\`, table 1):**
 
 | Last Name | First Name | Email | Due |
 |---|---|---|---|
@@ -672,9 +718,11 @@ Column positions can change too. A robust helper finds the column index from the
 | Doe | Jason | jdoe@hotmail.com | $100.00 |
 | Conway | Tim | tconway@earthlink.net | $50.00 |
 
-Test cases: (1) Frank Bach owes $51.00; (2) total due is $251.00; (3) clicking the "Due" header sorts ascending (Smith/Conway $50 first). The code below automates the first two.
+Test cases: (1) Frank Bach owes $51.00. (2) The total due is $251.00. The code below automates both.
 
-**Common mistake:** \`page.locator('td:has-text("50")')\` matches \`$50.00\` twice and \`$150.00\` if it existed. Match the row by a unique key, then read the exact cell.`,
+**Watch out:** \`td:has-text("50")\` matches \`$50.00\` twice. It would also match \`$150.00\`. Find the row by a unique value first. Then read the exact cell.
+
+**Why testers care:** order totals, user lists and reports are tables, and these checks keep passing after sorting changes.`,
       code: [
         {
           language: 'typescript',
@@ -709,15 +757,17 @@ test('act inside the matching row', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Find rows by unique content with filter({ hasText }), not by index.',
-        'Look up the column index from the header text.',
-        'allTextContents() is a snapshot: assert readiness first.',
+        'Find a row by unique text with filter({ hasText }), not by position.',
+        'Find the column number from the header text.',
+        'allTextContents() does not wait: check the table has loaded first.',
       ],
       source: 'Playwright docs — Locators: filtering; practice on the-internet /tables',
     },
     {
       heading: 'Putting it together: a checkout form end to end',
-      body: `**Intuition:** an end-to-end form test is your manual test case written as code: preconditions, steps, expected results. If you can write the manual case, you can write this.
+      body: `**Example:** \`await page.locator('[data-test="finish"]').click()\` → Playwright clicks Finish. Then \`await expect(page.locator('[data-test="complete-header"]')).toHaveText('Thank you for your order!')\` → it checks the success message. One manual step becomes one action plus one check.
+
+An end-to-end test is your manual test case written as code. It has a precondition, steps and expected results. If you can write the manual case, you can write this.
 
 **Manual test case (SauceDemo):**
 
@@ -730,11 +780,14 @@ test('act inside the matching row', async ({ page }) => {
 | 4 | Fill first name, last name, postcode, Continue | Overview shows item total $29.99 |
 | 5 | Click Finish | "Thank you for your order!" |
 
-Notes on the automation:
-- Each step is an action followed by an assertion. Actions alone prove nothing.
-- \`test.step\` names the steps so the HTML report reads like the manual case.
-- The negative step (empty form) is cheap to add and catches real regressions.
-- Credentials should come from env variables or fixtures in a real framework; hard-coding SauceDemo's public demo credentials is acceptable only for a practice site.`,
+How the code follows the case:
+- Each step is an action, then a check. Actions alone prove nothing.
+- \`test.step\` gives each step a name. The HTML report then reads like your manual case.
+- The negative step (empty form) is cheap to add. It catches real bugs.
+
+**Watch out:** in a real project, keep passwords in environment variables, not in the test. SauceDemo's public demo login is fine for practice.
+
+**Why testers care:** you can turn your existing manual cases into automated tests step by step.`,
       code: [
         {
           language: 'typescript',
@@ -776,9 +829,9 @@ test('buy the backpack', async ({ page }) => {
         },
       ],
       keyPoints: [
-        'Map each manual step to one action + one assertion.',
-        'test.step makes reports read like test cases.',
-        'Include at least one negative path in form tests.',
+        'Turn each manual step into one action plus one check.',
+        'test.step makes the report read like a test case.',
+        'Add at least one negative step to every form test.',
       ],
       source: 'Playwright docs — Writing tests, test.step; practice on saucedemo.com',
     },
@@ -788,8 +841,8 @@ test('buy the backpack', async ({ page }) => {
       id: 'pw-actions-cc-1',
       title: 'The confirm-dialog test that hangs',
       context:
-        'A teammate automated "Delete account asks for confirmation" using the-internet JavaScript alerts page as a stand-in. The test either times out after 30 seconds or reports "You clicked: Cancel" even though they meant to press OK.',
-      task: 'Make the test accept the confirm dialog, assert the dialog message, and assert the result text. It must never hang and must not depend on timing.',
+        'A teammate automated "Delete account asks for confirmation". They used the-internet JavaScript alerts page for practice. The test either hangs for 30 seconds, or shows "You clicked: Cancel". They wanted OK.',
+      task: 'Make the test press OK on the confirm box. Check the dialog message and the result text. The test must never hang and must not depend on timing.',
       starter: {
         language: 'typescript',
         title: 'confirm.spec.ts (buggy)',
@@ -813,9 +866,9 @@ test('confirm dialog is accepted', async ({ page }) => {
 });`,
       },
       hints: [
-        'What must every dialog listener do before the click can finish?',
-        'At which point in time must the handler exist: before or after the button is clicked?',
-        'Capture the message inside the handler and assert with a web-first assertion afterwards; no sleep is needed.',
+        'What must every dialog listener do so the click can finish?',
+        'When must the listener exist: before or after the button is clicked?',
+        'Save the message inside the listener. Check it after the click with expect. No sleep is needed.',
       ],
       solution: {
         language: 'typescript',
@@ -841,21 +894,21 @@ test('confirm dialog is accepted', async ({ page }) => {
   await expect(page.locator('#result')).toHaveText('You clicked: Ok');
 });`,
       },
-      explanation: `Fixes, one per bug:
+      explanation: `One fix per bug:
 
-1. **Handler never settled the dialog.** A \`dialog\` listener that only logs leaves the confirm open, so \`click()\` cannot complete and the test sits until the 30s test timeout. Every handler must call \`accept()\` or \`dismiss()\`.
-2. **Waiting too late.** \`page.waitForEvent('dialog')\` after the click starts listening after the dialog has already been handled, so it waits for a second dialog that never comes. (Without any listener at all, Playwright auto-dismisses, which is why the variant without version A shows "You clicked: Cancel".)
-3. **\`page.on\` replaced by \`page.once\`.** The handler is scoped to this one dialog; a later confirm in the same test will not be silently accepted.
-4. **\`waitForTimeout\` + \`textContent\` + \`toBe\`** replaced by \`await expect(locator).toHaveText(...)\`, which retries until the text appears.
-5. **Asserting the dialog itself.** The message and type are captured in the handler, so the test proves the right dialog appeared, not just that something was clicked.`,
+1. **The listener never closed the dialog.** It only logged the message. So the confirm stayed open. The \`click()\` could not finish, and the test hung until the 30 s timeout. Every listener must call \`accept()\` or \`dismiss()\`.
+2. **Waiting too late.** \`page.waitForEvent('dialog')\` after the click starts listening too late. The dialog is already gone. So it waits for a second dialog that never comes. (With no listener at all, Playwright closes the dialog itself. That is why you saw "You clicked: Cancel".)
+3. **\`page.on\` became \`page.once\`.** The listener now handles only this one dialog. A later confirm is not accepted by mistake.
+4. **No sleep.** \`waitForTimeout\` + \`textContent\` + \`toBe\` became \`await expect(locator).toHaveText(...)\`. It keeps checking until the text appears.
+5. **Check the dialog itself.** The listener saves the message and type. So the test proves the right dialog appeared.`,
       followUps: [
         {
           q: 'How would you test the Cancel path of the same confirm?',
-          a: 'Register `page.once(\'dialog\', d => d.dismiss())` before clicking, then assert `#result` has "You clicked: Cancel". Even though no listener also dismisses, an explicit dismiss documents intent and lets me capture the message for an assertion, so the test does not pass accidentally if the dialog stopped appearing.',
+          a: 'Add `page.once(\'dialog\', d => d.dismiss())` before the click. Then check `#result` shows "You clicked: Cancel". With no listener, the dialog is also dismissed. But an explicit dismiss shows my intent. It also lets me save the message and check it. So the test does not pass by luck if the dialog stops appearing.',
         },
         {
           q: 'What if the dialog does not appear at all because of a regression?',
-          a: 'With the fixed version the handler never runs, `dialogType` stays empty and `expect(dialogType).toBe(\'confirm\')` fails with a clear message. That is why capturing data in the handler is better than only accepting: it turns "dialog missing" into a visible failure.',
+          a: 'In the fixed version, the listener never runs. So `dialogType` stays empty. Then `expect(dialogType).toBe(\'confirm\')` fails with a clear message. That is why saving data in the listener helps. A missing dialog becomes a visible failure.',
         },
       ],
     },
@@ -863,8 +916,8 @@ test('confirm dialog is accepted', async ({ page }) => {
       id: 'pw-actions-cc-2',
       title: 'The flaky new-tab test with forced clicks',
       context:
-        'A test for "Click Here opens a new window" on the-internet /windows passes on a fast laptop and times out in CI about one run in five. A reviewer also flagged deprecated calls and a forced click.',
-      task: 'Rewrite the test so it reliably captures the new tab, uses current APIs and user-facing locators, and asserts on both tabs. Explain why the original races.',
+        'A test checks that "Click Here" opens a new window on the-internet /windows. It passes on a fast laptop. In CI it times out about one run in five. A reviewer also found old (deprecated) calls and a forced click.',
+      task: 'Rewrite the test so it always catches the new tab. Use current methods and user-facing locators. Check both tabs. Explain why the original sometimes misses the tab.',
       starter: {
         language: 'typescript',
         title: 'windows.spec.ts (flaky)',
@@ -885,8 +938,8 @@ test('opens a new window', async ({ page, context }) => {
       },
       hints: [
         'Which line runs first: the click that opens the tab, or the line that starts listening for it?',
-        'Replace the CSS path and the `$` handle with role-based locators and web-first assertions.',
-        'Is there any reason a user could not click this link normally? If not, why force?',
+        'Replace the CSS path and the old `$` call with getByRole and `await expect(...)` checks.',
+        'Could a user click this link normally? If yes, why force it?',
       ],
       solution: {
         language: 'typescript',
@@ -910,21 +963,21 @@ test('opens a new window', async ({ page, context }) => {
       },
       explanation: `What changed and why:
 
-1. **Race fixed.** The original clicked, slept, and only then called \`context.waitForEvent('page')\`. The event fired during the sleep, so the wait looked for a *second* new tab and timed out; on some runs the tab opened slowly enough to be caught, hence "flaky". The promise is now created before the click and awaited after.
-2. **Missing \`await\` on \`goto\`.** The click could start before navigation finished.
-3. **\`force: true\` removed.** Nothing covers the link; forcing would only hide a future overlay bug.
-4. **Brittle CSS path → \`getByRole('link', { name: 'Click Here' })\`.**
-5. **\`waitForTimeout(2000)\` and \`waitForLoadState('networkidle')\` removed.** Web-first assertions on the new tab wait for exactly what matters; networkidle is discouraged.
-6. **\`page.$\` + \`textContent\` + \`toBe\`** replaced by \`toBeVisible\` on a role locator, which retries.
-7. **Stronger oracle.** The test also checks the URL of the new tab, that the original tab is intact, and the tab count.`,
+1. **Listening in time.** The original clicked, slept, and only then started \`context.waitForEvent('page')\`. The tab opened during the sleep. So the wait looked for a *second* tab and timed out. On some runs the tab opened late enough to be caught. That is why it was **flaky** (sometimes passes, sometimes fails, with no code change). Now we start waiting before the click and \`await\` after.
+2. **Missing \`await\` on \`goto\`.** The click could start before the page loaded.
+3. **\`force: true\` removed.** Nothing covers the link. Forcing would only hide a future banner bug.
+4. **Fragile CSS path → \`getByRole('link', { name: 'Click Here' })\`.**
+5. **Sleeps removed.** \`waitForTimeout(2000)\` and \`networkidle\` are gone. \`expect\` checks on the new tab wait for exactly what matters.
+6. **\`page.$\` + \`textContent\` + \`toBe\`** became \`toBeVisible\` on a role locator. It keeps checking until it passes.
+7. **Better checks.** The test also checks the new tab's URL, the original tab and the tab count.`,
       followUps: [
         {
           q: 'When would you use page.waitForEvent(\'popup\') instead of context.waitForEvent(\'page\')?',
-          a: 'When I want only tabs opened by this specific page. `popup` ignores pages created elsewhere in the context, such as another test helper calling `context.newPage()`, so it is more precise when several pages are open. For a single-tab test both work for a `_blank` link.',
+          a: 'When I want only tabs opened by this exact page. `popup` ignores tabs made elsewhere, for example by a helper calling `context.newPage()`. So it is more precise when several tabs are open. For a simple test with a `_blank` link, both work.',
         },
         {
           q: 'The new tab requires login. Will it be logged in?',
-          a: 'Yes, as long as it opens in the same browser context. Pages in one context share cookies and local storage, so a session created in the first tab applies to the second. A different context (for a second user) would not share it, which is exactly how you test two users at once.',
+          a: 'Yes, if it opens in the same browser context. Tabs in one context share cookies and local storage. So the login from the first tab works in the second. A different context does not share it. That is how you test two users at once.',
         },
       ],
     },
@@ -933,50 +986,48 @@ test('opens a new window', async ({ page, context }) => {
     {
       id: 'pw-actions-iq-1',
       difficulty: 'medium',
-      question: 'How do you handle JavaScript alert, confirm and prompt dialogs in Playwright? What happens if you do nothing?',
+      question: 'How do you handle alert, confirm and prompt dialogs in Playwright? What happens if you do nothing?',
       whatInterviewerLooksFor: [
-        'Knows dialogs are auto-dismissed when no listener exists',
-        'Registers the handler before the triggering action',
-        'Knows a handler must accept or dismiss, otherwise the action stalls',
-        'Can enter prompt text and assert the dialog message',
-        'Distinguishes browser dialogs from HTML modals',
+        'Knows dialogs close by themselves (auto-dismiss) when there is no listener',
+        'Adds the listener before the click that opens the dialog',
+        'Knows a listener must accept or dismiss, or the click hangs',
+        'Can type into a prompt and check the dialog message',
+        'Can tell browser dialogs apart from HTML modals',
       ],
-      modelAnswer: `**Default:** with no \`dialog\` listener, Playwright **auto-dismisses** every dialog. Alerts just close; a confirm returns Cancel; a prompt returns null. So doing nothing is not a hang, but it may silently take the wrong branch.
+      modelAnswer: `**If I do nothing:** Playwright **closes every dialog for me** (auto-dismiss). An alert just closes. A confirm gets Cancel. A prompt gets no answer. So the test does not hang. But it may quietly take the wrong path.
 
-**Handling one deliberately:**
-1. Register before the action: \`page.once('dialog', async d => { msg = d.message(); await d.accept(); })\`.
-2. Trigger it: \`await page.getByRole('button', { name: 'Delete' }).click()\`.
-3. Assert both the dialog (captured \`msg\`, \`d.type()\`) and the page outcome with a web-first assertion.
+**Handling it on purpose:**
+1. Add a listener before the click: \`page.once('dialog', async d => { msg = d.message(); await d.accept(); })\`.
+2. Click: \`await page.getByRole('button', { name: 'Delete' }).click()\`.
+3. Check the saved message, and check the page result with \`await expect(...)\`.
 
-For prompts, \`dialog.accept('text')\` enters the answer; \`dialog.defaultValue()\` returns the pre-filled value.
+For a prompt, \`dialog.accept('text')\` types the answer.
 
 **Two traps:**
-- A listener that only logs (\`page.on('dialog', d => console.log(d.message()))\`) never closes the dialog, so the \`click()\` that opened it hangs until the test timeout.
-- \`page.on\` stays active for the whole test. I prefer \`page.once\` so a later dangerous confirm is not accepted by accident.
+- A listener that only logs never closes the dialog. Then the \`click()\` hangs until the test timeout.
+- \`page.on\` stays active for the whole test. I prefer \`page.once\`. Then a later dangerous confirm is not accepted by mistake.
 
-**beforeunload** dialogs only appear with \`page.close({ runBeforeUnload: true })\` and use the same listener.
-
-Finally, I check whether it is a real browser dialog at all: many "dialogs" are HTML modals made of \`div\`s, which I click with normal locators like \`getByRole('dialog').getByRole('button', { name: 'OK' })\`.
+Last, I check it is a real browser dialog. Many "dialogs" are HTML modals made of \`div\`s. I click those with normal locators, like \`getByRole('dialog').getByRole('button', { name: 'OK' })\`.
 
 Example on the-internet: accept the confirm, then \`await expect(page.locator('#result')).toHaveText('You clicked: Ok')\`.`,
       followUps: [
         {
           q: 'How would you assert the exact text of an alert?',
-          a: 'Capture `dialog.message()` inside the handler into a variable declared in the test, accept the dialog, and after the click use `expect(message).toBe(\'I am a JS Alert\')`. Asserting inside the handler also works, but a failing expect inside an event callback is harder to read in reports, so capturing and asserting afterwards is cleaner.',
+          a: 'Inside the listener, save `dialog.message()` into a variable from the test. Accept the dialog. After the click, check `expect(message).toBe(\'I am a JS Alert\')`. You can check inside the listener too. But a failure there is harder to read in reports. Saving first and checking after is cleaner.',
         },
         {
           q: 'How is this different from Selenium?',
-          a: 'In Selenium you switch to the alert after it appears (`driver.switchTo().alert().accept()`), often with an explicit wait. In Playwright you decide in advance with an event listener, and without a listener the dialog is dismissed automatically. There is no "switch" state to manage.',
+          a: 'In Selenium you switch to the alert after it appears: `driver.switchTo().alert().accept()`. Often you add a wait first. In Playwright you decide in advance with a listener. With no listener, the dialog closes by itself. There is no "switch" to manage.',
         },
         {
           q: 'A test has page.on(\'dialog\', d => d.accept()) in beforeEach. Any risk?',
-          a: 'It accepts every dialog in every test, including ones that should be cancelled or ones that indicate a bug (an unexpected "Are you sure?"). It hides unexpected dialogs. I would scope handlers per test with `page.once`, or at least make the global handler record dialogs so tests can assert that none were unexpected.',
+          a: 'Yes. It accepts every dialog in every test. That includes dialogs that should be cancelled. It also hides surprise dialogs that point to a bug. I would add `page.once` per test instead. Or the shared listener should record dialogs so tests can check none were unexpected.',
         },
       ],
       pitfalls: [
-        'Saying you need to "switch to the alert" as in Selenium',
-        'Registering the listener after the click',
-        'Handlers that log but never accept or dismiss',
+        'Saying you must "switch to the alert" as in Selenium',
+        'Adding the listener after the click',
+        'Listeners that log but never accept or dismiss',
         'Treating HTML modals as browser dialogs',
       ],
     },
@@ -985,42 +1036,42 @@ Example on the-internet: accept the confirm, then \`await expect(page.locator('#
       difficulty: 'medium',
       question: 'Clicking a link opens a new browser tab. Walk me through automating and verifying it in Playwright.',
       whatInterviewerLooksFor: [
-        'Starts waiting for the event before the click',
-        'Knows the difference between context page event and page popup event',
-        'Asserts on the new tab and the original tab',
-        'Understands tabs share the browser context',
+        'Starts waiting for the new tab before the click',
+        'Knows the difference between the context "page" event and the page "popup" event',
+        'Checks both the new tab and the original tab',
+        'Knows tabs in one context share cookies and login',
       ],
-      modelAnswer: `A new tab is a new \`Page\` in the same \`BrowserContext\`, and I receive it through an event.
+      modelAnswer: `A new tab is a new \`Page\` in the same browser context. I receive it through an **event** (a signal from the browser).
 
 **Steps:**
-1. \`const newTabPromise = context.waitForEvent('page');\` with **no await**, so I am listening before anything happens.
+1. \`const newTabPromise = context.waitForEvent('page');\` with **no await**. Now I am listening.
 2. \`await page.getByRole('link', { name: 'Click Here' }).click();\`
 3. \`const newTab = await newTabPromise;\`
-4. Assert with web-first assertions on the new tab: \`await expect(newTab).toHaveURL(/windows\\/new/)\` and \`await expect(newTab.getByRole('heading', { name: 'New Window' })).toBeVisible()\`.
-5. Assert the original page is unchanged, and optionally \`expect(context.pages()).toHaveLength(2)\`.
+4. Check the new tab: \`await expect(newTab).toHaveURL(/windows\\/new/)\` and \`await expect(newTab.getByRole('heading', { name: 'New Window' })).toBeVisible()\`.
+5. Check the original tab did not change. Optionally check \`expect(context.pages()).toHaveLength(2)\`.
 
-**Why the order matters:** if I click first and start waiting afterwards, the \`page\` event may already have fired, so my wait looks for a second tab and times out. That shows up as a flaky test: it passes when the tab opens slowly and fails when it opens fast. \`Promise.all([context.waitForEvent('page'), link.click()])\` is an equivalent pattern.
+**Why the order matters:** if I click first and wait after, the tab may already be open. Then my wait looks for a second tab and times out. The test becomes **flaky**: it passes when the tab opens slowly and fails when it opens fast. \`Promise.all([context.waitForEvent('page'), link.click()])\` is a safe alternative.
 
-**popup vs page:** \`page.waitForEvent('popup')\` only catches pages opened by that page (window.open or \`_blank\`); \`context.waitForEvent('page')\` catches any new page in the context.
+**popup vs page:** \`page.waitForEvent('popup')\` catches only tabs opened by that page. \`context.waitForEvent('page')\` catches any new tab in the context.
 
-**Shared state:** both tabs share cookies and storage, so the new tab is logged in too. If the new tab is still loading and I need a synchronous value like \`newTab.url()\`, I call \`await newTab.waitForLoadState()\` first; for normal assertions auto-waiting covers it.
+**Shared login:** both tabs share cookies and storage. So the new tab is logged in too.
 
-Finally I close the tab or let the context be disposed at the end of the test.`,
+At the end I close the tab, or let Playwright clean up after the test.`,
       followUps: [
         {
           q: 'What if the link opens in the same tab on mobile but a new tab on desktop?',
-          a: 'I would make the behaviour explicit per project. For the desktop project I use the event pattern; for the mobile project I assert `toHaveURL` on the same page. A helper can check `link.getAttribute(\'target\')` but I prefer the test to state the expected behaviour clearly per platform, because "opens in new tab" is itself a requirement.',
+          a: 'I make the expected behaviour clear for each project. On desktop I use the event pattern. On mobile I check `toHaveURL` on the same page. "Opens in a new tab" is itself a requirement. So each test should state it clearly.',
         },
         {
           q: 'How do you switch back to the original tab?',
-          a: 'There is nothing to switch. I keep both `page` and `newTab` variables and call methods on whichever I need. `bringToFront()` only matters for headed debugging or screenshots that depend on focus.',
+          a: 'There is nothing to switch. I keep two variables, `page` and `newTab`. I call methods on whichever one I need. `bringToFront()` only matters for screenshots or watching the browser while debugging.',
         },
       ],
       pitfalls: [
-        'Awaiting the click before starting to wait for the page event',
+        'Awaiting the click before starting to wait for the new tab',
         'Using waitForTimeout to "let the tab open"',
-        'Looking for "switchTo window" APIs',
-        'Only checking that some tab opened, not its URL or content',
+        'Looking for a "switch to window" method',
+        'Checking only that some tab opened, not its URL or content',
       ],
     },
     {
@@ -1028,34 +1079,34 @@ Finally I close the tab or let the context be disposed at the end of the test.`,
       difficulty: 'easy',
       question: 'What is the difference between fill(), pressSequentially() and press()? Which one do you use by default and why?',
       whatInterviewerLooksFor: [
-        'fill as the default for setting values',
-        'pressSequentially for key-by-key behaviour (autocomplete, masks)',
-        'press for single keys and shortcuts',
-        'Knows page.type is deprecated',
+        'Uses fill by default to set values',
+        'Uses pressSequentially only for key-by-key behaviour (autocomplete, input masks)',
+        'Uses press for single keys and shortcuts',
+        'Knows page.type is old (deprecated)',
       ],
-      modelAnswer: `- **\`fill(value)\`** focuses the field, replaces its whole value in one go and fires an \`input\` event. It waits for the element to be visible, enabled and editable, and throws if the element is not an input, textarea or contenteditable. It is my **default** because it is fast and deterministic.
-- **\`pressSequentially(text, { delay })\`** sends keydown, keypress and keyup for every character, optionally with a delay. I use it only when the app reacts to individual keystrokes: autocomplete suggestions, an input mask that formats a phone number while typing, per-key character counters.
-- **\`press(key)\`** sends one key or chord to an element: \`Enter\` to submit, \`Tab\` to move focus, \`ArrowDown\` in a list, \`ControlOrMeta+A\` to select all on any OS.
-- **\`clear()\`** empties a field, useful for required-field validation.
-- **\`page.type\`** is deprecated; old tutorials still show it.
+      modelAnswer: `- **\`fill(value)\`** clicks into the field and replaces the whole value at once. It waits until the field is visible, enabled and editable. It is my **default**, because it is fast and gives the same result every time.
+- **\`pressSequentially(text, { delay })\`** types one key at a time, like a person. I use it only when the app reacts to each key. Examples: autocomplete suggestions, a phone field that formats as you type, a live character counter.
+- **\`press(key)\`** sends one key or shortcut: \`Enter\` to submit, \`Tab\` to move on, \`ArrowDown\` in a list, \`ControlOrMeta+A\` to select all on any OS.
+- **\`clear()\`** empties a field. It helps test "required field" errors.
+- **\`page.type\`** is old (deprecated). Old tutorials still show it.
 
-**Example:** on a search page, \`fill('lap')\` may not trigger suggestions if the widget listens to \`keyup\`. I would switch that one step to \`pressSequentially('lap')\` and then \`press('ArrowDown')\` and \`press('Enter')\`.
+**Example:** on a search page, \`fill('lap')\` may not show suggestions. The box may only react to key presses. So for that one step I use \`pressSequentially('lap')\`. Then \`press('ArrowDown')\` and \`press('Enter')\`.
 
-The value is verified with \`await expect(input).toHaveValue('...')\`, not by reading it manually.`,
+I check the value with \`await expect(input).toHaveValue('...')\`.`,
       followUps: [
         {
           q: 'fill() fails with a timeout on a field that looks fine. What do you check?',
-          a: 'Whether the field is readonly or disabled (fill needs editable and enabled), whether my locator actually points at the input and not a wrapper div, whether it is inside an iframe, and whether another element with the same locator exists (strict mode). The error log in the report lists which actionability check kept failing.',
+          a: 'Is the field read-only or disabled? fill needs it editable and enabled. Does my locator point at the input, or at a wrapper div? Is the field inside an iframe? Do two elements match my locator? The error message in the report says which check kept failing.',
         },
         {
           q: 'How do you test a "max 10 characters" limit?',
-          a: 'Use `fill(\'12345678901\')` and assert `toHaveValue(\'1234567890\')` if the browser enforces maxlength, plus a boundary set: 9, 10, 11 characters. If the app enforces it with JavaScript on keystrokes instead, pressSequentially is closer to how the logic runs.',
+          a: 'Use `fill(\'12345678901\')` and check `toHaveValue(\'1234567890\')` if the browser enforces maxlength. Also test the boundaries: 9, 10 and 11 characters. If the app counts keys with JavaScript instead, pressSequentially is closer to how users trigger it.',
         },
       ],
       pitfalls: [
         'Saying pressSequentially is always better because it is "realistic"',
         'Recommending page.type',
-        'Clicking the field before fill (fill focuses automatically)',
+        'Clicking the field before fill (fill does that itself)',
       ],
     },
     {
@@ -1063,44 +1114,44 @@ The value is verified with \`await expect(input).toHaveValue('...')\`, not by re
       difficulty: 'medium',
       question: 'How do you select a value from a dropdown? What changes when the dropdown is a custom React component instead of a native select?',
       whatInterviewerLooksFor: [
-        'selectOption by value, label, index, multiple',
-        'Inspects the DOM first',
-        'Knows selectOption throws on non-select elements',
-        'Click-then-option pattern with role locators for custom dropdowns',
-        'Asserts the selected value',
+        'selectOption by value, label, index or a list',
+        'Inspects the HTML first',
+        'Knows selectOption throws on elements that are not a <select>',
+        'Click the dropdown, then the option by role, for custom dropdowns',
+        'Checks the selected value',
       ],
-      modelAnswer: `First I inspect the element in DevTools to see whether it is a real \`<select>\`.
+      modelAnswer: `First I inspect the element in DevTools. Is it a real \`<select>\`?
 
-**Native \`<select>\`:** \`selectOption\` does everything: waits for the select to be visible and enabled, waits for the option to exist, selects it and fires \`input\`/\`change\`.
+**Real \`<select>\`:** \`selectOption\` does everything. It waits for the dropdown and the option, picks it, and tells the page the value changed.
 - By value: \`selectOption('lohi')\` (SauceDemo sort)
 - By label: \`selectOption({ label: 'Price (low to high)' })\`
-- By index: \`selectOption({ index: 2 })\`, fragile, I avoid it
-- Multiple: \`selectOption(['red', 'green'])\` on a \`multiple\` select
-Then I assert with \`await expect(sort).toHaveValue('lohi')\` and, more importantly, the effect: prices are now in ascending order.
+- By position: \`selectOption({ index: 2 })\`. This breaks easily, so I avoid it.
+- Several: \`selectOption(['red', 'green'])\` on a multi-select
+Then I check \`await expect(sort).toHaveValue('lohi')\`. More important, I check the effect: prices are now low to high.
 
-**Custom dropdown:** there is no \`<select>\`, so \`selectOption\` throws "Element is not a select". I interact like a user:
+**Custom dropdown:** there is no \`<select>\`. So \`selectOption\` throws "Element is not a select". I act like a user:
 1. \`await page.getByRole('combobox', { name: 'Country' }).click()\`
 2. \`await page.getByRole('option', { name: 'India' }).click()\`
 3. \`await expect(page.getByRole('combobox', { name: 'Country' })).toHaveText(/India/)\`
 
-If the component is searchable I \`fill\` the combobox input first to filter the list. If options are rendered in a portal at the end of \`body\`, page-level \`getByRole('option')\` still finds them; scoping to the combobox would not.
+If the dropdown has a search box, I \`fill\` it first to shorten the list.
 
-**Which to prefer, label or value?** Label matches what the business and manual test cases describe; value is stable when copy is translated. In a multi-language app I choose value.`,
+**Label or value?** Label matches the words in manual test cases. Value stays the same when the text is translated. In a multi-language app I choose value.`,
       followUps: [
         {
           q: 'How do you verify all options of a dropdown?',
-          a: 'For a native select: `await expect(page.locator(\'#dropdown option\')).toHaveText([\'Please select an option\', \'Option 1\', \'Option 2\'])`, which compares the whole list in order and retries. For a custom one, open it and run the same assertion on `getByRole(\'option\')`.',
+          a: 'For a real select: `await expect(page.locator(\'#dropdown option\')).toHaveText([\'Please select an option\', \'Option 1\', \'Option 2\'])`. It compares the whole list in order and keeps retrying. For a custom one, open it first and run the same check on `getByRole(\'option\')`.',
         },
         {
           q: 'The option you want is disabled. What happens?',
-          a: 'selectOption waits for the select to be enabled, not each option; selecting a disabled option fails because the browser will not select it, and the test times out or errors. That is usually the right result, and I would turn it into an explicit assertion: `await expect(option).toBeDisabled()`.',
+          a: 'The browser will not select a disabled option. So the test fails with an error or a timeout. That is usually the right result. I would turn it into a clear check instead: `await expect(option).toBeDisabled()`.',
         },
       ],
       pitfalls: [
-        'Clicking <option> elements of a native select',
+        'Clicking <option> elements of a real select',
         'Using selectOption on a div-based dropdown',
-        'Selecting by index when value or label exists',
-        'Not asserting the selected value or its effect',
+        'Picking by position when value or label exists',
+        'Not checking the selected value or its effect',
       ],
     },
     {
@@ -1109,40 +1160,40 @@ If the component is searchable I \`fill\` the combobox input first to filter the
       question: 'A teammate fixed a failing click by adding { force: true }. The test is green now. Do you approve the PR?',
       context: 'The error before the change was: "element intercepts pointer events: <div class="cookie-banner">".',
       whatInterviewerLooksFor: [
-        'Understands force skips actionability checks, including receives-events',
+        'Knows force skips the safety checks, including "is something covering it?"',
         'Asks whether a real user is blocked too',
-        'Proposes a user-like fix (dismiss the banner, set consent cookie)',
-        'Knows legitimate uses of force',
-        'Thinks about bugs hidden by the change',
+        'Suggests a user-like fix (close the banner, or set the consent cookie)',
+        'Knows the rare good uses of force',
+        'Thinks about bugs the change could hide',
       ],
-      modelAnswer: `**Not as is.** The error says a cookie banner is covering the button. \`force: true\` tells Playwright to skip the non-essential actionability checks, including "receives events", so it clicks underneath the banner. A real user could not do that.
+      modelAnswer: `**Not as it is.** The error says a cookie banner covers the button. \`force: true\` skips the safety checks before the click. One check is "does the button receive the click, or is something on top?". So Playwright clicks under the banner. A real user cannot do that.
 
 **Questions I ask:**
-1. **Is it a product bug?** If the banner covers the checkout button on a normal viewport and cannot be closed, that is a real defect. The green test would hide it from everyone.
-2. **Is it a test setup issue?** If users normally accept the banner once, the test should do the same: click "Accept" in a \`beforeEach\`, or better, pre-set the consent cookie via \`storageState\` or \`context.addCookies\` so every test starts without the banner.
-3. **Is it a timing issue?** Sometimes the banner animates away; then the default auto-waiting already handles it and the failure means it never goes away.
+1. **Is it a product bug?** Maybe the banner covers Checkout on a normal screen and cannot be closed. Then it is a real defect. The green test would hide it.
+2. **Is it a test setup problem?** Users normally accept the banner once. The test should do the same. Click "Accept" in a \`beforeEach\`. Or better, set the consent cookie before the test with \`storageState\` or \`context.addCookies\`.
+3. **Is it a timing problem?** Sometimes the banner slides away slowly. Auto-waiting already handles that. So this failure means it never goes away.
 
-**Fix I would suggest:**
+**My suggested fix:**
 - Remove \`force\`.
-- Handle consent like a user (or set the cookie in setup).
-- Add an assertion that the banner is hidden before checkout: \`await expect(banner).toBeHidden()\`.
+- Handle the banner like a user, or set the cookie in setup.
+- Check the banner is gone before checkout: \`await expect(banner).toBeHidden()\`.
 
-**When force is acceptable:** custom checkboxes where the real \`<input>\` is visually hidden behind a styled span (better: click the label), or a known third-party overlay on a test-only environment, always with a comment and a ticket link.
+**When force is OK:** a styled checkbox that hides the real input on purpose (clicking the label is better). Always add a comment and a ticket link.
 
-The same reasoning applies to \`dispatchEvent('click')\`: it bypasses the pointer entirely and should not replace a user-like click in an end-to-end test.`,
+\`dispatchEvent('click')\` has the same problem. It skips the real mouse, so it is not a user-like click.`,
       followUps: [
         {
           q: 'How can you stop force from creeping into the codebase?',
-          a: 'Add a lint rule (eslint-plugin-playwright has rules against force options), make it a review checklist item, and require a comment explaining any exception. Code search for `force: true` in CI can also post a warning on the PR.',
+          a: 'Add a lint rule. eslint-plugin-playwright has rules against force. Add it to the code review checklist. Ask for a comment on every exception. A CI search for `force: true` can also warn on the pull request.',
         },
         {
           q: 'Which checks does force skip, and which still happen?',
-          a: 'Force skips the non-essential actionability checks such as visible, stable, enabled and receives events. The element still has to resolve via the locator (strict mode still applies), and Playwright still performs the input. So force fixes "can\'t click" errors, not "can\'t find" errors.',
+          a: 'Force skips the readiness checks: visible, not moving, enabled and not covered. The locator must still find exactly one element (strict mode still applies). Playwright still does the click. So force fixes "cannot click" errors, not "cannot find" errors.',
         },
       ],
       pitfalls: [
         'Approving because the build is green',
-        'Not considering that users are blocked too',
+        'Not asking whether users are blocked too',
         'Replacing force with waitForTimeout',
       ],
     },
@@ -1151,39 +1202,38 @@ The same reasoning applies to \`dispatchEvent('click')\`: it bypasses the pointe
       difficulty: 'medium',
       question: 'Your locator works in DevTools but Playwright says it cannot find the element. You discover it is inside an iframe. How do you handle iframes, including nested ones?',
       whatInterviewerLooksFor: [
-        'Knows page locators do not enter iframes',
+        'Knows page locators do not look inside iframes',
         'Uses frameLocator or locator.contentFrame()',
-        'Chains for nested frames',
-        'Mentions real-world examples (payment widget, editor)',
-        'Contrasts with Selenium switchTo().frame()',
+        'Chains frame locators for iframes inside iframes',
+        'Gives real examples (payment fields, text editor)',
+        'Compares with Selenium switchTo().frame()',
       ],
-      modelAnswer: `An iframe contains a separate document, so \`page.getByRole(...)\` only searches the outer page and keeps waiting until it times out.
+      modelAnswer: `An iframe holds a separate web page. So \`page.getByRole(...)\` searches only the outer page. It keeps waiting until it times out.
 
 **Ways in:**
-- \`page.frameLocator('#card-frame').getByLabel('Card number')\`. A FrameLocator is lazy and auto-waits, so I can chain any locator method and act normally.
-- If I already have a locator for the \`<iframe>\` element, \`locator.contentFrame()\` turns it into a FrameLocator. \`frameLocator.owner()\` goes back to the iframe element, useful to assert the frame itself is visible.
-- \`page.frame({ name })\` / \`page.frame({ url })\` returns a \`Frame\` object; I use it rarely, mostly for \`frame.url()\` checks.
+- \`page.frameLocator('#card-frame').getByLabel('Card number')\`. A frame locator waits like any locator. I can chain any locator method and act as usual.
+- If I already have a locator for the \`<iframe>\` tag, \`locator.contentFrame()\` lets me look inside it.
 
-**Nested frames:** chain them: \`page.frameLocator('frame[name="frame-top"]').frameLocator('frame[name="frame-middle"]').locator('#content')\`, which reads "MIDDLE" on the-internet nested frames page.
+**Iframes inside iframes:** chain them. \`page.frameLocator('frame[name="frame-top"]').frameLocator('frame[name="frame-middle"]').locator('#content')\` reads "MIDDLE" on the-internet nested frames page.
 
-**Choosing the iframe locator:** prefer a stable attribute: \`title\`, \`name\`, \`data-testid\`, or a \`src\` fragment like \`iframe[src*="checkout"]\`. Avoid \`iframe >> nth=2\` because ad and chat iframes shift order.
+**Finding the iframe:** use a stable attribute, like \`title\`, \`name\`, \`data-testid\` or part of \`src\`: \`iframe[src*="checkout"]\`. Do not pick it by position. Ad and chat iframes change the order.
 
-**Real-world cases:** card fields from payment providers are each in their own iframe, rich-text editors like TinyMCE, embedded maps. CAPTCHA frames should not be automated; ask for a test key or bypass.
+**Real cases:** payment card fields (each in its own iframe), text editors like TinyMCE, maps. Do not automate CAPTCHA. Ask for a test key or bypass.
 
-**Compared with Selenium:** there is no \`switchTo().frame()\` and no switching back; each locator carries its frame path, so I cannot accidentally stay "inside" the wrong frame.`,
+**Compared with Selenium:** there is no \`switchTo().frame()\` and no switching back. Each locator knows its own frame path. So I can never get stuck "inside" the wrong frame.`,
       followUps: [
         {
           q: 'How would you test a Stripe card element?',
-          a: 'Use Stripe test mode and test card numbers. Each field (number, expiry, CVC) may be its own iframe, so I locate each frame by its title attribute and fill the input inside it, then assert on the outer page (payment success message). I never use real cards or production keys.',
+          a: 'Use Stripe test mode and its test card numbers. Each field (number, expiry, CVC) may be its own iframe. I find each frame by its title and fill the input inside it. Then I check the outer page for the success message. I never use real cards or live keys.',
         },
         {
           q: 'Can frameLocator actions be slower or flakier?',
-          a: 'They wait like any locator, so they are not inherently flaky. Problems come from iframes that reload (the frame is replaced, but the lazy FrameLocator just re-resolves) or from cross-origin iframes that load slowly; the fix is an assertion on content inside the frame, not a sleep.',
+          a: 'They wait like any locator, so they are not flaky by nature. Problems come from iframes that reload, or iframes from another site that load slowly. The frame locator simply finds the new frame again. The fix is a check on content inside the frame, not a sleep.',
         },
       ],
       pitfalls: [
         'Searching for a "switch to frame" method',
-        'Selecting iframes by index',
+        'Picking iframes by position',
         'Adding waits instead of entering the frame',
       ],
     },
@@ -1193,41 +1243,41 @@ The same reasoning applies to \`dispatchEvent('click')\`: it bypasses the pointe
       question: 'Write a test that verifies the "Due" amount for a specific person in a web table, and that the column total is correct. How do you keep it robust when rows are sorted or columns move?',
       context: 'Use the-internet.herokuapp.com/tables, table 1, as the example.',
       whatInterviewerLooksFor: [
-        'Finds rows by unique content, not index',
-        'Derives column index from header text',
-        'Waits for table readiness before snapshot reads',
-        'Converts currency text to numbers correctly',
-        'Considers sorting, pagination and empty states',
+        'Finds rows by unique text, not by position',
+        'Gets the column number from the header text',
+        'Waits for the table to load before reading it all at once',
+        'Turns money text into numbers correctly',
+        'Thinks about sorting, paging and empty tables',
       ],
       modelAnswer: `**Plan:**
-1. Locate rows: \`const rows = page.locator('#table1 tbody tr')\`.
-2. Make sure the data is there: \`await expect(rows).toHaveCount(4)\` (or \`not.toHaveCount(0)\` for dynamic data). This matters because \`allTextContents()\` does not wait.
-3. Find the column index from the header: read \`thead th\` texts and \`findIndex(h => h.trim() === 'Due')\` (index 3 here). Columns can be reordered by a UI change; the header name is the contract.
-4. Pick the row by a unique key: \`rows.filter({ hasText: 'fbach@yahoo.com' })\`. Email is unique; last name might not be.
-5. Assert the cell: \`await expect(frankRow.locator('td').nth(dueIndex)).toHaveText('$51.00')\`, a web-first assertion that retries.
-6. Total: read the column with \`allTextContents()\`, map \`Number(text.replace('$', ''))\`, \`reduce\` to a sum, and \`expect(total).toBe(251)\`.
+1. Find the rows: \`const rows = page.locator('#table1 tbody tr')\`.
+2. Make sure the data is there: \`await expect(rows).toHaveCount(4)\`. This matters because \`allTextContents()\` does not wait.
+3. Find the column number from the header. Read the \`thead th\` texts. Then \`findIndex(h => h.trim() === 'Due')\` gives 3. Columns can move, but the header name stays.
+4. Pick the row by a unique value: \`rows.filter({ hasText: 'fbach@yahoo.com' })\`. Email is unique. A last name might not be.
+5. Check the cell: \`await expect(frankRow.locator('td').nth(dueIndex)).toHaveText('$51.00')\`. This check keeps retrying until it passes.
+6. Total: read the column with \`allTextContents()\`. Turn each text into a number with \`Number(text.replace('$', ''))\`. Add them with \`reduce\`. Then \`expect(total).toBe(251)\`.
 
-**Robustness:**
-- Sorting: never assume row 2 is Frank; the filter finds him wherever he is. To test sorting itself, click the header and compare the column array with a sorted copy.
-- Currency: for values with commas (\`$1,200.50\`), strip non-numeric characters except the dot; for floating point sums, compare with \`toBeCloseTo\` or work in cents.
-- Pagination: either loop through pages until "Next" is disabled, or (better) verify totals through the API and keep the UI test for rendering.
-- Empty state: a separate test that an empty result shows "No records" instead of an empty table.
+**Keeping it robust:**
+- Sorting: never assume row 2 is Frank. The filter finds him anywhere.
+- Money: for values like \`$1,200.50\`, remove everything except digits and the dot. For decimal sums, use \`toBeCloseTo\` or work in cents.
+- Paging: check totals through the API. Keep the UI test for what is shown.
+- Empty table: a separate test that it shows "No records".
 
-I would wrap steps 3–4 in a small helper (\`cellFor(rowKey, columnName)\`) inside the page object so many tests reuse it.`,
+I would put steps 3–4 in a small helper, \`cellFor(rowKey, columnName)\`, in the page object. Then many tests can reuse it.`,
       followUps: [
         {
           q: 'Why not use getByRole(\'row\', { name: \'Frank\' })?',
-          a: 'You can: a row\'s accessible name is built from its cell text, so `getByRole(\'row\', { name: /fbach@yahoo\\.com/ })` works and reads well. The risk is partial matches: the default name match is case-insensitive substring, so `name: \'Doe\'` would also match a "Doerr" row. Use exact or a precise regex, or filter on a unique column like email.',
+          a: 'You can. A row\'s name is built from its cell text. So `getByRole(\'row\', { name: /fbach@yahoo\\.com/ })` works and reads well. The risk is partial matches. By default the name match ignores case and accepts part of the text. So `name: \'Doe\'` would also match a "Doerr" row. Use exact matching, a precise regex, or a unique column like email.',
         },
         {
           q: 'How would you verify the table is sorted after clicking the "Due" header?',
-          a: 'Click the header, wait for a visible change (for example the first cell no longer equals its old value, using a web-first assertion), then read the column with allTextContents, convert to numbers, and compare with a copy sorted using a numeric comparator. A default `sort()` would sort strings and give wrong results for "$100.00".',
+          a: 'Click the header. Wait for a visible change with an `expect` check, for example the first cell changes. Then read the column with allTextContents and turn it into numbers. Compare it with a copy sorted by number. A plain `sort()` sorts text, so "$100.00" would land in the wrong place.',
         },
       ],
       pitfalls: [
-        'Using row indexes like tr:nth-child(2)',
+        'Using row positions like tr:nth-child(2)',
         'Calling allTextContents before the table has loaded',
-        'Summing strings or using default sort on numbers',
+        'Adding text instead of numbers, or sorting numbers as text',
         'Matching cells with loose text like "50"',
       ],
     },
@@ -1259,11 +1309,11 @@ I would wrap steps 3–4 in a small helper (\`cellFor(rowKey, columnName)\`) ins
 | Upload | \`setInputFiles(path)\` | file name visible |
 | Context menu | \`click({ button: 'right' })\` | menu \`toBeVisible()\` |
 | Autocomplete | \`pressSequentially('Beng')\` | suggestion visible, then chosen |`,
-      insight: 'The right action follows from how the element is built (native vs custom) and how the app listens (value vs keystrokes). Each action needs a matching assertion; the action alone proves nothing.',
+      insight: 'Pick the action from how the element is built (real or custom) and how the app listens (whole value or each key). Each action needs a matching check. The action alone proves nothing.',
       followUps: [
         {
           q: 'What changes for (d) if the file input only appears after clicking "Upload resume"?',
-          a: 'Use the filechooser event: `const chooserPromise = page.waitForEvent(\'filechooser\')`, click the button, `const chooser = await chooserPromise`, then `await chooser.setFiles(\'tests/data/resume.pdf\')`. Start listening before the click, as with popups and downloads.',
+          a: 'Use the filechooser event. Start `const chooserPromise = page.waitForEvent(\'filechooser\')`. Click the button. Then `const chooser = await chooserPromise` and `await chooser.setFiles(\'tests/data/resume.pdf\')`. Start listening before the click, just like new tabs and downloads.',
         },
       ],
     },
@@ -1281,12 +1331,12 @@ I would wrap steps 3–4 in a small helper (\`cellFor(rowKey, columnName)\`) ins
         { label: 'Receive', calc: 'A: await the download that started after the accept' },
         { label: 'Assert', calc: 'F (dialog message) and E (file name) after A' },
       ],
-      answer: '**C, D, B, A, F, E** (D, C, B, A, E, F is equally correct). Anything that puts B before C or D is wrong: before C, the confirm is auto-dismissed and no download ever starts; before D, the download event can fire before anyone listens.',
-      insight: 'Dialogs, popups, downloads and file choosers share one rule: set up the listener, then trigger, then consume. Learn the pattern once and apply it to every event-driven action.',
+      answer: '**C, D, B, A, F, E** (D, C, B, A, E, F is also correct). B must come after C and D. If B comes before C, the confirm closes with Cancel and no download starts. If B comes before D, the download can start before anyone listens.',
+      insight: 'Dialogs, new tabs, downloads and file choosers share one rule: start listening, then click, then receive. Learn it once and use it for all of them.',
       followUps: [
         {
           q: 'What would happen if you used page.on instead of page.once for the dialog here?',
-          a: 'This test would still pass. The difference shows up later: any further dialog in the same test, such as a "Delete all?" confirm, would also be accepted silently. page.once limits the handler to the dialog you meant, so unexpected dialogs keep their default dismiss behaviour and are easier to notice.',
+          a: 'This test would still pass. The problem comes later. Any other dialog in the same test would also be accepted, for example a "Delete all?" confirm. page.once handles only the dialog you meant. Surprise dialogs then close with Cancel, so they are easier to notice.',
         },
       ],
     },
@@ -1306,11 +1356,11 @@ I would wrap steps 3–4 in a small helper (\`cellFor(rowKey, columnName)\`) ins
         { label: 'max', calc: 'Math.max(50, 51, 100, 50) = 100' },
       ],
       answer: '`n = 4`, `last = "Conway"`, `dues = ["$50.00", "$51.00", "$100.00", "$50.00"]`, `max = 100` (Jason Doe).',
-      insight: 'count(), textContent() and allTextContents() are one-time snapshots: correct here only because the static page has loaded. On a dynamic table, add a web-first assertion such as toHaveCount first, or assert directly with toHaveText on the locator.',
+      insight: 'count(), textContent() and allTextContents() read the page once and do not wait. They are right here only because this simple page has loaded. On a table that loads later, first check with toHaveCount, or check directly with toHaveText.',
       followUps: [
         {
           q: 'How would you assert the whole Due column in one retrying assertion?',
-          a: '`await expect(rows.locator(\'td:nth-child(4)\')).toHaveText([\'$50.00\', \'$51.00\', \'$100.00\', \'$50.00\'])`. Passing an array to toHaveText checks every matched element in order and retries until it matches or times out, so it is safe on tables that load asynchronously.',
+          a: '`await expect(rows.locator(\'td:nth-child(4)\')).toHaveText([\'$50.00\', \'$51.00\', \'$100.00\', \'$50.00\'])`. With a list, toHaveText checks every cell in order. It keeps retrying until it matches or times out. So it is safe on tables that load later.',
         },
       ],
     },
@@ -1319,7 +1369,7 @@ I would wrap steps 3–4 in a small helper (\`cellFor(rowKey, columnName)\`) ins
     {
       id: 'pw-actions-mcq-01',
       difficulty: 'easy',
-      question: 'A search box shows suggestions only on keyup events. Which call reliably makes suggestions appear for "lap"?',
+      question: 'A search box shows suggestions only when keys are pressed (keyup events). Which call makes suggestions appear for "lap"?',
       options: [
         "await box.fill('lap')",
         "await box.pressSequentially('lap')",
@@ -1328,11 +1378,11 @@ I would wrap steps 3–4 in a small helper (\`cellFor(rowKey, columnName)\`) ins
       ],
       correct: [1],
       explanation:
-        'pressSequentially sends keydown, keypress and keyup for every character, so keystroke listeners fire. fill sets the whole value at once and fires an input event, which many widgets handle but a keyup-only widget would miss. selectOption is for <select> elements and setInputFiles for file inputs, so both throw here.',
+        'pressSequentially types one key at a time, so key listeners fire for every letter. fill puts in the whole value at once. Many widgets handle that, but a box that only listens to key presses would miss it. selectOption is for <select> elements and setInputFiles is for file inputs, so both throw here.',
       followUps: [
         {
           q: 'Why not use pressSequentially for every input then?',
-          a: 'It is slower and adds no coverage for ordinary fields. fill is faster, clears the old value and is the documented default; pressSequentially is reserved for fields with special keyboard handling.',
+          a: 'It is slower and tests nothing extra on normal fields. fill is faster, clears the old value and is the documented default. Keep pressSequentially for fields that react to each key.',
         },
       ],
     },
@@ -1357,11 +1407,11 @@ await page.locator('#dropdown').selectOption('2');`,
       ],
       correct: [1],
       explanation:
-        'A plain string is matched against the option value (falling back to the label), and value "2" belongs to "Option 2". It is not an index, so "third option" is right only by coincidence here. selectOption accepts a plain string as well as { label } and { index } objects, and nothing about this page renumbers indexes.',
+        'A plain string is matched against the option value first (then the label). Value "2" belongs to "Option 2". It is not a position number, so "the third option" is right only by chance here. selectOption accepts a plain string as well as { label } and { index }. Nothing on this page changes how positions are counted.',
       followUps: [
         {
           q: 'How would you assert the selection?',
-          a: "await expect(page.locator('#dropdown')).toHaveValue('2'). It retries until the select's value matches, so it also covers apps that update the select asynchronously.",
+          a: 'await expect(page.locator(\'#dropdown\')).toHaveValue(\'2\'). It keeps checking until the value matches, so it also works when the app updates the dropdown a little later.',
         },
       ],
     },
@@ -1383,11 +1433,11 @@ console.log(await page.locator('#result').textContent());`,
       ],
       correct: [2],
       explanation:
-        'With no dialog listener, Playwright dismisses dialogs automatically, so the confirm returns false and the page writes "You clicked: Cancel". The hang happens only when a listener exists but never calls accept or dismiss. Playwright does not accept by default and does not throw an unhandled-dialog error.',
+        'With no dialog listener, Playwright closes dialogs by itself (dismiss). So the confirm gets Cancel, and the page writes "You clicked: Cancel". A hang happens only when a listener exists but never calls accept or dismiss. Playwright does not press OK by default, and it does not throw an "unhandled dialog" error.',
       followUps: [
         {
           q: 'How do you make it click OK instead?',
-          a: "Register page.once('dialog', d => d.accept()) before the click, then assert await expect(page.locator('#result')).toHaveText('You clicked: Ok').",
+          a: 'Add page.once(\'dialog\', d => d.accept()) before the click. Then check await expect(page.locator(\'#result\')).toHaveText(\'You clicked: Ok\').',
         },
       ],
     },
@@ -1410,11 +1460,11 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [1],
       explanation:
-        'The listener is created after the click has already opened the tab, so the event is usually missed and the wait looks for a second new page until timeout; it passes only when the tab happens to open late. The page event fires for _blank links too. toHaveTitle works on any Page, and force has nothing to do with tabs.',
+        'The wait starts after the click has already opened the tab. So the event is usually missed. The wait then looks for a second new tab until it times out. It passes only when the tab happens to open late. The page event does fire for _blank links. toHaveTitle works on any Page, and force has nothing to do with tabs.',
       followUps: [
         {
           q: 'Write the fixed version in three lines.',
-          a: "const p = context.waitForEvent('page'); await page.getByRole('link', { name: 'Click Here' }).click(); const newTab = await p; The promise is created first and awaited after the click.",
+          a: 'const p = context.waitForEvent(\'page\'); await page.getByRole(\'link\', { name: \'Click Here\' }).click(); const newTab = await p; We start waiting first and await it after the click.',
         },
       ],
     },
@@ -1431,11 +1481,11 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [0, 1, 2],
       explanation:
-        'selectOption works by value (lohi), by label, or by zero-based index (az=0, za=1, lohi=2), so the first three all select it, though index is the most fragile. fill throws because a <select> is not an input, textarea or contenteditable. Clicking a position only opens the native dropdown and does not choose an option.',
+        'selectOption works by value (lohi), by label, or by position counted from 0 (az=0, za=1, lohi=2). So the first three all pick it, but position breaks most easily. fill throws, because a <select> is not a text field. Clicking a point only opens the dropdown; it does not choose an option.',
       followUps: [
         {
           q: 'Which of the three would you use in a framework and why?',
-          a: 'Value or label. Value survives copy and translation changes; label matches the manual test case wording. Index breaks as soon as an option is added or reordered.',
+          a: 'Value or label. Value stays the same when the text changes or is translated. Label matches the manual test case words. Position breaks as soon as an option is added or moved.',
         },
       ],
     },
@@ -1451,11 +1501,11 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [1],
       explanation:
-        'Custom dropdowns are not <select> elements, so you interact like a user: open the combobox, then pick the option by role and name. force cannot turn a div into a select. Setting the hidden value with evaluate skips the component logic and may not update the UI or the form state. The parent div is not a select either.',
+        'A custom dropdown is not a <select>. So act like a user: open the combobox, then click the option by role and name. force cannot turn a div into a select. Setting a hidden value with evaluate skips the dropdown\'s own code, so the screen and form may not update. The parent div is not a select either.',
       followUps: [
         {
           q: 'The listbox renders at the end of <body> (a portal). Does that matter?',
-          a: 'It matters only if you scoped the option locator inside the combobox container. Use a page-level getByRole(\'option\') or scope to getByRole(\'listbox\'), which is where the options really live in the DOM.',
+          a: 'Only if you searched for the option inside the combobox box. The list is actually at the end of the page. Use a page-level getByRole(\'option\'), or search inside getByRole(\'listbox\').',
         },
       ],
     },
@@ -1471,18 +1521,18 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [1],
       explanation:
-        'Payment providers usually render card fields in iframes, and page-level locators never search inside frames, so you go through frameLocator or contentFrame(). XPath does not cross frames either. A sleep does not help because the locator will never match in the outer document. Strict mode errors say "resolved to N elements", not a timeout with zero matches.',
+        'Payment providers usually put card fields inside iframes. Normal page locators never look inside iframes, so use frameLocator or contentFrame(). XPath cannot look inside iframes either. A sleep does not help, because the locator will never match in the outer page. A strict mode error says "resolved to N elements"; it is not a timeout with zero matches.',
       followUps: [
         {
           q: 'How would you pick a stable locator for the iframe itself?',
-          a: 'Use a meaningful attribute such as title, name or a src fragment, for example iframe[title="Secure card number input frame"], rather than the iframe index, because ad and chat iframes change order.',
+          a: 'Use a meaningful attribute such as title, name or part of src, for example iframe[title="Secure card number input frame"]. Do not use the iframe\'s position, because ad and chat iframes change the order.',
         },
       ],
     },
     {
       id: 'pw-actions-mcq-08',
       difficulty: 'medium',
-      question: 'A download test saves nothing: the file path from download.path() does not exist when the next test reads it. What explains this?',
+      question: 'A download test saves nothing. The file at download.path() is gone when the next test reads it. Why?',
       options: [
         'Downloads require headed mode',
         'Downloaded files are temporary and deleted when the browser context closes; call saveAs() to keep them',
@@ -1491,11 +1541,11 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [1],
       explanation:
-        'Playwright stores downloads in a temporary location that is cleaned up when the context that produced them closes, so a later test cannot rely on that path. Save the file with download.saveAs(target) within the test. Downloads work headless, path() returns a local file path, and turning off acceptDownloads would block downloads entirely.',
+        'Playwright keeps downloads in a temporary folder. That folder is cleaned when the test\'s browser context closes. So a later test cannot use that path. Save the file with download.saveAs(target) inside the test. Downloads work without a visible browser, path() returns a local file path, and acceptDownloads: false would block downloads completely.',
       followUps: [
         {
           q: 'Where should the test save it?',
-          a: 'testInfo.outputPath(download.suggestedFilename()) gives a per-test folder inside the test results directory, so parallel tests do not overwrite each other and the file is attached to that run.',
+          a: 'testInfo.outputPath(download.suggestedFilename()) gives each test its own folder inside the test results. Tests running at the same time do not overwrite each other.',
         },
       ],
     },
@@ -1511,11 +1561,11 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [0, 1, 2],
       explanation:
-        'setInputFiles accepts a single path, an array of paths for multiple inputs, or an empty array to clear the selection (it also accepts in-memory { name, mimeType, buffer } objects). fill does not work on file inputs; browsers do not allow scripts to type a path into them, which is why setInputFiles exists.',
+        'setInputFiles accepts one path, a list of paths for a multiple input, or an empty list to clear the choice. It also accepts a file made in code: { name, mimeType, buffer }. fill does not work on file inputs. Browsers do not let scripts type a path into them. That is why setInputFiles exists.',
       followUps: [
         {
           q: 'The page has no file input until you click "Browse". What now?',
-          a: "Start const chooser = page.waitForEvent('filechooser') before clicking Browse, await it, then call (await chooser).setFiles(path). Same listen-trigger-consume pattern as popups and downloads.",
+          a: 'Start const chooser = page.waitForEvent(\'filechooser\') before clicking Browse. Then call (await chooser).setFiles(path). It is the same listen, click, receive pattern as new tabs and downloads.',
         },
       ],
     },
@@ -1531,11 +1581,11 @@ await expect(newTab).toHaveTitle('New Window');`,
       ],
       correct: [1],
       explanation:
-        'force skips actionability checks, including whether the element receives pointer events, so Playwright clicks underneath the banner where a user cannot. The test should fail and a bug should be filed. force does not wait longer, and it is not browser-specific. It exists for rare deliberate cases, not for overlays that block users.',
+        'force skips the safety checks, including "does the button receive the click, or is something on top?". So Playwright clicks under the banner, where a user cannot. The test should fail, and a bug should be filed. force does not wait longer, and it works in every browser. It is for rare, deliberate cases, not for banners that block users.',
       followUps: [
         {
           q: 'How should the test handle a banner that users can close?',
-          a: 'Close it like a user in setup, or pre-set the consent cookie in storageState, then assert it is hidden before continuing. The click stays unforced.',
+          a: 'Close it like a user in the setup step, or set the consent cookie in storageState. Then check it is hidden before going on. The click stays normal, not forced.',
         },
       ],
     },
@@ -1559,11 +1609,11 @@ await expect(page.locator('#result'))                                    // line
       ],
       correct: [1],
       explanation:
-        'Once a dialog listener exists, Playwright stops auto-dismissing and leaves the dialog to you; this listener only logs, so the alert stays open and the click on line 3 stalls. goto waits for load, not networkidle. Line 4 is never reached. page.on registers synchronously and returns the page, so it does not need await.',
+        'Once a dialog listener exists, Playwright stops closing dialogs by itself. It leaves them to you. This listener only logs, so the alert stays open and the click on line 3 never finishes. goto waits for load, not networkidle. Line 4 is never reached. page.on adds the listener at once and does not need await.',
       followUps: [
         {
           q: 'Fix it with one change.',
-          a: "Make the handler settle the dialog: page.on('dialog', async d => { console.log(d.message()); await d.accept(); }); or better page.once, so only this dialog is affected.",
+          a: 'Make the listener close the dialog: page.on(\'dialog\', async d => { console.log(d.message()); await d.accept(); }); Even better, use page.once, so only this dialog is affected.',
         },
       ],
     },
@@ -1586,11 +1636,11 @@ page.locator('#table1 tr:nth-child(2) td:nth-child(4)');`,
       options: ['A', 'B', 'C', 'D'],
       correct: [1],
       explanation:
-        'B finds the row by a unique value (the email), so it works wherever sorting puts Frank. A and D depend on row position, which the new default sort changes. C matches any cell containing "51", which could include another value like $151.00 or a different column, and it does not tie the value to Frank at all.',
+        'B finds the row by a unique value (the email). So it works wherever sorting puts Frank. A and D depend on the row\'s position, which the new sort changes. C matches any cell that contains "51". That could be $151.00 or a different column, and it does not tie the value to Frank at all.',
       followUps: [
         {
           q: 'What if the Due column moves to position 5?',
-          a: 'Hard-coded nth(3) breaks. Read the header texts, find the index of "Due", and use that index, so the test follows the column by name.',
+          a: 'Then a fixed nth(3) breaks. Read the header texts, find the position of "Due", and use that number. The test now follows the column by its name.',
         },
       ],
     },
@@ -1606,11 +1656,11 @@ page.locator('#table1 tr:nth-child(2) td:nth-child(4)');`,
       ],
       correct: [0, 1, 2],
       explanation:
-        "goto defaults to the load event, commit is the earliest point (response received), and the docs mark networkidle as discouraged because background polling can keep it from settling and it does not prove the UI is ready. domcontentloaded fires when HTML is parsed, which is earlier than images finishing; that describes load, not domcontentloaded.",
+        'goto waits for the load event by default. commit is the earliest point: the response arrived. The docs do not recommend networkidle, because background requests can stop it from finishing, and it does not prove the page is ready. domcontentloaded fires when the HTML is read, before images finish. Waiting for images is what load does.',
       followUps: [
         {
           q: 'After clicking a link that navigates, how do you wait for the new page?',
-          a: "await expect(page).toHaveURL(/target/) or await page.waitForURL('**/target'). waitForNavigation is deprecated, and actions on the new page auto-wait anyway.",
+          a: 'await expect(page).toHaveURL(/target/) or await page.waitForURL(\'**/target\'). waitForNavigation is old (deprecated), and actions on the new page wait by themselves anyway.',
         },
       ],
     },
@@ -1626,11 +1676,11 @@ page.locator('#table1 tr:nth-child(2) td:nth-child(4)');`,
       ],
       correct: [1],
       explanation:
-        'Press on the source, move over the target, then release. Some apps only accept a drop after a dragover event, which needs the pointer to move over the target, hence the second hover. Two clicks never hold the button down. Dispatching drop before drag gets the events in the wrong order and skips the dataTransfer handshake. The last sequence presses before reaching the source and releases at the wrong place.',
+        'Press on the source, move over the target, then let go. Some apps accept a drop only after the mouse has moved over the target (the dragover event). That is why you hover the target twice. Two clicks never hold the button down. Sending drop before drag gets the events in the wrong order. The last option presses before reaching the source and releases in the wrong place.',
       followUps: [
         {
           q: 'How do you prove the drop worked on the-internet /drag_and_drop?',
-          a: "Assert the swapped headers: await expect(page.locator('#column-a header')).toHaveText('B'). A drag without an outcome assertion proves only that the mouse moved.",
+          a: 'Check the swapped headers: await expect(page.locator(\'#column-a header\')).toHaveText(\'B\'). A drag without a result check only proves that the mouse moved.',
         },
       ],
     },
@@ -1646,11 +1696,11 @@ page.locator('#table1 tr:nth-child(2) td:nth-child(4)');`,
       ],
       correct: [0, 1],
       explanation:
-        "A page opened by this page fires the page's popup event and the context's page event, so both listeners get it. Browser has no 'page' event. Page objects emit 'popup', not 'page', so waiting for 'page' on a page never resolves. A tab created with context.newPage() would fire only the context event, not popup.",
+        'A tab opened by this page fires the page\'s popup event and the context\'s page event. So both listeners get it. The browser object has no \'page\' event. A Page sends \'popup\', not \'page\', so waiting for \'page\' on a page never finishes. A tab made with context.newPage() would fire only the context event, not popup.',
       followUps: [
         {
           q: 'When is context.on(\'page\') more useful than a one-off wait?',
-          a: 'When you do not know which action opens a tab, or tabs open repeatedly (for example, an app that opens help pages). A context listener can log or close every new page, while waitForEvent is for one expected tab tied to one action.',
+          a: 'When you do not know which action opens a tab, or tabs open again and again (like help pages). A context listener can log or close every new tab. waitForEvent is for one expected tab after one action.',
         },
       ],
     },

@@ -6,7 +6,7 @@ const topic: Topic = {
   order: 1,
   title: 'JavaScript Basics for Testers',
   subtitle:
-    'Variables, types, operators, == vs ===, truthy/falsy, conditionals, template literals and number gotchas: the JavaScript you need before you write a single Playwright test.',
+    'Variables, types, == vs ===, truthy and falsy, if/else, template literals and number traps. The JavaScript you need before your first Playwright test.',
   estimatedMinutes: 90,
   sources: [
     'javascript.info: Variables, Data types, Type Conversions, Basic operators, Comparisons, Conditional branching, Logical operators, Nullish coalescing, Optional chaining, Numbers',
@@ -19,37 +19,43 @@ const topic: Topic = {
   ],
   tags: ['javascript', 'variables', 'let-const-var', 'typeof', 'equality', 'coercion', 'truthy-falsy', 'template-literals', 'numbers', 'debugging'],
   cheatSheet: [
-    'JavaScript is the language; Node.js runs it outside the browser. Playwright tests are JavaScript/TypeScript files that Node executes.',
-    'Default to `const`; use `let` only when you reassign; avoid `var` (function-scoped, hoisted as undefined, leaks out of blocks).',
-    '8 types: string, number, bigint, boolean, undefined, null, symbol, object. `typeof null` is "object" (historic bug); use `Array.isArray()` for arrays.',
-    '`===` compares type AND value with no conversion; `==` converts first (`"1" == 1` is true, `0 == ""` is true). Use `===` everywhere; `x == null` is the one accepted idiom.',
-    'Falsy values (exactly 8): false, 0, -0, 0n, "", null, undefined, NaN. Everything else is truthy, including "0", "false", [] and {}.',
-    '`a || b` falls back on ANY falsy value (0 and "" too); `a ?? b` falls back only on null/undefined. Use `??` for config defaults like timeouts and retries.',
-    '`obj?.a?.b` returns undefined instead of throwing when a link is null/undefined; pair with `??` for a default.',
-    '`+` with a string concatenates ("5" + 2 is "52"); `-`, `*`, `/` convert to numbers ("5" - 2 is 3).',
-    '0.1 + 0.2 is 0.30000000000000004: compare money in cents or with `toFixed(2)`; never `===` on raw float sums.',
-    '`NaN !== NaN`; check with `Number.isNaN(x)`. `parseFloat("29.99 USD")` is 29.99 but `Number("$29.99")` is NaN: strip symbols first.',
-    'Template literals: backticks, `${expr}` interpolation, multi-line; ideal for unique test data like `user_${Date.now()}@test.com`.',
-    'Debug with `console.log`, `console.table`, `console.error`, and the Node REPL; read the error name and line number first.',
+    'JavaScript is the language. Node.js runs it outside the browser. Playwright tests are JavaScript or TypeScript files that Node runs.',
+    'Use `const` by default. Use `let` only when the value changes. Avoid `var`: it leaks out of `{ }` blocks.',
+    'There are 8 types: string, number, bigint, boolean, undefined, null, symbol, object. `typeof null` is "object" (an old bug). Use `Array.isArray()` for arrays.',
+    '`===` checks type and value, with no conversion. `==` converts first, so `"1" == 1` is true. Use `===`. Only `x == null` is an accepted use of `==`.',
+    'There are exactly 8 falsy values: false, 0, -0, 0n, "", null, undefined, NaN. Everything else is truthy, even "0", "false", [] and {}.',
+    '`a || b` uses b when a is any falsy value (0 and "" too). `a ?? b` uses b only when a is null or undefined. Use `??` for timeouts and retries.',
+    '`obj?.a?.b` gives undefined instead of crashing when a part is missing. Add `??` to get a default value.',
+    '`+` with a string joins text: "5" + 2 is "52". `-`, `*` and `/` turn text into numbers: "5" - 2 is 3.',
+    '0.1 + 0.2 is 0.30000000000000004. Compare money in cents or with `toFixed(2)`. Never use `===` on raw decimal sums.',
+    '`NaN !== NaN`, so check it with `Number.isNaN(x)`. `parseFloat("29.99 USD")` is 29.99, but `Number("$29.99")` is NaN. Remove symbols first.',
+    'Template literals use backticks and `${expr}`. They are great for unique test data like `user_${Date.now()}@test.com`.',
+    'Debug with `console.log` and `console.table`. Read the error name and the line number first.',
   ],
   sections: [
     {
       heading: 'What JavaScript and Node.js are (and why Playwright needs them)',
-      body: `**Intuition:** JavaScript is a language, like English. Node.js is a "speaker" that can read that language on your laptop or a CI server, outside the browser. A Playwright test is a JavaScript (or TypeScript) file; Node.js reads it and, through Playwright, drives Chromium, Firefox and WebKit.
+      body: `**Example:** here is one line from a Playwright test.
 
-**The precise picture**
+\`await page.getByRole('button', { name: 'Login' }).click();\`
 
-| Term | What it is | Where you meet it as a tester |
+This line is plain JavaScript. It finds the Login button and clicks it.
+
+**JavaScript** is a language, like English. **Node.js** is a program that runs JavaScript on your laptop or a CI server, outside the browser. **Playwright** is a library (ready-made code) that runs inside Node.js. It opens real browsers and controls them.
+
+| Word | What it means | Where you see it |
 |---|---|---|
-| **JavaScript (ECMAScript)** | The language standard, updated yearly (ES2015 added \`let\`, \`const\`, arrows, classes; ES2020 added \`??\` and \`?.\`) | Every test file you write |
-| **Browser engine** (V8 in Chrome, SpiderMonkey in Firefox, JavaScriptCore in Safari) | Runs JS inside a web page | DevTools console, the app under test |
-| **Node.js** | V8 plus file system, network and process APIs, running outside the browser | \`npx playwright test\` runs on Node |
-| **npm** | Node's package manager | \`npm init playwright@latest\` installs Playwright |
-| **TypeScript** | JavaScript plus optional type annotations, compiled away before running | Playwright's default template uses \`.ts\` files |
+| **JavaScript** | The language you write | Every test file |
+| **Node.js** | Runs JavaScript outside the browser | \`npx playwright test\` runs on Node |
+| **npm** | Installs packages (ready-made code) for Node | \`npm init playwright@latest\` |
+| **TypeScript** | JavaScript plus types (labels like "this is a number") | Playwright test files end in \`.ts\` |
+| **Browser engine** | Runs JavaScript inside a web page | The app you are testing |
 
-**Why a manual tester must learn JS first:** every Playwright line (\`await page.getByRole('button', { name: 'Login' }).click()\`) is ordinary JavaScript: an object (\`page\`), a method call, a string, an options object, and \`await\`. If you understand values, objects, functions and promises, Playwright reads like plain English. If you do not, you end up copy-pasting code you cannot debug.
+Look at the Playwright line again. It uses an object (\`page\`), a function call (\`click()\`), a string (\`'Login'\`) and \`await\`. Learn these basics, and Playwright code becomes easy to read.
 
-**In interviews, say this:** "JavaScript is the language, Node.js is the runtime that executes it outside a browser, and Playwright is a Node library. My tests run in Node and control real browsers through Playwright."`,
+**In an interview, say:** "JavaScript is the language. Node.js runs it outside the browser. Playwright is a Node library that controls real browsers."
+
+**Why testers care:** your test code runs in Node, but the app's code runs in the browser. Knowing which side you are on makes debugging much easier.`,
       diagram: `  your test file (login.spec.ts)
             |
             v
@@ -61,25 +67,33 @@ const topic: Topic = {
    JavaScript runs HERE                     the app under test
                                             runs ITS own JS here`,
       keyPoints: [
-        'JavaScript = language; Node.js = runtime outside the browser; Playwright = Node library that drives browsers.',
-        'TypeScript is JavaScript with types; everything in this phase applies to it unchanged.',
-        'Your test code and the web app\'s code run in different places (Node vs the browser page).',
+        'JavaScript is the language. Node.js runs it outside the browser. Playwright is a Node library that drives browsers.',
+        'TypeScript is JavaScript with types. Everything in this phase works the same in TypeScript.',
+        'Your test code runs in Node. The web app\'s code runs in the browser page.',
       ],
       source: "Kyle Simpson: You Don't Know JS Yet: Get Started, Ch 1; Node.js docs",
     },
     {
       heading: 'Running JavaScript: Node, the REPL and the browser console',
-      body: `**Intuition:** you need a scratch pad where you can type a line and instantly see the result, the way you would try a value in a form field before writing the test case.
+      body: `**Example:** save this line in a file called \`scratch.js\`.
 
-**Three ways to run JS**
+\`console.log(2 + 3);\`
 
-1. **Node REPL:** type \`node\` in a terminal and press Enter. You get a \`>\` prompt; type \`0.1 + 0.2\` and see the answer. \`.exit\` (or Ctrl+C twice) quits.
-2. **A file:** save code as \`scratch.js\` and run \`node scratch.js\`. This is how you practise every snippet in this course.
-3. **Browser DevTools console:** F12 → Console. Useful for poking at the app under test (\`document.title\`), but remember that this is the *page's* JavaScript world, not your test's.
+Now run \`node scratch.js\` in a terminal. It prints \`5\`.
 
-**Statements, semicolons, comments:** a program is a list of statements run top to bottom. Semicolons are optional in most places (automatic semicolon insertion), but teams usually keep them or enforce a style with a formatter (Prettier). \`//\` starts a one-line comment; \`/* ... */\` spans lines.
+You need a place to try code and see the result quickly. There are three ways.
 
-**Common mistake:** running \`node login.spec.ts\` to execute a Playwright test. Node will run the file as a plain script, \`test()\` will not be registered with the runner, and nothing happens (or a type error). Playwright tests are run with \`npx playwright test\`.`,
+1. **Node REPL** (a type-and-see prompt): type \`node\` in a terminal and press Enter. Type \`0.1 + 0.2\` and see the answer. Type \`.exit\` to quit.
+2. **A file:** save code as \`scratch.js\` and run \`node scratch.js\`. Use this for every snippet in this course.
+3. **Browser console:** press F12 and open the Console tab. This code runs *inside the web page*, not in your test.
+
+**Comments:** \`//\` starts a one-line comment. \`/* ... */\` can cover many lines. JavaScript ignores comments.
+
+**Semicolons:** a semicolon \`;\` ends a statement (one instruction). It is often optional, but most teams keep it.
+
+**Watch out:** do not run a Playwright test with \`node login.spec.ts\`. Use \`npx playwright test\` instead.
+
+**Why testers care:** trying one line in the REPL is much faster than running a whole test again.`,
       code: [
         {
           language: 'javascript',
@@ -99,31 +113,39 @@ console.log('items:', 3, 'total:', 59.97); // → items: 3 total: 59.97`,
         },
       ],
       keyPoints: [
-        'Practise every snippet with `node file.js` or the `node` REPL.',
-        'The DevTools console runs inside the page, not inside your test.',
-        'Playwright tests run with `npx playwright test`, not `node file.spec.ts`.',
+        'Try every snippet with `node file.js` or the `node` REPL.',
+        'The browser console runs inside the page, not inside your test.',
+        'Run Playwright tests with `npx playwright test`, not `node file.spec.ts`.',
       ],
       source: 'Node.js docs: REPL; javascript.info: Hello, world! and Code structure',
     },
     {
       heading: 'Variables: let, const and var',
-      body: `**Intuition:** a variable is a labelled box. \`const\` is a box whose label is glued to one value forever; \`let\` is a box you can empty and refill; \`var\` is an old box with a loose lid that leaks outside the room you put it in.
+      body: `**Example:**
 
-**The rules**
+- \`const baseUrl = 'https://www.saucedemo.com';\` (this value never changes)
+- \`let attempts = 0;\` then \`attempts = attempts + 1;\` (this value changes)
+
+A **variable** is a labelled box that holds a value.
+
+- **\`const\`**: the box keeps the same value. You cannot put a new value in it.
+- **\`let\`**: you can put a new value in the box later.
+- **\`var\`**: the old way. Avoid it in new code.
 
 | | \`const\` | \`let\` | \`var\` |
 |---|---|---|---|
-| Reassign? | No (TypeError) | Yes | Yes |
-| Scope | Block \`{ }\` | Block \`{ }\` | Whole function (or global) |
-| Use before declaration | ReferenceError (temporal dead zone) | ReferenceError (temporal dead zone) | \`undefined\` (hoisted and initialised) |
-| Redeclare in same scope | SyntaxError | SyntaxError | Allowed (silently) |
-| Modern advice | **Default choice** | When the value changes | Avoid in new code |
+| Give it a new value later? | No (TypeError) | Yes | Yes |
+| Visible outside its \`{ }\` block? | No | No | Yes (it leaks out) |
+| Used before its line? | Error | Error | Gives \`undefined\` |
+| Should you use it? | **Yes, by default** | When the value changes | No |
 
-**\`const\` does not mean frozen.** It locks the *binding*, not the contents. \`const user = { name: 'standard_user' }\` can still have \`user.name\` changed; you just cannot point \`user\` at a different object. This matters for shared test data (see the Objects topic).
+**Watch out:** \`const\` does not freeze an object. You can still change what is inside it. \`user.name = 'b'\` works on a \`const user\`. Only \`user = { ... }\` (a whole new value) fails.
 
-**Naming:** camelCase (\`loginButton\`, \`maxRetries\`), letters/digits/\`$\`/\`_\`, cannot start with a digit, case-sensitive (\`User\` ≠ \`user\`). Reserved words (\`let\`, \`class\`, \`return\`) are not allowed. Use names that read like test language: \`expectedTitle\`, \`invalidEmails\`, \`cartCount\`.
+**Naming:** use camelCase, like \`loginButton\` or \`maxRetries\`. A name cannot start with a digit. \`User\` and \`user\` are different names.
 
-**In interviews, say this:** "I use \`const\` by default so accidental reassignment fails loudly, \`let\` for counters and values that change, and I avoid \`var\` because it is function-scoped and hoisted, which causes bugs that are hard to spot."`,
+**In an interview, say:** "I use \`const\` by default and \`let\` when the value changes. I never use \`var\`, because it leaks out of blocks and hides bugs."
+
+**Why testers care:** \`const\` stops you from changing \`expectedTotal\` by mistake halfway through a test.`,
       code: [
         {
           language: 'javascript',
@@ -139,12 +161,12 @@ try {
   console.log(e.name); // → TypeError
 }
 
-// const locks the binding, not the object's contents
+// const blocks a new value, but the object inside can still change
 const user = { name: 'standard_user' };
 user.name = 'locked_out_user';
 console.log(user.name); // → locked_out_user
 
-// var ignores block scope, let respects it
+// var leaks out of the { } block; let stays inside
 if (true) {
   var leaky = 'I escaped the block';
   let contained = 'I stay inside';
@@ -154,36 +176,47 @@ console.log(typeof contained); // → undefined (not declared out here)`,
         },
       ],
       keyPoints: [
-        '`const` by default, `let` when reassigning, never `var` in new code.',
-        '`const` objects and arrays can still be mutated.',
-        '`var` is function-scoped and leaks out of `if`/`for` blocks.',
+        'Use `const` by default, `let` when the value changes, and never `var` in new code.',
+        'You can still change what is inside a `const` object or array.',
+        '`var` leaks out of `if` and `for` blocks.',
       ],
       source: 'javascript.info: Variables; MDN: let, const, var',
     },
     {
       heading: 'Data types and typeof quirks',
-      body: `**Intuition:** every value has a *kind*: text, number, yes/no, "nothing", or a bundle of other values. The kind decides what operations make sense, just as a date field and a quantity field accept different inputs.
+      body: `**Example:**
 
-**The 8 types**
+- \`typeof 'Swag Labs'\` gives \`"string"\`.
+- \`typeof 29.99\` gives \`"number"\`.
+- \`typeof null\` gives \`"object"\`. This one is a surprise!
 
-| Type | Example | \`typeof\` result | Note for testers |
+Every value has a **type** (a kind of value). The type decides what you can do with it. A date field and a quantity field accept different inputs. Values work the same way.
+
+| Type | Example | \`typeof\` gives | Note for testers |
 |---|---|---|---|
-| string | \`'Products'\`, \`"₹499"\` | \`"string"\` | Text you read from the page is always a string |
-| number | \`42\`, \`29.99\`, \`NaN\`, \`Infinity\` | \`"number"\` | One type for integers and decimals |
-| bigint | \`9007199254740993n\` | \`"bigint"\` | Huge integers (rare in tests) |
-| boolean | \`true\`, \`false\` | \`"boolean"\` | Results of checks |
-| undefined | a declared but unset variable | \`"undefined"\` | "No value was assigned" |
-| null | \`null\` | \`"object"\` (!) | "Intentionally empty"; the \`typeof\` result is a 1995 bug kept for compatibility |
+| string | \`'Products'\`, \`"₹499"\` | \`"string"\` | Text read from a page is always a string |
+| number | \`42\`, \`29.99\`, \`NaN\` | \`"number"\` | Whole numbers and decimals share one type |
+| bigint | \`9007199254740993n\` | \`"bigint"\` | Very big whole numbers (rare in tests) |
+| boolean | \`true\`, \`false\` | \`"boolean"\` | Yes/no results |
+| undefined | a variable with no value yet | \`"undefined"\` | "No value was given" |
+| null | \`null\` | \`"object"\` (!) | "Empty on purpose". The "object" result is an old bug from 1995 |
 | symbol | \`Symbol('id')\` | \`"symbol"\` | Unique keys (rare in tests) |
-| object | \`{}\`, \`[]\`, \`new Date()\`, functions | \`"object"\` / \`"function"\` | Arrays and null also say "object" |
+| object | \`{}\`, \`[]\`, \`new Date()\` | \`"object"\` (functions give \`"function"\`) | Arrays also say "object" |
 
-The first seven are **primitives** (immutable, compared by value). Objects are compared **by reference** (covered in the Objects topic).
+The first seven are **primitives** (simple, single values). Objects are bundles of values. The Objects topic covers them.
 
-**\`null\` vs \`undefined\`:** \`undefined\` usually means "JavaScript never got a value" (missing property, missing argument, function with no return). \`null\` usually means "a developer deliberately said empty" (an API returning \`"middleName": null\`). In API tests, a field that is \`null\` and a field that is missing are different defects.
+**null vs undefined:**
 
-**Reliable checks:** \`Array.isArray(x)\` for arrays, \`x === null\` for null, \`Number.isNaN(x)\` for NaN, \`typeof x === 'string'\` for strings.
+- \`undefined\` means JavaScript never got a value. Examples: a missing property, or a missing argument.
+- \`null\` means a developer chose "empty" on purpose. Example: \`"middleName": null\` in an API response.
 
-**Common mistake:** asserting \`typeof response.items === 'array'\`. It is never true; \`typeof []\` is \`'object'\`.`,
+In API tests, a \`null\` field and a missing field are two different bugs.
+
+**Safe checks:** \`Array.isArray(x)\` for arrays, \`x === null\` for null, \`Number.isNaN(x)\` for NaN, and \`typeof x === 'string'\` for text.
+
+**Watch out:** \`typeof response.items === 'array'\` is never true, because \`typeof []\` is \`'object'\`.
+
+**Why testers care:** API checks often ask "is this field a list?" Use \`Array.isArray\` for that, not \`typeof\`.`,
       code: [
         {
           language: 'javascript',
@@ -211,28 +244,36 @@ console.log({ a: 1 }.b);               // → undefined (missing property)`,
         },
       ],
       keyPoints: [
-        '7 primitives + object. Arrays, dates, null and functions are not separate `typeof` types (functions report "function").',
-        '`typeof null === "object"` and `typeof NaN === "number"` are classic interview traps.',
-        'Use `Array.isArray`, `=== null` and `Number.isNaN` for precise checks.',
+        '7 primitives plus object. Arrays, dates and null all say "object". Functions say "function".',
+        '`typeof null` is "object" and `typeof NaN` is "number". Both are classic interview traps.',
+        'Use `Array.isArray`, `=== null` and `Number.isNaN` for exact checks.',
       ],
       source: 'javascript.info: Data types; MDN: typeof',
     },
     {
       heading: 'Operators: arithmetic, logical, ?? and ?.',
-      body: `**Intuition:** operators are the verbs of JavaScript: add, compare, combine conditions, pick a fallback.
+      body: `**Example:**
 
-**Arithmetic:** \`+ - * / % **\`. \`%\` is the remainder (\`10 % 3\` is 1), handy for "every 3rd row". \`**\` is power. \`++\`/\`--\` add or subtract one.
+- \`'5' + 2\` gives \`'52'\` (the text is joined).
+- \`'5' - 2\` gives \`3\` (a real number).
 
-**The \`+\` trap:** if either side is a string, \`+\` **concatenates**. Other arithmetic operators convert strings to numbers. This is the #1 source of "the total shows 2999 instead of 59.98" bugs when prices are read from the page as text.
+**Operators** are symbols that do work: add, compare, or pick a fallback value.
 
-**Logical operators return one of their operands, not just true/false:**
-- \`a || b\` returns \`a\` if it is truthy, else \`b\`.
-- \`a && b\` returns \`a\` if it is falsy, else \`b\`.
-- \`!a\` returns a real boolean; \`!!a\` converts any value to boolean.
+**Arithmetic:** \`+ - * / % **\`. \`%\` gives the remainder: \`10 % 3\` is 1. \`**\` is power: \`2 ** 3\` is 8. \`++\` adds one, and \`--\` takes one away.
 
-**Nullish coalescing \`??\` (ES2020):** \`a ?? b\` returns \`b\` only when \`a\` is \`null\` or \`undefined\`. Unlike \`||\`, it keeps legitimate \`0\`, \`''\` and \`false\`.
+**The \`+\` trap:** if either side is a string, \`+\` joins the text. This is called *concatenation*. Other operators, like \`-\` and \`*\`, turn strings into numbers. Prices read from a page are strings. So \`'29.99' + '29.99'\` gives \`'29.9929.99'\`, not 59.98.
 
-**Optional chaining \`?.\` (ES2020):** \`user?.address?.city\` stops and returns \`undefined\` if any link is null/undefined instead of throwing \`TypeError: Cannot read properties of undefined\`. Also works for calls (\`obj.method?.()\`) and brackets (\`obj?.[key]\`).
+**Logical operators** (\`||\`, \`&&\`, \`!\`) combine yes/no checks:
+
+- \`a || b\` gives \`a\` if \`a\` is truthy. Otherwise it gives \`b\`.
+- \`a && b\` gives \`a\` if \`a\` is falsy. Otherwise it gives \`b\`.
+- \`!a\` flips true and false. \`!!a\` turns any value into \`true\` or \`false\`.
+
+(*Truthy* and *falsy* are explained two sections below.)
+
+**\`??\` (nullish coalescing):** *nullish* means null or undefined. \`a ?? b\` gives \`b\` only when \`a\` is \`null\` or \`undefined\`. Unlike \`||\`, it keeps real values like \`0\`, \`''\` and \`false\`.
+
+**\`?.\` (optional chaining):** \`user?.address?.city\` stops and gives \`undefined\` if a part is missing. Without \`?.\`, the code crashes with \`TypeError: Cannot read properties of undefined\`.
 
 | Expression | Result | Why |
 |---|---|---|
@@ -241,7 +282,11 @@ console.log({ a: 1 }.b);               // → undefined (missing property)`,
 | \`'' \\|\\| 'guest'\` | \`'guest'\` | empty string is falsy |
 | \`null ?? 'x'\` | \`'x'\` | null triggers \`??\` |
 
-**In interviews, say this:** "For defaults I use \`??\` because a timeout of 0 or retries of 0 is a valid setting; \`||\` would silently replace it."`,
+      code: [
+**In an interview, say:** "For defaults I use \`??\`. A timeout of 0 is a real setting, and \`||\` would replace it."
+
+**Why testers care:** with \`||\`, a setting of \`retries: 0\` silently becomes 2 retries. \`??\` keeps your 0.
+`,
       code: [
         {
           language: 'javascript',
@@ -274,21 +319,31 @@ console.log(isLoggedIn && 'show cart'); // → show cart`,
         },
       ],
       keyPoints: [
-        '`+` with any string concatenates; `-`, `*`, `/` convert to numbers.',
-        '`||`/`&&` return operands, not booleans.',
-        '`??` only replaces null/undefined; `?.` prevents crashes on missing links.',
+        '`+` with any string joins text. `-`, `*` and `/` turn text into numbers.',
+        '`||` and `&&` give back one of the two values, not always true or false.',
+        '`??` only replaces null or undefined. `?.` stops crashes on missing parts.',
       ],
       source: 'javascript.info: Basic operators, Logical operators, Nullish coalescing, Optional chaining',
     },
     {
       heading: '== vs === and type coercion',
-      body: `**Intuition:** \`===\` is a strict passport check: same type, same value, no excuses. \`==\` is a lenient doorman who first tries to "convert" both sides into something comparable and then compares, which lets surprising guests in.
+      body: `**Example:**
 
-**Strict equality \`===\`:** if the types differ, the answer is \`false\` immediately. No conversion. \`!==\` is its negation.
+- \`'1' == 1\` gives \`true\`.
+- \`'1' === 1\` gives \`false\`.
 
-**Loose equality \`==\`:** if types differ, JavaScript **coerces** (converts) them, mostly towards numbers: strings become numbers, booleans become 1/0. Special rules: \`null == undefined\` is \`true\`, and \`null\`/\`undefined\` equal nothing else. \`NaN\` equals nothing, not even itself.
+Same values, different answers. Why?
 
-| Expression | \`==\` | \`===\` | What happened with \`==\` |
+**\`===\` (strict equality)** checks the type and the value. If the types differ, the answer is \`false\`. Nothing is converted. \`!==\` means "not strictly equal".
+
+**\`==\` (loose equality)** converts both sides to the same type first. Then it compares. This automatic conversion is called **type coercion**. It usually turns strings and booleans into numbers. That is why \`'1' == 1\` is true.
+
+Two special rules for \`==\`:
+
+- \`null == undefined\` is \`true\`. They equal nothing else.
+- \`NaN\` equals nothing, not even itself.
+
+| Expression | \`==\` | \`===\` | What \`==\` did |
 |---|---|---|---|
 | \`'1' == 1\` | true | false | \`'1'\` → 1 |
 | \`0 == ''\` | true | false | \`''\` → 0 |
@@ -298,11 +353,15 @@ console.log(isLoggedIn && 'show cart'); // → show cart`,
 | \`null == 0\` | false | false | null only equals undefined |
 | \`NaN == NaN\` | false | false | NaN equals nothing |
 
-**Coercion beyond \`==\`:** relational operators (\`<\`, \`>=\`) also convert, which gives \`null >= 0\` → \`true\` while \`null == 0\` → \`false\`. Comparing two **strings** with \`<\` compares them alphabetically by character code, so \`'10' < '9'\` is \`true\`. That is exactly the bug when you verify "sorted by price" using text read from the page.
+**\`<\` and \`>\` also convert.** So \`null >= 0\` is \`true\`, but \`null == 0\` is \`false\`.
 
-**Explicit conversion beats implicit:** \`Number(x)\`, \`String(x)\`, \`Boolean(x)\`. Kyle Simpson's point in *You Don't Know JS* is that coercion is not evil if it is obvious; the danger is coercion you did not intend.
+**Two strings compare like words in a dictionary.** They go letter by letter. So \`'10' < '9'\` is \`true\`, because \`'1'\` comes before \`'9'\`. This breaks "sorted by price" checks that use page text.
 
-**In interviews, say this:** "I use \`===\` everywhere. \`==\` converts types first, so \`'0' == false\` is true. The only \`==\` I accept is \`value == null\`, which matches both null and undefined in one check."`,
+**Convert on purpose:** use \`Number(x)\`, \`String(x)\` or \`Boolean(x)\`. Then you know exactly what you compare.
+
+**In an interview, say:** "I use \`===\` everywhere. \`==\` converts types first, so \`'0' == false\` is true. The only \`==\` I accept is \`value == null\`. It checks for null and undefined in one go."
+
+**Why testers care:** text from the page is a string. \`'2' === 2\` is false, so convert with \`Number()\` before you compare.`,
       code: [
         {
           language: 'javascript',
@@ -315,7 +374,7 @@ console.log([] == false);       // → true
 console.log(null == undefined); // → true
 console.log(null === undefined); // → false
 console.log(null == 0);         // → false
-console.log(null >= 0);         // → true  (relational: null -> 0)
+console.log(null >= 0);         // → true  (>= turns null into 0)
 console.log(NaN == NaN);        // → false
 
 // A real bug: badge text from the page is a string
@@ -324,7 +383,7 @@ console.log(cartBadgeText === 2);         // → false (types differ)
 console.log(Number(cartBadgeText) === 2); // → true  (convert explicitly)
 
 // Sorting check with strings vs numbers
-console.log('10' < '9');  // → true  (alphabetical, char by char)
+console.log('10' < '9');  // → true  (letter by letter, like a dictionary)
 console.log(10 < 9);      // → false
 
 // The accepted == idiom: one check for null OR undefined
@@ -333,33 +392,38 @@ console.log(discount == null); // → true`,
         },
       ],
       keyPoints: [
-        '`===` never converts; `==` converts types first.',
-        'Convert page text explicitly with `Number()` before numeric checks.',
-        'String comparison with `<`/`>` is alphabetical: `"10" < "9"` is true.',
-        '`x == null` is the one widely accepted use of `==`.',
+        '`===` never converts. `==` converts the types first.',
+        'Turn page text into a number with `Number()` before number checks.',
+        'Comparing two strings with `<` or `>` goes letter by letter: `"10" < "9"` is true.',
+        '`x == null` is the one common, accepted use of `==`.',
       ],
       source: "MDN: Equality comparisons and sameness; javascript.info: Comparisons; Kyle Simpson: You Don't Know JS Yet (coercion)",
     },
     {
       heading: 'Truthy and falsy values',
-      body: `**Intuition:** when JavaScript needs a yes/no (in an \`if\`, with \`!\`, \`||\`, \`&&\`), it squeezes any value into true or false. A short list of values squeeze to \`false\`; everything else is \`true\`.
+      body: `**Example:**
 
-**The 8 falsy values (memorise them):** \`false\`, \`0\`, \`-0\`, \`0n\`, \`''\` (empty string), \`null\`, \`undefined\`, \`NaN\`.
+- \`if ('0') { ... }\` runs. The string \`'0'\` counts as true.
+- \`if (0) { ... }\` does not run. The number \`0\` counts as false.
 
-**Everything else is truthy**, including traps: \`'0'\`, \`'false'\`, \`' '\` (a space), \`[]\` (empty array), \`{}\` (empty object), \`-1\`, \`Infinity\`.
+An \`if\` needs a yes or a no. So JavaScript turns any value into \`true\` or \`false\`. Values that become \`false\` are called **falsy**. All other values are called **truthy**.
 
-**Why testers care**
+**The 8 falsy values (learn them):** \`false\`, \`0\`, \`-0\`, \`0n\`, \`''\` (empty string), \`null\`, \`undefined\`, \`NaN\`.
 
-| Code | Bug it hides |
+**Everything else is truthy.** Watch these traps: \`'0'\`, \`'false'\`, \`' '\` (a space), \`[]\` (empty array), \`{}\` (empty object) and \`-1\`.
+
+| Code | The hidden bug |
 |---|---|
-| \`if (items) { ... }\` | An empty array \`[]\` is truthy, so "no items returned" is treated as success |
-| \`if (!count) fail()\` | \`count = 0\` is falsy, so a valid zero triggers the failure path |
-| \`if (process.env.HEADLESS)\` | Environment variables are strings; \`'false'\` is truthy, so headless stays on |
-| \`const name = input \\|\\| 'Guest'\` | A legitimate empty-string input gets replaced |
+| \`if (items)\` | An empty array \`[]\` is truthy, so "no items returned" looks like success |
+| \`if (!count) fail()\` | \`0\` is falsy, so a valid count of zero fails |
+| \`if (process.env.HEADLESS)\` | Environment variables are strings. \`'false'\` is truthy, so headless stays on |
+| \`input \\|\\| 'Guest'\` | A real empty input gets replaced with 'Guest' |
 
-**Better checks:** \`items.length > 0\`, \`count === 0\`, \`process.env.HEADLESS === 'true'\`, \`input ?? 'Guest'\`.
+**Better checks:** \`items.length > 0\`, \`count === 0\`, \`process.env.HEADLESS === 'true'\` and \`input ?? 'Guest'\`.
 
-**In interviews, say this:** "Truthiness is fine for 'is this value present at all', but in assertions I compare explicitly, like \`length > 0\` or \`=== 'true'\`, because empty arrays are truthy and zero is falsy."`,
+**In an interview, say:** "Truthy checks are fine for 'is anything there?'. In assertions I compare exactly, like \`length > 0\` or \`=== 'true'\`. Empty arrays are truthy, and zero is falsy."
+
+**Why testers care:** an empty result list is truthy. So \`if (items)\` passes even when the API returns nothing.`,
       code: [
         {
           language: 'javascript',
@@ -386,23 +450,31 @@ console.log(HEADLESS === 'true' ? 'headless' : 'headed'); // → headed`,
         },
       ],
       keyPoints: [
-        'Exactly 8 falsy values; `[]`, `{}`, `"0"` and `"false"` are truthy.',
+        'There are exactly 8 falsy values. `[]`, `{}`, `"0"` and `"false"` are all truthy.',
         'Environment variables are always strings (or undefined).',
-        'Prefer explicit checks (`length > 0`, `=== 0`) in assertions.',
+        'In assertions, check exactly: `length > 0` or `=== 0`.',
       ],
       source: 'MDN: Falsy, Truthy; javascript.info: Type Conversions',
     },
     {
       heading: 'Conditionals: if/else, switch and the ternary',
-      body: `**Intuition:** conditionals are decision tables in code. If you have written a decision table for a coupon field, you already think this way.
+      body: `**Example:**
 
-**if / else if / else** runs the first branch whose condition is truthy.
+\`if (code === 200) { console.log('ok'); } else { console.log('not ok'); }\`
 
-**switch** compares one value against many cases **using \`===\`**. Each \`case\` needs a \`break\` (or \`return\`), otherwise execution "falls through" into the next case. That fall-through is a classic bug, but it can be used deliberately to group cases.
+If \`code\` is 200, this prints \`ok\`. Otherwise it prints \`not ok\`.
 
-**Ternary \`cond ? a : b\`** is an expression that returns a value; use it for short choices (\`const browser = isCI ? 'chromium' : 'firefox'\`), not for nested logic.
+**Conditionals** let code make decisions. They work like a decision table for a coupon field.
 
-**Worked example:** classify an HTTP status code from an API response, a helper you will reuse in API tests.`,
+**if / else if / else** runs the first branch whose condition is true.
+
+**switch** compares one value with many \`case\` values. It uses \`===\`, so \`'1'\` does not match \`1\`. End each case with \`break\` or \`return\`. Without it, the code *falls through* and runs the next case too. This is a common bug. Sometimes people use it on purpose to group cases.
+
+**Ternary** \`cond ? a : b\` is a short if/else that gives back a value. Read it as "if cond, then a, else b". Example: \`const browser = isCI ? 'chromium' : 'firefox'\`. Use it for short choices only. Do not put one ternary inside another.
+
+The code below sorts HTTP status codes into groups. You will reuse this kind of helper in API tests.
+
+**Why testers care:** status checks, environment URLs and retry counts are all small decisions like these.`,
       code: [
         {
           language: 'javascript',
@@ -437,25 +509,35 @@ console.log(isCI ? 2 : 0); // → 2  (retries on CI, none locally)`,
         },
       ],
       keyPoints: [
-        '`switch` uses strict equality and needs `break`/`return` to stop fall-through.',
-        'Ternary is an expression: good for picking a value, bad for nested logic.',
-        'String comparisons in conditions are case-sensitive.',
+        '`switch` uses `===` and needs `break` or `return` to stop fall-through.',
+        'A ternary picks a value. Keep it short and do not nest it.',
+        'String checks are case-sensitive: "QA" is not "qa".',
       ],
       source: 'javascript.info: Conditional branching, The "switch" statement',
     },
     {
       heading: 'Template literals for test data',
-      body: `**Intuition:** a template literal is a fill-in-the-blanks form. Write the sentence once, mark the blanks, and JavaScript fills them in.
+      body: `**Example:**
 
-**Syntax:** backticks instead of quotes. Inside, \`\${expression}\` inserts the value of any expression (a variable, arithmetic, a function call). Template literals can span multiple lines and contain both \`'\` and \`"\` without escaping.
+- \`const id = 42;\`
+- \`\` \`/booking/\${id}\` \`\` gives \`/booking/42\`.
+
+A **template literal** is a string written with backticks instead of quotes. Think of a fill-in-the-blanks form. You write the sentence once. You mark each blank with \`\${ }\`. JavaScript fills in the value.
+
+- Inside \`\${ }\` you can put a variable, a sum or a function call.
+- It can cover many lines.
+- It can hold both \`'\` and \`"\` without any extra work.
 
 **Where testers use them**
-- **Unique test data:** \`\` \`qa_\${Date.now()}@example.com\` \`\` so parallel tests never collide on "email already registered".
-- **Dynamic URLs:** \`\` \`\${baseUrl}/booking/\${bookingId}\` \`\`.
-- **Readable failure messages:** \`\` \`Expected \${expected} items but saw \${actual}\` \`\`.
-- **Locators with data:** \`\` page.getByRole('row', { name: \`Order \${orderId}\` }) \`\` builds the accessible name from a variable.
 
-**Gotchas:** objects interpolate as \`[object Object]\` (use \`JSON.stringify\`), \`null\` becomes \`'null'\`, \`undefined\` becomes \`'undefined'\`, arrays are joined with commas. A missing value therefore produces a string like \`/booking/undefined\` rather than an error, so check for it.`,
+- **Unique test data:** \`\` \`qa_\${Date.now()}@example.com\` \`\`. Tests that run at the same time never clash on "email already registered".
+- **URLs:** \`\` \`\${baseUrl}/booking/\${bookingId}\` \`\`.
+- **Clear failure messages:** \`\` \`Expected \${expected} items but saw \${actual}\` \`\`.
+- **Locators with data:** \`\` page.getByRole('row', { name: \`Order \${orderId}\` }) \`\`.
+
+**Watch out:** a missing value does not cause an error. \`undefined\` becomes the text \`'undefined'\`, so a URL can become \`/booking/undefined\`. Objects show as \`[object Object]\`, so use \`JSON.stringify\` for them. Arrays are joined with commas.
+
+**Why testers care:** \`Date.now()\` inside a template literal gives each test run its own email or username.`,
       code: [
         {
           language: 'javascript',
@@ -488,24 +570,38 @@ console.log(\`\${['chromium', 'firefox']}\`);   // → chromium,firefox`,
         },
       ],
       keyPoints: [
-        'Backticks + `${expr}`; multi-line allowed.',
+        'Backticks plus `${expr}`. Many lines are allowed.',
         'Use `Date.now()` or a counter for unique emails and usernames.',
-        'Undefined and objects interpolate silently as "undefined" and "[object Object]".',
+        'A missing value becomes the text "undefined". An object becomes "[object Object]".',
       ],
       source: 'MDN: Template literals; javascript.info: Strings (backticks)',
     },
     {
       heading: 'Number gotchas: 0.1 + 0.2, NaN and parsing',
-      body: `**Intuition:** computers store decimals in binary, and most decimals (like 0.1) cannot be written exactly in binary, just as 1/3 cannot be written exactly in decimal. Tiny rounding errors appear, and they break \`===\` on prices.
+      body: `**Example:**
 
-**Floating point (IEEE 754 double):** \`0.1 + 0.2\` is \`0.30000000000000004\`. On SauceDemo, Fleece Jacket ($49.99) + Onesie ($7.99) computes as \`57.980000000000004\`. Fixes for price assertions:
-1. Format both sides: \`sum.toFixed(2) === '57.98'\` (\`toFixed\` returns a **string**).
-2. Work in cents: \`Math.round(price * 100)\`.
-3. Compare with tolerance: \`Math.abs(a - b) < 0.005\` (Playwright's \`toBeCloseTo\` does this).
+- \`0.1 + 0.2\` gives \`0.30000000000000004\`.
+- \`0.1 + 0.2 === 0.3\` gives \`false\`.
 
-**NaN:** "Not a Number" is what failed numeric conversions produce (\`Number('$29.99')\`). It is of type number, it is **not equal to itself**, and it spreads: any arithmetic with NaN gives NaN. Check with \`Number.isNaN(x)\` (the global \`isNaN('abc')\` converts first and returns true for any non-numeric string).
+Computers store numbers in binary (only 0s and 1s). Many decimals, like 0.1, cannot be stored exactly in binary. It is like 1/3 in decimal: 0.3333... never ends. So tiny rounding errors appear. They break \`===\` checks on prices.
 
-**Parsing text from the page**
+On SauceDemo, Fleece Jacket ($49.99) + Onesie ($7.99) gives \`57.980000000000004\`.
+
+**Three safe ways to check prices:**
+
+1. Round both sides to text: \`sum.toFixed(2) === '57.98'\`. Note: \`toFixed\` gives a **string**.
+2. Work in cents (whole numbers): \`Math.round(price * 100)\`.
+3. Allow a tiny difference: \`Math.abs(a - b) < 0.005\`. Playwright's \`toBeCloseTo\` does this for you.
+
+**NaN** means "Not a Number". You get it when a conversion fails, like \`Number('$29.99')\`. Three facts:
+
+- Its type is still \`number\`.
+- It is **not equal to itself**.
+- It spreads: any maths with NaN gives NaN.
+
+Check it with \`Number.isNaN(x)\`. The older \`isNaN('abc')\` converts first, so it says true for any text.
+
+**Turning page text into numbers**
 
 | Call | Result | Use when |
 |---|---|---|
@@ -516,7 +612,11 @@ console.log(\`\${['chromium', 'firefox']}\`);   // → chromium,firefox`,
 | \`parseFloat('$29.99')\` | NaN | Must start with a digit/sign |
 | \`parseInt('42px', 10)\` | 42 | Integers; always pass radix 10 |
 
-**Other edges:** \`1 / 0\` is \`Infinity\`; integers are only exact up to \`Number.MAX_SAFE_INTEGER\` (9007199254740991), so large IDs from APIs should stay strings or use BigInt.`,
+      code: [
+**Watch out:** whole numbers are exact only up to \`Number.MAX_SAFE_INTEGER\` (9007199254740991). Keep very large API IDs as strings.
+
+**Why testers care:** a total check with \`===\` on raw decimals fails for some product combinations and passes for others.
+`,
       code: [
         {
           language: 'javascript',
@@ -548,31 +648,43 @@ console.log(bad + 10);               // → NaN (NaN spreads)`,
         },
       ],
       keyPoints: [
-        'Never `===` raw float sums; use `toFixed(2)`, cents, or a tolerance.',
-        '`toFixed` returns a string.',
-        '`Number("")` is 0 and `Number("$1")` is NaN: clean page text first.',
-        '`NaN !== NaN`; use `Number.isNaN`.',
+        'Never use `===` on raw decimal sums. Use `toFixed(2)`, cents, or a small tolerance.',
+        '`toFixed` gives back a string.',
+        '`Number("")` is 0 and `Number("$1")` is NaN. Clean page text first.',
+        '`NaN !== NaN`, so use `Number.isNaN`.',
       ],
       source: 'javascript.info: Numbers; MDN: Number.EPSILON, parseFloat, Number.isNaN',
     },
     {
       heading: 'Console debugging',
-      body: `**Intuition:** \`console.log\` is your evidence screenshot. When a test misbehaves, print what the code actually sees, not what you assume it sees.
+      body: `**Example:**
 
-**Useful console methods**
+\`console.log({ total });\` prints \`{ total: '029.999.99' }\`.
 
-| Method | Use |
+The quotes show that \`total\` is a string, not a number. That is the bug.
+
+\`console.log\` is your evidence screenshot. When a test misbehaves, print what the code really sees. Do not guess.
+
+| Method | What it does |
 |---|---|
-| \`console.log(a, b)\` | Print values; pass several args instead of concatenating so types stay visible |
-| \`console.log({ total, expected })\` | Shorthand prints names with values: \`{ total: 59.98, expected: '59.98' }\` |
-| \`console.table(rows)\` | Arrays of objects as a table (test data sets) |
-| \`console.error\` / \`console.warn\` | Write to stderr; shows up highlighted in CI logs |
-| \`console.time('x')\` / \`console.timeEnd('x')\` | Rough timing of a block |
-| \`console.assert(cond, msg)\` | Logs only when \`cond\` is falsy (does not throw) |
+| \`console.log(a, b)\` | Prints values. Pass them separately so you can see their types |
+| \`console.log({ total, expected })\` | Prints names with values: \`{ total: 59.98, expected: '59.98' }\` |
+| \`console.table(rows)\` | Shows a list of objects as a table |
+| \`console.error\` / \`console.warn\` | Prints errors and warnings. CI logs often highlight them |
+| \`console.time('x')\` / \`console.timeEnd('x')\` | Measures roughly how long some code takes |
+| \`console.assert(cond, msg)\` | Prints \`msg\` only when \`cond\` is false. It does not stop the code |
 
-**Reading an error:** look at the **name** (\`TypeError\`, \`ReferenceError\`, \`SyntaxError\`), the **message**, and the **first stack line in your own file**. \`TypeError: Cannot read properties of undefined (reading 'email')\` means the thing *before* \`.email\` was undefined.
+**Reading an error:** look at three things.
 
-**Beyond console:** in Node you can pause on a \`debugger;\` statement with \`node --inspect-brk file.js\`, and in Playwright you will later use \`--debug\`, \`page.pause()\` and the trace viewer. Remove noisy logs before committing; leftover logs make CI output unreadable.`,
+1. The **name**: \`TypeError\`, \`ReferenceError\` or \`SyntaxError\`.
+2. The **message**.
+3. The **first line from your own file** in the stack trace (the list of calls that led to the error).
+
+\`TypeError: Cannot read properties of undefined (reading 'email')\` means the thing *before* \`.email\` was undefined.
+
+**More tools:** Playwright has \`--debug\`, \`page.pause()\` and the trace viewer. You will use them later. Remove extra logs before you commit. Too many logs make CI output hard to read.
+
+**Why testers care:** printing \`{ total }\` and \`typeof total\` finds most "wrong total" bugs in seconds.`,
       code: [
         {
           language: 'javascript',
@@ -597,9 +709,9 @@ console.assert(total > 100, 'total should exceed 100');
         },
       ],
       keyPoints: [
-        'Log `{ variable }` to see both name and value; check `typeof` when results look odd.',
-        'Read error name + message + first line in your file.',
-        '`console.assert` does not fail a test; real assertions do.',
+        'Log `{ variable }` to see the name and the value. Check `typeof` when a result looks odd.',
+        'Read the error name, the message, and the first line in your own file.',
+        '`console.assert` does not fail a test. Real assertions do.',
       ],
       source: 'Node.js docs: Console; javascript.info: Debugging in the browser',
     },
@@ -609,8 +721,8 @@ console.assert(total > 100, 'total should exceed 100');
       id: 'js-basics-cc-1',
       title: 'Fix the test-config helper that ignores zero and compares loosely',
       context:
-        'A teammate wrote a helper that builds run settings for a Playwright-style suite from an options object and an environment variable. On CI, `retries: 0` is ignored, `HEADLESS=false` still runs headless, and the "is smoke run" check passes for the wrong values.',
-      task: 'Fix `buildSettings(opts, env)` so that explicit 0/false/empty values are respected, the env var string is interpreted correctly, and comparisons are strict. It must return `{ retries, timeout, headless, isSmoke, label }` where `headless` is a real boolean and `label` reads "Run with N attempts" (N = retries + 1). Press Run to check your fix.',
+        'A teammate wrote a helper that builds run settings for a test suite. It reads an options object and an environment variable. On CI, three things go wrong. `retries: 0` is ignored. `HEADLESS=false` still runs headless. The "is smoke run" check passes for the wrong values.',
+      task: 'Fix `buildSettings(opts, env)`. Keep real 0, false and empty values. Read the env var string correctly. Use strict comparisons. It must return `{ retries, timeout, headless, isSmoke, label }`. `headless` must be a real boolean. `label` must read "Run with N attempts", where N = retries + 1. Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'settings.js (buggy)',
@@ -633,9 +745,9 @@ console.log(buildSettings({ retries: 0, timeout: 0, tag: '1' }, { HEADLESS: 'fal
 // }`,
       },
       hints: [
-        'Which operator falls back only on null/undefined instead of on every falsy value?',
+        'Which operator uses the default only for null or undefined, not for every falsy value?',
         'Environment variables are strings. What is `Boolean("false")`?',
-        'Look at how `+` evaluates left to right when a string is involved, and decide what type `tag` should be.',
+        '`+` works from left to right. What happens once a string is involved? Also decide what type `tag` should be.',
       ],
       solution: {
         language: 'javascript',
@@ -661,11 +773,11 @@ console.log(buildSettings({ retries: 0, timeout: 0, tag: '1' }, { HEADLESS: 'fal
 console.log(buildSettings({}, {}).headless); // → true`,
       },
       explanation: `**Fixes**
-1. **\`||\` → \`??\`** for \`retries\` and \`timeout\`: \`||\` replaced the legitimate \`0\` with the default. \`??\` only replaces \`null\`/\`undefined\`.
-2. **Env var parsing:** \`env.HEADLESS || true\` returned the *string* \`'false'\`, which is truthy, so the suite stayed headless. The fix compares the string explicitly and returns a real boolean.
-3. **Loose equality:** \`opts.tag == 1\` happened to work for \`'1'\` but also passes for \`true\` and \`' 1 '\`. Converting with \`Number()\` and comparing with \`===\` makes the intent explicit.
-4. **Concatenation bug:** \`'Run with ' + retries + 1\` evaluates left to right as string + number + number, producing \`'21'\`. Doing the math inside \`\${}\` (or in parentheses) fixes it.
-5. **\`var\` → \`const\`:** none of the values are reassigned; \`const\` documents that and prevents accidents.`,
+1. **\`||\` → \`??\`** for \`retries\` and \`timeout\`. \`||\` replaced a real \`0\` with the default. \`??\` only replaces \`null\` or \`undefined\`.
+2. **Env var check:** \`env.HEADLESS || true\` gave back the *string* \`'false'\`. A non-empty string is truthy, so the suite stayed headless. The fix compares the string exactly and returns a real boolean.
+3. **Loose equality:** \`opts.tag == 1\` worked for \`'1'\`. But it also passes for \`true\` and \`' 1 '\`. Converting with \`Number()\` and comparing with \`===\` makes the intent clear.
+4. **Joining bug:** \`'Run with ' + retries + 1\` runs left to right. First it joins text, then it joins the 1 as text, so you get \`'21'\`. Doing the maths inside \`\${}\` fixes it.
+5. **\`var\` → \`const\`:** no value is changed later. \`const\` says so and prevents accidents.`,
       fnName: 'buildSettings',
       tests: [
         { args: [{ retries: 0, timeout: 0, tag: '1' }, { HEADLESS: 'false' }], expected: { retries: 0, timeout: 0, headless: false, isSmoke: true, label: 'Run with 1 attempts' } },
@@ -677,12 +789,12 @@ console.log(buildSettings({}, {}).headless); // → true`,
       ],
       followUps: [
         {
-          q: 'Why might `timeout: 0` be a meaningful value rather than a mistake?',
-          a: 'In Playwright, a timeout of 0 means "no timeout" for many settings, which people use while debugging. A helper that silently turns 0 into 30000 changes behaviour without telling anyone. The general rule: a default should only apply when the caller gave no value at all, which is exactly what `??` expresses.',
+          q: 'Why might `timeout: 0` be a real setting and not a mistake?',
+          a: 'In Playwright, a timeout of 0 often means "no timeout". People use it while debugging. A helper that quietly turns 0 into 30000 changes behaviour without telling anyone. The rule: use a default only when the caller gave no value at all. That is exactly what `??` does.',
         },
         {
           q: 'How would you test this helper itself?',
-          a: 'Table-driven unit checks: each row gives opts, env and the expected settings. Include the boundary values that broke it: retries 0, timeout 0, HEADLESS "false", "true", undefined and an unexpected value like "no", tag as "1", 1 and "smoke". The bug class here is "falsy but valid", so every input should have a 0/empty/false row.',
+          a: 'Use a table of cases. Each row has opts, env and the expected settings. Include the values that broke it: retries 0, timeout 0, HEADLESS "false", "true", undefined and an odd value like "no". Try tag as "1", 1 and "smoke". The bug here is "falsy but valid", so give every input a 0, empty or false row.',
         },
       ],
     },
@@ -690,8 +802,8 @@ console.log(buildSettings({}, {}).headless); // → true`,
       id: 'js-basics-cc-2',
       title: 'Repair a flaky cart-total check',
       context:
-        'This helper verifies the SauceDemo checkout overview: it reads item prices and the "Item total" label as text, sums the items and compares. It fails intermittently depending on which products are in the cart, and once it passed when the label was missing entirely.',
-      task: 'Fix `verifyItemTotal(priceTexts, totalLabel)` so it parses the prices robustly, compares money without floating-point surprises, and fails loudly when anything cannot be parsed. It returns `\'PASS\'`, or `\'FAIL: unparseable price in <JSON of priceTexts>\'`, `\'FAIL: unparseable total label "<label>"\'`, or `\'FAIL: items add up to X.XX but page shows Y.YY\'`. Press Run to check your fix.',
+        'This helper checks the SauceDemo checkout overview page. It reads item prices and the "Item total" label as text. It adds up the items and compares the sum with the label. It fails for some products and not others. Once it even passed when the label was missing.',
+      task: 'Fix `verifyItemTotal(priceTexts, totalLabel)`. Read the prices safely. Compare money without decimal rounding surprises. Fail clearly when any text cannot be read as a number. It returns `\'PASS\'`, or `\'FAIL: unparseable price in <JSON of priceTexts>\'`, `\'FAIL: unparseable total label "<label>"\'`, or `\'FAIL: items add up to X.XX but page shows Y.YY\'`. Press Run to check your fix.',
       starter: {
         language: 'javascript',
         title: 'cart-check.js (buggy)',
@@ -714,9 +826,9 @@ console.log(verifyItemTotal(['$49.99'], ''));
 // → PASS   (empty label should never pass)`,
       },
       hints: [
-        'What does `parseFloat("$49.99")` return, and what does the second `if` do with that value?',
-        'Convert each side to whole cents with `Math.round(x * 100)` before comparing.',
-        'Treat "could not parse" as its own failure with `Number.isNaN`, never as a pass.',
+        'What does `parseFloat("$49.99")` give? What does the second `if` do with that value?',
+        'Turn each side into whole cents with `Math.round(x * 100)` before you compare.',
+        'Treat "could not read the number" as a failure. Check it with `Number.isNaN`. Never treat it as a pass.',
       ],
       solution: {
         language: 'javascript',
@@ -748,10 +860,10 @@ console.log(verifyItemTotal(['$29.99', '$9.99'], 'Item total: $39.99'));
 // → FAIL: items add up to 39.98 but page shows 39.99`,
       },
       explanation: `**Fixes**
-1. **Parsing:** \`parseFloat('$49.99')\` is \`NaN\` because the string starts with \`$\`. The new \`toCents\` extracts the first number with a small regex, so \`$49.99\`, \`49.99\` and \`Item total: $57.98\` all work.
-2. **NaN treated as a pass:** \`sum != sum\` is true only for NaN, and the starter returned PASS for it, the worst possible outcome: a test that passes when it cannot read the page. Unparseable input is now an explicit FAIL with the offending text.
-3. **Floating point:** \`49.99 + 7.99\` is \`57.980000000000004\`. Summing integer cents avoids drift entirely.
-4. **Strict comparison** (\`===\`) on integers, and failure messages that show both values formatted to two decimals, so the CI log is self-explanatory.`,
+1. **Reading the number:** \`parseFloat('$49.99')\` is \`NaN\`, because the text starts with \`$\`. The new \`toCents\` finds the first number with a small regex (a text pattern). So \`$49.99\`, \`49.99\` and \`Item total: $57.98\` all work.
+2. **NaN treated as a pass:** \`sum != sum\` is true only for NaN. The starter returned PASS for it. That is the worst result: a test that passes when it cannot read the page. Now bad input is a clear FAIL that shows the bad text.
+3. **Decimal rounding:** \`49.99 + 7.99\` is \`57.980000000000004\`. Adding whole cents avoids this completely.
+4. **Strict comparison** (\`===\`) on whole numbers. The failure message shows both values with two decimals, so the CI log explains itself.`,
       fnName: 'verifyItemTotal',
       tests: [
         { args: [['$49.99', '$7.99'], 'Item total: $57.98'], expected: 'PASS' },
@@ -764,12 +876,12 @@ console.log(verifyItemTotal(['$29.99', '$9.99'], 'Item total: $39.99'));
       ],
       followUps: [
         {
-          q: 'In Playwright, which assertion would you use for a computed decimal instead of hand-rolled cents?',
-          a: '`expect(sum).toBeCloseTo(57.98, 2)` compares numbers with a precision of 2 decimal digits, which absorbs floating-point noise. For the text on the page itself I would use a web-first assertion such as `await expect(page.getByTestId("subtotal-label")).toHaveText("Item total: $57.98")`, which also retries until the UI settles.',
+          q: 'In Playwright, which assertion would you use for a calculated decimal, instead of cents?',
+          a: '`expect(sum).toBeCloseTo(57.98, 2)` compares numbers to 2 decimal places. It ignores tiny rounding errors. For the text on the page, I would use a web-first assertion: `await expect(page.getByTestId("subtotal-label")).toHaveText("Item total: $57.98")`. It also retries until the page settles.',
         },
         {
           q: 'Why is "a test that passes when it cannot read the data" so dangerous?',
-          a: 'It is a false negative for the whole suite: the report is green while the feature may be broken, and nobody looks at green tests. Good checks fail closed: missing elements, NaN, empty strings or undefined must produce a failure with a message that names the bad input, so the root cause is obvious in the CI log.',
+          a: 'The report is green while the feature may be broken. Nobody looks closely at green tests. Good checks fail when data is missing: missing elements, NaN, empty strings or undefined must fail. The message should name the bad input, so the cause is clear in the CI log.',
         },
       ],
     },
@@ -778,201 +890,202 @@ console.log(verifyItemTotal(['$29.99', '$9.99'], 'Item total: $39.99'));
     {
       id: 'js-basics-iq-01',
       difficulty: 'easy',
-      question: 'What is the difference between var, let and const? Which do you use in your test scripts and why?',
+      question: 'What is the difference between var, let and const? Which one do you use in test scripts, and why?',
       whatInterviewerLooksFor: [
-        'Scope difference: function scope vs block scope',
-        'Hoisting behaviour: undefined vs temporal dead zone',
-        'Knows const prevents reassignment but not mutation',
-        'States a clear personal default with a reason',
+        'Scope: var belongs to the whole function; let and const belong to their { } block',
+        'Hoisting: var gives undefined early; let and const throw an error (the temporal dead zone)',
+        'Knows const blocks a new value, but the object inside can still change',
+        'Gives a clear personal rule with a reason',
       ],
-      modelAnswer: `**Short answer:** all three declare variables; they differ in scope, hoisting and reassignment.
+      modelAnswer: `**Short answer:** all three create variables. They differ in where they are visible, when you can use them, and whether you can give them a new value.
 
 | | var | let | const |
 |---|---|---|---|
-| Scope | function | block | block |
-| Access before declaration | \`undefined\` | ReferenceError (TDZ) | ReferenceError (TDZ) |
-| Reassign | yes | yes | no |
-| Redeclare in same scope | yes | no | no |
+| Visible in | the whole function | the \`{ }\` block | the \`{ }\` block |
+| Used before its line | \`undefined\` | error (TDZ) | error (TDZ) |
+| New value later | yes | yes | no |
+| Declare twice | yes | no | no |
 
-**Example of the scope difference:** a \`var\` declared inside an \`if\` block is visible after the block; a \`let\` is not. With \`var\` in a loop that schedules callbacks, every callback sees the final value; with \`let\`, each iteration gets its own copy.
+**TDZ (Temporal Dead Zone)** is the gap between the start of a block and the line that declares the variable. Using a \`let\` or \`const\` in that gap throws an error.
 
-**const is not "immutable":** \`const user = { role: 'admin' }\` cannot be pointed at another object, but \`user.role = 'guest'\` still works. To actually freeze an object you would use \`Object.freeze\` (shallow).
+**Example:** \`if (true) { var a = 1; let b = 2; }\`. After the block, \`a\` is 1, but \`b\` does not exist. \`var\` leaks out of the block.
 
-**What I use:** \`const\` by default (base URLs, locators, test data objects, the \`page\` from a fixture), \`let\` only for values that change, such as a retry counter or an accumulator, and never \`var\`. In tests this has a practical benefit: if someone accidentally reassigns \`expectedTotal\` halfway through a test, \`const\` makes it fail immediately with a TypeError instead of silently asserting against the wrong value.`,
+**const is not frozen:** \`const user = { role: 'admin' }\` cannot get a new object. But \`user.role = 'guest'\` still works.
+
+**What I use:** \`const\` by default, for base URLs, locators and test data. \`let\` only for values that change, like a retry counter. Never \`var\`. If someone changes \`expectedTotal\` by mistake, \`const\` fails at once with a TypeError.`,
       followUps: [
         {
-          q: 'If const objects can be mutated, how do you protect shared test data?',
-          a: 'Either create fresh data per test with a factory function (each call returns a new object), or deep-copy before modifying with structuredClone. Object.freeze helps catch accidental writes, but it is shallow, so nested objects remain writable. In Playwright, a fixture that builds data per test is the cleanest option because tests can also run in parallel workers.',
+          q: 'If const objects can still change, how do you protect shared test data?',
+          a: 'Create fresh data for each test with a factory function (a function that returns a new object on every call). Or copy the data with structuredClone before changing it. Object.freeze helps too, but only for the top level. In Playwright, a fixture that builds data per test is cleanest, because tests can run at the same time.',
         },
         {
-          q: 'What happens if you access a let variable before its declaration line?',
-          a: 'You get `ReferenceError: Cannot access \'x\' before initialization`. The variable is hoisted (the engine knows it exists in that block), but it is uninitialised until the declaration runs; that window is called the temporal dead zone. With var, the same access returns undefined, which hides the bug instead of reporting it.',
+          q: 'What happens if you use a let variable before its declaration line?',
+          a: "You get `ReferenceError: Cannot access 'x' before initialization`. JavaScript knows the variable exists, but it has no value yet. That gap is the temporal dead zone. With var, the same code gives undefined, which hides the bug instead of showing it.",
         },
       ],
       pitfalls: [
-        'Saying const makes objects immutable.',
-        'Claiming let and const are not hoisted at all (they are, but stay in the TDZ).',
-        'Describing var only as "old" without explaining function scope.',
+        'Saying const makes objects unchangeable.',
+        'Saying let and const are not hoisted at all. They are, but they stay in the TDZ until their line runs.',
+        'Calling var "old" without explaining that it leaks out of blocks.',
       ],
     },
     {
       id: 'js-basics-iq-02',
       difficulty: 'medium',
-      question: 'Explain == versus === with examples. Is there ever a good reason to use ==?',
+      question: 'Explain == and === with examples. Is there ever a good reason to use ==?',
       whatInterviewerLooksFor: [
-        'Correctly says == performs type coercion and === does not',
-        'Gives concrete surprising examples',
-        'Mentions null/undefined special case and NaN',
-        'Connects to a real test bug (string from the page vs number)',
+        'Says == converts types first (type coercion) and === does not',
+        'Gives clear, surprising examples',
+        'Mentions the null/undefined rule and NaN',
+        'Links it to a real test bug: page text compared with a number',
       ],
-      modelAnswer: `**\`===\` (strict):** compares type and value. Different types → \`false\`, no conversion.
+      modelAnswer: `**\`===\` (strict):** checks the type and the value. Different types give \`false\`. Nothing is converted.
 
-**\`==\` (loose):** if the types differ, JavaScript converts them first (usually to numbers), then compares.
+**\`==\` (loose):** if the types differ, JavaScript converts them first, usually to numbers. Then it compares. This is called type coercion.
 
-Examples:
-- \`'5' == 5\` → \`true\`, \`'5' === 5\` → \`false\`
-- \`0 == ''\` → \`true\`; \`'0' == false\` → \`true\`; \`[] == false\` → \`true\`
-- \`null == undefined\` → \`true\` but \`null == 0\` → \`false\`
-- \`NaN == NaN\` → \`false\` (NaN equals nothing; use \`Number.isNaN\`)
+**Examples:**
+- \`'5' == 5\` → \`true\`, but \`'5' === 5\` → \`false\`
+- \`0 == ''\` → \`true\`, and \`'0' == false\` → \`true\`
+- \`null == undefined\` → \`true\`, but \`null == 0\` → \`false\`
+- \`NaN == NaN\` → \`false\`. Use \`Number.isNaN\` instead.
 
-**Why it matters in testing:** anything you read from the UI (\`textContent\`, \`inputValue\`) is a string. If I write \`if (badgeText == 3)\` it passes for \`'3'\`, but it also passes for \`' 3 '\` and \`'03'\`, which might be a formatting bug I should catch. With \`===\` I am forced to convert explicitly: \`Number(badgeText.trim()) === 3\`, or better, assert the exact text \`'3'\`.
+**Why it matters in tests:** text from the page is always a string. \`badgeText == 3\` passes for \`'3'\`. It also passes for \`' 3 '\` and \`'03'\`, which may be real formatting bugs. With \`===\` I must convert on purpose: \`Number(badgeText.trim()) === 3\`. Or, better, I check the exact text \`'3'\`.
 
-**The one good use of \`==\`:** \`value == null\` is a compact, widely accepted way to test for "null or undefined" in one go. Linters such as ESLint's \`eqeqeq\` rule have an option that allows exactly this.
+**The one good use of \`==\`:** \`value == null\` checks for null or undefined in one go. ESLint's \`eqeqeq\` rule has an option that allows exactly this.
 
-**Objects:** both operators compare object **references**, so \`{a:1} === {a:1}\` is \`false\`. To compare API payloads I use a deep equality assertion (\`toEqual\` in Playwright's expect).`,
+**Objects:** both operators check if two objects are the *same object*. So \`{a:1} === {a:1}\` is \`false\`. To compare API data, I use \`toEqual\` in Playwright.`,
       followUps: [
         {
-          q: 'What does `[] == ![]` return and why?',
-          a: 'true. `![]` is evaluated first: `[]` is truthy, so `![]` is `false`. Now `[] == false`: the boolean becomes 0, the array is converted to a primitive (`""`), and `""` becomes 0. `0 == 0` is true. It is a puzzle, but it shows why == is avoided: the rules chain several conversions.',
+          q: 'What does `[] == ![]` give, and why?',
+          a: 'true. First `![]` runs: `[]` is truthy, so `![]` is false. Now we have `[] == false`. The false becomes 0. The array becomes "" and then 0. So `0 == 0` is true. It is a puzzle, but it shows why people avoid ==: one comparison hides several conversions.',
         },
         {
-          q: 'How does Playwright\'s expect compare values: like == or ===?',
-          a: '`toBe` uses Object.is, which is like === except that NaN equals NaN and +0 differs from -0. `toEqual` recursively compares the contents of objects and arrays. Neither does loose coercion, so `expect("3").toBe(3)` fails, which is what you want.',
+          q: "Does Playwright's expect compare like == or ===?",
+          a: '`toBe` uses Object.is. It works like ===, except that NaN equals NaN and +0 differs from -0. `toEqual` compares what is inside objects and arrays. Neither one converts types, so `expect("3").toBe(3)` fails. That is what you want.',
         },
       ],
       pitfalls: [
-        'Saying == "compares only values" without explaining conversion.',
-        'Thinking === compares object contents.',
-        'Forgetting that NaN is not equal to itself under either operator.',
+        'Saying == "compares only values" without explaining the conversion.',
+        'Thinking === compares what is inside two objects.',
+        'Forgetting that NaN is not equal to itself with either operator.',
       ],
     },
     {
       id: 'js-basics-iq-03',
       difficulty: 'medium',
-      question: 'What is the difference between null and undefined, and why does typeof null return "object"? How would you check if an API field is an array?',
-      context: 'Asked while discussing validation of an API response body in a JavaScript-based test.',
+      question: 'What is the difference between null and undefined? Why does typeof null give "object"? How would you check that an API field is an array?',
+      context: 'Asked while talking about checking an API response in a JavaScript test.',
       whatInterviewerLooksFor: [
-        'undefined = not assigned / missing; null = intentionally empty',
-        'Knows typeof null is a historic bug, not a feature',
-        'Uses Array.isArray instead of typeof',
-        'Links missing vs null fields to API contract defects',
+        'undefined = no value was given, or the field is missing; null = empty on purpose',
+        'Knows typeof null is an old bug, not a feature',
+        'Uses Array.isArray, not typeof',
+        'Links missing vs null fields to API contract bugs',
       ],
-      modelAnswer: `**undefined** means "no value has been assigned": a declared variable without a value, a missing object property, a missing function argument, or the result of a function with no \`return\`.
+      modelAnswer: `**undefined** means "no value was given". You get it for a variable with no value, a missing property, a missing argument, or a function with no \`return\`.
 
-**null** is a value a developer deliberately assigns to mean "empty / no object here", for example \`"discountCode": null\` in a JSON response.
+**null** is a value a developer sets on purpose. It means "empty here". Example: \`"discountCode": null\` in a JSON response.
 
-**typeof null === 'object'** is a bug from the first JavaScript implementation (1995): values were stored with a type tag, and the tag for objects was 0, which is also what the null pointer looked like. Fixing it would break existing websites, so it stayed. Practical consequence: \`typeof x === 'object'\` is not a safe "is this an object?" check; add \`x !== null\`.
+**Why \`typeof null\` is \`'object'\`:** it is a bug from the first version of JavaScript in 1995. Fixing it would break old websites, so it stayed. So \`typeof x === 'object'\` is not a safe "is this an object?" check. Add \`x !== null\`.
 
-**Checking for arrays:** \`typeof []\` is also \`'object'\`, so I use \`Array.isArray(body.items)\`.
+**Checking for arrays:** \`typeof []\` is also \`'object'\`. So I use \`Array.isArray(body.items)\`.
 
-**Why testers care:** in an API contract, these are three different situations:
-1. field present with a value,
-2. field present but \`null\`,
-3. field missing (reading it gives \`undefined\`).
+**Why testers care:** in an API contract, there are three different cases:
+1. the field is there, with a value;
+2. the field is there, but it is \`null\`;
+3. the field is missing (reading it gives \`undefined\`).
 
-If the spec says "\`middleName\` may be null", then a response without the field at all is a contract violation that a loose check like \`if (!body.middleName)\` would not distinguish. I check \`'middleName' in body\` (or \`Object.hasOwn\`) and \`body.middleName === null\` separately, or validate the whole body with a JSON schema.`,
+Say the spec says "\`middleName\` may be null". A response with no \`middleName\` at all breaks the contract. A loose check like \`if (!body.middleName)\` cannot tell the difference. I check \`'middleName' in body\` and \`body.middleName === null\` separately. Or I check the whole body with a JSON schema.`,
       followUps: [
         {
           q: 'What does JSON.stringify do with undefined and null values?',
-          a: 'Properties whose value is undefined are dropped from the output, while null is kept: `JSON.stringify({ a: undefined, b: null })` gives `{"b":null}`. So if a client sends a body built from objects with undefined fields, the server never sees those keys. Worth knowing when an API test "sends" a field that silently disappears.',
+          a: 'It drops properties whose value is undefined, but it keeps null. `JSON.stringify({ a: undefined, b: null })` gives `{"b":null}`. So if a test builds a request body with undefined fields, the server never sees those keys. This explains many "the field silently disappeared" bugs.',
         },
         {
           q: 'How would you check that a value is a plain object (not null, not an array)?',
-          a: '`typeof v === "object" && v !== null && !Array.isArray(v)`. Each part removes one false positive: null reports "object", and arrays report "object". For stricter checks (excluding Dates, Maps), compare `Object.getPrototypeOf(v) === Object.prototype`.',
+          a: '`typeof v === "object" && v !== null && !Array.isArray(v)`. Each part removes one wrong match: null says "object", and arrays say "object" too. For a stricter check that also rejects Dates and Maps, compare `Object.getPrototypeOf(v) === Object.prototype`.',
         },
       ],
       pitfalls: [
         'Saying null and undefined are "the same".',
         'Using typeof to detect arrays.',
-        'Treating a missing field and a null field as equivalent in API checks.',
+        'Treating a missing field and a null field as the same in API checks.',
       ],
     },
     {
       id: 'js-basics-iq-04',
       difficulty: 'medium',
-      question: 'Which values are falsy in JavaScript, and how does `||` differ from `??` when setting defaults in test configuration?',
+      question: 'Which values are falsy in JavaScript? How is `||` different from `??` when you set defaults in test config?',
       whatInterviewerLooksFor: [
-        'Lists all falsy values (0, "", null, undefined, NaN, false, -0, 0n)',
+        'Lists all 8 falsy values (false, 0, -0, 0n, "", null, undefined, NaN)',
         'Knows [] and "0" are truthy',
-        'Explains || falls back on any falsy, ?? only on null/undefined',
-        'Gives a realistic config example',
+        'Explains: || replaces any falsy value; ?? replaces only null or undefined',
+        'Gives a real config example',
       ],
-      modelAnswer: `**Falsy values:** \`false\`, \`0\`, \`-0\`, \`0n\`, \`''\`, \`null\`, \`undefined\`, \`NaN\`. Everything else is truthy, including \`'0'\`, \`'false'\`, \`[]\` and \`{}\`.
+      modelAnswer: `**Falsy values:** \`false\`, \`0\`, \`-0\`, \`0n\`, \`''\`, \`null\`, \`undefined\`, \`NaN\`. Everything else is truthy, even \`'0'\`, \`'false'\`, \`[]\` and \`{}\`.
 
-**\`a || b\`** returns \`a\` if it is truthy, otherwise \`b\`. So it replaces *every* falsy value.
+**\`a || b\`** gives \`a\` if it is truthy. Otherwise it gives \`b\`. So it replaces *every* falsy value.
 
-**\`a ?? b\`** returns \`b\` only if \`a\` is \`null\` or \`undefined\`.
+**\`a ?? b\`** gives \`b\` only if \`a\` is \`null\` or \`undefined\`.
 
 **Config example:**
+- \`opts.retries || 2\` with \`opts.retries = 0\` gives \`2\`. Your "no retries" setting is silently ignored.
+- \`opts.retries ?? 2\` gives \`0\`. Correct.
+- \`process.env.RETRIES || 2\` with \`RETRIES=0\` gives the *string* \`'0'\`. It is truthy, so it is kept, but it is text, not a number.
 
-- \`const retries = process.env.RETRIES || 2\`: if someone sets \`RETRIES=0\`... it is actually the *string* \`'0'\`, which is truthy, so this returns \`'0'\` (a string, which may break numeric math later).
-- \`const retries = opts.retries || 2\` with \`opts.retries = 0\` returns \`2\`, silently ignoring the explicit "no retries".
-- \`const retries = opts.retries ?? 2\` returns \`0\`. Correct.
+The safe version for env vars: \`Number(process.env.RETRIES ?? 2)\`.
 
-The robust version for env vars combines both lessons: \`const retries = Number(process.env.RETRIES ?? 2)\`.
-
-**Where truthiness bites in assertions:** \`if (items)\` is true for an empty array; \`if (!count)\` treats a valid 0 as missing. In tests I compare explicitly (\`items.length > 0\`, \`count === 0\`) so the intent is clear and empty states are tested properly.`,
+**Where truthy checks hurt in assertions:** \`if (items)\` is true for an empty array. \`if (!count)\` treats a valid 0 as missing. In tests I compare exactly: \`items.length > 0\` and \`count === 0\`.`,
       followUps: [
         {
           q: 'Can you mix ?? with || in one expression?',
-          a: 'Not without parentheses: `a || b ?? c` is a SyntaxError, a deliberate rule to avoid ambiguous precedence. Write `(a || b) ?? c` or `a || (b ?? c)` to state what you mean.',
+          a: 'Not without brackets. `a || b ?? c` is a SyntaxError. JavaScript forbids it on purpose, because the order would be unclear. Write `(a || b) ?? c` or `a || (b ?? c)` to show what you mean.',
         },
         {
-          q: 'What is the difference between ?? and the ??= operator?',
-          a: '`x ??= value` assigns value to x only if x is currently null or undefined, so it is shorthand for `x = x ?? value` but without re-assigning when x already has a value. It is handy for lazily filling defaults in an options object, such as `opts.timeout ??= 30000`.',
+          q: 'What is the difference between ?? and ??=?',
+          a: '`x ??= value` sets x to value only if x is null or undefined right now. It is a short way to write `x = x ?? value`. It is handy for filling in missing options, like `opts.timeout ??= 30000`.',
         },
       ],
       pitfalls: [
         'Forgetting NaN or the empty string in the falsy list.',
         'Believing an empty array is falsy.',
-        'Using || for numeric defaults where 0 is valid.',
+        'Using || for number defaults where 0 is a valid value.',
       ],
     },
     {
       id: 'js-basics-iq-05',
       difficulty: 'medium',
-      question: 'Why does 0.1 + 0.2 not equal 0.3 in JavaScript, and how do you assert prices and totals safely in a test?',
-      context: 'The interviewer shows a failing check: expected 57.98, received 57.980000000000004 on an e-commerce checkout page.',
+      question: 'Why is 0.1 + 0.2 not equal to 0.3 in JavaScript? How do you safely check prices and totals in a test?',
+      context: 'The interviewer shows a failing check on a shop checkout page: expected 57.98, received 57.980000000000004.',
       whatInterviewerLooksFor: [
-        'Explains binary floating point (IEEE 754) simply',
-        'Offers several safe comparison strategies',
-        'Remembers that toFixed returns a string',
-        'Distinguishes asserting displayed text vs computed numbers',
+        'Explains binary decimals (IEEE 754) in simple words',
+        'Gives more than one safe way to compare',
+        'Remembers that toFixed gives a string',
+        'Knows when to check page text and when to check a calculated number',
       ],
-      modelAnswer: `**Why:** JavaScript numbers are 64-bit IEEE 754 floating-point values. Many decimal fractions (0.1, 0.2, 7.99) have no exact binary representation, the same way 1/3 has no exact decimal one. Each is stored as the nearest representable value, and adding them can expose the tiny error: \`0.1 + 0.2\` is \`0.30000000000000004\`; \`49.99 + 7.99\` is \`57.980000000000004\`.
+      modelAnswer: `**Why:** JavaScript stores numbers in binary (0s and 1s), in a format called IEEE 754. Many decimals, like 0.1, 0.2 or 7.99, cannot be stored exactly in binary. It is the same as 1/3 in decimal: 0.333... never ends. So each number is stored as a very close value. Adding them can show the tiny error: \`0.1 + 0.2\` is \`0.30000000000000004\`, and \`49.99 + 7.99\` is \`57.980000000000004\`.
 
-**Safe strategies:**
-1. **Integer cents:** \`Math.round(price * 100)\`; sum integers; compare with \`===\`. Most robust for money.
-2. **Round for display comparison:** \`sum.toFixed(2) === '57.98'\`. Note \`toFixed\` returns a string, so compare to a string.
-3. **Tolerance:** \`Math.abs(actual - expected) < 0.005\`. In Playwright: \`expect(sum).toBeCloseTo(57.98, 2)\`.
+**Safe ways to compare:**
+1. **Whole cents:** \`Math.round(price * 100)\`. Add the whole numbers and compare with \`===\`. Best for money.
+2. **Round to text:** \`sum.toFixed(2) === '57.98'\`. \`toFixed\` gives a string, so compare with a string.
+3. **Small tolerance:** \`Math.abs(actual - expected) < 0.005\`. In Playwright: \`expect(sum).toBeCloseTo(57.98, 2)\`.
 
-**What I actually assert in UI tests:** the page shows text, so I usually assert the text exactly: \`await expect(subtotal).toHaveText('Item total: $57.98')\`. I only compute numbers when I am verifying a calculation, for example that item prices add up to the subtotal, and then I compute in cents.
+**What I check in UI tests:** the page shows text, so usually I check the text: \`await expect(subtotal).toHaveText('Item total: $57.98')\`. I calculate numbers only when I test a sum, like "item prices add up to the subtotal". Then I use cents.
 
-**Related gotchas:** \`Number('$57.98')\` is \`NaN\`, so strip currency symbols first; large integer IDs (beyond 2^53 − 1) lose precision, so keep them as strings.`,
+**Related traps:** \`Number('$57.98')\` is \`NaN\`, so remove the currency sign first. Very large IDs (above 2^53 − 1) lose accuracy, so keep them as strings.`,
       followUps: [
         {
-          q: 'Is the floating-point issue a JavaScript bug?',
-          a: 'No. It is how IEEE 754 binary floating point works, and Python, Java (double), C# (double) behave the same way: in Python `0.1 + 0.2` also prints 0.30000000000000004. Some languages offer decimal types (Java BigDecimal, C# decimal); in JavaScript you use integers (cents) or a decimal library.',
+          q: 'Is this a JavaScript bug?',
+          a: 'No. It is how binary decimals (IEEE 754) work everywhere. Python, Java and C# doubles do the same: in Python, `0.1 + 0.2` also prints 0.30000000000000004. Some languages have special decimal types, like Java BigDecimal. In JavaScript you use whole cents or a decimal library.',
         },
         {
-          q: 'What does (1.005).toFixed(2) return?',
-          a: '"1.00", not "1.01", because 1.005 is actually stored as 1.00499999999999989... So toFixed is fine for formatting a result for display comparison, but rounding money for business logic should be done in integer cents (or with a library) to match what the backend does.',
+          q: 'What does (1.005).toFixed(2) give?',
+          a: '"1.00", not "1.01". The number 1.005 is really stored as 1.00499999999999989... So toFixed is fine for showing a value in a check. But for money logic, round in whole cents (or use a library) so you match what the backend does.',
         },
       ],
       pitfalls: [
         'Calling it a JavaScript bug.',
-        'Comparing toFixed output to a number with ===.',
-        'Using parseFloat on "$57.98" and not noticing NaN.',
+        'Comparing the toFixed result with a number using ===.',
+        'Using parseFloat on "$57.98" and not noticing the NaN.',
       ],
     },
     {
@@ -980,24 +1093,24 @@ The robust version for env vars combines both lessons: \`const retries = Number(
       difficulty: 'easy',
       question: 'Write a function that takes an HTTP status code and returns "success", "redirect", "client error", "server error" or "invalid". How would you test it?',
       whatInterviewerLooksFor: [
-        'Correct ranges with inclusive/exclusive boundaries',
-        'Handles invalid input (non-number, out of range, non-integer)',
-        'Applies boundary value analysis to their own code',
-        'Readable structure (early returns or switch(true) avoided)',
+        'Correct ranges, with the right boundaries',
+        'Handles bad input: not a number, out of range, or a decimal',
+        'Uses boundary value analysis on their own code',
+        'Readable code, for example early returns',
       ],
-      modelAnswer: `**Code (spoken line by line):**
+      modelAnswer: `**Code (explained line by line):**
 
-- First guard bad input: \`if (!Number.isInteger(code) || code < 100 || code > 599) return 'invalid';\`
-- Then ranges with early returns:
-  - \`if (code < 200) return 'informational';\` (optional; the spec only listed four, so I would ask: for 1xx I would return \`'invalid'\` or add a category)
+- First, reject bad input: \`if (!Number.isInteger(code) || code < 100 || code > 599) return 'invalid';\`
+- Then check ranges from low to high, and return early:
+  - \`if (code < 200) return 'informational';\` (the task lists only four groups, so I would ask what 1xx should return)
   - \`if (code < 300) return 'success';\`
   - \`if (code < 400) return 'redirect';\`
   - \`if (code < 500) return 'client error';\`
   - \`return 'server error';\`
 
-Using ascending \`<\` checks with early returns means each branch only needs one comparison, and there are no gaps or overlaps.
+Each line needs only one comparison. There are no gaps and no overlaps.
 
-**Testing it, like any feature under test (BVA on each boundary):**
+**Testing it (boundary values on each edge):**
 
 | Input | Expected |
 |---|---|
@@ -1006,68 +1119,68 @@ Using ascending \`<\` checks with early returns means each branch only needs one
 | 399, 400 | redirect, client error |
 | 499, 500 | client error, server error |
 | 599, 600 | server error, invalid |
-| '200' (string) | invalid (or decide to coerce: a requirement question!) |
+| '200' (string) | invalid (or convert it? Ask: this is a requirement question) |
 | 200.5, NaN, undefined | invalid |
 
-**Why the string case matters:** if the code came from \`response.status()\` in Playwright it is a number, but if it was parsed from a log line it is a string. I would clarify the contract instead of silently coercing with \`==\`. Showing that I test my own helpers with boundary values is exactly what separates an automation tester from someone who only writes scripts.`,
+**Why the string case matters:** \`response.status()\` in Playwright gives a number. But a code read from a log line is a string. I would ask what the function should accept, not quietly convert with \`==\`. Testing my own helpers with boundary values shows I think like a tester, not just a script writer.`,
       followUps: [
         {
           q: 'Why not use switch for ranges?',
-          a: 'switch compares with === against single values, so ranges need the `switch (true) { case code >= 200 && code < 300: ... }` trick, which is harder to read than if/else. switch shines for discrete values like environment names or HTTP method names. For ranges, ordered if statements with early return are clearer.',
+          a: 'switch compares single values with ===. For ranges you need the `switch (true) { case code >= 200 && code < 300: ... }` trick, which is harder to read. switch is great for fixed values, like environment names or HTTP methods. For ranges, simple if statements with early return are clearer.',
         },
         {
-          q: 'In Playwright API tests, is there a built-in for "2xx"?',
-          a: 'Yes. `response.ok()` returns true for statuses 200-299, and the web-first `await expect(response).toBeOK()` asserts it with a helpful failure message. For exact checks you still assert `expect(response.status()).toBe(201)` because "some 2xx" can hide a 200 where the spec requires 201 Created.',
+          q: 'In Playwright API tests, is there a built-in check for "2xx"?',
+          a: 'Yes. `response.ok()` is true for statuses 200-299. `await expect(response).toBeOK()` checks it with a helpful failure message. For exact checks, still use `expect(response.status()).toBe(201)`. "Any 2xx" can hide a 200 where the spec needs 201 Created.',
         },
       ],
       pitfalls: [
-        'Off-by-one boundaries (using <= 300 for success).',
-        'Not handling invalid input at all.',
-        'Not offering any test cases for their own function.',
+        'Off-by-one boundaries, like using <= 300 for success.',
+        'Not handling bad input at all.',
+        'Not giving any test cases for their own function.',
       ],
     },
     {
       id: 'js-basics-iq-07',
       difficulty: 'medium',
-      question: 'Swap the values of two variables without using a third variable. Then predict: what do "5" + 3, "5" - 3 and true + true evaluate to?',
-      context: 'A warm-up coding round often mixes a tiny coding task with output prediction to check JavaScript fundamentals.',
+      question: 'Swap the values of two variables without a third variable. Then predict: what do "5" + 3, "5" - 3 and true + true give?',
+      context: 'A warm-up coding round often mixes a tiny coding task with "predict the output" questions.',
       whatInterviewerLooksFor: [
-        'Knows destructuring swap',
-        'Can explain the arithmetic swap and its limits',
-        'Correctly predicts coercion results and explains why',
+        'Knows the destructuring swap',
+        'Can explain the maths swap and its limits',
+        'Predicts the conversion results correctly and explains why',
       ],
-      modelAnswer: `**Swap (modern, readable):**
+      modelAnswer: `**Swap (modern and readable):**
 
-\`let a = 1, b = 2; [a, b] = [b, a];\` → \`a\` is 2, \`b\` is 1.
+\`let a = 1, b = 2; [a, b] = [b, a];\` → now \`a\` is 2 and \`b\` is 1.
 
-This is **array destructuring**: the right side builds a temporary array \`[2, 1]\`, the left side unpacks it into \`a\` and \`b\`. Works for any type (strings, objects).
+This is **array destructuring** (unpacking an array into variables). The right side builds a short array \`[2, 1]\`. The left side unpacks it into \`a\` and \`b\`. It works for any type of value.
 
-**Arithmetic swap (the "classic" answer):**
+**Maths swap (the "classic" answer):**
 
 \`a = a + b; b = a - b; a = a - b;\`
 
-Works for numbers only, can lose precision with floats, and breaks with strings (\`+\` concatenates). I would mention it but prefer destructuring. (XOR swap \`a ^= b; b ^= a; a ^= b;\` works for 32-bit integers only.)
+It works for numbers only. It can lose accuracy with decimals. It breaks with strings, because \`+\` joins text. I would mention it, but I prefer destructuring.
 
-**Output prediction:**
-- \`'5' + 3\` → \`'53'\`: if either operand of \`+\` is a string, it concatenates.
-- \`'5' - 3\` → \`2\`: \`-\` is numeric only, so \`'5'\` is converted to 5.
-- \`true + true\` → \`2\`: booleans convert to 1 and 0 for arithmetic.
+**Predict the output:**
+- \`'5' + 3\` → \`'53'\`. If either side of \`+\` is a string, it joins text.
+- \`'5' - 3\` → \`2\`. \`-\` works only on numbers, so \`'5'\` becomes 5.
+- \`true + true\` → \`2\`. In maths, \`true\` becomes 1 and \`false\` becomes 0.
 
-**Why an automation interviewer asks this:** values read from the browser are strings, so \`+\` on them concatenates. Knowing which operators convert and which concatenate is the difference between a test that checks \`2 + 1 = 3\` items and one that checks \`'21'\`.`,
+**Why a test interviewer asks this:** values read from the browser are strings, and \`+\` on them joins text. That is the difference between a test that checks 2 + 1 = 3 items and one that checks \`'21'\`.`,
       followUps: [
         {
-          q: 'Would the destructuring swap work if the previous line did not end with a semicolon?',
-          a: 'It can break. If the previous line is `let b = 2` with no semicolon and the next line starts with `[a, b] = [b, a]`, JavaScript may join them as `2[a, b] = ...`, an index access. Lines starting with `[` or `(` are the main automatic-semicolon-insertion trap, which is why many teams keep semicolons or a formatter enforces them.',
+          q: 'Would the destructuring swap work if the line before it had no semicolon?',
+          a: 'It can break. Say the line before is `let b = 2` with no semicolon, and the next line starts with `[a, b] = [b, a]`. JavaScript may read them as one line: `2[a, b] = ...`. Lines that start with `[` or `(` are the main trap. That is why many teams keep semicolons or use a formatter.',
         },
         {
-          q: 'What do "5" * "2" and [] + {} produce?',
-          a: '`"5" * "2"` is 10 because `*` converts both strings to numbers. `[] + {}` is the string "[object Object]": both are converted to primitives, the array becomes "" and the object becomes "[object Object]", and since a string is involved, + concatenates.',
+          q: 'What do "5" * "2" and [] + {} give?',
+          a: '`"5" * "2"` is 10, because `*` turns both strings into numbers. `[] + {}` is the string "[object Object]". Both sides become text first: the array becomes "" and the object becomes "[object Object]". Since text is involved, + joins them.',
         },
       ],
       pitfalls: [
         'Saying "5" + 3 is 8.',
-        'Only knowing the arithmetic trick and not its string/float limitations.',
-        'Not explaining why the coercion happens.',
+        'Knowing only the maths trick and not its limits with strings and decimals.',
+        'Not explaining why the conversion happens.',
       ],
     },
   ],
@@ -1075,82 +1188,82 @@ Works for numbers only, can lose precision with floats, and breaks with strings 
     {
       id: 'js-basics-drill-1',
       question:
-        'Predict the output of each line before running it: `console.log("3" + 4 + 5)`, `console.log(3 + 4 + "5")`, `console.log("10" - "4" + "2")`, `console.log(+"")`, `console.log(null + 1)`, `console.log(undefined + 1)`.',
+        'Predict the output of each line before you run it: `console.log("3" + 4 + 5)`, `console.log(3 + 4 + "5")`, `console.log("10" - "4" + "2")`, `console.log(+"")`, `console.log(null + 1)`, `console.log(undefined + 1)`.',
       assumptions: [
-        'Operators of equal precedence evaluate left to right.',
-        '`+` concatenates if either operand is a string; `-` always converts to numbers.',
-        'Unary `+` converts its operand to a number.',
+        'Operators of the same kind run from left to right.',
+        '`+` joins text if either side is a string. `-` always turns both sides into numbers.',
+        'A `+` in front of one value (like `+""`) turns it into a number.',
       ],
       steps: [
-        { label: '"3" + 4 + 5', calc: '"3" + 4 → "34" (string wins); "34" + 5 → "345"' },
+        { label: '"3" + 4 + 5', calc: '"3" + 4 → "34" (text wins); "34" + 5 → "345"' },
         { label: '3 + 4 + "5"', calc: '3 + 4 → 7 (both numbers); 7 + "5" → "75"' },
-        { label: '"10" - "4" + "2"', calc: '"10" - "4" → 6 (minus converts); 6 + "2" → "62"' },
+        { label: '"10" - "4" + "2"', calc: '"10" - "4" → 6 (minus makes numbers); 6 + "2" → "62"' },
         { label: '+""', calc: 'Number("") is 0 → 0' },
-        { label: 'null + 1', calc: 'null converts to 0 → 1' },
-        { label: 'undefined + 1', calc: 'undefined converts to NaN → NaN' },
+        { label: 'null + 1', calc: 'null becomes 0 → 1' },
+        { label: 'undefined + 1', calc: 'undefined becomes NaN → NaN' },
       ],
-      answer: '`345`, `75`, `62`, `0`, `1`, `NaN` (the first three are strings, which `console.log` prints without quotes).',
+      answer: '`345`, `75`, `62`, `0`, `1`, `NaN`. The first three are strings, which `console.log` prints without quotes.',
       insight:
-        'Left-to-right evaluation plus the "+ prefers strings" rule explains most coercion puzzles. In test code, convert page text with Number() before doing any arithmetic.',
+        'Two rules explain most of these puzzles: work left to right, and "+ prefers text". In test code, turn page text into a number with Number() before any maths.',
       followUps: [
         {
-          q: 'How would you make "3" + 4 + 5 produce 12?',
-          a: 'Convert explicitly first: `Number("3") + 4 + 5` or `+"3" + 4 + 5`. Explicit conversion at the point where text enters your code (right after reading it from the page or an API) keeps the rest of the logic numeric and predictable.',
+          q: 'How would you make "3" + 4 + 5 give 12?',
+          a: 'Convert first: `Number("3") + 4 + 5` or `+"3" + 4 + 5`. Convert at the point where text enters your code, right after you read it from the page or an API. Then the rest of your logic works with numbers and behaves as you expect.',
         },
       ],
     },
     {
       id: 'js-basics-drill-2',
       question:
-        'A config loader runs `const s = { retries: 0, baseURL: "", headless: "false", workers: null };` and then logs: `s.retries || 1`, `s.retries ?? 1`, `s.baseURL || "http://localhost"`, `s.baseURL ?? "http://localhost"`, `!!s.headless`, `s.workers ?? 4`, `s.trace?.mode ?? "off"`. Predict each value.',
+        'A config loader runs `const s = { retries: 0, baseURL: "", headless: "false", workers: null };`. Then it logs: `s.retries || 1`, `s.retries ?? 1`, `s.baseURL || "http://localhost"`, `s.baseURL ?? "http://localhost"`, `!!s.headless`, `s.workers ?? 4`, `s.trace?.mode ?? "off"`. Predict each value.',
       assumptions: [
-        'Falsy: false, 0, -0, 0n, "", null, undefined, NaN.',
-        '`??` falls back only for null/undefined.',
-        '`?.` returns undefined when the left side is null/undefined.',
+        'Falsy values: false, 0, -0, 0n, "", null, undefined, NaN.',
+        '`??` uses the default only for null or undefined.',
+        '`?.` gives undefined when the left side is null or undefined.',
       ],
       steps: [
         { label: 's.retries || 1', calc: '0 is falsy → 1' },
-        { label: 's.retries ?? 1', calc: '0 is not null/undefined → 0' },
+        { label: 's.retries ?? 1', calc: '0 is not null or undefined → 0' },
         { label: 's.baseURL || "http://localhost"', calc: '"" is falsy → "http://localhost"' },
-        { label: 's.baseURL ?? "http://localhost"', calc: '"" is not nullish → "" (empty string)' },
+        { label: 's.baseURL ?? "http://localhost"', calc: '"" is not null or undefined → "" (empty string)' },
         { label: '!!s.headless', calc: '"false" is a non-empty string → truthy → true' },
         { label: 's.workers ?? 4', calc: 'null → 4' },
         { label: 's.trace?.mode ?? "off"', calc: 's.trace is undefined → ?. gives undefined → "off"' },
       ],
       answer: '`1`, `0`, `"http://localhost"`, `""`, `true`, `4`, `"off"`.',
       insight:
-        'Pick the operator by asking "is this falsy value legitimate?" Zero retries is legitimate (use ??); an empty baseURL is probably not (|| or validation). String flags like "false" must be compared explicitly.',
+        'Choose the operator by asking: "is this falsy value a real setting?" Zero retries is a real setting, so use ??. An empty baseURL is probably a mistake, so use || or check it. Text flags like "false" must be compared exactly.',
       followUps: [
         {
           q: 'Which of these results would most likely cause a confusing test failure, and how?',
-          a: '`s.baseURL ?? "http://localhost"` returning "" is the sneakiest: page.goto("/login") would then have no base URL and fail with an "invalid URL" style error far away from the config. Validating config at startup (throw if baseURL is empty) gives a clear message at the real cause.',
+          a: '`s.baseURL ?? "http://localhost"` giving "" is the sneakiest. Then page.goto("/login") has no base URL and fails with an "invalid URL" style error, far away from the config. Check the config at startup (throw if baseURL is empty). Then the error message points at the real cause.',
         },
       ],
     },
     {
       id: 'js-basics-drill-3',
       question:
-        'Trace this snippet and give each logged value: `const qty = "2"; const price = 9.99; console.log(qty * price); console.log(qty + price); console.log(typeof (qty * price)); console.log((qty * price).toFixed(2) === "19.98"); console.log(Number("2 ") === 2, Number("2 items"));`',
+        'Trace this code and give each logged value: `const qty = "2"; const price = 9.99; console.log(qty * price); console.log(qty + price); console.log(typeof (qty * price)); console.log((qty * price).toFixed(2) === "19.98"); console.log(Number("2 ") === 2, Number("2 items"));`',
       assumptions: [
-        '`*` converts strings to numbers; `+` with a string concatenates.',
-        '`toFixed` returns a string.',
-        'Number() trims surrounding whitespace but rejects any other junk.',
+        '`*` turns strings into numbers. `+` with a string joins text.',
+        '`toFixed` gives a string.',
+        'Number() ignores spaces at the start and end, but rejects any other extra text.',
       ],
       steps: [
         { label: 'qty * price', calc: '"2" → 2; 2 × 9.99 = 19.98 → 19.98' },
         { label: 'qty + price', calc: 'string + number → "2" + "9.99" → "29.99"' },
-        { label: 'typeof (qty * price)', calc: 'result of * is a number → "number"' },
+        { label: 'typeof (qty * price)', calc: 'the result of * is a number → "number"' },
         { label: '(qty * price).toFixed(2) === "19.98"', calc: '19.98.toFixed(2) is the string "19.98" → true' },
-        { label: 'Number("2 ") === 2', calc: 'whitespace is trimmed → 2 === 2 → true' },
-        { label: 'Number("2 items")', calc: 'non-numeric characters → NaN' },
+        { label: 'Number("2 ") === 2', calc: 'the space is ignored → 2 === 2 → true' },
+        { label: 'Number("2 items")', calc: 'extra text → NaN' },
       ],
       answer: '`19.98`, `29.99` (a string), `"number"`, `true`, then `true NaN`.',
       insight:
-        'The same two values give a correct total with * and a nonsense "price" with +. When a quantity comes from an input field it is a string: convert it before any arithmetic, and assert both the type and the value when debugging.',
+        'The same two values give a correct total with * and a nonsense "price" with +. A quantity from an input field is a string. Convert it before any maths. When debugging, check both the type and the value.',
       followUps: [
         {
-          q: 'Why might qty + price be a realistic bug and not just a puzzle?',
-          a: 'A "subtotal = qty + shipping" calculation in a test helper, with qty read via inputValue(), produces "25.99" instead of 7.99 for qty 2 and shipping 5.99. The assertion then compares against the page and fails, and the tester wrongly files an app bug. Converting with Number() at the boundary prevents it.',
+          q: 'Why might qty + price be a real bug and not just a puzzle?',
+          a: 'Picture a test helper that does "subtotal = qty + shipping", with qty read by inputValue(). For qty 2 and shipping 5.99 it gives "25.99" instead of 7.99. The check against the page fails, and the tester wrongly reports an app bug. Converting with Number() as soon as you read the text prevents it.',
         },
       ],
     },
@@ -1159,7 +1272,7 @@ Works for numbers only, can lose precision with floats, and breaks with strings 
     {
       id: 'js-basics-mcq-01',
       difficulty: 'easy',
-      question: 'Which statement best describes the relationship between JavaScript, Node.js and Playwright?',
+      question: 'Which sentence best describes how JavaScript, Node.js and Playwright fit together?',
       options: [
         'Node.js is a runtime that executes JavaScript outside the browser, and Playwright is a library running in Node that controls browsers',
         'Playwright is a JavaScript engine that replaces Node.js when tests run in a browser',
@@ -1168,11 +1281,11 @@ Works for numbers only, can lose precision with floats, and breaks with strings 
       ],
       correct: [0],
       explanation:
-        'Node.js embeds the V8 engine plus OS APIs so JavaScript can run outside a browser; `npx playwright test` runs your test files in Node, and Playwright sends commands to real browsers. Playwright is not an engine, Node is not a browser, and tests do not run inside the page (only code you pass to page.evaluate does).',
+        'Node.js runs JavaScript outside a browser. `npx playwright test` runs your test files in Node, and Playwright sends commands to real browsers. Playwright is not an engine, Node is not a browser, and tests do not run inside the page. Only code you pass to page.evaluate runs in the page.',
       followUps: [
         {
-          q: 'Where does code inside page.evaluate(() => document.title) run?',
-          a: 'Inside the browser page, not in Node. The function is serialised and executed in the page context, so it cannot see your test variables unless you pass them as an argument. That separation of Node-side and page-side code is a common source of confusion for beginners.',
+          q: 'Where does the code inside page.evaluate(() => document.title) run?',
+          a: 'Inside the browser page, not in Node. Playwright sends the function to the page and runs it there. So it cannot see your test variables unless you pass them in as an argument. Beginners often mix up these two places.',
         },
       ],
     },
@@ -1189,11 +1302,11 @@ console.log(user.name);`,
       options: ['problem_user', 'standard_user', 'TypeError: Assignment to constant variable', 'undefined'],
       correct: [0],
       explanation:
-        'const prevents re-binding the variable `user` to a different value, but the object it points to can still be changed, so the property update succeeds and prints problem_user. The TypeError appears only for `user = {...}`. standard_user would require the object to be frozen.',
+        'const stops you from giving the variable `user` a whole new value. But the object inside can still change. So the property update works and prints problem_user. The TypeError appears only for `user = {...}`. standard_user would need a frozen object.',
       followUps: [
         {
           q: 'How would you make the assignment fail or be ignored?',
-          a: 'Object.freeze(user) makes top-level properties read-only: in non-strict code the assignment is silently ignored, in strict mode (ES modules, classes) it throws a TypeError. Freeze is shallow, so nested objects stay writable unless frozen too.',
+          a: 'Use Object.freeze(user). Then the top-level properties are read-only. In normal scripts the change is silently ignored. In strict mode (ES modules and classes) it throws a TypeError. Freeze only works one level deep, so nested objects can still change.',
         },
       ],
     },
@@ -1204,11 +1317,11 @@ console.log(user.name);`,
       options: ['0', '"0"', '[]', 'NaN', '""'],
       correct: [0, 3, 4],
       explanation:
-        'The falsy values are false, 0, -0, 0n, "", null, undefined and NaN, so 0, NaN and "" are falsy. The string "0" is a non-empty string and therefore truthy, and an empty array is an object, and all objects are truthy, a classic trap when checking `if (items)`.',
+        'The falsy values are false, 0, -0, 0n, "", null, undefined and NaN. So 0, NaN and "" are falsy. The string "0" is not empty, so it is truthy. An empty array is an object, and every object is truthy. This is a classic trap when you write `if (items)`.',
       followUps: [
         {
           q: 'How should you check that an API returned at least one item?',
-          a: 'Use `Array.isArray(items) && items.length > 0`, or in Playwright `expect(items.length).toBeGreaterThan(0)`. A bare `if (items)` passes for an empty array, so an endpoint that wrongly returns [] would look fine.',
+          a: 'Use `Array.isArray(items) && items.length > 0`. In Playwright, use `expect(items.length).toBeGreaterThan(0)`. A plain `if (items)` passes for an empty array, so an endpoint that wrongly returns [] would look fine.',
         },
       ],
     },
@@ -1226,18 +1339,18 @@ console.log(Number(badge) === 2);`,
       options: ['true, false, true', 'true, true, true', 'false, false, true', 'true, false, false'],
       correct: [0],
       explanation:
-        '`==` converts the string to a number before comparing, so it is true; `===` sees string vs number and returns false without converting; `Number(badge)` is the number 2, so the strict check is true. Option "true, true, true" assumes === converts like ==, which it never does.',
+        '`==` turns the string into a number first, so it is true. `===` sees a string and a number and says false, with no conversion. `Number(badge)` is the number 2, so the strict check is true. The answer "true, true, true" assumes === converts like ==. It never does.',
       followUps: [
         {
-          q: 'Why is asserting the text "2" often better than converting to a number?',
-          a: 'The user sees text. Asserting `toHaveText("2")` catches formatting defects like "02" or " 2" that Number() would hide, and Playwright\'s web-first assertion retries until the badge updates, avoiding a race with the click that added the item.',
+          q: 'Why is checking the text "2" often better than converting to a number?',
+          a: 'The user sees text. `toHaveText("2")` catches format bugs like "02" or " 2" that Number() would hide. Also, Playwright\'s web-first assertion retries until the badge updates. That avoids a race with the click that added the item.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-05',
       difficulty: 'medium',
-      question: 'Which line prints `0`?',
+      question: 'The config sets retries to 0. Which of the lines A to D print `0`?',
       code: {
         language: 'javascript',
         code: `const opts = { retries: 0 };
@@ -1249,18 +1362,18 @@ console.log(!opts.retries ? 3 : opts.retries); // D`,
       options: ['Only B', 'B and C', 'Only C', 'A and B'],
       correct: [1],
       explanation:
-        'B: `??` keeps 0 because it is not null/undefined. C: `&&` returns its first operand when that operand is falsy, so it returns 0 without evaluating 3. A falls back to 3 because 0 is falsy, and D also yields 3 because !0 is true. Many beginners miss that && returns the operand itself, not false.',
+        'B: `??` keeps 0, because 0 is not null or undefined. C: `&&` gives back its first value when that value is falsy, so it gives 0 and never looks at 3. A gives 3 because 0 is falsy. D also gives 3 because !0 is true. Many beginners miss that && gives back the value itself, not false.',
       followUps: [
         {
-          q: 'When is `&&` returning a non-boolean actually useful?',
-          a: 'As a guard: `user && user.name` returns user.name only if user exists (today `user?.name` is cleaner). In React it is used for conditional rendering. In test code, prefer explicit booleans in assertions so a 0 or "" does not sneak through as a "result".',
+          q: 'When is it useful that `&&` gives back a value instead of true/false?',
+          a: 'As a guard: `user && user.name` gives user.name only if user exists. Today `user?.name` is cleaner. React uses && to show things conditionally. In test code, use real true/false values in assertions, so a 0 or "" does not sneak through as a result.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-06',
       difficulty: 'medium',
-      question: 'You verify that prices on a product list are sorted low-to-high. The prices are read as strings: ["9.99", "15.99", "7.99"]. A helper checks `prices[i] <= prices[i + 1]` for each pair. What happens?',
+      question: 'You check that prices on a product list are sorted from low to high. The prices are strings: ["9.99", "15.99", "7.99"]. A helper checks `prices[i] <= prices[i + 1]` for each pair. What happens?',
       options: [
         'It wrongly flags 9.99 → 15.99 as out of order, because two strings are compared character by character',
         'It works correctly because <= converts both strings to numbers',
@@ -1269,33 +1382,33 @@ console.log(!opts.retries ? 3 : opts.retries); // D`,
       ],
       correct: [0],
       explanation:
-        'When both operands are strings, relational operators compare them lexicographically by character code, so "9.99" <= "15.99" is false ("9" > "1"). The helper flags a correctly sorted pair as wrong (and could accept a wrong order elsewhere). Relational operators only convert to numbers when the types differ; they never throw on strings; truthiness is irrelevant here.',
+        'When both sides are strings, `<=` compares them letter by letter, like words in a dictionary. So "9.99" <= "15.99" is false, because "9" comes after "1". The helper wrongly flags a correct pair. `<=` only converts to numbers when the types differ. It never throws on strings, and truthiness does not matter here.',
       followUps: [
         {
           q: 'How do you fix the helper?',
-          a: 'Convert first: `const nums = prices.map(Number)` (after stripping "$"), then compare numbers, or compare `nums` with a sorted copy: `[...nums].sort((a, b) => a - b)` and deep-equal them with toEqual. The default sort() is also lexicographic, so the comparator is required.',
+          a: 'Convert first: `const nums = prices.map(Number)` (after removing any "$"). Then compare numbers. Or compare `nums` with a sorted copy: `[...nums].sort((a, b) => a - b)`, and check they match with toEqual. Plain sort() also compares letter by letter, so the (a, b) => a - b part is required.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-07',
       difficulty: 'medium',
-      question: 'Select ALL expressions that evaluate to `true`.',
+      question: 'Select ALL expressions that give `true`.',
       options: ['null == undefined', 'null == 0', 'null >= 0', 'NaN === NaN', "'' == 0"],
       correct: [0, 2, 4],
       explanation:
-        'null == undefined is a special rule (true). null == 0 is false because == never converts null to a number, but relational operators do, so null >= 0 becomes 0 >= 0 (true). NaN is not equal to anything, including itself. "" == 0 is true because the empty string converts to 0.',
+        'null == undefined is a special rule, so it is true. null == 0 is false, because == never turns null into a number. But >= does, so null >= 0 becomes 0 >= 0, which is true. NaN equals nothing, not even itself. "" == 0 is true, because the empty string becomes 0.',
       followUps: [
         {
-          q: 'How do you test for NaN reliably?',
-          a: '`Number.isNaN(x)`, which is true only for the actual NaN value. The global `isNaN(x)` converts first, so isNaN("hello") is true. Object.is(x, NaN) also works, and Playwright\'s toBe uses Object.is, so expect(NaN).toBe(NaN) passes.',
+          q: 'How do you check for NaN reliably?',
+          a: 'Use `Number.isNaN(x)`. It is true only for the real NaN value. The older `isNaN(x)` converts first, so isNaN("hello") is true. Object.is(x, NaN) also works. Playwright\'s toBe uses Object.is, so expect(NaN).toBe(NaN) passes.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-08',
       difficulty: 'hard',
-      question: 'A checkout helper compares a summed price three ways. What do the three logs print?',
+      question: 'A checkout helper checks a price sum in three ways. What do the three logs print?',
       code: {
         language: 'javascript',
         code: `const price = 49.99 + 7.99;
@@ -1306,18 +1419,18 @@ console.log(price.toFixed(2) === '57.98');`,
       options: ['false, false, true', 'true, true, true', 'false, true, true', 'false, false, false'],
       correct: [0],
       explanation:
-        'Floating point makes the sum 57.980000000000004, so the first check is false. toFixed(2) returns the string "57.98", which is never === to the number 57.98, so the second is false; the third compares string to string and is true. Picking "false, true, true" assumes toFixed returns a number.',
+        'Decimal rounding makes the sum 57.980000000000004, so the first check is false. toFixed(2) gives the string "57.98". A string is never === to the number 57.98, so the second is false. The third compares a string with a string, so it is true. "false, true, true" assumes toFixed gives a number.',
       followUps: [
         {
-          q: 'Give a money-safe way to sum prices.',
-          a: 'Convert each price to integer cents with Math.round(price * 100), add the integers, and compare to expected cents. Integers below 2^53 are exact in JavaScript, so there is no drift. Format back with (cents / 100).toFixed(2) only for messages.',
+          q: 'Give a money-safe way to add up prices.',
+          a: 'Turn each price into whole cents with Math.round(price * 100). Add the whole numbers, and compare with the expected cents. Whole numbers are exact in JavaScript (up to about 9 quadrillion), so nothing drifts. Use (cents / 100).toFixed(2) only to show the value in messages.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-09',
       difficulty: 'medium',
-      question: 'Your config reads `const headless = process.env.HEADLESS || true;` and CI sets HEADLESS=false. What happens and why?',
+      question: 'Your config has `const headless = process.env.HEADLESS || true;` and CI sets HEADLESS=false. What happens, and why?',
       options: [
         'Tests run headless, because the env var is the string "false", which is truthy and is returned as-is',
         'Tests run headed, because || converts "false" to the boolean false',
@@ -1326,18 +1439,18 @@ console.log(price.toFixed(2) === '57.98');`,
       ],
       correct: [0],
       explanation:
-        'Environment variables are always strings (or undefined). "false" is a non-empty string, so it is truthy and || returns it; any truthiness check on it then means "headless". Node never parses env vars into booleans, and || works on any types. Compare explicitly: process.env.HEADLESS !== "false".',
+        'Environment variables are always strings (or undefined). "false" is a non-empty string, so it is truthy, and || gives it back. Any truthy check on it then means "headless". Node never turns env vars into booleans, and || works on any type. Compare exactly instead: process.env.HEADLESS !== "false".',
       followUps: [
         {
-          q: 'How does Playwright usually decide headed vs headless?',
-          a: 'Headless is the default; you run headed with the --headed CLI flag or `use: { headless: false }` in playwright.config. Teams often key behaviour off `!!process.env.CI` (CI sets CI=true), e.g. retries: process.env.CI ? 2 : 0.',
+          q: 'How does Playwright usually decide between headed and headless?',
+          a: 'Headless is the default. You run headed with the --headed flag, or with `use: { headless: false }` in playwright.config. Teams often switch settings on `!!process.env.CI`, because CI systems set CI=true. For example: retries: process.env.CI ? 2 : 0.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-10',
       difficulty: 'hard',
-      question: 'An environment-name switch is called with the string "1" and then the number 1. What gets logged?',
+      question: 'An environment-name switch is called with the string "1" and then with the number 1. What gets logged?',
       code: {
         language: 'javascript',
         code: `function envName(code) {
@@ -1357,18 +1470,18 @@ envName(1);`,
       options: ['local, then qa and staging', 'qa, then qa', 'qa and staging, then qa and staging', 'local, then qa'],
       correct: [0],
       explanation:
-        'switch compares with ===, so the string "1" matches no case and runs default (local). For the number 1, case 1 matches and, with no break, execution falls through into case 2, printing qa then staging. Options that print qa for "1" assume loose comparison; "local, then qa" ignores fall-through.',
+        'switch compares with ===, so the string "1" matches no case. It runs default and prints local. For the number 1, case 1 matches. There is no break, so the code falls through into case 2 and prints qa, then staging. Answers that print qa for "1" assume a loose check. "local, then qa" forgets about fall-through.',
       followUps: [
         {
-          q: 'How would you catch this class of bug automatically?',
-          a: 'Linters: ESLint\'s no-fallthrough rule flags a case that falls through without a comment, and TypeScript\'s noFallthroughCasesInSwitch option makes it a compile error. For the type mismatch, TypeScript would flag passing a string where a number is expected.',
+          q: 'How would you catch this kind of bug automatically?',
+          a: 'Use tools. ESLint\'s no-fallthrough rule flags a case that falls through without a comment. TypeScript\'s noFallthroughCasesInSwitch option makes it a compile error. TypeScript would also flag passing a string where a number is expected.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-11',
       difficulty: 'medium',
-      question: 'Which template literal correctly builds a unique email such as `qa_1700000000000@test.com` from `const id = Date.now()`?',
+      question: 'Which template literal correctly builds a unique email like `qa_1700000000000@test.com` from `const id = Date.now()`?',
       options: [
         '`qa_${id}@test.com` (with backticks)',
         "'qa_${id}@test.com' (with single quotes)",
@@ -1377,18 +1490,18 @@ envName(1);`,
       ],
       correct: [0],
       explanation:
-        'Interpolation needs backticks and the ${ } syntax. Inside single or double quotes, ${id} is just literal text, so you would get "qa_${id}@test.com". ${} outside a template literal is a syntax error, and $(id) is shell syntax, not JavaScript.',
+        'Filling in a value needs backticks and the ${ } syntax. Inside single or double quotes, ${id} is just plain text, so you get "qa_${id}@test.com". ${} outside a template literal is a syntax error. $(id) is shell syntax, not JavaScript.',
       followUps: [
         {
           q: 'Is Date.now() unique enough for parallel Playwright workers?',
-          a: 'Not guaranteed: two workers can create data in the same millisecond. Add the worker index (testInfo.workerIndex) or a random suffix, or use crypto.randomUUID(). Collisions cause flaky "email already registered" failures that only appear in parallel runs.',
+          a: 'Not always. Two workers can create data in the same millisecond. Add the worker number (testInfo.workerIndex), or a random part, or use crypto.randomUUID(). Clashes cause flaky "email already registered" failures that only appear when tests run in parallel.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-12',
       difficulty: 'hard',
-      question: 'Select ALL statements about `typeof` that are correct.',
+      question: 'Select ALL true statements about `typeof`.',
       options: [
         'typeof null returns "object"',
         'typeof [] returns "array"',
@@ -1398,18 +1511,18 @@ envName(1);`,
       ],
       correct: [0, 2, 3],
       explanation:
-        'typeof null is "object" (historic bug), typeof NaN is "number", and functions report "function". Arrays report "object", so use Array.isArray. typeof on an undeclared variable safely returns "undefined" instead of throwing (although typeof on a let variable in its temporal dead zone does throw).',
+        'typeof null is "object" (an old bug). typeof NaN is "number". Functions give "function". Arrays give "object", so use Array.isArray for them. typeof on a variable that was never declared safely gives "undefined" and does not throw. (But typeof on a let variable in its temporal dead zone does throw.)',
       followUps: [
         {
-          q: 'Why is typeof safe on undeclared variables useful?',
-          a: 'It lets code feature-detect globals that may not exist in an environment, such as `typeof window !== "undefined"` to tell browser from Node. Accessing `window` directly in Node would throw a ReferenceError.',
+          q: 'Why is it useful that typeof does not throw on undeclared variables?',
+          a: 'It lets code check for globals that may not exist. For example, `typeof window !== "undefined"` tells the browser apart from Node. Using `window` directly in Node would throw a ReferenceError.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-13',
       difficulty: 'hard',
-      question: 'An API returns `{ "order": { "customer": null } }`. Which expression returns "N/A" without throwing when the customer is null?',
+      question: 'An API returns `{ "order": { "customer": null } }`. Which expression gives "N/A" without throwing when customer is null?',
       code: {
         language: 'javascript',
         code: `const body = { order: { customer: null } };
@@ -1421,11 +1534,11 @@ envName(1);`,
       options: ['B only', 'B and C', 'A and B', 'B and D'],
       correct: [0],
       explanation:
-        'B short-circuits at customer?. and returns undefined, then ?? supplies "N/A". A, C and D all read .email from null and throw a TypeError: in C the ?. guards order (which exists), and in D it guards body. Optional chaining only protects the link immediately to its left, so it must sit right after the value that can be null.',
+        'B stops at customer?. and gives undefined, then ?? gives "N/A". A, C and D all read .email from null, so they throw a TypeError. In C the ?. guards order, which exists. In D it guards body. ?. only protects the value just before it, so put it right after the value that can be null.',
       followUps: [
         {
-          q: 'When is optional chaining hiding a real defect?',
-          a: 'If the contract says customer is required, `customer?.email` makes the test quietly continue with undefined. In assertions, check structure explicitly (expect(body.order.customer).not.toBeNull() or schema validation) and reserve ?. for genuinely optional data.',
+          q: 'When can optional chaining hide a real bug?',
+          a: 'If the contract says customer is required, `customer?.email` lets the test quietly carry on with undefined. In assertions, check the shape on purpose, with expect(body.order.customer).not.toBeNull() or a schema check. Keep ?. for data that is really optional.',
         },
       ],
     },
@@ -1444,18 +1557,18 @@ console.log(parseInt('px42', 10)); // E`,
       options: ['A', 'B', 'C', 'D', 'E'],
       correct: [0, 3, 4],
       explanation:
-        'Number() rejects any non-numeric character, so "$29.99" is NaN (A). parseFloat reads a leading number and stops at junk, so B is 29.99. Number("") is 0, not NaN (C). undefined converts to NaN in arithmetic (D). parseInt needs the string to start with a digit, so "px42" is NaN (E).',
+        'Number() rejects any non-number character, so "$29.99" gives NaN (A). parseFloat reads the number at the start and stops at the extra text, so B is 29.99. Number("") is 0, not NaN (C). undefined becomes NaN in maths (D). parseInt needs the text to start with a digit, so "px42" gives NaN (E).',
       followUps: [
         {
           q: 'Why is Number("") === 0 dangerous in UI tests?',
-          a: 'If a price element is empty because the app failed to render it, Number(text) silently becomes 0 and a "total is non-negative" or "free item" check could pass. Check that the text is non-empty (or use a regex match) before converting, so missing data fails loudly.',
+          a: 'Say a price element is empty because the app failed to show it. Number(text) quietly becomes 0. Then a "total is not negative" or "free item" check could pass. Check that the text is not empty (or match it with a regex) before converting, so missing data fails clearly.',
         },
       ],
     },
     {
       id: 'js-basics-mcq-15',
       difficulty: 'expert',
-      question: 'Select ALL true statements about debugging this failure: `TypeError: Cannot read properties of undefined (reading \'email\')` at line 12 of user.helper.js.',
+      question: 'Select ALL true statements about this failure: `TypeError: Cannot read properties of undefined (reading \'email\')` at line 12 of user.helper.js.',
       options: [
         'The expression immediately before `.email` evaluated to undefined',
         'The property email exists but its value is undefined',
@@ -1464,11 +1577,11 @@ console.log(parseInt('px42', 10)); // E`,
       ],
       correct: [0, 2],
       explanation:
-        'The message means JavaScript tried to read `email` from undefined, so the thing before `.email` was undefined, and logging it (plus where it came from) is the right first move. If email existed with value undefined, reading it would not throw. Line 12 is where it crashed, but the cause is often earlier, e.g. an API returning a different shape or a function missing a return.',
+        'The message means JavaScript tried to read `email` from undefined. So the thing before `.email` was undefined. Logging it, and where it came from, is the right first step. If email existed with the value undefined, reading it would not throw. Line 12 is where it crashed, but the cause is often earlier, for example an API giving a different shape or a function missing a return.',
       followUps: [
         {
           q: 'What tools help beyond console.log in Node?',
-          a: 'Put a `debugger;` statement in and run `node --inspect-brk file.js`, then attach Chrome DevTools or the VS Code debugger to step through and inspect variables. For Playwright tests specifically, `npx playwright test --debug` and the trace viewer show each action and its state.',
+          a: 'Put a `debugger;` line in the code and run `node --inspect-brk file.js`. Then attach Chrome DevTools or the VS Code debugger to step through the code and see the variables. For Playwright tests, `npx playwright test --debug` and the trace viewer show each action and its state.',
         },
       ],
     },
