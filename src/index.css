@@ -577,6 +577,20 @@ kbd {
   .shell.has-syllabus.sidebar-collapsed .main {
     margin-left: 0;
   }
+  /* pages without a docked syllabus: the toggle opens it as a drawer over the page */
+  .shell:not(.has-syllabus) .sidebar.open {
+    display: block;
+    width: min(88vw, 340px);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+  .shell:not(.has-syllabus) .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 17, 8, 0.42);
+    z-index: 15;
+  }
 }
 @media (max-width: 1099px) {
   .topnav,
@@ -4865,4 +4879,472 @@ samp {
   font-size: 0.875rem;
   font-weight: 500;
   padding: 6px 10px;
+}
+
+/* =====================================================================
+   Achievements (src/components/achievements, src/pages/Achievements.tsx)
+   Tier tokens per tier: -hi / -lo = the metal rim, -face = the medallion face, -ink = the glyph,
+   -ribbon = the label ribbon (white --tier-ribbon-text on it is AA at small sizes). The badge is
+   the one metal object on the page; everything around it stays flat paper. 'standard' (single-step
+   badges) follows the pen ink; 'locked' is the greyed-out state.
+   ===================================================================== */
+:root {
+  --tier-bronze-hi: #e2a274;
+  --tier-bronze-lo: #94521f;
+  --tier-bronze-face: #f7ebdd;
+  --tier-bronze-ink: #874717;
+  --tier-bronze-ribbon: #874717;
+  --tier-silver-hi: #eceef1;
+  --tier-silver-lo: #858d9a;
+  --tier-silver-face: #f0f0ee;
+  --tier-silver-ink: #464c58;
+  --tier-silver-ribbon: #535a66;
+  --tier-gold-hi: #f6dc84;
+  --tier-gold-lo: #bd840a;
+  --tier-gold-face: #fbf2d8;
+  --tier-gold-ink: #835600;
+  --tier-gold-ribbon: #8a5b00;
+  --tier-diamond-hi: #b7e6f5;
+  --tier-diamond-lo: #4f63c9;
+  --tier-diamond-face: #e9eef8;
+  --tier-diamond-ink: #2c3d99;
+  --tier-diamond-ribbon: #2f40a0;
+  --tier-locked-hi: #ddd7c8;
+  --tier-locked-lo: #aaa290;
+  --tier-locked-face: #ece7da;
+  --tier-locked-ink: #6f6a5c;
+  --tier-ribbon-text: #ffffff;
+  --tier-shine: rgba(255, 255, 255, 0.75);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --tier-bronze-hi: #eab085;
+    --tier-bronze-lo: #8f4f1f;
+    --tier-bronze-face: #2a1f15;
+    --tier-bronze-ink: #f0ae7c;
+    --tier-bronze-ribbon: #874717;
+    --tier-silver-hi: #eef0f3;
+    --tier-silver-lo: #7a8290;
+    --tier-silver-face: #23232a;
+    --tier-silver-ink: #d6d9df;
+    --tier-silver-ribbon: #4f5662;
+    --tier-gold-hi: #f6dc84;
+    --tier-gold-lo: #b67d06;
+    --tier-gold-face: #2a2311;
+    --tier-gold-ink: #f3cd5a;
+    --tier-gold-ribbon: #805400;
+    --tier-diamond-hi: #a9e3f4;
+    --tier-diamond-lo: #6475db;
+    --tier-diamond-face: #191d33;
+    --tier-diamond-ink: #aebcf7;
+    --tier-diamond-ribbon: #3445a8;
+    --tier-locked-hi: #4a4537;
+    --tier-locked-lo: #36332a;
+    --tier-locked-face: #22201a;
+    --tier-locked-ink: #8f8875;
+    --tier-shine: rgba(255, 255, 255, 0.55);
+  }
+}
+:root[data-theme='dark'] {
+  --tier-bronze-hi: #eab085;
+  --tier-bronze-lo: #8f4f1f;
+  --tier-bronze-face: #2a1f15;
+  --tier-bronze-ink: #f0ae7c;
+  --tier-bronze-ribbon: #874717;
+  --tier-silver-hi: #eef0f3;
+  --tier-silver-lo: #7a8290;
+  --tier-silver-face: #23232a;
+  --tier-silver-ink: #d6d9df;
+  --tier-silver-ribbon: #4f5662;
+  --tier-gold-hi: #f6dc84;
+  --tier-gold-lo: #b67d06;
+  --tier-gold-face: #2a2311;
+  --tier-gold-ink: #f3cd5a;
+  --tier-gold-ribbon: #805400;
+  --tier-diamond-hi: #a9e3f4;
+  --tier-diamond-lo: #6475db;
+  --tier-diamond-face: #191d33;
+  --tier-diamond-ink: #aebcf7;
+  --tier-diamond-ribbon: #3445a8;
+  --tier-locked-hi: #4a4537;
+  --tier-locked-lo: #36332a;
+  --tier-locked-face: #22201a;
+  --tier-locked-ink: #8f8875;
+  --tier-shine: rgba(255, 255, 255, 0.55);
+}
+:root {
+  --tier-standard-hi: color-mix(in srgb, var(--accent) 35%, var(--surface));
+  --tier-standard-lo: var(--accent);
+  --tier-standard-face: var(--accent-soft);
+  --tier-standard-ink: var(--accent);
+  --tier-standard-ribbon: var(--accent);
+}
+
+.ach-badge {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+.ach-badge.is-locked {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+.ach-badge-ribbon-text {
+  font: 800 9px/1 var(--sans);
+  letter-spacing: 0.14em;
+}
+.ach-badge-mult {
+  font: 800 14px/1 var(--sans);
+}
+
+/* tier pill: a stamped label in the tier's colours */
+.ach-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.ach-tier-pill.tier-bronze {
+  background: var(--tier-bronze-face);
+  color: var(--tier-bronze-ink);
+  border-color: color-mix(in srgb, var(--tier-bronze-lo) 50%, transparent);
+}
+.ach-tier-pill.tier-silver {
+  background: var(--tier-silver-face);
+  color: var(--tier-silver-ink);
+  border-color: color-mix(in srgb, var(--tier-silver-lo) 50%, transparent);
+}
+.ach-tier-pill.tier-gold {
+  background: var(--tier-gold-face);
+  color: var(--tier-gold-ink);
+  border-color: color-mix(in srgb, var(--tier-gold-lo) 50%, transparent);
+}
+.ach-tier-pill.tier-diamond {
+  background: var(--tier-diamond-face);
+  color: var(--tier-diamond-ink);
+  border-color: color-mix(in srgb, var(--tier-diamond-lo) 50%, transparent);
+}
+.ach-num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- celebration overlay ---------- */
+.ach-backdrop {
+  z-index: 95;
+}
+.ach-modal {
+  position: relative;
+  width: min(460px, 100%);
+  text-align: center;
+  padding: 22px 22px 20px;
+  border-top: 3px solid var(--margin-rule);
+}
+.ach-modal-many {
+  width: min(640px, 100%);
+}
+.ach-modal h2 {
+  margin: 0.4rem 0 0.35rem;
+  font-size: 1.6rem;
+}
+.ach-modal p {
+  margin: 0.35rem auto 0;
+  max-width: 40ch;
+}
+.ach-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.ach-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.ach-single {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ach-hero {
+  display: grid;
+  place-items: center;
+  width: 200px;
+  height: 200px;
+  margin: 4px auto -4px;
+  border-radius: 50%;
+  border: 1px dashed var(--border-strong);
+}
+.ach-burst-grid {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 14px 8px;
+  max-height: min(48vh, 420px);
+  overflow-y: auto;
+}
+.ach-burst-grid li {
+  position: relative; /* keeps anything absolutely positioned inside the scroller */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.ach-burst-name {
+  font-weight: 650;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+.ach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+@media (max-width: 480px) {
+  .ach-actions .btn {
+    flex: 1 1 100%;
+  }
+  .ach-hero {
+    width: 176px;
+    height: 176px;
+  }
+}
+
+/* ---------- achievements page ---------- */
+.ach-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ach-page-head .lead {
+  max-width: 60ch;
+}
+.ach-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-bottom: 16px;
+}
+.ach-count-value {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.ach-count-value .muted {
+  font-size: 1.1rem;
+}
+.ach-filter {
+  margin-bottom: 8px;
+}
+.ach-group {
+  margin: 28px 0;
+}
+.ach-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+.ach-card {
+  position: relative; /* anchors the tier chips' .sr-only labels */
+  height: 100%;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s;
+}
+.ach-card.is-earned:hover {
+  border-color: var(--border-strong);
+}
+.ach-card.is-locked {
+  background: transparent;
+  border-style: dashed;
+}
+.ach-card:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.ach-card-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ach-card-name {
+  margin: 0;
+  font-size: 1.08rem;
+}
+.ach-card.is-locked .ach-card-name {
+  color: var(--text-2);
+}
+.ach-card-desc {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.ach-card-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.ach-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.ach-meter {
+  min-width: 0;
+}
+.ach-ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ach-step {
+  position: relative; /* anchors its .sr-only label */
+  min-width: 2.1rem;
+  text-align: center;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font: 600 0.7rem/1.5 var(--mono);
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.ach-step.got.tier-bronze {
+  background: var(--tier-bronze-face);
+  color: var(--tier-bronze-ink);
+  border-color: var(--tier-bronze-lo);
+}
+.ach-step.got.tier-silver {
+  background: var(--tier-silver-face);
+  color: var(--tier-silver-ink);
+  border-color: var(--tier-silver-lo);
+}
+.ach-step.got.tier-gold {
+  background: var(--tier-gold-face);
+  color: var(--tier-gold-ink);
+  border-color: var(--tier-gold-lo);
+}
+.ach-step.got.tier-diamond {
+  background: var(--tier-diamond-face);
+  color: var(--tier-diamond-ink);
+  border-color: var(--tier-diamond-lo);
+}
+
+/* ---------- dashboard summary ---------- */
+.ach-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
+  gap: 20px;
+  margin: 0;
+}
+.ach-summary-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+.ach-mini-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  gap: 8px;
+}
+.ach-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: var(--radius);
+  color: inherit;
+  text-decoration: none !important;
+  text-align: center;
+  transition: background-color 0.15s;
+}
+.ach-mini:hover {
+  background: var(--surface-2);
+}
+.ach-mini-name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-2);
+}
+.ach-empty {
+  margin: 0;
+  max-width: 60ch;
+}
+.ach-summary-next {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-left: 20px;
+  border-left: 1px solid var(--rule);
+}
+.ach-next {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+.ach-next-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ach-next-body strong {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ach-next-body .pbar {
+  flex: none;
+  width: 100%;
+}
+@media (max-width: 760px) {
+  .ach-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ach-summary-next {
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
 }

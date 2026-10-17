@@ -1,7 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Award,
   Building2,
   ChevronDown,
   Code2,
@@ -25,10 +26,13 @@ import { setSettings, useProgress } from '../lib/progress';
 import { topicStatus } from '../lib/stats';
 import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 import { applyThemeAttrs } from '../lib/theme';
+import { useAchievementDetection } from '../lib/useAchievements';
+import { achievementById, TIER_LABEL } from '../content/achievements';
 
 // overlays are lazy so cmdk and the tour stay out of the main bundle until first use
 const CommandPalette = lazy(() => import('./CommandPalette'));
 const WelcomeTour = lazy(() => import('./WelcomeTour'));
+const AchievementCelebration = lazy(() => import('./achievements/AchievementCelebration'));
 
 /** pages worth offering under "Continue where you left off" */
 const STUDY_PAGE = /^\/(topic|coding|pw-lab|playground|companies|roadmap)/;
@@ -88,6 +92,21 @@ export default function Layout() {
     if (tourOpen) saveUiPrefs({ tourSeen: true });
   }, [tourOpen]);
   useEffect(() => on('open-guide', () => setTourOpen(true)), []);
+
+  // ---- achievements: detect + store new badges; celebrate once the guide is closed ----
+  const navigate = useNavigate();
+  const { queue: unlocked, dismiss: dismissUnlocked } = useAchievementDetection(p);
+  const viewAllAchievements = useCallback(() => {
+    dismissUnlocked();
+    navigate('/achievements');
+  }, [dismissUnlocked, navigate]);
+  const unlockedNews = tourOpen
+    ? ''
+    : unlocked.length === 1
+      ? `Achievement unlocked: ${achievementById[unlocked[0].id]?.name}${TIER_LABEL[unlocked[0].tier] ? `, ${TIER_LABEL[unlocked[0].tier]} tier` : ''}`
+      : unlocked.length > 1
+        ? `You've earned ${unlocked.length} achievements`
+        : '';
   useEffect(() => on('open-palette', showPalette), [showPalette]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -224,6 +243,9 @@ export default function Layout() {
           >
             {isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
           </button>
+          <NavLink to="/achievements" className="btn-ghost icon-btn" aria-label="Achievements" title="Achievements">
+            <Award size={18} aria-hidden="true" />
+          </NavLink>
           <NavLink to="/settings" className="btn-ghost icon-btn" aria-label="Settings" title="Settings">
             <SettingsIcon size={18} aria-hidden="true" />
           </NavLink>
@@ -240,6 +262,9 @@ export default function Layout() {
           </NavLink>
           <NavLink to="/weak-areas" className="drawer-link">
             <Target size={16} aria-hidden="true" /> Weak areas{weakCount > 0 && <span className="count-tag fail">{weakCount}</span>}
+          </NavLink>
+          <NavLink to="/achievements" className="drawer-link">
+            <Award size={16} aria-hidden="true" /> Achievements
           </NavLink>
           <div className="drawer-label">Practice</div>
           {practiceNav.map((n) => (
@@ -332,7 +357,12 @@ export default function Layout() {
       <Suspense fallback={null}>
         {paletteLoaded && <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />}
         {tourOpen && <WelcomeTour onClose={closeTour} />}
+        {/* achievement unlocks wait until the guide is closed */}
+        {unlocked.length > 0 && !tourOpen && <AchievementCelebration items={unlocked} onClose={dismissUnlocked} onViewAll={viewAllAchievements} />}
       </Suspense>
+      <div className="sr-only" aria-live="assertive" aria-atomic="true">
+        {unlockedNews}
+      </div>
     </div>
   );
 }

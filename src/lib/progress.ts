@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { mergeEarned, type EarnedNow, type StoredAchievement } from '../content/achievements';
 
 export type Rating = 'nailed' | 'partial' | 'missed';
 
@@ -49,6 +50,8 @@ export interface Progress {
   migrations?: string[];
   /** local dates (YYYY-MM-DD) with any study activity, oldest first (max 400); drives the study streak */
   activityDays?: string[];
+  /** earned badges (src/content/achievements.ts); optional for saves made before achievements existed */
+  achievements?: Record<string, StoredAchievement>;
   settings: Settings;
 }
 
@@ -67,6 +70,7 @@ const DEFAULT: Progress = {
   // fresh progress already matches current content, so no migration applies
   migrations: [],
   activityDays: [],
+  achievements: {},
   settings: { passMark: 70, secondsPerQuestion: 90, shuffle: true, theme: 'system', studyLock: 'exam', accent: 'indigo' },
 };
 
@@ -199,6 +203,12 @@ export function setDraft(id: string, text: string) {
 
 export function setSettings(s: Partial<Settings>) {
   update((p) => ({ ...p, settings: { ...p.settings, ...s } }), false);
+}
+
+/** Store newly earned badges / tier-ups. Never downgrades, and doesn't count as study activity. */
+export function earnAchievements(earned: EarnedNow[], at = Date.now()) {
+  if (!earned.length) return;
+  update((p) => ({ ...p, achievements: mergeEarned(p.achievements, earned, at) }), false);
 }
 
 export function resetProgress() {

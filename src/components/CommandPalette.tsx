@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Command, defaultFilter } from 'cmdk';
 import {
+  Award,
   BookOpen,
   Building2,
   ClipboardList,
@@ -56,6 +57,7 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
       { id: 'page:/pw-lab', label: 'Playwright Lab (Judge)', icon: FlaskConical, words: 'mutants bugs tests', run: go('/pw-lab') },
       { id: 'page:/companies', label: 'Company Questions', icon: Building2, words: 'interview', run: go('/companies') },
       { id: 'page:/roadmap', label: '12-Week Roadmap & Projects', icon: Map, words: 'plan weeks', run: go('/roadmap') },
+      { id: 'page:/achievements', label: 'Achievements', icon: Award, words: 'badges milestones rewards trophies medals', run: go('/achievements') },
       { id: 'page:/settings', label: 'Settings', icon: Settings, words: 'pass mark theme reset', run: go('/settings') },
     ];
     const actions: Item[] = [

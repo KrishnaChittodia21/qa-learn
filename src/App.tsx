@@ -10,6 +10,7 @@ import { PwLabOverviewPage, PwLabStepPage } from './pages/PwLab';
 import PlaygroundPage from './pages/Playground';
 import CompaniesPage from './pages/Companies';
 import SettingsPage from './pages/Settings';
+import AchievementsPage from './pages/Achievements';
 import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
 import { resumeLocation } from './lib/uiPrefs';
@@ -39,6 +40,7 @@ const router = createHashRouter([
       { path: 'companies', element: <CompaniesPage /> },
       { path: 'weak-areas', element: <WeakAreasPage /> },
       { path: 'practice', element: <PracticePage /> },
+      { path: 'achievements', element: <AchievementsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Home /> },
     ],

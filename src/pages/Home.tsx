@@ -25,6 +25,7 @@ import {
 import { weakTopics } from '../lib/weak';
 import { CountUp } from '../components/CountUp';
 import { ProgressPanel } from '../components/ProgressPanel';
+import { AchievementsSummary } from '../components/achievements/AchievementsSummary';
 import { ChartCard } from '../components/charts/ChartCard';
 import { BarList } from '../components/charts/BarList';
 import { ColumnChart } from '../components/charts/ColumnChart';
@@ -223,6 +224,8 @@ export default function Home() {
       )}
 
       <ProgressPanel p={p} />
+
+      <AchievementsSummary p={p} />
 
       <section className="dash-section" aria-labelledby="dash-weak">
         <div className="dash-section-head">
