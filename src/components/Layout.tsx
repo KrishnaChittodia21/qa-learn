@@ -1,31 +1,38 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Award,
   Building2,
   ChevronDown,
+  CircleHelp,
   Code2,
+  Crosshair,
   FlaskConical,
-  LayoutDashboard,
+  LayoutGrid,
+  Layers,
   ListTree,
-  Map as MapIcon,
-  Menu,
   Moon,
-  Settings as SettingsIcon,
+  Route,
+  Search,
+  SlidersHorizontal,
   Sun,
-  Target,
   Terminal,
+  TriangleAlert,
+  X,
+  Zap,
 } from 'lucide-react';
 import { Toaster } from './Toaster';
 import { SiteFooter } from './SiteFooter';
-import { BrandMark } from './BrandMark';
+import { BrandMark, BrandName } from './BrandMark';
 import { on, openGuide } from '../lib/appEvents';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, PHASES, TOPICS } from '../content';
-import { setSettings, useProgress } from '../lib/progress';
+import { localDay, setSettings, useProgress, type Progress } from '../lib/progress';
 import { topicStatus } from '../lib/stats';
+import { studyStreak } from '../lib/streak';
 import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 import { applyThemeAttrs } from '../lib/theme';
+import { useFocusTrap } from '../lib/useFocusTrap';
 import { useAchievementDetection } from '../lib/useAchievements';
 import { achievementById, TIER_LABEL } from '../content/achievements';
 
@@ -45,25 +52,98 @@ function typingInField(e: KeyboardEvent) {
 
 const STATUS_LABEL = { new: 'not started', 'in-progress': 'in progress', passed: 'passed' } as const;
 
-/** below this width the main nav and the syllabus live in a drawer */
-const isCompact = () => window.matchMedia('(max-width: 1099px)').matches;
+type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean | 'true'; strokeWidth?: number }>;
+interface NavItem {
+  to: string;
+  label: string;
+  /** short label for the mobile dock */
+  dock?: string;
+  icon: Icon;
+  /** extra paths that count as "this section" (e.g. a topic page belongs to the Syllabus) */
+  match: (path: string) => boolean;
+}
+
+/** primary instruments, in the mockup's order (numbered 01–07 in the rail) */
+const PRIMARY: NavItem[] = [
+  { to: '/', label: 'Today', icon: Crosshair, match: (p) => p === '/' },
+  { to: '/contents', label: 'Syllabus', icon: Layers, match: (p) => p.startsWith('/contents') || p.startsWith('/topic/') },
+  { to: '/coding', label: 'Coding', icon: Code2, match: (p) => p.startsWith('/coding') },
+  { to: '/pw-lab', label: 'Playwright Lab', dock: 'Lab', icon: FlaskConical, match: (p) => p.startsWith('/pw-lab') },
+  { to: '/roadmap', label: 'Roadmap', icon: Route, match: (p) => p.startsWith('/roadmap') },
+  { to: '/weak-areas', label: 'Weak areas', icon: TriangleAlert, match: (p) => p.startsWith('/weak-areas') || p.startsWith('/practice') },
+  { to: '/achievements', label: 'Achievements', icon: Award, match: (p) => p.startsWith('/achievements') },
+];
+/** secondary tools (rail group "Tools"; the mobile "More" sheet holds these + the primary items without a dock slot) */
+const TOOLS: NavItem[] = [
+  { to: '/playground', label: 'Playground', icon: Terminal, match: (p) => p.startsWith('/playground') },
+  { to: '/companies', label: 'Company Qs', icon: Building2, match: (p) => p.startsWith('/companies') },
+  { to: '/settings', label: 'Settings', icon: SlidersHorizontal, match: (p) => p.startsWith('/settings') },
+];
+const DOCK = PRIMARY.slice(0, 4);
+const MORE = [...PRIMARY.slice(4), ...TOOLS];
+
+/** breadcrumb for the console strip (mono, uppercase via CSS) */
+function crumbsFor(path: string): string[] {
+  const topic = path.match(/^\/topic\/([^/]+)/);
+  if (topic) {
+    const t = TOPICS.find((x) => x.id === topic[1]);
+    const ph = t && PHASES.find((p) => p.id === t.phase);
+    const out = ['Syllabus'];
+    if (ph) out.push(`Phase ${String(ph.number).padStart(2, '0')}`);
+    out.push(t?.title.split(':')[0] ?? topic[1]);
+    if (path.endsWith('/exam')) out.push('Exam');
+    return out;
+  }
+  const coding = path.match(/^\/coding\/(.+)/);
+  if (coding) return ['Coding', CODING_PROBLEMS.find((c) => c.id === coding[1])?.title ?? coding[1]];
+  const lab = path.match(/^\/pw-lab\/(.+)/);
+  if (lab) return ['Playwright Lab', `@${lab[1]}`];
+  if (path.startsWith('/practice')) return ['Weak areas', 'Practice'];
+  const item = [...PRIMARY, ...TOOLS].find((n) => n.match(path));
+  return [item?.label ?? 'Today'];
+}
+
+/** study signal for the last `n` days (oldest first): 0 = no activity, else a 1–100 bar height */
+function activitySignal(p: Progress, n: number, now = new Date()) {
+  const active = new Set(p.activityDays ?? []);
+  const events = new Map<string, number>();
+  const bump = (iso?: string) => {
+    if (!iso) return;
+    const d = localDay(new Date(iso));
+    events.set(d, (events.get(d) ?? 0) + 1);
+  };
+  Object.values(p.mcq).forEach((r) => bump(r.lastAt));
+  Object.values(p.tests).forEach((r) => r.history?.forEach((h) => bump(h.at)));
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (n - 1 - i));
+    const day = localDay(d);
+    if (!active.has(day)) return { day, h: 0 };
+    return { day, h: Math.min(100, 34 + (events.get(day) ?? 0) * 6) };
+  });
+}
+
+const fmtDate = (d: Date) =>
+  `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.getDate()} ${d.toLocaleDateString('en-GB', { month: 'short' })} ${d.getFullYear()}`;
 
 export default function Layout() {
   const p = useProgress();
   const [query, setQuery] = useState('');
   const [navOpen, setNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => getUiPrefs().sidebarCollapsed);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => getUiPrefs().collapsedPhases);
   const location = useLocation();
-  const loc = location.pathname + location.search;
+  const path = location.pathname;
+  const loc = path + location.search;
   const locRef = useRef(loc);
   locRef.current = loc;
   const firstRoute = useRef(true);
   const sidebarRef = useRef<HTMLElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => applyThemeAttrs(p.settings), [p.settings]);
 
-  // track the OS preference so the toggle icon is right while theme = 'system'
+  // track the OS preference so the theme switch is right while theme = 'system'
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -73,7 +153,6 @@ export default function Layout() {
   }, []);
   const isDark = p.settings.theme === 'dark' || (p.settings.theme === 'system' && systemDark);
 
-  useEffect(() => saveUiPrefs({ sidebarCollapsed }), [sidebarCollapsed]);
   useEffect(() => saveUiPrefs({ collapsedPhases: collapsed }), [collapsed]);
   useEffect(() => {
     saveUiPrefs(STUDY_PAGE.test(loc) ? { lastLocation: loc, lastStudyLocation: loc } : { lastLocation: loc });
@@ -126,6 +205,7 @@ export default function Layout() {
   // New page → top of page, except on app start, where we restore the saved scroll position.
   useEffect(() => {
     setNavOpen(false);
+    setMoreOpen(false);
     if (firstRoute.current) {
       firstRoute.current = false;
       const saved = getUiPrefs().lastScroll;
@@ -135,7 +215,7 @@ export default function Layout() {
       }
     }
     window.scrollTo({ top: 0 });
-  }, [location.pathname]);
+  }, [path]);
 
   // Remember how far down the current page the user has read.
   useEffect(() => {
@@ -151,19 +231,21 @@ export default function Layout() {
     };
   }, []);
 
-  // Keep the active topic visible inside the sidebar list.
+  // Syllabus drawer + More sheet: trap focus while open, Escape closes, focus returns to the opener.
+  const closeNav = useCallback(() => setNavOpen(false), []);
+  const closeMore = useCallback(() => setMoreOpen(false), []);
+  useFocusTrap(sidebarRef, navOpen, closeNav);
+  useFocusTrap(moreRef, moreOpen, closeMore);
+
+  // Keep the active topic visible inside the syllabus list when the drawer opens.
   useEffect(() => {
+    if (!navOpen) return;
     const aside = sidebarRef.current;
     const active = aside?.querySelector<HTMLElement>('.side-topic.active');
     if (aside && active && (active.offsetTop < aside.scrollTop || active.offsetTop > aside.scrollTop + aside.clientHeight - 40)) {
       aside.scrollTop = active.offsetTop - aside.clientHeight / 3;
     }
-  }, [location.pathname]);
-
-  const toggleNav = () => {
-    if (isCompact() || !syllabusPage) setNavOpen((o) => !o);
-    else setSidebarCollapsed((c) => !c);
-  };
+  }, [navOpen, path]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -178,109 +260,174 @@ export default function Layout() {
 
   const weakCount = Object.values(p.mcq).filter((r) => !r.lastCorrect).length;
   const passedCount = TOPICS.filter((t) => topicStatus(p, t) === 'passed').length;
-
-  // the syllabus sits beside lessons, not beside a running exam
-  const syllabusPage = location.pathname.startsWith('/topic/') && !location.pathname.endsWith('/exam');
   const codeSolved = Object.keys(p.code).length;
-  const practiceNav = [
-    { to: '/coding', label: 'JS coding', long: `JS coding practice (${codeSolved}/${CODING_PROBLEMS.length})`, icon: Code2 },
-    { to: '/pw-lab', label: 'Playwright Lab', long: 'Playwright Lab (auto-judged)', icon: FlaskConical },
-    { to: '/companies', label: 'Company Qs', long: `Company questions (${COMPANY_QUESTIONS.length})`, icon: Building2 },
-    { to: '/playground', label: 'Playground', long: 'JS Playground', icon: Terminal },
-    { to: '/roadmap', label: '12-week plan', long: '12-week roadmap & projects', icon: MapIcon },
-  ];
+  const streak = studyStreak(p.activityDays);
+  const wave = useMemo(() => activitySignal(p, 14), [p]);
+  const crumbs = crumbsFor(path);
+  const today = useMemo(() => fmtDate(new Date()), []);
+
+  // topic pages (not a running exam) are where the syllabus index matters most
+  const syllabusPage = path.startsWith('/topic/') && !path.endsWith('/exam');
+  const moreActive = MORE.some((n) => n.match(path));
+
+  const countFor = (to: string) =>
+    to === '/weak-areas' && weakCount > 0 ? (
+      <span className="count-tag fail" aria-label={`, ${weakCount} wrong answers`}>
+        {weakCount}
+      </span>
+    ) : null;
+  const titleFor = (to: string, label: string) =>
+    to === '/coding'
+      ? `JS coding practice (${codeSolved}/${CODING_PROBLEMS.length})`
+      : to === '/companies'
+        ? `Company questions (${COMPANY_QUESTIONS.length})`
+        : label;
+
+  const themeSwitch = (
+    <div className="theme-seg" role="group" aria-label="Theme">
+      <button type="button" aria-pressed={isDark} onClick={() => setSettings({ theme: 'dark' })} title="Obsidian (dark)">
+        <Moon size={14} aria-hidden="true" />
+        <span className="lbl">Obsidian</span>
+      </button>
+      <button type="button" aria-pressed={!isDark} onClick={() => setSettings({ theme: 'light' })} title="Daylight (light)">
+        <Sun size={14} aria-hidden="true" />
+        <span className="lbl">Daylight</span>
+      </button>
+    </div>
+  );
 
   return (
-    <div className={`shell ${syllabusPage ? 'has-syllabus' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`shell ${syllabusPage ? 'has-syllabus' : ''}`}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <header className="topbar">
-        <button
-          className={`btn-ghost nav-toggle ${syllabusPage ? 'nav-toggle-syllabus' : ''}`}
-          onClick={toggleNav}
-          aria-label={syllabusPage ? 'Toggle the syllabus' : 'Open the menu'}
-          aria-expanded={navOpen}
-          title={syllabusPage ? (sidebarCollapsed ? 'Show syllabus' : 'Hide syllabus') : 'Menu'}
-          type="button"
-        >
-          <Menu size={20} aria-hidden="true" />
-        </button>
-        <NavLink to="/" className="brand" aria-label="QA Learn, today">
+
+      {/* fixed lab background: gradient (body::before) + lattice + crosshairs + scanlines + grain */}
+      <div className="lattice" aria-hidden="true" />
+      <div className="lab-bg-marks" aria-hidden="true">
+        <span className="xhair" style={{ top: 118, right: '6%' }}>
+          <i />
+        </span>
+        <span className="xhair" style={{ top: '62%', right: '2.2%' }}>
+          <i />
+        </span>
+        <span className="xhair" style={{ bottom: '7%', left: 'calc(var(--rail-w) + 1.4%)' }}>
+          <i />
+        </span>
+      </div>
+      <div className="scanlines" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
+
+      {/* ---- desktop: fixed left instrument rail ---- */}
+      <aside className="rail" aria-label="Main navigation">
+        <Link to="/" className="brand" aria-label="QA.learn, today">
           <BrandMark />
-          <span className="brand-name">QA Learn</span>
-        </NavLink>
-        <nav className="topnav" aria-label="Main">
-          <NavLink to="/" end className="topnav-link">
-            Today
-          </NavLink>
-          <NavLink to="/contents" className="topnav-link">
-            Contents
-          </NavLink>
-          <NavLink to="/weak-areas" className="topnav-link">
-            Weak areas{weakCount > 0 && <span className="count-tag fail" aria-label={`, ${weakCount} wrong answers`}>{weakCount}</span>}
-          </NavLink>
-          <span className="topnav-sep" aria-hidden="true" />
-          {practiceNav.map((n) => (
-            <NavLink key={n.to} to={n.to} className="topnav-link">
-              {n.label}
-            </NavLink>
+          <BrandName />
+        </Link>
+        <button type="button" className="rail-search" onClick={showPalette} aria-label="Search (Command K)" title="Search (⌘K)">
+          <Search size={16} aria-hidden="true" />
+          <span className="lbl">Search specs</span>
+          <kbd className="kbd">⌘K</kbd>
+        </button>
+        <div className="rail-label">Navigate</div>
+        <nav className="rail-nav" aria-label="Main">
+          {PRIMARY.map((n, i) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              className="rail-a"
+              aria-current={n.match(path) ? 'page' : undefined}
+              aria-label={n.label}
+              title={titleFor(n.to, n.label)}
+            >
+              <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
+              <span className="lbl">{n.label}</span>
+              {countFor(n.to)}
+              <span className="ix">{String(i + 1).padStart(2, '0')}</span>
+            </Link>
           ))}
         </nav>
-        <div className="topbar-right">
-          <span className="topbar-report" title="Topics whose full exam you have passed">
-            <span className="report-pass">{passedCount}</span>/{TOPICS.length} passed
-          </span>
-          <button type="button" className="btn-ghost guide-btn" onClick={openGuide} title="Open the guide (press ?)">
-            Guide me
+        <div className="rail-label">Tools</div>
+        <nav className="rail-nav rail-tools" aria-label="Tools">
+          {TOOLS.map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              className="rail-a"
+              aria-current={n.match(path) ? 'page' : undefined}
+              aria-label={n.label}
+              title={titleFor(n.to, n.label)}
+            >
+              <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
+              <span className="lbl">{n.label}</span>
+            </Link>
+          ))}
+          <button type="button" className="rail-a" onClick={openGuide} aria-label="Guide me (press ?)" title="Open the guide (press ?)">
+            <CircleHelp size={18} aria-hidden="true" strokeWidth={1.6} />
+            <span className="lbl">Guide me</span>
+            <kbd className="kbd ix">?</kbd>
           </button>
-          <button
-            type="button"
-            className="btn-ghost icon-btn theme-toggle"
-            onClick={() => setSettings({ theme: isDark ? 'light' : 'dark' })}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
-          </button>
-          <NavLink to="/achievements" className="btn-ghost icon-btn" aria-label="Achievements" title="Achievements">
-            <Award size={18} aria-hidden="true" />
-          </NavLink>
-          <NavLink to="/settings" className="btn-ghost icon-btn" aria-label="Settings" title="Settings">
-            <SettingsIcon size={18} aria-hidden="true" />
-          </NavLink>
+        </nav>
+        <div className="rail-spacer" />
+        <div className="rail-streak" title={`${streak}-day study streak`}>
+          <div className="row">
+            <span className="mlabel">Streak</span>
+            <b>
+              {streak}
+              <small>{streak === 1 ? 'day' : 'days'}</small>
+            </b>
+          </div>
+          <div className="wave14" role="img" aria-label="Study activity over the last 14 days">
+            {wave.map((d, i) => (
+              <i
+                key={d.day}
+                className={d.h === 0 ? 'off' : i === wave.length - 1 ? 'now' : undefined}
+                style={{ '--h': Math.max(d.h, 8) } as CSSProperties}
+              />
+            ))}
+          </div>
         </div>
+        {themeSwitch}
+        <div className="rail-status">
+          <span className="dot" aria-hidden="true" />
+          <span className="txt">
+            LAB ONLINE · {passedCount}/{TOPICS.length} PASSED
+          </span>
+        </div>
+      </aside>
+
+      {/* ---- mobile: compact top bar ---- */}
+      <header className="mtop">
+        <Link to="/" className="brand" aria-label="QA.learn, today">
+          <BrandMark size={30} />
+          <BrandName sub={false} />
+        </Link>
+        <span className="m-streak" title={`${streak}-day study streak`}>
+          <Zap size={14} aria-hidden="true" />
+          <b>{streak}</b>d<span className="sr-only"> study streak</span>
+        </span>
+        <button type="button" className="icon-btn m-ibtn" onClick={showPalette} aria-label="Search">
+          <Search size={18} aria-hidden="true" />
+        </button>
       </header>
 
-      <motion.aside ref={sidebarRef} layoutScroll className={`sidebar ${navOpen ? 'open' : ''}`} aria-label="Syllabus">
-        <nav className="drawer-nav" aria-label="Main">
-          <NavLink to="/" end className="drawer-link">
-            <LayoutDashboard size={16} aria-hidden="true" /> Today
-          </NavLink>
-          <NavLink to="/contents" className="drawer-link">
-            <ListTree size={16} aria-hidden="true" /> Contents
-          </NavLink>
-          <NavLink to="/weak-areas" className="drawer-link">
-            <Target size={16} aria-hidden="true" /> Weak areas{weakCount > 0 && <span className="count-tag fail">{weakCount}</span>}
-          </NavLink>
-          <NavLink to="/achievements" className="drawer-link">
-            <Award size={16} aria-hidden="true" /> Achievements
-          </NavLink>
-          <div className="drawer-label">Practice</div>
-          {practiceNav.map((n) => (
-            <NavLink key={n.to} to={n.to} className="drawer-link">
-              <n.icon size={16} aria-hidden="true" /> {n.long}
-            </NavLink>
-          ))}
-          <NavLink to="/settings" className="drawer-link">
-            <SettingsIcon size={16} aria-hidden="true" /> Settings
-          </NavLink>
-        </nav>
+      {/* ---- syllabus index: a drawer over the page (topic list by phase) ---- */}
+      <aside
+        ref={sidebarRef}
+        className={`sidebar ${navOpen ? 'open' : ''}`}
+        aria-label="Syllabus"
+        inert={!navOpen}
+        role={navOpen ? 'dialog' : undefined}
+        aria-modal={navOpen ? true : undefined}
+      >
         <div className="syllabus-head">
           <span className="syllabus-title">Syllabus</span>
-          <span className="syllabus-legend" aria-hidden="true">
-            <span className="mark mark-passed" /> passed <span className="mark mark-in-progress" /> started <span className="mark mark-new" /> not run
-          </span>
+          <button type="button" className="icon-btn" onClick={closeNav} aria-label="Close the syllabus">
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="syllabus-legend" aria-hidden="true">
+          <span className="mark mark-passed" /> passed <span className="mark mark-in-progress" /> started <span className="mark mark-new" /> not run
         </div>
         <input
           className="search"
@@ -288,6 +435,7 @@ export default function Layout() {
           aria-label="Filter topics"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          data-autofocus
         />
         <nav aria-label="Topics by phase">
           {PHASES.map((ph) => {
@@ -336,22 +484,138 @@ export default function Layout() {
             );
           })}
         </nav>
-      </motion.aside>
-      {navOpen && <div className="scrim" onClick={() => setNavOpen(false)} />}
+      </aside>
+      {navOpen && <div className="scrim" onClick={closeNav} />}
 
       <main className="main" id="main" tabIndex={-1}>
+        {/* console strip: mono breadcrumb + readouts (not a nav). Pages may portal a status into #console-slot. */}
+        <div className="console shell-console">
+          <span className="crumb">
+            <Link to="/" className="crumb-root">
+              QA.LEARN
+            </Link>
+            {crumbs.map((c, i) => (
+              <span key={i} className="crumb-seg">
+                <span aria-hidden="true">/</span>
+                {i === crumbs.length - 1 ? <b aria-current="page">{c}</b> : c}
+              </span>
+            ))}
+          </span>
+          <span className="console-date">{today}</span>
+          <span className="sp" aria-hidden="true" />
+          <span className="console-slot" id="console-slot" />
+          <span className="live" title="Topics whose full exam you have passed">
+            {passedCount}/{TOPICS.length} PASSED
+          </span>
+          <button
+            type="button"
+            className={`icon-btn console-btn ${syllabusPage ? 'is-topic' : ''}`}
+            onClick={() => setNavOpen((o) => !o)}
+            aria-label="Open the syllabus index"
+            aria-expanded={navOpen}
+            title="Syllabus index"
+          >
+            <ListTree size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="ruler shell-ruler" aria-hidden="true" />
         <AnimatePresence initial={false}>
           <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 22, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 330, damping: 26, opacity: { duration: 0.2 } }}
+            key={path}
+            className="page-host"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: [0.2, 0.7, 0.2, 1] }}
           >
             <Outlet />
           </motion.div>
         </AnimatePresence>
         <SiteFooter />
       </main>
+
+      {/* ---- mobile: bottom instrument dock + More sheet ---- */}
+      <nav className="dock" aria-label="Main">
+        {DOCK.map((n) => (
+          <Link key={n.to} to={n.to} aria-current={n.match(path) ? 'page' : undefined}>
+            <n.icon size={20} aria-hidden="true" strokeWidth={1.6} />
+            <span>{n.dock ?? n.label}</span>
+          </Link>
+        ))}
+        <button
+          type="button"
+          className={moreActive ? 'is-active' : undefined}
+          onClick={() => setMoreOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={moreOpen}
+        >
+          <LayoutGrid size={20} aria-hidden="true" strokeWidth={1.6} />
+          <span>More</span>
+          {weakCount > 0 && (
+            <i className="badge-n" aria-label={`, ${weakCount} wrong answers`}>
+              {weakCount}
+            </i>
+          )}
+        </button>
+      </nav>
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            <motion.div className="scrim sheet-scrim" onClick={closeMore} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+            <motion.div
+              ref={moreRef}
+              className="sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label="More"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ duration: 0.28, ease: [0.2, 0.7, 0.2, 1] }}
+            >
+              <div className="sheet-head">
+                <span className="mlabel">
+                  <b>More</b> · instruments
+                </span>
+                <button type="button" className="icon-btn" onClick={closeMore} aria-label="Close">
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="sheet-grid">
+                {MORE.map((n) => (
+                  <Link key={n.to} to={n.to} className="sheet-a" aria-current={n.match(path) ? 'page' : undefined}>
+                    <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
+                    <span>{titleFor(n.to, n.label)}</span>
+                    {countFor(n.to)}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  className="sheet-a"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    setNavOpen(true);
+                  }}
+                >
+                  <ListTree size={18} aria-hidden="true" strokeWidth={1.6} />
+                  <span>Syllabus index</span>
+                </button>
+                <button
+                  type="button"
+                  className="sheet-a"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    openGuide();
+                  }}
+                >
+                  <CircleHelp size={18} aria-hidden="true" strokeWidth={1.6} />
+                  <span>Guide me</span>
+                </button>
+              </div>
+              {themeSwitch}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <Toaster />
       <Suspense fallback={null}>

@@ -63,7 +63,7 @@ export function CodeBlock({ snippet, compact }: { snippet: CodeSnippet; compact?
     }
   };
   return (
-    <figure className={`code ${compact ? 'code-compact' : ''}`}>
+    <figure className={`code ${compact ? 'code-compact' : ''}`} data-theme="dark">
       <figcaption>
         <span className="code-title">{snippet.title ?? ''}</span>
         <span className="code-lang">{lang}</span>
@@ -101,7 +101,7 @@ export function CodeEditor({
   language: string;
 }) {
   return (
-    <div className="editor">
+    <div className="editor" data-theme="dark">
       <Editor
         value={value}
         onValueChange={onChange}
@@ -118,7 +118,7 @@ export function CodeEditor({
 }
 
 export function Diagram({ text }: { text: string }) {
-  return <pre className="diagram">{text}</pre>;
+  return <pre className="diagram" data-theme="dark">{text}</pre>;
 }
 
 export function DifficultyBadge({ d }: { d: Difficulty }) {

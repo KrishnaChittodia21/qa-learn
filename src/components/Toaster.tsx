@@ -1,11 +1,12 @@
 import { useSyncExternalStore } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { PartyPopper, X } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { X } from 'lucide-react';
 import { dismissToast, getToasts, subscribeToasts } from '../lib/celebrate';
 
-/** Bottom-right toasts (auto-hide after 3s), announced politely to screen readers. */
+/** Bottom-right toasts (auto-hide after 3s; above the dock on phones), announced politely to screen readers. */
 export function Toaster() {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts);
+  const reduce = useReducedMotion();
   return (
     <div className="toaster" aria-live="polite" role="status">
       <AnimatePresence>
@@ -13,19 +14,20 @@ export function Toaster() {
           <motion.div
             key={t.id}
             className="toast"
-            layout
-            initial={{ opacity: 0, y: 40, scale: 0.8, rotate: 4 }}
-            animate={{ opacity: 1, y: 0, scale: 1, rotate: -1 }}
-            exit={{ opacity: 0, x: 60, rotate: 6, transition: { duration: 0.18 } }}
-            transition={{ type: 'spring', stiffness: 420, damping: 20 }}
+            layout={!reduce}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, x: 24, transition: { duration: 0.16 } }}
+            transition={{ duration: 0.24, ease: [0.2, 0.7, 0.2, 1] }}
           >
-            <PartyPopper size={18} aria-hidden="true" className="toast-icon" />
-            <div>
+            <span className="node pass toast-node" aria-hidden="true" />
+            <div className="toast-b">
+              <span className="toast-k">Run log</span>
               <strong>{t.title}</strong>
-              {t.detail && <div className="small muted">{t.detail}</div>}
+              {t.detail && <span className="toast-d">{t.detail}</span>}
             </div>
-            <button type="button" className="btn-ghost icon-btn" aria-label="Dismiss" onClick={() => dismissToast(t.id)}>
-              <X size={16} aria-hidden="true" />
+            <button type="button" className="icon-btn toast-x" aria-label="Dismiss" onClick={() => dismissToast(t.id)}>
+              <X size={14} aria-hidden="true" />
             </button>
           </motion.div>
         ))}

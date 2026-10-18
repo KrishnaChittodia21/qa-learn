@@ -1,35 +1,16 @@
-/* Prism tokens (light + dark) */
+/* Prism tokens — Spectral Lab code palette. Code is a dark island in both themes
+   (figure.code / .editor / .diagram / .console-out carry data-theme="dark"), so there is one palette. */
 :root {
-  --tk-comment: #665c4c;
-  --tk-keyword: #8a2a6f;
-  --tk-string: #2f6b1f;
-  --tk-number: #94480c;
-  --tk-function: #1f4fd1;
-  --tk-class: #0b6a72;
-  --tk-operator: #4a4363;
-  --tk-property: #a2343f;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --tk-comment: #b0a5c2;
-    --tk-keyword: #e0a1d3;
-    --tk-string: #9fd38a;
-    --tk-number: #ebb46a;
-    --tk-function: #9fb5f7;
-    --tk-class: #7fcfd9;
-    --tk-operator: #d6cce4;
-    --tk-property: #f0a19a;
-  }
-}
-:root[data-theme='dark'] {
-  --tk-comment: #b0a5c2;
-  --tk-keyword: #e0a1d3;
-  --tk-string: #9fd38a;
-  --tk-number: #ebb46a;
-  --tk-function: #9fb5f7;
-  --tk-class: #7fcfd9;
-  --tk-operator: #d6cce4;
-  --tk-property: #f0a19a;
+  --tk-text: #CFE3DC;
+  --tk-comment: #6F8A82;
+  --tk-keyword: #E08BFF;
+  --tk-string: #C8FF3D;
+  --tk-number: #FFB547;
+  --tk-function: #3DD9FF;
+  --tk-class: #3DFFC2;
+  --tk-operator: #A8C3BB;
+  --tk-punct: #8F7BFF;
+  --tk-property: #FF9EB3;
 }
 .token.comment,
 .token.prolog,
@@ -69,10 +50,12 @@
   color: var(--tk-class);
 }
 .token.operator,
-.token.punctuation,
 .token.entity,
 .token.url {
   color: var(--tk-operator);
+}
+.token.punctuation {
+  color: var(--tk-punct);
 }
 .token.property,
 .token.tag,
@@ -82,5 +65,5 @@
   color: var(--tk-property);
 }
 .token.deleted {
-  color: var(--bad);
+  color: #FF6B85;
 }

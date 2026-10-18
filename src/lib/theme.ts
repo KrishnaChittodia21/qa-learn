@@ -1,11 +1,12 @@
 import type { Accent, Settings } from './progress';
 
-/** Colour themes (Settings → Colour). Ids are the saved setting values from earlier versions, so old saves keep working. */
+/** Colour themes (Settings → Colour): which spectrum hue is the action colour. Ids are the saved setting values
+ *  from earlier versions, so old saves keep working (tokens.css maps each id to a Spectral hue). */
 export const ACCENTS: { id: Accent; label: string }[] = [
-  { id: 'indigo', label: 'Bubblegum' },
-  { id: 'teal', label: 'Lagoon' },
-  { id: 'rose', label: 'Tangerine' },
-  { id: 'amber', label: 'Blueberry' },
+  { id: 'indigo', label: 'Mint' },
+  { id: 'teal', label: 'Cyan' },
+  { id: 'rose', label: 'Lilac' },
+  { id: 'amber', label: 'Lime' },
 ];
 
 /** Mirror the theme + accent settings onto <html> (CSS tokens key off data-theme / data-accent). */

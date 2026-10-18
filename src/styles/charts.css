@@ -1,0 +1,652 @@
+/* =====================================================================
+   charts.css — OWNER: Today agent (wave 2).
+   Scope: metric charts in src/components/charts (ChartCard = a .panel) + the --viz-* chart tokens.
+   Palette = the Spectral spectrum + test-status hues, tuned per theme so marks hold >= 3:1 against
+   the panel plates (#0C1916 / #070F0D dark, #FFFFFF / #F8FBFA light):
+   - --viz-series   main series (mint in Obsidian; a deeper mint in Daylight)
+   - --viz-weak     "needs work" bars (coral = fail)
+   - --viz-ord-1..3 ordinal rating ramp missed → partly → nailed (fail → flaky → pass)
+   - --viz-empty    the receding "nothing" step (heatmap off-days) = the gauge track
+   - --viz-st-pass / --viz-st-prog / --viz-st-new   topic status: passed (pass), in progress (run cyan), not run (track)
+   Text always uses ink tokens; colour never carries meaning alone (legends, labels, table view).
+   ===================================================================== */
+:root,
+[data-theme='dark'] {
+  --viz-series: #3DFFC2;
+  --viz-weak: #FF4D6D;
+  --viz-ord-1: #FF4D6D;
+  --viz-ord-2: #FFB547;
+  --viz-ord-3: #3DFFC2;
+  --viz-empty: #1A2C27;
+  --viz-st-pass: #3DFFC2;
+  --viz-st-prog: #3DD9FF;
+  --viz-st-new: #24392F;
+}
+[data-theme='light'] {
+  --viz-series: #00A77C;
+  --viz-weak: #E0244A;
+  --viz-ord-1: #E0244A;
+  --viz-ord-2: #D98700;
+  --viz-ord-3: #00A77C;
+  --viz-empty: #DFE7E4;
+  --viz-st-pass: #00A77C;
+  --viz-st-prog: #0096C2;
+  --viz-st-new: #CFDBD7;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --viz-series: #00A77C;
+    --viz-weak: #E0244A;
+    --viz-ord-1: #E0244A;
+    --viz-ord-2: #D98700;
+    --viz-ord-3: #00A77C;
+    --viz-empty: #DFE7E4;
+    --viz-st-pass: #00A77C;
+    --viz-st-prog: #0096C2;
+    --viz-st-new: #CFDBD7;
+  }
+}
+
+/* ---------- chart card (a .panel) ---------- */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.chart-grid > .chart-card {
+  margin: 0;
+}
+.chart-wide {
+  grid-column: 1 / -1;
+}
+.chart-card {
+  min-width: 0;
+  padding: 20px 22px;
+  container-type: inline-size;
+}
+/* narrow cards: the table toggle drops under the title instead of squeezing it */
+@container (max-width: 360px) {
+  .chart-head {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.chart-title {
+  margin: 0;
+  font: 700 19px/1.2 var(--display);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.chart-sub {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.chart-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.chart-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--frame-n);
+  font: 500 10px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.chart-toggle:hover {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.chart-toggle[aria-pressed='true'] {
+  color: var(--run-t);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--run) 55%, transparent);
+}
+.chart-note {
+  margin: 12px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.chart-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 3px;
+  border: 1px dashed var(--tick);
+  background: var(--inset);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  text-align: left;
+}
+.chart-empty-mark {
+  flex: none;
+  padding: 4px 7px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--frame-n);
+  color: var(--skip-t);
+}
+.chart-empty-body {
+  min-width: 0;
+}
+.chart-empty strong {
+  display: block;
+  margin-bottom: 2px;
+  font: 600 14px/1.3 var(--sans);
+  color: var(--ink);
+}
+.chart-empty p {
+  margin: 0 0 10px;
+}
+.chart-empty p:last-child {
+  margin: 0;
+}
+.chart-empty .btn {
+  white-space: normal;
+  max-width: 100%;
+}
+.hide-narrow {
+  display: none;
+}
+@media (min-width: 901px) {
+  .hide-narrow {
+    display: block;
+  }
+}
+.chart-table-wrap {
+  margin: 0;
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--frame-n);
+  border-radius: 3px;
+}
+.chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-table th,
+.chart-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.chart-table td {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.chart-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--inset);
+  color: var(--ink-3);
+  font: 500 10px/1.2 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line-2);
+}
+.chart-table tbody th {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* legend: swatch mirrors the mark, text stays in ink tokens */
+.chart-legend {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font: 500 10.5px/1.2 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.chart-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex: none;
+}
+.chart-swatch.line {
+  width: 14px;
+  height: 2px;
+}
+.chart-legend-value {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* tooltip: value leads, label follows, short line-key in the series colour */
+.donut-wrap,
+.barlist,
+.colchart,
+.linechart,
+.heatmap-wrap,
+.stackbar-wrap {
+  position: relative;
+}
+.chart-tip {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+  background: var(--panel-top);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  box-shadow: var(--shadow-md);
+  padding: 7px 10px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  max-width: 240px;
+  width: max-content;
+}
+.chart-tip strong {
+  font: 600 13px var(--mono);
+}
+.chart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chart-tip-key {
+  width: 12px;
+  height: 2px;
+  flex: none;
+}
+.chart-tip-label {
+  color: var(--ink-2);
+}
+.chart-tip-detail {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* svg chrome: hairline grid, recessive axis, mono numbers */
+.chart-svg {
+  display: block;
+  overflow: visible;
+}
+.chart-grid-line,
+.chart-svg .chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.chart-svg .chart-axis {
+  stroke: var(--tick);
+  stroke-width: 1;
+}
+.chart-tick,
+.chart-xlabel {
+  fill: var(--ink-3);
+  font: 500 10.5px var(--mono);
+}
+.chart-xlabel {
+  font-family: var(--sans);
+  font-size: 11.5px;
+}
+.chart-cap {
+  fill: var(--ink);
+  font: 600 11px var(--mono);
+}
+.chart-ref {
+  stroke: var(--flaky);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+.chart-ref-label {
+  fill: var(--flaky-t);
+  font: 500 10px var(--mono);
+}
+.chart-crosshair {
+  stroke: var(--tick);
+  stroke-width: 1;
+  transition: opacity 0.12s;
+}
+.chart-mark,
+.chart-dot,
+.donut-seg,
+.heatmap-cell,
+.stackbar-seg {
+  outline: none;
+}
+.chart-mark:hover .chart-col,
+.chart-mark:focus-visible .chart-col {
+  filter: brightness(1.12);
+}
+.chart-mark:focus-visible rect {
+  stroke: var(--ring);
+  stroke-width: 2;
+}
+.chart-dot:focus-visible {
+  stroke: var(--ring);
+}
+.chart-col {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: viz-grow-y 0.5s ease-out both;
+}
+.chart-line {
+  animation: viz-fade 0.5s ease-out both;
+}
+
+/* horizontal bar list */
+.barlist-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.barlist-row,
+.barlist-ref-row {
+  display: grid;
+  grid-template-columns: var(--bar-label, minmax(110px, 32%)) minmax(0, 1fr) 4.6em;
+  align-items: center;
+  gap: 12px;
+}
+.barlist-row {
+  padding: 6px 8px;
+  border-radius: 3px;
+  color: var(--ink);
+  font-weight: 400;
+  outline: none;
+}
+a.barlist-row:hover,
+.barlist-row:hover,
+.barlist-row:focus-visible {
+  background: color-mix(in oklab, var(--mint) 6%, transparent);
+  text-decoration: none;
+}
+.barlist-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.barlist-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.barlist-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.barlist-sub {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+.barlist-track {
+  position: relative;
+  height: 8px;
+  background: var(--track);
+}
+.barlist-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  transform-origin: left;
+  animation: viz-grow-x 0.6s ease-out both;
+}
+.barlist-ref {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 1px;
+  background: var(--ink-2);
+}
+.barlist-ref-row {
+  padding: 0 8px;
+}
+.barlist-ref-track {
+  position: relative;
+  height: 14px;
+}
+.barlist-ref-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font: 500 9.5px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.barlist-value {
+  text-align: right;
+  font: 500 12px var(--mono);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.barlist-rows > li.has-actions {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.barlist-rows > li.has-actions:last-child {
+  border-bottom: 0;
+}
+.barlist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 8px 0;
+}
+.barlist-actions .btn,
+.barlist-actions .btn-ghost {
+  white-space: normal;
+  text-align: left;
+}
+.barlist-actions svg {
+  flex: none;
+}
+
+/* status strips per phase (ProgressPanel) */
+.phase-bars-wrap {
+  position: relative;
+}
+.phase-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 11px;
+}
+.phase-bar-head {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+.phase-bar-num {
+  font: 500 10px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+}
+.phase-bar-title {
+  min-width: 0;
+  font: 500 13px/1.25 var(--sans);
+  color: var(--ink);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a.phase-bar-title:hover {
+  color: var(--accent);
+}
+.phase-bar-count {
+  font: 500 11.5px var(--mono);
+  color: var(--ink-2);
+}
+.phase-bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  background: var(--track);
+}
+.phase-bar-row.is-all {
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+}
+.phase-bar-row.is-all .phase-bar {
+  height: 10px;
+}
+.phase-bar-seg {
+  min-width: 3px;
+  transition: filter 0.15s;
+}
+.phase-bar-seg:hover {
+  filter: brightness(1.12);
+}
+.phase-bar-seg:focus-visible {
+  box-shadow: 0 0 0 2px var(--panel-top), 0 0 0 4px var(--ring);
+}
+
+/* activity heatmap */
+.heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, auto);
+  gap: 3px;
+  max-width: 360px;
+}
+.heatmap-daylabel {
+  font: 500 9.5px/1 var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  padding-right: 6px;
+  align-self: center;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 1px;
+  background: var(--viz-empty);
+  min-width: 0;
+}
+.heatmap-cell.on {
+  box-shadow: 0 0 6px color-mix(in oklab, var(--viz-series) 40%, transparent);
+}
+.heatmap-cell.future {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.heatmap-cell.today {
+  box-shadow: 0 0 0 1.5px var(--panel-top), 0 0 0 2.5px var(--run);
+}
+.heatmap-cell:hover {
+  filter: brightness(1.15);
+}
+.heatmap-cell:focus-visible {
+  box-shadow: 0 0 0 2px var(--panel-top), 0 0 0 4px var(--ring);
+}
+
+/* 100% stacked bar */
+.stackbar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+}
+.stackbar-seg {
+  min-width: 4px;
+  transition: filter 0.15s;
+  animation: viz-fade 0.5s ease-out both;
+}
+.stackbar-seg:hover {
+  filter: brightness(1.12);
+}
+.stackbar-seg:focus-visible {
+  box-shadow: 0 0 0 2px var(--panel-top), 0 0 0 4px var(--ring);
+}
+
+.mini-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.mini-stats strong {
+  color: var(--ink);
+  font: 600 12.5px var(--mono);
+}
+
+@keyframes viz-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes viz-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes viz-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .chart-card {
+    padding: 16px;
+  }
+  .barlist-row {
+    grid-template-columns: minmax(0, 1fr) 4.6em;
+    row-gap: 4px;
+  }
+  .barlist-label {
+    grid-column: 1 / -1;
+  }
+  .barlist-ref-row {
+    grid-template-columns: minmax(0, 1fr) 4.6em;
+  }
+  .barlist-ref-row > span:first-child {
+    display: none;
+  }
+  .chart-head {
+    flex-direction: column;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-col,
+  .chart-line,
+  .barlist-bar,
+  .stackbar-seg {
+    animation: none;
+  }
+}

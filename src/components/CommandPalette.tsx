@@ -17,6 +17,7 @@ import {
   Map,
   Moon,
   Play,
+  Search,
   Settings,
   Sparkles,
   Target,
@@ -48,17 +49,18 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
   const [search, setSearch] = useState('');
   const groups = useMemo(() => {
     const go = (href: string) => () => nav(href);
+    // rail order: numbered pages 01–07, then the Tools group
     const pages: Item[] = [
-      { id: 'page:/', label: 'Today (dashboard)', icon: LayoutDashboard, run: go('/') },
-      { id: 'page:/contents', label: 'Contents: everything in the course', icon: ListTree, words: 'index toc', run: go('/contents') },
-      { id: 'page:/weak-areas', label: 'Weak Areas', icon: Target, words: 'mistakes revise', run: go('/weak-areas') },
-      { id: 'page:/coding', label: 'JS Coding Practice', icon: Code2, words: 'javascript problems', run: go('/coding') },
-      { id: 'page:/playground', label: 'JS Playground', icon: Terminal, words: 'run javascript console', run: go('/playground') },
-      { id: 'page:/pw-lab', label: 'Playwright Lab (Judge)', icon: FlaskConical, words: 'mutants bugs tests', run: go('/pw-lab') },
-      { id: 'page:/companies', label: 'Company Questions', icon: Building2, words: 'interview', run: go('/companies') },
-      { id: 'page:/roadmap', label: '12-Week Roadmap & Projects', icon: Map, words: 'plan weeks', run: go('/roadmap') },
-      { id: 'page:/achievements', label: 'Achievements', icon: Award, words: 'badges milestones rewards trophies medals', run: go('/achievements') },
-      { id: 'page:/settings', label: 'Settings', icon: Settings, words: 'pass mark theme reset', run: go('/settings') },
+      { id: 'page:/', label: 'Today', hint: '01', icon: LayoutDashboard, words: 'dashboard home', run: go('/') },
+      { id: 'page:/contents', label: 'Syllabus: every stage, topic and section', hint: '02', icon: ListTree, words: 'contents index toc build matrix', run: go('/contents') },
+      { id: 'page:/coding', label: 'JS Coding Practice', hint: '03', icon: Code2, words: 'javascript problems', run: go('/coding') },
+      { id: 'page:/pw-lab', label: 'Playwright Lab (Judge)', hint: '04', icon: FlaskConical, words: 'mutants bugs tests', run: go('/pw-lab') },
+      { id: 'page:/roadmap', label: '12-Week Roadmap & Projects', hint: '05', icon: Map, words: 'plan weeks', run: go('/roadmap') },
+      { id: 'page:/weak-areas', label: 'Weak areas', hint: '06', icon: Target, words: 'mistakes revise', run: go('/weak-areas') },
+      { id: 'page:/achievements', label: 'Achievements', hint: '07', icon: Award, words: 'badges milestones rewards trophies medals', run: go('/achievements') },
+      { id: 'page:/playground', label: 'JS Playground', hint: 'Tool', icon: Terminal, words: 'run javascript console', run: go('/playground') },
+      { id: 'page:/companies', label: 'Company Questions', hint: 'Tool', icon: Building2, words: 'interview', run: go('/companies') },
+      { id: 'page:/settings', label: 'Settings', hint: 'Tool', icon: Settings, words: 'pass mark theme reset colour accent', run: go('/settings') },
     ];
     const actions: Item[] = [
       {
@@ -174,7 +176,16 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
       loop
       filter={(_value, q, keywords) => defaultFilter(keywords?.join(' ') ?? '', q)}
     >
-      <Command.Input value={search} onValueChange={setSearch} placeholder="Where to? Pages, topics, sections, questions…" className="cmd-input" />
+      <div className="cmd-head" aria-hidden="true">
+        <span className="mlabel">
+          <b>Search specs</b> · pages, topics, sections, questions
+        </span>
+        <kbd className="kbd">⌘K</kbd>
+      </div>
+      <div className="cmd-field">
+        <Search size={18} aria-hidden="true" className="cmd-field-icon" />
+        <Command.Input value={search} onValueChange={setSearch} placeholder="Where to? Pages, topics, sections, questions…" className="cmd-input" />
+      </div>
       <Command.List className="cmd-list">
         <Command.Empty className="cmd-empty">Hmm, nothing by that name. Try a shorter word?</Command.Empty>
         {!typing && recent.length > 0 && (
@@ -199,15 +210,19 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
         {typing && render('Playwright Lab', [...groups.lab, ...groups.playground])}
         {typing && render('Company questions', groups.company)}
       </Command.List>
-      <div className="cmd-foot small muted" aria-hidden="true">
+      <div className="cmd-foot" aria-hidden="true">
         <span>
-          <kbd>↑</kbd> <kbd>↓</kbd> move
+          <kbd className="kbd">↑</kbd>
+          <kbd className="kbd">↓</kbd> move
         </span>
         <span>
-          <CornerDownLeft size={12} /> open
+          <kbd className="kbd">
+            <CornerDownLeft size={11} />
+          </kbd>{' '}
+          open
         </span>
         <span>
-          <kbd>esc</kbd> close
+          <kbd className="kbd">esc</kbd> close
         </span>
         <span className="cmd-foot-tip">
           <ClipboardList size={12} /> Type 2+ letters to search sections and questions

@@ -2,7 +2,7 @@
 // Pattern: a pure `simulate(params) => Frame[]` produces every state up front, so stepping
 // backwards, resetting and changing parameters are trivial and deterministic. Components
 // only render the current frame.
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 export interface BaseFrame {
   /** one or two sentences narrating what just happened (read by screen readers) */
@@ -86,6 +86,14 @@ export function useFrames<F extends BaseFrame>(frames: F[]) {
 
 export type Stepper = ReturnType<typeof useFrames<BaseFrame>>;
 
+/** Figure numbering supplied by the page that places a visualisation ("Fig 4.1", spec "05.2"). */
+const FigureContext = createContext<{ fig?: string; spec?: string }>({});
+
+/** Wrap a placed visualisation so its frame can label itself "Fig 4.1 · SPEC 05.2". */
+export function VizFigure({ fig, spec, children }: { fig?: string; spec?: string; children: ReactNode }) {
+  return <FigureContext.Provider value={{ fig, spec }}>{children}</FigureContext.Provider>;
+}
+
 /** Card chrome: title, parameter controls, the drawing, transport controls and narration. */
 export function VizFrame({
   title,
@@ -106,7 +114,8 @@ export function VizFrame({
 }) {
   const { frame, i, total, playing, speed } = stepper;
   const [revealed, setRevealed] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const fig = useContext(FigureContext);
   useEffect(() => setRevealed(false), [i]);
 
   // keyboard: ←/→ step, space play/pause (only when focus is inside this card)
@@ -123,16 +132,34 @@ export function VizFrame({
   };
 
   return (
-    <div className="viz" ref={rootRef} tabIndex={0} onKeyDown={onKey} aria-label={`${title} interactive visualisation`}>
+    <figure
+      className={`viz panel cut-lg ${playing ? 'is-playing' : ''}`}
+      ref={rootRef}
+      tabIndex={0}
+      onKeyDown={onKey}
+      aria-label={`${title} interactive visualisation`}
+    >
       <div className="viz-head">
-        <div>
-          <div className="viz-eyebrow">▶ Interactive</div>
+        <span className="chip holo viz-eyebrow">{fig.fig ? `Fig ${fig.fig}` : 'Interactive'}</span>
+        <div className="viz-head-t">
           <div className="viz-title">{title}</div>
           {blurb && <div className="viz-blurb">{blurb}</div>}
         </div>
+        <span className="viz-coord" aria-hidden="true">
+          {fig.spec ? `SPEC ${fig.spec} · ` : ''}STEP {String(i + 1).padStart(2, '0')}/{String(total).padStart(2, '0')}
+        </span>
       </div>
       {controls && <div className="viz-controls">{controls}</div>}
-      <div className="viz-stage">{children}</div>
+      <div className="viz-stage">
+        {children}
+        <span className="xhair c1" aria-hidden="true">
+          <i />
+        </span>
+        <span className="xhair c2" aria-hidden="true">
+          <i />
+        </span>
+        {playing && <span className="scan viz-scan" aria-hidden="true" />}
+      </div>
       {legend && <div className="viz-legend">{legend}</div>}
       <div className="viz-caption" aria-live="polite">
         <span className="viz-stepno">
@@ -142,7 +169,7 @@ export function VizFrame({
       </div>
       {frame.predict && (
         <div className="viz-predict">
-          <strong>🤔 Predict:</strong> {frame.predict}{' '}
+          <span className="mlabel">Predict</span> {frame.predict}{' '}
           {!revealed ? (
             <button type="button" className="link-btn" onClick={() => setRevealed(true)}>
               Think, then reveal →
@@ -173,15 +200,18 @@ export function VizFrame({
         <button type="button" className="btn btn-xs" onClick={stepper.next} disabled={i === total - 1} aria-label="Next step">
           ▶
         </button>
-        <input
-          className="viz-scrub"
-          type="range"
-          min={0}
-          max={total - 1}
-          value={i}
-          onChange={(e) => stepper.seek(Number(e.target.value))}
-          aria-label="Scrub through steps"
-        />
+        <div className="viz-scrub-wrap">
+          <input
+            className="viz-scrub"
+            type="range"
+            min={0}
+            max={total - 1}
+            value={i}
+            onChange={(e) => stepper.seek(Number(e.target.value))}
+            aria-label="Scrub through steps"
+          />
+          <div className="seg thin viz-seg" style={{ '--n': total, '--v': i + 1, '--gap': '2px' } as React.CSSProperties} aria-hidden="true" />
+        </div>
         <label className="viz-speed">
           Speed
           <select value={speed} onChange={(e) => stepper.setSpeed(Number(e.target.value))}>
@@ -193,7 +223,7 @@ export function VizFrame({
           </select>
         </label>
       </div>
-    </div>
+    </figure>
   );
 }
 
