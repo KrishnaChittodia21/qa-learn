@@ -1,7 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { BarChart3, Table2 } from 'lucide-react';
 import { Legend, type LegendItem } from './Legend';
-import { BugBuddy } from '../Doodles';
 
 export interface TableData {
   columns: string[];
@@ -34,7 +33,7 @@ export function ChartCard({
   const [asTable, setAsTable] = useState(false);
   const id = useId();
   return (
-    <section className={`card chart-card ${className}`} aria-labelledby={`${id}-t`}>
+    <section className={`panel chart-card ${className}`} aria-labelledby={`${id}-t`}>
       <header className="chart-head">
         <div>
           <h3 id={`${id}-t`} className="chart-title">
@@ -54,7 +53,9 @@ export function ChartCard({
       </header>
       {empty ? (
         <div className="chart-empty">
-          <BugBuddy size={72} mood="sleepy" />
+          <span className="chart-empty-mark mlabel" aria-hidden="true">
+            No data
+          </span>
           <div className="chart-empty-body">{empty}</div>
         </div>
       ) : asTable && table ? (

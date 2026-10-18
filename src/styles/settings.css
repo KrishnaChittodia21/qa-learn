@@ -1,0 +1,121 @@
+/* =====================================================================
+   settings.css — OWNER: Syllabus/Achievements/overlays agent (wave 2).
+   Scope: the Settings page (src/pages/Settings.tsx): grouped instrument panels — exam calibration,
+   appearance (theme + Spectral accent swatches), study-first lock, guide, fresh start.
+   Every rule is scoped under .set-page.
+   ===================================================================== */
+
+.set-page .set-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.set-page .set-head { grid-column: 1 / -1; padding: 28px 30px 24px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 30px; align-items: end; }
+.set-page .set-exam { grid-column: 1 / 8; }
+.set-page .set-look { grid-column: 8 / 13; }
+.set-page .set-lock { grid-column: 1 / 8; }
+.set-page .set-guide { grid-column: 8 / 13; }
+.set-page .set-danger { grid-column: 1 / -1; }
+
+.set-page .hd-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.set-page .set-head h1 { margin: 6px 0 0; }
+.set-page .set-head h1 .display { display: block; font-size: clamp(42px, 4vw, 64px); padding-bottom: .06em; }
+.set-page .set-head h1 .sub { display: block; margin-top: 8px; font: 700 clamp(22px, 2.2vw, 30px)/1.05 var(--display); letter-spacing: -.03em; }
+.set-page .set-read { margin: 0; display: grid; grid-template-columns: repeat(4, auto); }
+.set-page .set-read div { padding: 4px 22px; border-left: 1px solid var(--line-2); }
+.set-page .set-read dt { font: 500 10px/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+.set-page .set-read dd { margin: 10px 0 0; font: 500 30px/1 var(--mono); letter-spacing: -.05em; white-space: nowrap; }
+.set-page .set-read dd small { font-size: 13px; color: var(--ink-3); letter-spacing: 0; margin-left: 3px; }
+.set-page .set-read .set-read-t { font: 600 16px/1.2 var(--sans); letter-spacing: 0; padding-top: 8px; }
+
+.set-page .set-field { display: grid; gap: 10px; }
+.set-page .set-field + .set-field { margin-top: 20px; }
+.set-page .set-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.set-page .set-row .num { font-size: 32px; }
+.set-page .set-hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.set-page .set-scale { display: flex; justify-content: space-between; font: 500 10px/1 var(--mono); letter-spacing: .08em; color: var(--ink-3); }
+
+/* range: a linear gauge with a diamond thumb */
+.set-page .set-range { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
+.set-page .set-range::-webkit-slider-runnable-track {
+  height: 4px; background: linear-gradient(90deg, var(--mint), var(--cyan)) 0 0 / calc(var(--v) * 1%) 100% no-repeat, var(--track);
+}
+.set-page .set-range::-moz-range-track { height: 4px; background: var(--track); }
+.set-page .set-range::-moz-range-progress { height: 4px; background: linear-gradient(90deg, var(--mint), var(--cyan)); }
+.set-page .set-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; transform: rotate(45deg);
+  background: var(--panel-top); border: 2px solid var(--mint); box-shadow: 0 0 10px color-mix(in oklab, var(--mint) 50%, transparent);
+}
+.set-page .set-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 0; transform: rotate(45deg); background: var(--panel-top); border: 2px solid var(--mint); }
+.set-page .set-range:focus-visible { outline: 2px solid var(--mint); outline-offset: 4px; }
+
+/* switch */
+.set-page .set-toggle { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; cursor: pointer; }
+.set-page .set-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.set-page .sw { position: relative; width: 40px; height: 22px; border-radius: 2px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--frame-n); transition: background .2s, box-shadow .2s; }
+.set-page .sw::after { content: ''; position: absolute; left: 4px; top: 4px; width: 14px; height: 14px; background: var(--ink-3); transition: transform .2s, background .2s; }
+.set-page .set-toggle input:checked + .sw { background: color-mix(in oklab, var(--mint) 18%, var(--inset)); box-shadow: inset 0 0 0 1px var(--mint); }
+.set-page .set-toggle input:checked + .sw::after { transform: translateX(18px); background: var(--mint); box-shadow: 0 0 8px var(--mint); }
+.set-page .set-toggle input:focus-visible + .sw { outline: 2px solid var(--mint); outline-offset: 2px; }
+.set-page .set-toggle-b { display: grid; gap: 3px; min-width: 0; }
+.set-page .set-toggle-b b { font: 600 14.5px/1.3 var(--sans); }
+.set-page .set-state { font-size: 10.5px; letter-spacing: .14em; color: var(--ink-3); }
+
+/* theme segmented control */
+.set-page .set-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 3px; gap: 3px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--frame-n); border-radius: 3px; }
+.set-page .set-seg button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; border: 0; border-radius: 2px; cursor: pointer;
+  font: 600 13px/1 var(--sans); color: var(--ink-2); background: transparent; transition: background .2s, color .2s, box-shadow .2s;
+}
+.set-page .set-seg button:hover { color: var(--ink); }
+.set-page .set-seg button[aria-pressed='true'] { color: var(--ink); background: var(--panel-top); box-shadow: inset 0 0 0 1px var(--line-2), inset 0 -2px 0 var(--accent-fill); }
+
+/* accent swatches: fixed previews in each Spectral hue, independent of the active accent */
+.set-page .ink-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.set-page .ink-swatch {
+  --hue: var(--mint);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; cursor: pointer; text-align: left;
+  border: 0; border-radius: 3px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--frame-n); color: var(--ink);
+  transition: box-shadow .2s, background .2s;
+}
+.set-page .ink-swatch:hover { box-shadow: inset 0 0 0 1px var(--line-2); }
+.set-page .ink-swatch.on { background: color-mix(in oklab, var(--hue) 10%, var(--inset)); box-shadow: inset 0 0 0 1px var(--hue); }
+.set-page .ink-sample {
+  display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px 0 10px; font: 700 14px/1 var(--display); color: #04100C; background: var(--hue);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+.set-page .ink-sample i { width: 7px; height: 7px; transform: rotate(45deg); background: #04100C; opacity: .7; }
+.set-page .ink-label { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.set-page .ink-swatch.on .ink-label { color: var(--ink); }
+
+/* study-first lock options */
+.set-page .set-locks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.set-page .set-lock-opt {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px; cursor: pointer; text-align: left;
+  border: 0; border-radius: 3px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--frame-n); color: var(--ink); transition: box-shadow .2s, background .2s;
+}
+.set-page .set-lock-opt:hover { box-shadow: inset 0 0 0 1px var(--line-2); }
+.set-page .set-lock-opt { font: inherit; line-height: 1.45; }
+.set-page .set-lock-opt .set-hint { display: block; }
+.set-page .set-lock-opt b { display: block; font: 600 13.5px/1.3 var(--sans); margin-bottom: 4px; }
+.set-page .set-lock-opt .bx { width: 14px; height: 14px; margin-top: 2px; transform: rotate(45deg) scale(.8); box-shadow: inset 0 0 0 1px var(--tick); }
+.set-page .set-lock-opt[aria-pressed='true'] { background: color-mix(in oklab, var(--mint) 9%, var(--inset)); box-shadow: inset 0 0 0 1px var(--mint); }
+.set-page .set-lock-opt[aria-pressed='true'] .bx { background: var(--mint); box-shadow: 0 0 8px var(--mint); }
+
+.set-page .set-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.set-page .set-danger { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; box-shadow: inset 2px 0 0 var(--fail); }
+.set-page .set-danger .p-title { margin: 6px 0 4px; }
+
+@media (max-width: 1200px) {
+  .set-page .set-head { grid-template-columns: 1fr; }
+  .set-page .set-read div:first-child { padding-left: 0; border-left: 0; }
+  .set-page .set-exam, .set-page .set-lock { grid-column: 1 / 7; }
+  .set-page .set-look, .set-page .set-guide { grid-column: 7 / 13; }
+}
+@media (max-width: 900px) {
+  .set-page .set-bento { display: flex; flex-direction: column; }
+  .set-page .set-head { padding: 22px 20px; }
+  .set-page .set-read { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  .set-page .set-read div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .set-page .set-read dd { font-size: 24px; }
+  .set-page .set-locks { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .set-page .ink-picker { grid-template-columns: 1fr; }
+}

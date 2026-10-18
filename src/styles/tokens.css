@@ -1,0 +1,297 @@
+/* =====================================================================
+   tokens.css — OWNER: foundation (wave 1). Spectral Lab design tokens.
+   Themes: "Obsidian" (dark, default) and "Daylight" (light).
+   Mechanism (unchanged): Settings theme 'system' | 'light' | 'dark' → src/lib/theme.ts sets
+   data-theme on <html> ('system' removes it and the OS preference decides) + data-accent.
+   - dark tokens: :root and any [data-theme="dark"] element (a "dark island", e.g. code / runner)
+   - light tokens: [data-theme="light"], and :root without data-theme when the OS prefers light
+   Text on panels: --ink / --ink-2 / --ink-3 (AA both themes). Spectrum as TEXT: the -t variants.
+   Fonts: --display (Syne), --sans (Inter Tight), --mono (Geist Mono; ALL numerals use mono).
+   Legacy names (--text, --surface, --accent, --good, --pop-*, --tint-* …) are aliases at the bottom;
+   two names changed meaning: the old --ink (text on bright fills) is now --on-fill and the old
+   --line (chunky outline colour) is now --outline. --ink/--line now follow the Spectral brief.
+   Accent ids are saved setting values: indigo = Mint (default), teal = Cyan, rose = Lilac, amber = Lime.
+   ===================================================================== */
+
+@property --fr { syntax: '<color>'; inherits: false; initial-value: transparent; }
+@property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+/* theme-independent tokens */
+:root {
+  /* type */
+  --display: 'Syne Variable', 'Syne', 'Inter Tight Variable', ui-sans-serif, system-ui, sans-serif;
+  --sans: 'Inter Tight Variable', 'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --serif: var(--display);
+  /* shape: hard instrument radii (chips 2, inputs/buttons 3, modules 4); key panels are chamfered */
+  --bw: 1px;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius: var(--radius-md);
+  --cut: 16px;                        /* default panel chamfer */
+  /* elevation (soft, no hard offsets) */
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, .02) inset, 0 6px 18px -12px rgba(0, 0, 0, .55);
+  --shadow-md: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 16px 40px -24px rgba(0, 0, 0, .7);
+  --shadow-lg: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 28px 70px -30px rgba(0, 0, 0, .85);
+  /* spacing scale (4px base) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.2, 0.7, 0.2, 1);   /* no overshoot: instruments don't bounce */
+  --dur-fast: 0.16s;
+  --dur: 0.28s;
+  /* layout (see shell.css for how they change per breakpoint) */
+  --content: 1180px;
+  --sidebar: 300px;                   /* syllabus drawer width */
+}
+
+/* ---------- Obsidian (dark, default) ---------- */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  /* surfaces */
+  --bg0: #030608;
+  --bg1: #07110F;
+  --bg2: #0A1714;
+  --panel-top: #0C1916;
+  --panel-bot: #070F0D;
+  --inset: #050C0A;            /* wells, tracks, inputs */
+  --line: rgba(170, 255, 225, .09);   /* hairline */
+  --line-2: rgba(170, 255, 225, .16); /* stronger hairline */
+  --frame-n: #1B2F2A;          /* neutral 1px panel frame (opaque) */
+  --tick: #4A6C63;             /* registration ticks */
+  --track: #14231F;            /* empty gauge segments */
+  /* ink */
+  --ink: #EAFFF7;
+  --ink-2: #A8C3BB;
+  --ink-3: #779189;            /* >= 4.5:1 on --bg1 and panels */
+  --ink-inv: #04100C;
+  /* spectrum (fills, strokes, glows) */
+  --lime: #C8FF3D;
+  --mint: #3DFFC2;
+  --cyan: #3DD9FF;
+  --iris: #8F7BFF;
+  --lilac: #E08BFF;
+  /* spectrum as TEXT (AA on panels) */
+  --lime-t: #C8FF3D;
+  --mint-t: #3DFFC2;
+  --cyan-t: #3DD9FF;
+  --iris-t: #A99BFF;
+  --lilac-t: #E9A6FF;
+  /* status */
+  --pass: #3DFFC2;   --pass-t: #3DFFC2;
+  --fail: #FF4D6D;   --fail-t: #FF6B85;
+  --flaky: #FFB547;  --flaky-t: #FFC266;
+  --skip: #6E8580;   --skip-t: #9AB0AA;
+  --run: #3DD9FF;    --run-t: #3DD9FF;
+  /* gradients */
+  --holo-lin: linear-gradient(90deg, #C8FF3D 0%, #3DFFC2 28%, #3DD9FF 55%, #8F7BFF 80%, #E08BFF 100%);
+  --holo-text: linear-gradient(100deg, #C8FF3D 0%, #3DFFC2 22%, #3DD9FF 45%, #8F7BFF 70%, #E08BFF 85%, #C8FF3D 100%);
+  --holo-conic: conic-gradient(from var(--a), #C8FF3D, #3DFFC2, #3DD9FF, #8F7BFF, #E08BFF, #C8FF3D);
+  --wash: linear-gradient(180deg, rgba(61, 255, 194, .035), transparent 40%);
+  --glow: 0 0 18px;
+  --grain-o: .085;
+  --scan-o: .045;
+  --lattice-o: .5;
+  --shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 24px 60px -30px rgba(0, 0, 0, .9);
+  /* legacy tokens whose value differs per theme */
+  --on-status: #04100C;
+  --accent-text: #04100C;
+  --scrim: rgba(1, 5, 4, .72);
+  --tint-mix: 13%;
+  /* tier colours (achievement medallions, .tpill, .ladder) */
+  --tier-bronze: #D9925F; --tier-silver: #C3D2CE; --tier-gold: #F4C64E; --tier-cert: #3DFFC2;
+  --tier-bronze-t: #EBAA7C; --tier-silver-t: #CFDCD8; --tier-gold-t: #F7D06A; --tier-cert-t: #3DFFC2;
+}
+
+/* ---------- Daylight (light) ---------- */
+[data-theme='light'] {
+  color-scheme: light;
+  --bg0: #F6F8F6;
+  --bg1: #EEF3F0;
+  --bg2: #E6EDEA;
+  --panel-top: #FFFFFF;
+  --panel-bot: #F8FBFA;
+  --inset: #EDF2F0;
+  --line: rgba(8, 40, 34, .08);
+  --line-2: rgba(8, 40, 34, .14);
+  --frame-n: #CBD8D3;
+  --tick: #8EA79F;
+  --track: #DFE7E4;
+  --ink: #06120F;
+  --ink-2: #2F4943;
+  --ink-3: #566D67;
+  --ink-inv: #FFFFFF;
+  --lime: #9BD400;
+  --mint: #00C994;
+  --cyan: #00A9D6;
+  --iris: #6A55F0;
+  --lilac: #B54FD8;
+  --lime-t: #4D6E00;
+  --mint-t: #00775A;
+  --cyan-t: #006F8E;
+  --iris-t: #5038D6;
+  --lilac-t: #8C2BAA;
+  --pass: #00B887;   --pass-t: #00704F;
+  --fail: #F0284F;   --fail-t: #C4153B;
+  --flaky: #F29A00;  --flaky-t: #8F5600;
+  --skip: #92A39E;   --skip-t: #4F6560;
+  --run: #00A9D6;    --run-t: #006F8E;
+  --holo-lin: linear-gradient(90deg, #A6E000 0%, #00D69C 28%, #00B4E0 55%, #8C7BFF 80%, #D07DF0 100%);
+  --holo-text: linear-gradient(100deg, #4D7A00 0%, #00866A 22%, #00779C 45%, #5038D6 70%, #9A2FB8 85%, #4D7A00 100%);
+  --holo-conic: conic-gradient(from var(--a), #A6E000, #00D69C, #00B4E0, #7560F5, #C25CE0, #A6E000);
+  --wash: linear-gradient(180deg, rgba(255, 255, 255, .7), transparent 50%);
+  --grain-o: .05;
+  --scan-o: 0;
+  --lattice-o: .55;
+  --shadow: 0 1px 0 #fff inset, 0 18px 40px -26px rgba(6, 40, 32, .28);
+  --on-status: #FFFFFF;
+  --accent-text: #FFFFFF;
+  --scrim: rgba(6, 22, 18, .42);
+  --tint-mix: 16%;
+  --tier-bronze: #B8703F; --tier-silver: #8A9C97; --tier-gold: #D9A21B; --tier-cert: #00C994;
+  --tier-bronze-t: #8A4A1F; --tier-silver-t: #4C5E59; --tier-gold-t: #7A5800; --tier-cert-t: #00704F;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg0: #F6F8F6;
+    --bg1: #EEF3F0;
+    --bg2: #E6EDEA;
+    --panel-top: #FFFFFF;
+    --panel-bot: #F8FBFA;
+    --inset: #EDF2F0;
+    --line: rgba(8, 40, 34, .08);
+    --line-2: rgba(8, 40, 34, .14);
+    --frame-n: #CBD8D3;
+    --tick: #8EA79F;
+    --track: #DFE7E4;
+    --ink: #06120F;
+    --ink-2: #2F4943;
+    --ink-3: #566D67;
+    --ink-inv: #FFFFFF;
+    --lime: #9BD400;
+    --mint: #00C994;
+    --cyan: #00A9D6;
+    --iris: #6A55F0;
+    --lilac: #B54FD8;
+    --lime-t: #4D6E00;
+    --mint-t: #00775A;
+    --cyan-t: #006F8E;
+    --iris-t: #5038D6;
+    --lilac-t: #8C2BAA;
+    --pass: #00B887;   --pass-t: #00704F;
+    --fail: #F0284F;   --fail-t: #C4153B;
+    --flaky: #F29A00;  --flaky-t: #8F5600;
+    --skip: #92A39E;   --skip-t: #4F6560;
+    --run: #00A9D6;    --run-t: #006F8E;
+    --holo-lin: linear-gradient(90deg, #A6E000 0%, #00D69C 28%, #00B4E0 55%, #8C7BFF 80%, #D07DF0 100%);
+    --holo-text: linear-gradient(100deg, #4D7A00 0%, #00866A 22%, #00779C 45%, #5038D6 70%, #9A2FB8 85%, #4D7A00 100%);
+    --holo-conic: conic-gradient(from var(--a), #A6E000, #00D69C, #00B4E0, #7560F5, #C25CE0, #A6E000);
+    --wash: linear-gradient(180deg, rgba(255, 255, 255, .7), transparent 50%);
+    --grain-o: .05;
+    --scan-o: 0;
+    --lattice-o: .55;
+    --shadow: 0 1px 0 #fff inset, 0 18px 40px -26px rgba(6, 40, 32, .28);
+    --on-status: #FFFFFF;
+    --accent-text: #FFFFFF;
+    --scrim: rgba(6, 22, 18, .42);
+    --tint-mix: 16%;
+    --tier-bronze: #B8703F; --tier-silver: #8A9C97; --tier-gold: #D9A21B; --tier-cert: #00C994;
+    --tier-bronze-t: #8A4A1F; --tier-silver-t: #4C5E59; --tier-gold-t: #7A5800; --tier-cert-t: #00704F;
+  }
+}
+
+/* ---------- accent themes (Settings → Colour; data-accent on <html>) ----------
+   Each picks the spectrum hue used as the "action" colour (+ a decorative partner). */
+:root,
+[data-theme] {
+  --acc: var(--mint);
+  --acc-t: var(--mint-t);
+  --acc-2: var(--iris);
+}
+:root[data-accent='teal'],
+[data-accent='teal'] [data-theme] {
+  --acc: var(--cyan);
+  --acc-t: var(--cyan-t);
+  --acc-2: var(--lime);
+}
+:root[data-accent='rose'],
+[data-accent='rose'] [data-theme] {
+  --acc: var(--lilac);
+  --acc-t: var(--lilac-t);
+  --acc-2: var(--cyan);
+}
+:root[data-accent='amber'],
+[data-accent='amber'] [data-theme] {
+  --acc: var(--lime);
+  --acc-t: var(--lime-t);
+  --acc-2: var(--iris);
+}
+
+/* ---------- aliases: re-declared on every theme island so they resolve against its tokens ---------- */
+:root,
+[data-theme] {
+  /* ---- legacy aliases (pre-Spectral names; every screen still uses them) ---- */
+  --bg: var(--bg1);
+  --surface: var(--panel-top);
+  --surface-2: var(--bg2);
+  --border: var(--line-2);
+  --border-strong: var(--tick);
+  --rule: var(--line);
+  --outline: var(--frame-n);          /* was --line ("chunky outline") before Spectral */
+  --control: var(--tick);             /* input / check box outlines */
+  --shadow-ink: transparent;          /* hard offset shadows are retired */
+  --on-fill: #04100C;                 /* was --ink: text on bright spectrum fills, both themes */
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --muted: var(--ink-3);
+  --pop-sun: var(--lime);
+  --pop-mint: var(--mint);
+  --pop-sky: var(--cyan);
+  --pop-pink: var(--lilac);
+  --pop-tangerine: var(--flaky);
+  --tint-sun: color-mix(in oklab, var(--lime) var(--tint-mix), var(--panel-top));
+  --tint-mint: color-mix(in oklab, var(--mint) var(--tint-mix), var(--panel-top));
+  --tint-sky: color-mix(in oklab, var(--cyan) var(--tint-mix), var(--panel-top));
+  --tint-pink: color-mix(in oklab, var(--lilac) var(--tint-mix), var(--panel-top));
+  --tint-tangerine: color-mix(in oklab, var(--flaky) var(--tint-mix), var(--panel-top));
+  --good: var(--pass-t);
+  --good-soft: color-mix(in oklab, var(--pass) var(--tint-mix), var(--panel-top));
+  --warn: var(--flaky-t);
+  --warn-soft: color-mix(in oklab, var(--flaky) var(--tint-mix), var(--panel-top));
+  --bad: var(--fail-t);
+  --bad-soft: color-mix(in oklab, var(--fail) var(--tint-mix), var(--panel-top));
+  --code-bg: #040A09;                 /* code is a dark island in both themes */
+  --ring: var(--cyan);
+  --glass: color-mix(in oklab, var(--bg1) 88%, transparent);
+  --glass-sidebar: var(--panel-top);
+  /* accent family (Settings → Colour; data-accent picks --acc / --acc-t / --acc-2) */
+  --accent: var(--acc-t);
+  --accent-fill: var(--acc);
+  --accent-ink: #04100C;
+  --accent-soft: color-mix(in oklab, var(--acc) var(--tint-mix), var(--panel-top));
+  --accent-2: var(--acc-2);
+  --margin-rule: var(--accent-2);
+}
+[data-theme='light'] {
+  --shadow-sm: 0 1px 0 #fff inset, 0 4px 12px -8px rgba(6, 40, 32, .2);
+  --shadow-md: 0 1px 0 #fff inset, 0 12px 28px -20px rgba(6, 40, 32, .28);
+  --shadow-lg: 0 1px 0 #fff inset, 0 22px 50px -28px rgba(6, 40, 32, .34);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --shadow-sm: 0 1px 0 #fff inset, 0 4px 12px -8px rgba(6, 40, 32, .2);
+    --shadow-md: 0 1px 0 #fff inset, 0 12px 28px -20px rgba(6, 40, 32, .28);
+    --shadow-lg: 0 1px 0 #fff inset, 0 22px 50px -28px rgba(6, 40, 32, .34);
+  }
+}

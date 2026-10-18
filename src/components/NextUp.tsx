@@ -15,14 +15,17 @@ export function NextUp({
 }) {
   return (
     <div className="next-up">
-      <span className="next-up-lead">{lead}</span>
+      <span className="next-up-lead">
+        <span className="mlabel">Next up</span>
+        {lead}
+      </span>
       {to ? (
         <Link to={to} className="btn btn-primary" onClick={onClick}>
-          {label} <ArrowRight size={16} aria-hidden="true" />
+          {label} <ArrowRight size={16} aria-hidden="true" className="arr" />
         </Link>
       ) : (
         <button type="button" className="btn btn-primary" onClick={onClick}>
-          {label} <ArrowRight size={16} aria-hidden="true" />
+          {label} <ArrowRight size={16} aria-hidden="true" className="arr" />
         </button>
       )}
     </div>

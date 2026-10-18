@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { COMPANY_QUESTIONS } from '../content';
 import type { CompanyArea } from '../types';
 import { useProgress } from '../lib/progress';
 import { CompanyCard } from '../components/CompanyCard';
 import { AREA_LABEL } from '../lib/companyAreas';
-import { ProgressBar } from '../components/ui';
 
 const AREAS = Object.keys(AREA_LABEL) as CompanyArea[];
 
@@ -23,63 +22,92 @@ export default function CompaniesPage() {
   const inCompany = COMPANY_QUESTIONS.filter((q) => company === 'all' || q.company === company);
   const list = inCompany.filter((q) => (area === 'all' || q.area === area) && !(hideDone && p.company[q.id]));
   const practised = COMPANY_QUESTIONS.filter((q) => p.company[q.id]).length;
+  const totalQ = Math.max(1, COMPANY_QUESTIONS.length);
 
   return (
-    <div className="page">
-      <div className="topic-head">
-        <div className="eyebrow">Practice</div>
-        <h1>Company interview questions</h1>
-        <p className="lead">
+    <div className="page co">
+      <header className="co-head">
+        <span className="mlabel">
+          <b>Practice</b> · interview reports
+        </span>
+        <h1 className="h1">Company interview questions</h1>
+        <p className="lede">
           Questions candidates reported being asked at specific companies, grouped by area. Each one links to where it was reported
           and to the lesson that teaches it. Try answering out loud before you reveal ours.
         </p>
-        <div className="topic-progress">
-          <ProgressBar value={(practised / Math.max(1, COMPANY_QUESTIONS.length)) * 100} tone="good" />
-          <span className="small muted">
-            {practised}/{COMPANY_QUESTIONS.length} practised · {companies.length} companies
-          </span>
-        </div>
-      </div>
+      </header>
 
       {!COMPANY_QUESTIONS.length ? (
         <p className="muted">Company questions are being researched. Check back soon.</p>
       ) : (
         <>
-          <div className="row wrap gap-s coding-filters">
-            <button type="button" className={`chip ${area === 'all' ? 'on' : ''}`} onClick={() => setArea('all')}>
-              All areas ({inCompany.length})
-            </button>
-            {AREAS.map((a) => {
-              const n = inCompany.filter((q) => q.area === a).length;
-              if (!n) return null;
-              return (
-                <button key={a} type="button" className={`chip ${area === a ? 'on' : ''}`} onClick={() => setArea(a)}>
-                  {AREA_LABEL[a]} ({n})
+          <section className="panel flat co-bar rise" style={{ '--i': 1 } as CSSProperties} aria-label="Progress and filters">
+            <div className="co-read">
+              <div className="readout">
+                <span className="num">
+                  {practised}
+                  <small>/ {COMPANY_QUESTIONS.length} practised</small>
+                </span>
+              </div>
+              <div
+                className="seg"
+                style={{ '--n': 40, '--v': (practised / totalQ) * 40, '--g': 'var(--pass)' } as CSSProperties}
+                role="img"
+                aria-label={`${practised} of ${COMPANY_QUESTIONS.length} practised`}
+              />
+              <span className="mlabel">
+                <b>{companies.length}</b> companies · <b>{list.length}</b> shown
+              </span>
+            </div>
+            <div className="co-filters">
+              <div className="co-chips" role="group" aria-label="Area">
+                <button type="button" className={`chip ${area === 'all' ? 'on' : ''}`} onClick={() => setArea('all')}>
+                  All areas <span className="n">{inCompany.length}</span>
                 </button>
-              );
-            })}
+                {AREAS.map((a) => {
+                  const n = inCompany.filter((q) => q.area === a).length;
+                  if (!n) return null;
+                  return (
+                    <button key={a} type="button" className={`chip ${area === a ? 'on' : ''}`} onClick={() => setArea(a)}>
+                      {AREA_LABEL[a]} <span className="n">{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="co-row">
+                <label className="co-sel">
+                  <span className="mlabel">Company</span>
+                  <select className="input" value={company} onChange={(e) => setCompany(e.target.value)}>
+                    <option value="all">All companies ({COMPANY_QUESTIONS.length})</option>
+                    {companies.map(([name, n]) => (
+                      <option key={name} value={name}>
+                        {name} ({n})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="check co-hide">
+                  <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} /> Hide practised
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {!list.length && (
+            <div className="runner co-none" data-theme="dark">
+              <div className="rl skip">
+                <span className="m">–</span>
+                <span className="tx">No questions match these filters.</span>
+                <span className="d">0 specs</span>
+              </div>
+            </div>
+          )}
+          <div className="co-list">
+            {list.map((q) => (
+              <CompanyCard key={q.id} q={q} />
+            ))}
           </div>
-          <div className="row wrap gap-s coding-filters">
-            <label className="small">
-              Company{' '}
-              <select className="pg-examples" value={company} onChange={(e) => setCompany(e.target.value)}>
-                <option value="all">All companies ({COMPANY_QUESTIONS.length})</option>
-                {companies.map(([name, n]) => (
-                  <option key={name} value={name}>
-                    {name} ({n})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="small muted hide-solved">
-              <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} /> Hide practised
-            </label>
-          </div>
-          {!list.length && <p className="muted">No questions match these filters.</p>}
-          {list.map((q) => (
-            <CompanyCard key={q.id} q={q} />
-          ))}
-          <p className="muted small">
+          <p className="co-foot">
             Sources are candidates&apos; public interview reports. Questions are rewritten in our own words, and answers are ours, not
             the company&apos;s.
           </p>

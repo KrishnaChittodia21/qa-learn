@@ -1,0 +1,214 @@
+/* =====================================================================
+   viz.css — OWNER: Topic agent (wave 2).
+   Scope: interactive visualisations (src/viz). VizFrame renders a chamfered instrument frame
+   (figure.viz.panel.cut-lg): head with "Fig n.m" holo chip + spec/step coordinate, a dotted stage
+   with crosshairs (scan beam while playing), legend, narration, predict prompt, transport.
+   Widgets draw with the legacy colour aliases (--accent, --good, --surface-2 …) mapped in tokens.css.
+   ===================================================================== */
+
+.viz {
+  margin: 0;
+  padding: 0;
+  outline: none;
+  min-width: 0;
+}
+.viz:focus-visible { --fr: var(--mint); }
+.viz-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line-2);
+}
+.viz-head .viz-eyebrow { flex: none; }
+.viz-head-t { min-width: 0; flex: 1; }
+.viz-title { font: 700 19px/1.2 var(--display); letter-spacing: -.01em; color: var(--ink); }
+.viz-blurb { margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.viz-coord { flex: none; font: 400 10px/1 var(--mono); letter-spacing: .1em; color: var(--ink-3); white-space: nowrap; }
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 14px 22px 0;
+  font-size: 0.85rem;
+}
+.viz-slider { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+.viz-slider > span,
+.viz-choice > span { font: 500 10.5px/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.viz-slider strong { color: var(--ink); font-weight: 600; }
+.viz-slider input { accent-color: var(--mint); }
+.viz-choice { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.viz-choice .chip { min-height: 30px; padding: 3px 11px; font-size: 0.82rem; text-transform: none; }
+.viz-stage {
+  position: relative;
+  margin: 14px 22px 0;
+  padding: 14px;
+  border: 1px solid var(--frame-n);
+  background-color: var(--bg1);
+  background-image: radial-gradient(color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 14px 14px;
+  overflow: hidden;
+}
+.viz-stage .xhair.c1 { right: 8px; top: 8px; }
+.viz-stage .xhair.c2 { left: 6px; bottom: 6px; }
+.viz-stage .viz-scan {
+  top: 0;
+  height: 60px;
+  --scan-h: 320px;
+  background: linear-gradient(180deg, transparent, color-mix(in oklab, var(--cyan) 9%, transparent));
+  box-shadow: none;
+  border-bottom: 1.5px solid var(--cyan);
+  animation: scan 5.5s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+.viz-svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  font-family: var(--sans);
+}
+.viz-svg text { fill: var(--ink); }
+.viz-label { font-size: 12px; fill: var(--ink-2) !important; }
+.viz-edge { fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.viz-node circle { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 2; transition: fill .35s ease, stroke .35s ease, r .35s ease; }
+.viz-node.active circle { stroke-width: 4; }
+.viz-node.active.cb-closed circle { fill: var(--good-soft); stroke: var(--pass); }
+.viz-node.active.cb-open circle { fill: var(--bad-soft); stroke: var(--fail); }
+.viz-node.active.cb-half-open circle { fill: var(--warn-soft); stroke: var(--flaky); }
+.viz-node-label { font-size: 13px; font-weight: 700; }
+.viz-outage { fill: var(--bad-soft); }
+.viz-dot { transition: r .25s ease, fill .25s ease; }
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 10px 22px 0;
+  font: 500 11.5px/1.5 var(--mono);
+  color: var(--ink-2);
+}
+.viz-key {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: -8px;
+  vertical-align: 0;
+  transform: rotate(45deg);
+}
+.viz-key.ring { background: transparent; border: 1.5px solid var(--ink); }
+.viz-caption {
+  margin: 12px 22px 0;
+  padding: 10px 14px;
+  min-height: 2.6em;
+  border-left: 2px solid var(--run);
+  background: color-mix(in oklab, var(--run) 6%, transparent);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.viz-stepno { margin-right: 6px; font: 600 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--run-t); }
+.viz-predict {
+  margin: 8px 22px 0;
+  padding: 10px 14px;
+  border-left: 2px solid var(--flaky);
+  background: color-mix(in oklab, var(--flaky) 7%, transparent);
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.viz-predict .mlabel { margin-right: 6px; color: var(--flaky-t); }
+.viz-transport {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px 22px 16px;
+  border-top: 1px solid var(--line-2);
+}
+.viz-transport .btn { min-width: 38px; font-family: var(--mono); }
+.viz-scrub-wrap { position: relative; flex: 1; min-width: 120px; height: 24px; display: flex; align-items: center; }
+.viz-seg { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.viz-scrub {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.viz-scrub::-webkit-slider-runnable-track { height: 24px; background: transparent; }
+.viz-scrub::-moz-range-track { height: 24px; background: transparent; }
+.viz-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 6px;
+  background: var(--ink);
+  transform: rotate(45deg);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--mint) 70%, transparent);
+}
+.viz-scrub::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 0; background: var(--ink); transform: rotate(45deg); }
+.viz-scrub:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.viz-speed { display: flex; align-items: center; gap: 6px; font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.viz-speed select {
+  min-height: 32px;
+  padding: 0 6px;
+  font: 500 12px var(--mono);
+  background: var(--inset);
+  color: var(--ink);
+  border: 1px solid var(--frame-n);
+  border-radius: 3px;
+}
+.viz-loading {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-md);
+  font: 500 12px/1.5 var(--mono);
+  letter-spacing: .04em;
+  color: var(--ink-2);
+}
+.viz .viz-loading { margin: 16px 22px; }
+.viz-loading[role='alert'] { border-color: color-mix(in oklab, var(--fail) 55%, transparent); color: var(--fail-t); }
+.viz-backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px dashed color-mix(in oklab, var(--cyan) 45%, transparent);
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--cyan) 5%, transparent);
+  color: var(--ink-2);
+  font: 500 12px/1.4 var(--mono);
+  text-align: left;
+  cursor: pointer;
+}
+.viz-backlink svg { flex: none; color: var(--cyan-t); }
+.viz-backlink:hover { color: var(--ink); border-color: var(--cyan); }
+@media (max-width: 900px) {
+  .viz-head { flex-wrap: wrap; padding: 14px 16px; }
+  .viz-coord { order: 1; margin-left: auto; }
+  .viz-head-t { order: 2; flex-basis: 100%; }
+  .viz-controls { padding: 12px 16px 0; }
+  .viz-stage { margin: 12px 10px 0; padding: 8px; }
+  .viz-legend { padding: 10px 16px 0; }
+  .viz-caption,
+  .viz-predict { margin-left: 12px; margin-right: 12px; }
+  .viz-transport { padding: 12px 12px 14px; }
+  .viz-scrub-wrap { order: 5; flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .viz *,
+  .viz *::before,
+  .viz *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .viz-stage .viz-scan { display: none; }
+}
