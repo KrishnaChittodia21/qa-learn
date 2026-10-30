@@ -11,7 +11,9 @@
     "validate": "node --no-warnings scripts/validate-content.mjs && node --no-warnings scripts/validate-coding.mjs && node --no-warnings scripts/validate-company.mjs",
     "practice-app": "node practice-app/server.mjs",
     "practice:test": "playwright test --config practice/playwright.config.ts",
-    "judge": "node --no-warnings scripts/judge.mjs"
+    "judge": "node --no-warnings scripts/judge.mjs",
+    "test": "node --no-warnings --test 'tests/*.test.ts'",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/geist-mono": "5.3.0",
