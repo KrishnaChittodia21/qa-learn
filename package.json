@@ -13,7 +13,9 @@
     "practice:test": "playwright test --config practice/playwright.config.ts",
     "judge": "node --no-warnings scripts/judge.mjs",
     "test": "node --no-warnings --test 'tests/*.test.ts'",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:split": "ANSWER_SPLIT=1 vite build --outDir dist-split && node --no-warnings scripts/check-bundle.mjs dist-split",
+    "check:bundle": "node --no-warnings scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist-mono": "5.3.0",

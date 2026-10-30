@@ -107,6 +107,21 @@ celebrations as they appear. Found on the way: the duplicate page during route c
 has no answers (`.map` files included); `qa_learn` holds the answer key; `git status` in `../system-design-learn`
 is unchanged.
 
+**As built:** `scripts/content-split.ts` splits topics (MCQ `correct`/`explanation`/`followUps`; interview looks-for,
+model answer, follow-ups, pitfalls; lab `solution`/`explanation`/`followUps`; drill assumptions, steps, answer,
+insight, follow-ups), coding problems (`solution`, `explanation`, `followUps`) and company questions (`answer`,
+`followUps`); the UI keeps `multi`, `assumptionCount` and `stepCount` hints. `npm run build:split` builds with the split
+(`ANSWER_SPLIT=1`, Vite plugin in `vite.config.ts`) into `dist-split/` and runs `scripts/check-bundle.mjs`: 0 answers
+over 5,547 probes (today's normal `dist/` fails it with 5,549). The normal build keeps answers until M2 switches the
+app to the service, so the split build doesn't run as an app yet. Coding and lab tests (hidden ones included) stay
+public because the judge runs in the browser; moving them needs server-side judging in a sandbox. Service: `api/`
+(`qa-api`, Fastify 5): `config.ts` (checked env, `qa_learn`, port 3001; production needs https and `PROXY_SECRET`),
+`app.ts` (error format, schema rule, helmet, CORS, 120/min per IP, `/health` with its own bucket, `x-qa-proxy`
+check), `server.ts`, `sync-answer-keys.ts` (`npm run sync:answers`: 1,059 answer keys, 83 coding solutions, 200
+company answers; hash-skipped, all sets checked before any write, >10% deletes refused without `--allow-delete`).
+Tests: `cd api && TEST_MONGODB_URI=mongodb://127.0.0.1:27017 npm test` (15; the sync tests use a throwaway
+database). Vite proxies `/api` → `localhost:3001`. Atlas, Render and the other accounts are set up before M12.
+
 ### M2 · Sign-up, synced progress and locked content · 10–14 h
 
 - **Service:** Better Auth on `qa_learn` (copied from SDL's `auth.ts`, `auth-events.ts`, `email-check.ts`, `mail.ts`),
