@@ -5,10 +5,11 @@ import { test } from 'node:test'
 import type { Db } from 'mongodb'
 import { buildApp } from '../src/app.ts'
 import { loadConfig, type Config } from '../src/config.ts'
+import { ORIGIN, SECRET } from './helpers.ts'
 
-const ORIGIN = 'http://localhost:5173'
-const config: Config = { ...loadConfig({ MONGODB_URI: 'mongodb://unused' }), logLevel: 'silent' }
-const fakeDb = (command: () => Promise<unknown>) => ({ db: { command } as unknown as Db })
+const config: Config = { ...loadConfig({ MONGODB_URI: 'mongodb://unused', BETTER_AUTH_SECRET: SECRET }), logLevel: 'silent' }
+// these tests never reach the auth routes, so a database that only answers pings is enough
+const fakeDb = (command: () => Promise<unknown>) => ({ db: { command, collection: () => ({}) } as unknown as Db })
 const okDb = fakeDb(async () => ({ ok: 1 }))
 
 test('defaults: the qa_learn database on port 3001, CORS for the local app only', () => {
@@ -92,19 +93,28 @@ test('with PROXY_SECRET set, only calls that came through the frontend host are 
   await app.close()
 })
 
-test('production refuses to start without https or a proxy secret', () => {
+test('production refuses to start without https, email, CAPTCHA or a proxy secret', () => {
   assert.throws(
-    () => loadConfig({ NODE_ENV: 'production', MONGODB_URI: 'x' }),
-    (e: Error) => /APP_URL must be https/.test(e.message) && /PROXY_SECRET/.test(e.message),
+    () => loadConfig({ NODE_ENV: 'production', MONGODB_URI: 'x', BETTER_AUTH_SECRET: SECRET }),
+    (e: Error) => ['APP_URL must be https', 'PROXY_SECRET', 'SMTP_USER', 'TURNSTILE_SECRET_KEY'].every((s) => e.message.includes(s)),
   )
-  assert.throws(() => loadConfig({ NODE_ENV: 'production', MONGODB_URI: 'x', APP_URL: 'https://qa.example', PROXY_SECRET: 'short' }), /PROXY_SECRET/)
-  const ok = loadConfig({ NODE_ENV: 'production', MONGODB_URI: 'x', APP_URL: 'https://qa.example', PROXY_SECRET: 'p'.repeat(32) })
-  assert.equal(ok.production, true)
+  const prod = { NODE_ENV: 'production', MONGODB_URI: 'x', BETTER_AUTH_SECRET: SECRET, APP_URL: 'https://qa.example', SMTP_USER: 'me@gmail.com', SMTP_PASS: 'k', TURNSTILE_SECRET_KEY: 't' }
+  assert.throws(() => loadConfig({ ...prod, PROXY_SECRET: 'short' }), /PROXY_SECRET/)
+  assert.equal(loadConfig({ ...prod, PROXY_SECRET: 'p'.repeat(32) }).production, true)
+})
+
+test('a provider SMTP login needs its own sender address', () => {
+  const base = { MONGODB_URI: 'x', BETTER_AUTH_SECRET: SECRET, SMTP_USER: 'abc@smtp-brevo.com', SMTP_PASS: 'k' }
+  assert.throws(() => loadConfig({ ...base, SMTP_HOST: 'smtp-relay.brevo.com' }), /SMTP_FROM/)
+  const ok = loadConfig({ ...base, SMTP_HOST: 'smtp-relay.brevo.com', SMTP_FROM: 'me@gmail.com' })
+  assert.deepEqual(ok.smtp, { user: 'abc@smtp-brevo.com', pass: 'k', host: 'smtp-relay.brevo.com', port: 587, from: 'me@gmail.com' })
+  // Gmail in development: the login is the sender
+  assert.equal(loadConfig({ ...base, SMTP_USER: 'me@gmail.com' }).smtp?.from, 'me@gmail.com')
 })
 
 test('bad config stops startup with every problem listed', () => {
   assert.throws(
-    () => loadConfig({ PORT: 'abc', CORS_ORIGINS: 'https://x.dev/path' }),
-    (e: Error) => /PORT/.test(e.message) && /CORS_ORIGINS/.test(e.message) && /MONGODB_URI/.test(e.message),
+    () => loadConfig({ PORT: 'abc', CORS_ORIGINS: 'https://x.dev/path', SMTP_USER: 'only-half' }),
+    (e: Error) => ['PORT', 'CORS_ORIGINS', 'MONGODB_URI', 'BETTER_AUTH_SECRET', 'SMTP_USER and SMTP_PASS'].every((s) => e.message.includes(s)),
   )
 })
