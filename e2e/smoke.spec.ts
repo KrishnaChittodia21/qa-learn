@@ -1,12 +1,8 @@
-// Smoke journey for a first-time visitor: Home → first lesson → mark it read → unlock and run the exam → result.
-// Every later milestone (sign-up, locks, Saved, Shorts…) adds its own journey next to this one.
+// Smoke journey for a first-time, signed-out visitor: Home → first lesson → mark it read (kept in this browser) →
+// the graded exam and the account pages ask for an account. The signed-in journey is in account.spec.ts.
 import { expect, test } from '@playwright/test';
 
-test('a new visitor can study the first topic and take its exam', async ({ page }) => {
-  // earning a badge (first section read, etc.) opens a celebration over the page at any point: close it when it shows
-  const celebration = page.getByRole('button', { name: 'Woohoo, keep going' });
-  await page.addLocatorHandler(celebration, () => celebration.click());
-
+test('a new visitor can study the first topic; exams and account pages ask for an account', async ({ page }) => {
   await page.goto('/');
 
   // first visit opens the welcome tour
@@ -25,21 +21,22 @@ test('a new visitor can study the first topic and take its exam', async ({ page 
   await page.reload();
   await expect(page.getByRole('checkbox').first()).toBeChecked();
 
-  // the exam is locked until every section is read (default study-first lock)
+  // the exam is graded by qa-api, so it asks for an account
   const topicUrl = page.url().split('?')[0];
   await page.goto(`${topicUrl}?tab=exam`);
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: /mark all as read/ }).click();
   await page.getByRole('button', { name: /Set up exam/ }).click();
+  // during a route change the outgoing page-host briefly renders the new page too (Layout.tsx, fixed in M6)
+  const signUp = page.getByRole('heading', { name: 'Sign up to take graded exams' });
+  await expect(signUp).toHaveCount(1);
+  await expect(signUp).toBeVisible();
 
-  // during a route change the outgoing page-host briefly renders the new page too (Layout.tsx, fixed in M6):
-  // wait until there is one copy, which also fails if the duplicate ever stays
-  const start = page.getByRole('button', { name: /Start run/ });
-  await expect(start).toHaveCount(1);
-  await start.click();
-  await page.getByRole('group', { name: /Options/ }).getByRole('button').first().click();
-  page.once('dialog', (d) => d.accept()); // "N question(s) unanswered. Submit anyway?"
-  await page.getByRole('button', { name: 'Submit run' }).click();
+  // interview answers too
+  await page.goto(`${topicUrl}?tab=interview`);
+  await expect(page.getByRole('link', { name: /Sign up to see the model answer/ }).first()).toBeVisible();
 
-  await expect(page.getByRole('heading', { name: 'Run complete' })).toBeVisible();
+  // account pages are shown dimmed with the sign-up prompt
+  await page.goto('/#/achievements');
+  await expect(page.getByRole('note', { name: 'achievements is locked' })).toBeVisible();
 });

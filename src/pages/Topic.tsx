@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { COMPANY_BY_TOPIC, PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import { CompanyCard } from '../components/CompanyCard';
-import type { CodeChallenge, EnvelopeQuestion, InterviewQuestion, Topic } from '../types';
+import type { CodeChallenge, CodeSnippet, EnvelopeQuestion, EnvelopeStep, FollowUp, InterviewQuestion, Topic } from '../types';
+import { isMulti, useReveal } from '../lib/answers';
+import { RevealButton } from '../components/RevealButton';
 import {
   rateIQ,
   setDraft,
@@ -606,7 +608,9 @@ function ChallengeCard({ c, n, foil }: { c: CodeChallenge; n: number; foil: bool
   const draftKey = `cc:${c.id}`;
   const code = p.drafts[draftKey] ?? c.starter.code;
   const [hints, setHints] = useState(0);
-  const [showSolution, setShowSolution] = useState(false);
+  const [hideSolution, setHideSolution] = useState(false);
+  const ref = useReveal<{ solution: CodeSnippet; explanation: string; followUps?: FollowUp[] }>('challenge', c.id);
+  const showSolution = !!ref.answer && !hideSolution;
   const done = !!p.cc[c.id];
   const edited = p.drafts[draftKey] !== undefined && p.drafts[draftKey] !== c.starter.code;
   return (
@@ -641,9 +645,13 @@ function ChallengeCard({ c, n, foil }: { c: CodeChallenge; n: number; foil: bool
                 Hint {hints + 1} / {c.hints.length}
               </button>
             )}
-            <button className="btn btn-ghost btn-sm" type="button" onClick={() => setShowSolution((s) => !s)}>
-              {showSolution ? 'Hide solution' : 'Compare with reference'}
-            </button>
+            {ref.answer ? (
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setHideSolution((s) => !s)}>
+                {showSolution ? 'Hide solution' : 'Show solution'}
+              </button>
+            ) : (
+              <RevealButton r={ref} attempt={code} starter={c.starter.code} label="Compare with reference" what="compare with the reference" />
+            )}
             <button className={`btn btn-sm ${!done && foil ? 'btn-primary' : 'btn-line'}`} type="button" onClick={() => setFlag('cc', c.id, !done)}>
               {done ? 'Mark not done' : 'Mark as done'}
             </button>
@@ -683,14 +691,14 @@ function ChallengeCard({ c, n, foil }: { c: CodeChallenge; n: number; foil: bool
           ) : null}
         </div>
       </div>
-      {showSolution && (
+      {showSolution && ref.answer && (
         <div className="solution">
           <span className="mlabel">Reference solution</span>
-          <CodeBlock snippet={c.solution} />
+          <CodeBlock snippet={ref.answer.solution} />
           <div className="prose">
-            <Markdown>{c.explanation}</Markdown>
+            <Markdown>{ref.answer.explanation}</Markdown>
           </div>
-          <FollowUps items={c.followUps} />
+          <FollowUps items={ref.answer.followUps} />
         </div>
       )}
     </article>
@@ -729,7 +737,9 @@ function InterviewTab({ topic }: { topic: Topic }) {
 function InterviewCard({ q, n }: { q: InterviewQuestion; n: number }) {
   const p = useProgress();
   const draftKey = `iq:${q.id}`;
-  const [answer, setAnswer] = useState(false);
+  const draft = p.drafts[draftKey] ?? '';
+  const ref = useReveal<{ whatInterviewerLooksFor: string[]; modelAnswer: string; followUps: FollowUp[]; pitfalls: string[] }>('interview', q.id);
+  const answer = ref.answer;
   const [fu, setFu] = useState(0);
   const rating = p.iq[q.id];
   const rate = (r: Rating) => rateIQ(q.id, rating === r ? null : r);
@@ -747,35 +757,34 @@ function InterviewCard({ q, n }: { q: InterviewQuestion; n: number }) {
       <textarea
         className="answer-box"
         placeholder="Draft your answer: structure it, give a concrete example, mention risks and trade-offs…"
-        value={p.drafts[draftKey] ?? ''}
+        value={draft}
         onChange={(e) => setDraft(draftKey, e.target.value)}
         rows={5}
         aria-label={`Your answer to question ${n}`}
       />
-      <Reveal label="What the interviewer is looking for">
-        <div className="pr-list">
-          {q.whatInterviewerLooksFor.map((s) => (
-            <div key={s} className="pr-row ok">
-              <span className="st">PASS</span>
-              <div>{s}</div>
-            </div>
-          ))}
-        </div>
-      </Reveal>
-      {!answer ? (
-        <button className="btn btn-line btn-sm" type="button" onClick={() => setAnswer(true)}>
-          Reveal model answer
-        </button>
-      ) : (
+      <RevealButton r={ref} attempt={draft} label="Reveal model answer" what="see the model answer" />
+      {answer && (
+        <Reveal label="What the interviewer is looking for">
+          <div className="pr-list">
+            {answer.whatInterviewerLooksFor.map((s) => (
+              <div key={s} className="pr-row ok">
+                <span className="st">PASS</span>
+                <div>{s}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      )}
+      {answer && (
         <div className="model-answer">
           <span className="mlabel">Model answer</span>
-          <Markdown>{q.modelAnswer}</Markdown>
+          <Markdown>{answer.modelAnswer}</Markdown>
         </div>
       )}
       {answer && (
         <div className="followups">
           <div className="label">Interviewer follow-ups</div>
-          {q.followUps.slice(0, fu).map((f, i) => (
+          {answer.followUps.slice(0, fu).map((f, i) => (
             <div key={i} className="followup">
               <div className="fq">↳ {f.q}</div>
               <Reveal label="Show answer">
@@ -783,14 +792,14 @@ function InterviewCard({ q, n }: { q: InterviewQuestion; n: number }) {
               </Reveal>
             </div>
           ))}
-          {fu < q.followUps.length && (
+          {fu < answer.followUps.length && (
             <button className="btn-ghost btn-sm" type="button" onClick={() => setFu((x) => x + 1)}>
-              + Next follow-up ({fu}/{q.followUps.length})
+              + Next follow-up ({fu}/{answer.followUps.length})
             </button>
           )}
           <Reveal label="Pitfalls: what weak candidates say">
             <div className="pr-list">
-              {q.pitfalls.map((s) => (
+              {answer.pitfalls.map((s) => (
                 <div key={s} className="pr-row bad">
                   <span className="st">FAIL</span>
                   <div>{s}</div>
@@ -817,9 +826,13 @@ function InterviewCard({ q, n }: { q: InterviewQuestion; n: number }) {
 function EnvelopeCard({ q, n }: { q: EnvelopeQuestion; n: number }) {
   const p = useProgress();
   const draftKey = `boe:${q.id}`;
+  const draft = p.drafts[draftKey] ?? '';
+  // the working comes from qa-api after an attempt; then it is shown a stage at a time as before
+  const ref = useReveal<{ assumptions: string[]; steps: EnvelopeStep[]; answer: string; insight: string; followUps?: FollowUp[] }>('drill', q.id);
+  const a = ref.answer;
   // stage 0: question only · 1: assumptions · 2..k+1: steps · k+2: answer
   const [stage, setStage] = useState(0);
-  const total = q.steps.length + 2;
+  const total = (a?.steps.length ?? q.stepCount ?? q.steps?.length ?? 0) + 2;
   const done = !!p.boe[q.id];
   return (
     <article className="panel tp-card boe">
@@ -838,24 +851,24 @@ function EnvelopeCard({ q, n }: { q: EnvelopeQuestion; n: number }) {
       <textarea
         className="answer-box mono"
         placeholder="Your attempt: work it out here before revealing the solution…"
-        value={p.drafts[draftKey] ?? ''}
+        value={draft}
         onChange={(e) => setDraft(draftKey, e.target.value)}
         rows={4}
         aria-label={`Your working for drill ${n}`}
       />
-      {stage >= 1 && (
+      {a && stage >= 1 && (
         <div className="assumptions">
           <div className="label">Given</div>
           <ul>
-            {q.assumptions.map((a) => (
-              <li key={a}>{a}</li>
+            {a.assumptions.map((x) => (
+              <li key={x}>{x}</li>
             ))}
           </ul>
         </div>
       )}
-      {stage >= 2 && (
+      {a && stage >= 2 && (
         <ol className="steps">
-          {q.steps.slice(0, stage - 1).map((s, i) => (
+          {a.steps.slice(0, stage - 1).map((s, i) => (
             <li key={i}>
               <span className="ln">S{pad2(i + 1)}</span>
               <span className="step-label">{s.label}</span>
@@ -864,23 +877,24 @@ function EnvelopeCard({ q, n }: { q: EnvelopeQuestion; n: number }) {
           ))}
         </ol>
       )}
-      {stage >= total && (
+      {a && stage >= total && (
         <div className="boe-answer">
           <div className="label">Answer</div>
-          <Markdown>{q.answer}</Markdown>
+          <Markdown>{a.answer}</Markdown>
           <div className="insight">
-            <Lightbulb size={15} aria-hidden="true" className="card-icon" /> <strong>Takeaway:</strong> {q.insight}
+            <Lightbulb size={15} aria-hidden="true" className="card-icon" /> <strong>Takeaway:</strong> {a.insight}
           </div>
-          <FollowUps items={q.followUps} />
+          <FollowUps items={a.followUps} />
         </div>
       )}
       <div className="row gap-s wrap">
-        {stage < total && (
+        <RevealButton r={ref} attempt={draft} label="Check my working" what="check your working" />
+        {a && stage < total && (
           <button className="btn btn-line btn-sm" type="button" onClick={() => setStage((s) => s + 1)}>
-            {stage === 0 ? 'Reveal the givens' : stage < total - 1 ? `Reveal step ${stage}/${q.steps.length}` : 'Reveal answer'}
+            {stage === 0 ? 'Reveal the givens' : stage < total - 1 ? `Reveal step ${stage}/${a.steps.length}` : 'Reveal answer'}
           </button>
         )}
-        {stage < total && (
+        {a && stage < total && (
           <button className="btn-ghost btn-sm" type="button" onClick={() => setStage(total)}>
             Show everything
           </button>
@@ -927,7 +941,7 @@ function ExamIntro({ topic }: { topic: Topic }) {
   const nav = useNavigate();
   const rec = p.tests[topic.id];
   const minutes = Math.ceil((topic.test.length * p.settings.secondsPerQuestion) / 60);
-  const multi = topic.test.filter((q) => q.correct.length > 1).length;
+  const multi = topic.test.filter(isMulti).length;
   const wrong = currentlyWrong(p, topic);
   const weak = weakSections(topic, wrong);
   return (

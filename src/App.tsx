@@ -13,7 +13,16 @@ import SettingsPage from './pages/Settings';
 import AchievementsPage from './pages/Achievements';
 import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
+import { ForgotPage, LoginPage, ResetPage, SignupPage } from './pages/Auth';
+import { LockedPreview } from './components/LockedPreview';
 import { resumeLocation } from './lib/uiPrefs';
+
+// A confirmation link that has expired (1 h) or is broken comes back with ?error=…: send the reader to Sign in
+// with a note (signing in emails a fresh link) instead of a home page that looks like it worked.
+const linkError = new URLSearchParams(window.location.search).get('error');
+if (linkError === 'TOKEN_EXPIRED' || linkError === 'INVALID_TOKEN') {
+  window.history.replaceState(null, '', `${window.location.pathname}#/login?link=${linkError === 'TOKEN_EXPIRED' ? 'expired' : 'invalid'}`);
+}
 
 // On a fresh start at the dashboard URL, reopen the page the user was last reading.
 // Deep links (any other hash) are respected as-is.
@@ -38,10 +47,28 @@ const router = createHashRouter([
       { path: 'pw-lab/:step', element: <PwLabStepPage /> },
       { path: 'playground', element: <PlaygroundPage /> },
       { path: 'companies', element: <CompaniesPage /> },
-      { path: 'weak-areas', element: <WeakAreasPage /> },
+      {
+        path: 'weak-areas',
+        element: (
+          <LockedPreview feature="Weak areas" why="See which topics and sections your exam answers say need work, and drill the questions you missed.">
+            <WeakAreasPage />
+          </LockedPreview>
+        ),
+      },
       { path: 'practice', element: <PracticePage /> },
-      { path: 'achievements', element: <AchievementsPage /> },
+      {
+        path: 'achievements',
+        element: (
+          <LockedPreview feature="achievements" why="Earn badges for reading, passing exams, solving problems and keeping a study streak, saved to your account.">
+            <AchievementsPage />
+          </LockedPreview>
+        ),
+      },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'signup', element: <SignupPage /> },
+      { path: 'forgot', element: <ForgotPage /> },
+      { path: 'reset', element: <ResetPage /> },
       { path: '*', element: <Home /> },
     ],
   },

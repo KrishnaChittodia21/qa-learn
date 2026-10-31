@@ -41,9 +41,11 @@ export interface CodeChallenge {
   task: string;
   starter: CodeSnippet;
   hints: string[];
-  solution: CodeSnippet;
+  // answer fields are optional: the app's build ships content without them (scripts/content-split.ts) and they come
+  // from qa-api after an attempt; the source files and the service always have them
+  solution?: CodeSnippet;
   /** markdown: why the solution is better */
-  explanation: string;
+  explanation?: string;
   /** what the interviewer asks after you present the solution */
   followUps?: FollowUp[];
   /**
@@ -65,11 +67,11 @@ export interface InterviewQuestion {
   question: string;
   /** optional scenario framing the interviewer gives */
   context?: string;
-  whatInterviewerLooksFor: string[];
+  whatInterviewerLooksFor?: string[];
   /** markdown */
-  modelAnswer: string;
-  followUps: FollowUp[];
-  pitfalls: string[];
+  modelAnswer?: string;
+  followUps?: FollowUp[];
+  pitfalls?: string[];
 }
 
 export interface EnvelopeStep {
@@ -82,13 +84,16 @@ export interface EnvelopeStep {
 export interface EnvelopeQuestion {
   id: string;
   question: string;
-  assumptions: string[];
-  steps: EnvelopeStep[];
-  answer: string;
+  assumptions?: string[];
+  steps?: EnvelopeStep[];
+  answer?: string;
   /** the design implication the numbers reveal */
-  insight: string;
+  insight?: string;
   /** "now what if…" probes on the estimate */
   followUps?: FollowUp[];
+  /** public hints in the app's build, where the working itself is left out */
+  assumptionCount?: number;
+  stepCount?: number;
 }
 
 export interface MCQ {
@@ -98,10 +103,12 @@ export interface MCQ {
   code?: CodeSnippet;
   options: string[];
   /** indexes into options; more than one => "select all that apply" */
-  correct: number[];
-  explanation: string;
+  correct?: number[];
+  explanation?: string;
   /** what the interviewer asks next once you have answered */
   followUps?: FollowUp[];
+  /** public hint in the app's build: "select all that apply" without saying which */
+  multi?: boolean;
 }
 
 export interface Topic {
@@ -147,9 +154,9 @@ export interface CodingProblem {
   starter: string;
   tests: CodingTest[];
   hints: string[];
-  solution: string;
+  solution?: string;
   /** markdown: approach, complexity, alternative solutions, interview talking points */
-  explanation: string;
+  explanation?: string;
   /** e.g. "Asked in QA automation interviews (reported on Glassdoor, 2025)" — never invented */
   askedIn?: string;
   followUps?: FollowUp[];
@@ -190,7 +197,7 @@ export interface CompanyQuestion {
   /** the question as asked, rewritten in our own words */
   question: string;
   /** markdown: a strong, concise answer */
-  answer: string;
+  answer?: string;
   followUps?: FollowUp[];
   /** topic id where this is taught (gets a "Company Qs" tab entry) */
   topic?: string;

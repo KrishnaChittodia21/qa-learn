@@ -74,10 +74,11 @@ export function sectionForQuestion(topic: Topic, q: MCQ): number {
   const hit = sectionCache.get(q.id);
   if (hit !== undefined) return hit;
   const { vectors, idf } = sectionIndex(topic);
-  const correct = q.correct.map((i) => q.options[i]).join(' ');
   const qv = termFreq(tokens(q.question), 2);
-  termFreq(tokens(correct), 2, qv);
-  termFreq(tokens(q.explanation), 1, qv);
+  // the app's build has no answers (they come from qa-api): every option then stands in for the right one
+  if (q.correct) termFreq(tokens(q.correct.map((i) => q.options[i]).join(' ')), 2, qv);
+  else termFreq(tokens(q.options.join(' ')), 1, qv);
+  if (q.explanation) termFreq(tokens(q.explanation), 1, qv);
   if (q.code?.title) termFreq(tokens(q.code.title), 1, qv);
   const weighted: Vec = new Map([...qv].map(([w, f]) => [w, (1 + Math.log(f)) * (idf.get(w) ?? 0)]));
   let best = 0;
@@ -179,7 +180,7 @@ export function accuracyBreakdown(p: Progress, topics: Topic[]) {
       const ok = r.lastCorrect ? 1 : 0;
       byDifficulty[q.difficulty].seen++;
       byDifficulty[q.difficulty].correct += ok;
-      const fmt = q.correct.length > 1 ? byFormat.multi : byFormat.single;
+      const fmt = (q.multi ?? (q.correct?.length ?? 0) > 1) ? byFormat.multi : byFormat.single;
       fmt.seen++;
       fmt.correct += ok;
       if (q.code) {

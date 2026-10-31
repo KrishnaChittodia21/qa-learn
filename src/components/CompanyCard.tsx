@@ -1,13 +1,17 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 import { TOPIC_BY_ID } from '../content';
 import type { CompanyQuestion } from '../types';
 import { AREA_LABEL } from '../lib/companyAreas';
+import { useCompanyAnswer } from '../lib/answers';
 import { setFlag, useProgress } from '../lib/progress';
-import { FollowUps, Markdown, Reveal } from './ui';
+import { FollowUps, Markdown } from './ui';
 
-/** One company-reported question: try it, reveal our answer, check the source. */
+/** One company-reported question: try it, reveal our answer (from qa-api, for a signed-in learner), check the source. */
 export function CompanyCard({ q, showTopic = true }: { q: CompanyQuestion; showTopic?: boolean }) {
   const p = useProgress();
+  const { pathname, search } = useLocation();
+  const strong = useCompanyAnswer(q.id);
   const done = !!p.company[q.id];
   const topic = q.topic ? TOPIC_BY_ID.get(q.topic) : undefined;
   const meta = [q.role, q.round].filter(Boolean).join(' · ');
@@ -21,10 +25,29 @@ export function CompanyCard({ q, showTopic = true }: { q: CompanyQuestion; showT
         {done && <span className="chip pass company-q-done">✓ Practised</span>}
       </div>
       <h3 className="company-q-text">{q.question}</h3>
-      <Reveal label="Show a strong answer">
-        <Markdown>{q.answer}</Markdown>
-        <FollowUps items={q.followUps} />
-      </Reveal>
+      {strong.answer ? (
+        <div className="company-q-answer">
+          <Markdown>{strong.answer.answer}</Markdown>
+          <FollowUps items={strong.answer.followUps} />
+        </div>
+      ) : strong.status === 'out' ? (
+        <Link className="btn btn-line btn-sm" to={`/signup?next=${encodeURIComponent(pathname + search)}`}>
+          <Lock size={14} aria-hidden="true" /> Sign up to see a strong answer
+        </Link>
+      ) : (
+        strong.status === 'in' && (
+          <div className="reveal-gate">
+            <button className="btn btn-line btn-sm" type="button" disabled={strong.busy} onClick={() => void strong.load()}>
+              {strong.busy ? 'Loading…' : 'Show a strong answer'}
+            </button>
+            {strong.error && (
+              <p className="auth-err" role="alert">
+                {strong.error}
+              </p>
+            )}
+          </div>
+        )
+      )}
       <div className="company-q-foot">
         <span className="company-q-src">
           <span className="mlabel">Reported</span>{' '}

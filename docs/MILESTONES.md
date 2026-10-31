@@ -139,6 +139,28 @@ database). Vite proxies `/api` → `localhost:3001`. Atlas, Render and the other
 after sign-up, local progress is imported once and shows on a second device; no answer reaches the browser
 before an attempt.
 
+**As built:** service: `api/src/auth.ts` (Better Auth on `qa_learn`: email + password, verification, reset, delete
+account clearing `progress`/`exam_sessions`/`feedback`, `role` not settable), `mail.ts` (log-only without SMTP),
+`email-check.ts` (throwaway and no-mail domains refused), sign-in limits in `app.ts` (per IP per route, 10 wrong
+passwords per account → Turnstile or a 15-minute lock); `progress.ts` (one doc per user, batched versioned
+`PATCH /api/progress`, resend dedupe, one-time import that never takes a pass or a badge, badges earned on the server
+in the learner's time zone, `GET /api/me`); `practice.ts` (topic exams from the whole pool, drills of answered
+questions, interview-mode locks, deadline + 60 s, reveals for interview/drill/lab/coding after 20 s and a 20-character
+attempt with one-use signed tokens, company answers for any signed-in learner, 300/account and 600/IP answers a day
+with flagging). Shared rules: `src/lib/progress-ops.ts`. App: `lib/api.ts`, `lib/session.ts`, synced `lib/progress.ts`
+(30 s batches, flush on hide/close and before any exam start or reveal, conflict replay), `lib/answers.ts` +
+`RevealButton`, `pages/Auth.tsx` (login, signup, forgot, reset), account control in the rail and phone bar,
+`LockedPreview` on Achievements, Weak areas and Home's study activity, `SignInCard` on exams and the mistakes drill;
+streak and badge celebrations only signed in. Answer fields are optional in `src/types.ts` (the type checker found
+every screen that read one). The answer-free build is now the default (`npm run build` runs the bundle check; dev
+too). Tests: app 50, service 43, e2e 4 (`e2e/account.spec.ts`: signed-out tick imported, server-graded exam, second
+browser; the service runs on `qa_learn_e2e` and the tests read confirm links from `e2e/.api.log`). Bugs found by the
+e2e run and fixed: sign-in navigated twice (pulled the learner back), and an exam start raced the queued "mark all as
+read". **Do not merge to `main` before M12**: the Pages deploy would ship an app whose exams and answers need a service
+that isn't deployed yet. Left out on purpose: Google/GitHub sign-in (not needed), locking coding judge runs (they run
+in the browser, locking protects nothing), the auth-event log and flagged-accounts list (moved to M9, where Admin reads
+them).
+
 ### M3 · Profile and Save for later · 8–12 h
 
 - **Service:** `account.ts` copied (avatar upload to its own Cloudinary folder `qa-avatars/<userId>`, feedback,

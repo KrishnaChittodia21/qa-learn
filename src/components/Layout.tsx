@@ -12,6 +12,8 @@ import {
   LayoutGrid,
   Layers,
   ListTree,
+  LogIn,
+  LogOut,
   Moon,
   Route,
   Search,
@@ -34,6 +36,7 @@ import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 import { applyThemeAttrs } from '../lib/theme';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { useAchievementDetection } from '../lib/useAchievements';
+import { signOut, useSession } from '../lib/session';
 import { achievementById, TIER_LABEL } from '../content/achievements';
 
 // overlays are lazy so cmdk and the tour stay out of the main bundle until first use
@@ -174,7 +177,10 @@ export default function Layout() {
 
   // ---- achievements: detect + store new badges; celebrate once the guide is closed ----
   const navigate = useNavigate();
-  const { queue: unlocked, dismiss: dismissUnlocked } = useAchievementDetection(p);
+  // badges are an account feature: earned and celebrated only while signed in
+  const session = useSession();
+  const signedIn = session.status === 'in';
+  const { queue: unlocked, dismiss: dismissUnlocked } = useAchievementDetection(p, signedIn);
   const viewAllAchievements = useCallback(() => {
     dismissUnlocked();
     navigate('/achievements');
@@ -369,24 +375,27 @@ export default function Layout() {
           </button>
         </nav>
         <div className="rail-spacer" />
-        <div className="rail-streak" title={`${streak}-day study streak`}>
-          <div className="row">
-            <span className="mlabel">Streak</span>
-            <b>
-              {streak}
-              <small>{streak === 1 ? 'day' : 'days'}</small>
-            </b>
+        {signedIn && (
+          <div className="rail-streak" title={`${streak}-day study streak`}>
+            <div className="row">
+              <span className="mlabel">Streak</span>
+              <b>
+                {streak}
+                <small>{streak === 1 ? 'day' : 'days'}</small>
+              </b>
+            </div>
+            <div className="wave14" role="img" aria-label="Study activity over the last 14 days">
+              {wave.map((d, i) => (
+                <i
+                  key={d.day}
+                  className={d.h === 0 ? 'off' : i === wave.length - 1 ? 'now' : undefined}
+                  style={{ '--h': Math.max(d.h, 8) } as CSSProperties}
+                />
+              ))}
+            </div>
           </div>
-          <div className="wave14" role="img" aria-label="Study activity over the last 14 days">
-            {wave.map((d, i) => (
-              <i
-                key={d.day}
-                className={d.h === 0 ? 'off' : i === wave.length - 1 ? 'now' : undefined}
-                style={{ '--h': Math.max(d.h, 8) } as CSSProperties}
-              />
-            ))}
-          </div>
-        </div>
+        )}
+        <AccountControl />
         {themeSwitch}
         <div className="rail-status">
           <span className="dot" aria-hidden="true" />
@@ -402,13 +411,16 @@ export default function Layout() {
           <BrandMark size={30} />
           <BrandName sub={false} />
         </Link>
-        <span className="m-streak" title={`${streak}-day study streak`}>
-          <Zap size={14} aria-hidden="true" />
-          <b>{streak}</b>d<span className="sr-only"> study streak</span>
-        </span>
+        {signedIn && (
+          <span className="m-streak" title={`${streak}-day study streak`}>
+            <Zap size={14} aria-hidden="true" />
+            <b>{streak}</b>d<span className="sr-only"> study streak</span>
+          </span>
+        )}
         <button type="button" className="icon-btn m-ibtn" onClick={showPalette} aria-label="Search">
           <Search size={18} aria-hidden="true" />
         </button>
+        <AccountControl compact />
       </header>
 
       {/* ---- syllabus index: a drawer over the page (topic list by phase) ---- */}
@@ -627,6 +639,45 @@ export default function Layout() {
       <div className="sr-only" aria-live="assertive" aria-atomic="true">
         {unlockedNews}
       </div>
+    </div>
+  );
+}
+
+/** Sign in / create an account, or who is signed in and Sign out. `compact`: one icon for the phone top bar. */
+function AccountControl({ compact = false }: { compact?: boolean }) {
+  const session = useSession();
+  const { pathname, search } = useLocation();
+  const next = encodeURIComponent(pathname + search);
+  if (session.status === 'loading') return null;
+  if (session.status === 'out') {
+    return compact ? (
+      <Link to={`/login?next=${next}`} className="icon-btn m-ibtn" aria-label="Sign in">
+        <LogIn size={18} aria-hidden="true" />
+      </Link>
+    ) : (
+      <div className="rail-account">
+        <Link to={`/login?next=${next}`} className="btn btn-sm">
+          <LogIn size={15} aria-hidden="true" /> Sign in
+        </Link>
+        <Link to={`/signup?next=${next}`} className="btn-ghost btn-sm">
+          Create account
+        </Link>
+      </div>
+    );
+  }
+  const out = () => void signOut();
+  return compact ? (
+    <button type="button" className="icon-btn m-ibtn" onClick={out} aria-label={`Sign out ${session.user.name}`}>
+      <LogOut size={18} aria-hidden="true" />
+    </button>
+  ) : (
+    <div className="rail-account">
+      <span className="who" title={session.user.email}>
+        {session.user.name}
+      </span>
+      <button type="button" className="btn-ghost btn-sm" onClick={out}>
+        <LogOut size={15} aria-hidden="true" /> Sign out
+      </button>
     </div>
   );
 }

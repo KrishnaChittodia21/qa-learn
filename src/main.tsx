@@ -25,13 +25,17 @@ import './styles/charts.css'
 import './styles/today.css'
 import './styles/settings.css'
 import './styles/achievements.css'
+import './styles/auth.css'
 import './prism-theme.css'
 import App from './App.tsx'
 import { applyThemeAttrs } from './lib/theme'
 import { getProgress } from './lib/progress'
+import { refreshSession } from './lib/session'
 
 // set data-theme / data-accent before the first paint so there is no flash of the default theme
 applyThemeAttrs(getProgress().settings)
+// who is signed in (the cookie is httpOnly, so only the service can say); signed in, progress starts syncing
+void refreshSession()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node --no-warnings scripts/check-bundle.mjs dist",
     "lint": "oxlint",
     "preview": "vite preview",
     "validate": "node --no-warnings scripts/validate-content.mjs && node --no-warnings scripts/validate-coding.mjs && node --no-warnings scripts/validate-company.mjs",
@@ -14,7 +14,6 @@
     "judge": "node --no-warnings scripts/judge.mjs",
     "test": "node --no-warnings --test 'tests/*.test.ts'",
     "test:e2e": "playwright test",
-    "build:split": "ANSWER_SPLIT=1 vite build --outDir dist-split && node --no-warnings scripts/check-bundle.mjs dist-split",
     "check:bundle": "node --no-warnings scripts/check-bundle.mjs"
   },
   "dependencies": {

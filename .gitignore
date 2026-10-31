@@ -33,3 +33,4 @@ public/judge-results.json
 dist-split
 .env*
 !.env.example
+e2e/.api.log

@@ -51,6 +51,7 @@ import { BarList } from '../components/charts/BarList';
 import { ColumnChart } from '../components/charts/ColumnChart';
 import { LineChart } from '../components/charts/LineChart';
 import { Heatmap } from '../components/charts/Heatmap';
+import { LockedPreview } from '../components/LockedPreview';
 import { StackedBar } from '../components/charts/StackedBar';
 import { C, plural } from '../components/charts/core';
 
@@ -621,26 +622,29 @@ function Signal({ p }: { p: Progress }) {
   const first = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
   return (
     <section className="panel b-sig rise" style={v({ '--i': 5 })} aria-labelledby="sig-t">
-      <div className="p-head">
-        <span className="mlabel" id="sig-t">
-          Signal · 30d
-        </span>
-        <span className={`chip ${streak ? 'pass' : 'skip'}`}>{streak}-day streak</span>
-      </div>
-      <div className="sig-num">
-        <b>{active}</b>
-        <span className="ink2">
-          study days
-          <br />
-          <span className="ink3">best run {best}</span>
-        </span>
-      </div>
-      <Wave30 days={days} />
-      <div className="sig-axis" aria-hidden="true">
-        <span className="coord">{axisDate(first)}</span>
-        <span className="coord">{axisDate(mid)}</span>
-        <span className="coord">TODAY</span>
-      </div>
+      {/* study activity and the streak are account features: dimmed with a sign-up prompt while signed out */}
+      <LockedPreview compact feature="your study streak" why="Every day you study is saved to your account, on any device.">
+        <div className="p-head">
+          <span className="mlabel" id="sig-t">
+            Signal · 30d
+          </span>
+          <span className={`chip ${streak ? 'pass' : 'skip'}`}>{streak}-day streak</span>
+        </div>
+        <div className="sig-num">
+          <b>{active}</b>
+          <span className="ink2">
+            study days
+            <br />
+            <span className="ink3">best run {best}</span>
+          </span>
+        </div>
+        <Wave30 days={days} />
+        <div className="sig-axis" aria-hidden="true">
+          <span className="coord">{axisDate(first)}</span>
+          <span className="coord">{axisDate(mid)}</span>
+          <span className="coord">TODAY</span>
+        </div>
+      </LockedPreview>
     </section>
   );
 }

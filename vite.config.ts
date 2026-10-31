@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 
 // Content modules replaced by their public half, so no answer reaches the bundle (qa-api grades and reveals, M2).
-// shortcut: on only for `npm run build:split` until M2 switches the app to the service; then it becomes the default
+// Dev runs the same way, so a screen that still reads an answer breaks locally, not in production.
 function answerSplit(): Plugin {
   // ?v=<mtime>: Node caches imports, so an edited file is re-read
   const importFresh = (file: string) => import(`${pathToFileURL(file).href}?v=${statSync(file).mtimeMs}`)
@@ -30,7 +30,7 @@ function answerSplit(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), ...(process.env.ANSWER_SPLIT === '1' ? [answerSplit()] : [])],
+  plugins: [react(), answerSplit()],
   // relative asset URLs so the build works from any sub-path, e.g. GitHub Pages' /qa-learn/
   base: './',
   build: {

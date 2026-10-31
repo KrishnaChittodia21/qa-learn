@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, Lightbulb, Play, RotateCcw, Search, Send } from 'lucide-react';
 import { CODING_PROBLEMS } from '../content';
-import type { CodingProblem, Difficulty } from '../types';
+import type { CodingProblem, Difficulty, FollowUp } from '../types';
+import { useReveal } from '../lib/answers';
+import { RevealButton } from '../components/RevealButton';
 import { setDraft, setFlag, useProgress, type Progress } from '../lib/progress';
 import { celebrate } from '../lib/celebrate';
 import { RunnerConsole } from '../components/TestRunner';
@@ -492,6 +494,8 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
   const code = p.drafts[draftKey] ?? q.starter;
   const [hints, setHints] = useState(0);
   const [showSol, setShowSol] = useState(false);
+  // the reference comes from qa-api for a real attempt (lib/answers.ts)
+  const sol = useReveal<{ solution: string; explanation: string; followUps?: FollowUp[] }>('coding', q.id);
   // bumping the key clears the previous results after a reset
   const [runKey, setRunKey] = useState(0);
   const st = problemState(p, q);
@@ -627,9 +631,18 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
                 Hide
               </button>
             </div>
-            <CodeBlock snippet={{ language: 'javascript', title: 'Solution', code: q.solution }} />
-            <Markdown>{q.explanation}</Markdown>
-            <FollowUps items={q.followUps} />
+            {sol.answer ? (
+              <>
+                <CodeBlock snippet={{ language: 'javascript', title: 'Solution', code: sol.answer.solution }} />
+                <Markdown>{sol.answer.explanation}</Markdown>
+                <FollowUps items={sol.answer.followUps} />
+              </>
+            ) : (
+              <>
+                <p className="muted">Try it yourself first: the reference opens once your code differs from the starter.</p>
+                <RevealButton r={sol} attempt={code} starter={q.starter} label="Show the reference solution" what="see the reference solution" />
+              </>
+            )}
           </section>
         )}
 
