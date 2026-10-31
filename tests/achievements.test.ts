@@ -94,6 +94,14 @@ test('struggle badges: failing twice before a pass, fixing a missed question, st
   assert.equal(ev['regression-ranger'].value, 1);
 });
 
+test("the night-owl badge reads the learner's time zone when one is given (the service runs on UTC)", () => {
+  const p = fresh();
+  // 20:30 UTC: 02:00 the next morning in India, 20:30 in London (winter)
+  p.mcq[C.TOPICS[0].test[0].id] = { seen: 1, wrong: 0, lastCorrect: true, lastAt: '2026-01-15T20:30:00.000Z' };
+  assert.equal(A.evaluateAll(p, { ...ctx, timeZone: 'Asia/Kolkata' })['midnight-deploy'].tier, 'standard');
+  assert.equal(A.evaluateAll(p, { ...ctx, timeZone: 'Europe/London' })['midnight-deploy'].tier, null);
+});
+
 test('the first-time-pass badge does not count a pass after a fail', () => {
   const p = fresh();
   const [a, b] = C.TOPICS;

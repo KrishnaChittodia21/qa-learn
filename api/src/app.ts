@@ -12,6 +12,7 @@ import { createAuth, SIGN_IN_FAILS, type Auth } from './auth.ts'
 import type { Config } from './config.ts'
 import { emailChecker, systemDns, type MailDns } from './email-check.ts'
 import { createMailer, type Mailer } from './mail.ts'
+import { progressRoutes } from './progress.ts'
 
 const TAKES_BODY = ['POST', 'PUT', 'PATCH']
 
@@ -199,6 +200,8 @@ export async function buildApp(config: Config, deps: { db: Db; mailer?: Mailer; 
   app.decorate('requireAdmin', async (req: FastifyRequest) => {
     if ((await loadUser(req, true)).role !== 'admin') throw httpError(403, 'FORBIDDEN', 'Admins only')
   })
+
+  await progressRoutes(app, deps.db)
 
   return app
 }

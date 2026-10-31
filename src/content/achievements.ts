@@ -39,6 +39,8 @@ export interface AchievementContext {
   /** companies with at least COMPANY_MIN questions: their question ids */
   companyBank: { company: string; ids: string[] }[];
   totals: { sections: number; cc: number; boe: number; iq: number };
+  /** the learner's IANA time zone; the service passes it (it runs on UTC), the browser leaves it out and uses local time */
+  timeZone?: string;
 }
 
 type Goal = number | ((ctx: AchievementContext, p?: Progress) => number);
@@ -145,14 +147,17 @@ function fullWeekends(days: string[] = []): number {
 }
 
 /** exam attempts and exam answers stamped between 00:00 and 03:59 local time */
-function lateNightCount(p: Progress): number {
+function lateNightCount(p: Progress, timeZone?: string): number {
+  const hourOf = timeZone
+    ? (d: Date) => Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone }).format(d))
+    : (d: Date) => d.getHours();
   const stamps = [
     ...Object.values(p.tests).flatMap((t) => (t.history ?? []).map((h) => h.at)),
     ...Object.values(p.mcq).map((m) => m.lastAt),
   ];
   return stamps.filter((at) => {
     const d = new Date(at);
-    return !Number.isNaN(d.getTime()) && d.getHours() < 4;
+    return !Number.isNaN(d.getTime()) && hourOf(d) < 4;
   }).length;
 }
 
@@ -483,7 +488,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     group: 'fun',
     art: 'moon',
     goal: 1,
-    measure: (p) => lateNightCount(p),
+    measure: (p, ctx) => lateNightCount(p, ctx.timeZone),
     requirement: () => 'Answer an exam between 00:00 and 03:59',
     unit: 'late runs',
   },
