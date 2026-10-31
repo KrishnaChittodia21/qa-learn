@@ -2,6 +2,7 @@ import { MongoClient } from 'mongodb'
 import { buildApp } from './app.ts'
 import { ensureAuthIndexes } from './auth.ts'
 import { loadConfig } from './config.ts'
+import { ensurePracticeIndexes } from './practice.ts'
 import { ensureAnswerKeyIndexes } from './sync-answer-keys.ts'
 
 const config = loadConfig()
@@ -11,7 +12,7 @@ const config = loadConfig()
 const client = new MongoClient(config.mongoUri, { serverSelectionTimeoutMS: 5000, ignoreUndefined: true })
 await client.connect()
 const db = client.db(config.mongoDb)
-await Promise.all([ensureAuthIndexes(db), ensureAnswerKeyIndexes(db)])
+await Promise.all([ensureAuthIndexes(db), ensureAnswerKeyIndexes(db), ensurePracticeIndexes(db)])
 
 const app = await buildApp(config, { db })
 app.addHook('onClose', () => client.close())

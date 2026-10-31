@@ -9,7 +9,7 @@ import { ORIGIN, SECRET } from './helpers.ts'
 
 const config: Config = { ...loadConfig({ MONGODB_URI: 'mongodb://unused', BETTER_AUTH_SECRET: SECRET }), logLevel: 'silent' }
 // these tests never reach the auth routes, so a database that only answers pings is enough
-const fakeDb = (command: () => Promise<unknown>) => ({ db: { command, collection: () => ({}) } as unknown as Db })
+const fakeDb = (command: () => Promise<unknown>) => ({ db: { command, collection: () => ({ find: () => ({ toArray: async () => [] }) }) } as unknown as Db })
 const okDb = fakeDb(async () => ({ ok: 1 }))
 
 test('defaults: the qa_learn database on port 3001, CORS for the local app only', () => {
