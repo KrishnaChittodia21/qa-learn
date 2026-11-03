@@ -417,6 +417,17 @@ a deployed service move to "Later".
 **Done when:** `docs/SECURITY-AUDIT.md` lists every check with evidence, no Critical or High is open, and each
 fix has a test.
 
+**As built:** `docs/SECURITY-AUDIT.md`. SDL has no audit doc to copy, so it uses its own format: findings table,
+then every check with evidence. Findings:
+- **H1, fixed:** Vite dev-server advisories, upgraded to `vite@8.3.4` (pinned). CI runs `npm audit --audit-level=high` for
+  the app and `api/`, so a new High fails the build.
+- **M1, fixed:** `qa-api` listened on every interface, now `127.0.0.1` unless `HOST` is set (tested). The proxy and
+  Playwright use `127.0.0.1`.
+- **L1, open until M12:** no CSP on Pages.
+- **L2, L3, accepted:** learner code in a same-origin worker; caret ranges pinned by the lockfile.
+
+Everything else passed with an existing test as evidence. "No `/api` calls in the static build" waits for M12.
+
 ### M12 · GitHub Pages release (static build) · 6–9 h
 
 The site stays on GitHub Pages (decision 2026-11-04). Pages serves static files only, so it can't run qa-api: since

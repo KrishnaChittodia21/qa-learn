@@ -4,6 +4,8 @@ export interface Config {
   mongoUri: string
   mongoDb: string
   port: number
+  /** interface to listen on: this machine only by default (one learner); a deployment sets HOST=0.0.0.0 */
+  host: string
   /** the frontend's origin; the service is reached through it (`/api/*` is rewritten), so login cookies are first-party */
   appUrl: string
   /** browser origins allowed to call the service (the frontend) */
@@ -64,6 +66,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     mongoUri: env.MONGODB_URI ?? '',
     mongoDb: env.MONGODB_DB || 'qa_learn',
     port: whole('PORT', 3001),
+    host: env.HOST?.trim() || '127.0.0.1',
     appUrl,
     corsOrigins: origins,
     trustProxyHops: whole('TRUST_PROXY_HOPS', 0),

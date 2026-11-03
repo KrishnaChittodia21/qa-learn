@@ -24,6 +24,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # a known high or critical advisory in any dependency fails the run (security audit, M11)
+      - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run validate
       - run: npm test
@@ -49,6 +51,7 @@ jobs:
       # the service imports shared rules and content from the app (src/), which need the app's packages
       - run: npm ci
       - run: npm ci --prefix api
+      - run: npm audit --audit-level=high --prefix api
       - run: npx tsc --noEmit -p api
       - run: npm test --prefix api
 

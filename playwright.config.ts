@@ -23,7 +23,7 @@ export default defineConfig({
   webServer: [
     {
       command: `npm --prefix api run sync:answers --silent && node --no-warnings api/src/server.ts > ${API_LOG} 2>&1`,
-      url: `http://localhost:${API_PORT}/health`,
+      url: `http://127.0.0.1:${API_PORT}/health`,
       reuseExistingServer: !process.env.CI,
       env: {
         MONGODB_URI: process.env.TEST_MONGODB_URI ?? 'mongodb://127.0.0.1:27017',
@@ -39,7 +39,7 @@ export default defineConfig({
       command: `npx vite --port ${PORT} --strictPort`,
       url: `http://localhost:${PORT}`,
       reuseExistingServer: !process.env.CI,
-      env: { API_URL: `http://localhost:${API_PORT}` },
+      env: { API_URL: `http://127.0.0.1:${API_PORT}` },
     },
   ],
 });

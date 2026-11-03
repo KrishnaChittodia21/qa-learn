@@ -12,9 +12,11 @@ const config: Config = { ...loadConfig({ MONGODB_URI: 'mongodb://unused', BETTER
 const fakeDb = (command: () => Promise<unknown>) => ({ db: { command, collection: () => ({ find: () => ({ toArray: async () => [] }) }) } as unknown as Db })
 const okDb = fakeDb(async () => ({ ok: 1 }))
 
-test('defaults: the qa_learn database on port 3001, CORS for the local app only', () => {
+test('defaults: the qa_learn database on port 3001, this machine only, CORS for the local app only', () => {
   assert.equal(config.mongoDb, 'qa_learn')
   assert.equal(config.port, 3001)
+  // not reachable from the local network unless HOST says so (security audit, M11)
+  assert.equal(config.host, '127.0.0.1')
   assert.deepEqual(config.corsOrigins, [ORIGIN])
 })
 

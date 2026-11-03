@@ -41,5 +41,5 @@ export default defineConfig({
     assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined),
   },
   // same-origin /api in dev, like the production rewrite, so login cookies are first-party; 3001 so SDL's api (3000) can run too
-  server: { proxy: { '/api': process.env.API_URL ?? 'http://localhost:3001' } },
+  server: { proxy: { '/api': process.env.API_URL ?? 'http://127.0.0.1:3001' } },
 })
