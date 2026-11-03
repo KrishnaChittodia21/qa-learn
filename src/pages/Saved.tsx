@@ -1,5 +1,5 @@
 // Saved for later (M3): everything shortlisted with the ☆ button. Adapted from system-design-learn's Saved page.
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Building2, Calculator, Check, ChevronDown, Code2, FlaskConical, Mic, Star, Trash2, Undo2 } from 'lucide-react';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS, TOPIC_BY_ID } from '../content';
@@ -100,7 +100,7 @@ export default function SavedPage() {
 
   return (
     <div className="page saved-page">
-      <header className="saved-head">
+      <header className="saved-head rise">
         <span className="mlabel">
           <Star size={13} aria-hidden="true" /> Saved for later
         </span>
@@ -108,7 +108,7 @@ export default function SavedPage() {
         <p className="muted">Everything you starred to come back to. Open it, then mark it done when you have.</p>
       </header>
 
-      <div className="saved-tools">
+      <div className="saved-tools rise" style={{ '--i': 1 } as CSSProperties}>
         <div className="saved-chips" role="group" aria-label="Show">
           {FILTERS.map((f) => (
             <button key={f.id} type="button" className={`chip ${filter === f.id ? 'on' : ''}`} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
@@ -122,7 +122,7 @@ export default function SavedPage() {
       </div>
 
       {shown.length ? (
-        <ul className="saved-list" aria-label="Saved items">
+        <ul className="saved-list rise" style={{ '--i': 2 } as CSSProperties} aria-label="Saved items">
           {shown.map((r) => {
             const Icon = ICON[r.item.kind];
             return (

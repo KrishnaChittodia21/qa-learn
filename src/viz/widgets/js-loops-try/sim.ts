@@ -134,7 +134,7 @@ export function simulate(p: Params): LtFrame[] {
       items = ['chromium', 'firefox', 'webkit'].map((v, i) => ({ key: String(i), val: `'${v}'`, kind: 'index' }));
       snap(0, 'An array is an object with index keys 0, 1, 2 and a length of 3.');
       items.push({ key: 'extra', val: "'oops'", kind: 'prop' });
-      snap(1, 'An extra property is added (libraries and polyfills do this). It is NOT an index, so length stays 3.', stop ? undefined : 'Which of the three loops will visit extra?');
+      snap(1, 'An extra property is added (libraries and polyfills do this). It is NOT an index, so length stays 3.');
       const L = [2, 5 + s, 8 + s * 2];
       // for...of
       col = 0;
@@ -144,17 +144,17 @@ export function simulate(p: Params): LtFrame[] {
         const v = items[i].val;
         if (stop && i === 1) {
           cols[0].state = 'broke';
-          snap(L[0] + 1, `b = ${v} matches: break exits the for...of loop immediately. webkit is never visited.`);
+          snap(L[0] + 1, `b = ${v} matches: break exits the for...of loop immediately. webkit is never visited.`, 'for...in comes next on the same array. What will k hold on its first visit?');
           break;
         }
         out.push(v.slice(1, -1));
         cols[0].got.push({ text: v });
-        snap(L[0] + 1 + s, `for...of asks the array's iterator for the next VALUE: b = ${v}.`, i === 0 ? 'for...in comes next on the same array. What will k hold on its first visit?' : undefined);
+        snap(L[0] + 1 + s, `for...of asks the array's iterator for the next VALUE: b = ${v}.`, !stop && i === 2 ? 'The array also has an extra property. Will for...of visit it?' : undefined);
       }
       if (!stop) {
         cursor = -1;
         cols[0].state = 'done';
-        snap(L[0], 'The iterator is done after index 2. for...of never sees extra: the array iterator yields indices 0..length-1 only.');
+        snap(L[0], 'The iterator is done after index 2. for...of never sees extra: the array iterator yields indices 0..length-1 only.', 'for...in comes next on the same array. What will k hold on its first visit?');
       }
       // for...in
       col = 1;
@@ -275,13 +275,13 @@ export function simulate(p: Params): LtFrame[] {
   go('try');
   snap(tryL, 'Enter the try block.');
   log('try: add to cart');
-  snap(tryL + 1, 'First statement runs normally.', p.flow === 'ok' ? 'Nothing will throw in this run. Will the finally block still run?' : p.flow === 'return' ? "Next line is return 'paid'. Will finally still run?" : 'The next line throws. Which lines run next?');
+  snap(tryL + 1, 'First statement runs normally.', p.flow === 'ok' ? undefined : p.flow === 'return' ? "Next line is return 'paid'. Will finally still run?" : 'The next line throws. Which lines run next?');
   if (p.flow === 'ok') {
     log('try: pay');
     snap(tryL + 2, 'Second statement runs; the try block completes normally.');
     mark('try', 'ran');
     mark('catch', 'skipped');
-    snap(catchL, 'No error was thrown, so the catch block is skipped entirely.');
+    snap(catchL, 'No error was thrown, so the catch block is skipped entirely.', 'Nothing threw. Will the finally block still run?');
   } else if (p.flow === 'return') {
     pending = { kind: 'return', text: "'paid'" };
     snap(tryL + 2, "return 'paid' is evaluated, but the function does NOT leave yet: the return is parked as a pending completion because a finally block is waiting.");
@@ -299,13 +299,13 @@ export function simulate(p: Params): LtFrame[] {
     snap(catchL + 1, 'catch logs err.message.');
     if (p.flow !== 'throw') {
       pending = { kind: 'throw', text: "Error('card declined')" };
-      snap(catchL + 2, 'throw err rethrows the same error. It is parked as pending: finally must run first.', p.flow === 'finallyReturn' ? 'finally contains a return. What will the caller receive?' : 'Does the caller see this error?');
+      snap(catchL + 2, 'throw err rethrows the same error. It is parked as pending: finally must run first.', 'An error is pending. Will finally still run?');
     }
   }
   go('finally');
   snap(finL, pending ? `finally runs even though a ${pending.kind} is pending.` : 'finally runs: it always does, error or not.');
   log('finally: clear cart');
-  snap(finL + 1, 'The cleanup runs: log out, delete the test booking, close the page.', p.flow === 'ok' || p.flow === 'return' ? "finally is done. Does console.log('after try/catch') run next?" : undefined);
+  snap(finL + 1, 'The cleanup runs: log out, delete the test booking, close the page.', p.flow === 'finallyReturn' ? 'The next line in finally is a return. What happens to the pending error?' : "finally is done. Does console.log('after try/catch') run next?");
   if (p.flow === 'finallyReturn') {
     pending = { kind: 'return', text: "'cleaned up'" };
     snap(finL + 2, "return inside finally REPLACES the pending throw. The error is silently swallowed, which would turn a failing test green.");

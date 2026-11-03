@@ -106,10 +106,9 @@ export function simulate({ workers: W, twoUsers, mode }: Params): Frame[] {
   push(
     'config',
     `The runner reads playwright.config.ts: testDir, workers: ${W}, projects: [chromium], reporter: 'html', headless: ${mode === 'headless'}. It finds ${total} tests in 3 files.`,
-    `${total} tests, ${W} worker${W > 1 ? 's' : ''}. How many browsers will Playwright launch: ${total}, ${W}, or 1?`,
   );
   workers = workers.map((w) => ({ ...w, spawned: true }));
-  push('spawn', `The runner starts ${W} worker process${W > 1 ? 'es' : ''} (separate OS processes). Each takes a whole file at a time: ${queues.map((q, k) => `worker ${k + 1} → ${[...new Set(q.map((t) => t.file))].join(', ')}`).join('; ')}.`);
+  push('spawn', `The runner starts ${W} worker process${W > 1 ? 'es' : ''} (separate OS processes). Each takes a whole file at a time: ${queues.map((q, k) => `worker ${k + 1} → ${[...new Set(q.map((t) => t.file))].join(', ')}`).join('; ')}.`, `${total} tests, ${W} worker${W > 1 ? 's' : ''}. How many browsers will Playwright launch?`);
   workers = workers.map((w) => ({ ...w, browser: true }));
   push(
     'launch',

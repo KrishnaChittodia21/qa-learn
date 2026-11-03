@@ -33,7 +33,7 @@ test('a new visitor can study the first topic; exams and account pages ask for a
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: /mark all as read/ }).click();
   await page.getByRole('button', { name: /Set up exam/ }).click();
-  // during a route change the outgoing page-host briefly renders the new page too (Layout.tsx, fixed in M6)
+  // one copy only: the outgoing page must not render the new route too (fixed in M6)
   const signUp = page.getByRole('heading', { name: 'Sign up to take graded exams' });
   await expect(signUp).toHaveCount(1);
   await expect(signUp).toBeVisible();

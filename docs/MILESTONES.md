@@ -253,6 +253,21 @@ celebrates exactly once.
 **Done when:** each phase has at least one interactive widget per topic, page transitions run at 60 fps on a
 mid-range phone (no layout properties animated), and reduced motion has no movement anywhere.
 
+**As built:**
+- Duplicate page fixed: the route wrapper in `Layout.tsx` is a keyed `motion.div` without `AnimatePresence`
+  (with no exit animation it only kept the old wrapper alive, rendering the new page twice). The fade-in is
+  unchanged and only animates opacity and transform.
+- Staggered entrances (`.rise` + `--i`, CSS) were already on every page; Saved and Profile now use them too.
+  No GSAP port: the app already had CSS staggers, `motion` and `CountUp`.
+- Coverage was already complete: all 35 topics have a widget, and every widget has its own controls.
+  `tests/viz.test.ts` now guards that, and checks that each placement points at a real section heading.
+- "Your turn" predict prompts already existed in every widget. Many sat one frame too early, so "See what
+  happens" didn't show the answer. Fixed across 16 simulations, checked by stepping through every setting
+  combination and pairing each question with the next frame's caption. No predict is on a last frame.
+- Reduced motion: `MotionConfig reducedMotion="user"` drops the transform part of `motion` animations, and
+  `base.css` cuts CSS animations to 0.01 ms.
+- Not done: no new widgets (none were missing), and no 60 fps measurement on a real phone.
+
 ### M7 · Shorts · 14–20 h
 
 - **Engine:** port `ShortPlayer.tsx`, `ShortThumb.tsx`, `lib/shorts.ts`, the beat kit (`counter`, `spike`, `race`,

@@ -123,16 +123,8 @@ export function simulate({ scenario: sc, timing }: Params): Frame[] {
       step(130, { line: 1, waiting: kind }, `130 ms: waitForEvent('${kind}') starts listening and returns a promise. No await, so the test moves straight on to the click.`, { lane: 'test', label: `wait(${kind})`, tone: 'accent' });
   }
   const clickLine = armsFirst ? 2 : 1;
-  const p1: Record<Scenario, string> = {
-    'dialog-before': 'The button calls confirm(). A listener that accepts is registered. What will #result say?',
-    'dialog-after': `No dialog listener exists yet, and confirm() will open ${delayed ? '300 ms after the click' : 'during the click'}. Who answers it?`,
-    'dialog-noop': 'The listener only logs the message; it never calls accept() or dismiss(). Does the click finish?',
-    'popup-before': 'The popup waiter was armed before the click. Will popupPromise receive the new tab?',
-    'popup-after': `Nobody is waiting for a popup yet, and the tab opens ${delayed ? '300 ms after the click' : 'during the click'}. Will line 2 catch it?`,
-    download: 'The download waiter is armed. After the click, where is the downloaded file?',
-  };
-  step(140, { line: clickLine, click: 'running' }, `140 ms: click() runs its actionability checks (visible, stable, receives events, enabled): all pass.`, { lane: 'test', label: 'click', tone: 'accent' }, p1[sc]);
-  step(160, {}, `160 ms: the mouse click is dispatched; ${delayed ? appLater : appAct}.`, { lane: 'browser', label: 'mousedown/up', tone: 'muted' });
+  step(140, { line: clickLine, click: 'running' }, `140 ms: click() runs its actionability checks (visible, stable, receives events, enabled): all pass.`, { lane: 'test', label: 'click', tone: 'accent' });
+  step(160, {}, `160 ms: the mouse click is dispatched; ${delayed ? appLater : appAct}.`, { lane: 'browser', label: 'mousedown/up', tone: 'muted' }, delayed || isDialog ? undefined : armsFirst ? `The ${kind} waiter was armed before the click. Will its promise receive the ${kind === 'popup' ? 'new tab' : 'download'}?` : 'No popup waiter exists yet. Is the popup event caught?');
 
   const after = () => {
     // click returns, then (if not armed first) the late registration
@@ -147,7 +139,7 @@ export function simulate({ scenario: sc, timing }: Params): Frame[] {
       if (isDialog)
         step(190, { line: 2, listeners: 1 }, `190 ms: only now is page.on('dialog') registered${delayed ? '; the confirm has not opened yet' : ', but the confirm is already gone'}.`, { lane: 'test', label: 'on(dialog)', tone: delayed ? 'warn' : 'bad' });
       else
-        step(190, { line: 2, waiting: 'popup' }, `190 ms: waitForEvent('popup') starts now. It only sees popups that open from this moment on.`, { lane: 'test', label: 'wait(popup)', tone: delayed ? 'warn' : 'bad' }, delayed ? undefined : 'The tab already opened at 170 ms. What is this waitForEvent waiting for?');
+        step(190, { line: 2, waiting: 'popup' }, `190 ms: waitForEvent('popup') starts now. It only sees popups that open from this moment on.`, { lane: 'test', label: 'wait(popup)', tone: delayed ? 'warn' : 'bad' }, delayed ? `The tab opens at ${A} ms. Will this late waiter catch it?` : 'The tab already opened at 170 ms. What is this waitForEvent waiting for?');
     }
   };
 
@@ -157,18 +149,17 @@ export function simulate({ scenario: sc, timing }: Params): Frame[] {
     const accepts = sc !== 'dialog-noop';
     const expectLine = 3;
     const openDialog = () => {
-      step(A, { page: 'dialog' }, `${A} ms: confirm() opens a modal dialog. The page's JavaScript is frozen until someone presses OK or Cancel.`, { lane: 'browser', label: 'dialog', tone: 'warn' });
+      step(A, { page: 'dialog' }, `${A} ms: confirm() opens a modal dialog. The page's JavaScript is frozen until someone presses OK or Cancel.`, { lane: 'browser', label: 'dialog', tone: 'warn' }, handled ? 'A dialog listener exists. Does Playwright still auto-dismiss the confirm?' : 'No dialog listener is registered yet. Who closes this confirm?');
       if (!handled) {
         step(A + 1, { token: 'auto' }, `${A + 1} ms: 'dialog' event with ZERO listeners, so Playwright auto-dismisses it (Cancel for a confirm).`, { lane: 'browser', label: 'auto-dismiss', tone: 'bad' });
         step(A + 5, { page: 'ready', result: 'You clicked: Cancel' }, `${A + 5} ms: confirm() returns false; the app writes "You clicked: Cancel".`);
         return;
       }
-      if (sc === 'dialog-before') frames[frames.length - 1].predict = 'The page is frozen inside confirm(). Does Playwright auto-dismiss it this time?';
       step(A + 1, { token: 'handler' }, `${A + 1} ms: 'dialog' event: a listener exists, so Playwright does NOT auto-dismiss; it hands the Dialog to your handler.`, { lane: 'test', label: 'handler', tone: 'accent' });
       if (accepts) {
         step(A + 5, { page: 'ready', result: 'You clicked: Ok' }, `${A + 5} ms: the handler calls d.accept(); confirm() returns true and the app writes "You clicked: Ok".`, { lane: 'test', label: 'accept()', tone: 'good' });
       } else {
-        step(A + 3, {}, `${A + 3} ms: the handler logs "I am a JS Confirm" and returns. The dialog is still open; nothing will ever close it.`, { lane: 'test', label: 'log only', tone: 'bad' });
+        step(A + 3, {}, `${A + 3} ms: the handler logs "I am a JS Confirm" and returns. The dialog is still open; nothing will ever close it.`, { lane: 'test', label: 'log only', tone: 'bad' }, delayed ? 'The handler returned without accept() or dismiss(). Will #result ever change?' : 'The handler returned without accept() or dismiss(). Does the click finish?');
       }
     };
     if (!delayed) {
@@ -182,7 +173,7 @@ export function simulate({ scenario: sc, timing }: Params): Frame[] {
       }
     } else {
       after();
-      step(200, { line: expectLine }, `200 ms: toHaveText() starts retrying: #result is still empty.`, { lane: 'test', label: 'expect…', tone: 'accent' }, sc === 'dialog-after' ? 'The listener was registered at 190 ms and the confirm opens at 465 ms. Accepted or auto-dismissed?' : undefined);
+      step(200, { line: expectLine }, `200 ms: toHaveText() starts retrying: #result is still empty.`, { lane: 'test', label: 'expect…', tone: 'accent' });
       openDialog();
       if (sc === 'dialog-noop') {
         step(1000, {}, `1 s: the dialog is still open, the app is frozen inside confirm(), and #result never changes.`, undefined, 'Will the assertion recover?');
@@ -231,9 +222,9 @@ export function simulate({ scenario: sc, timing }: Params): Frame[] {
       if (caught) {
         const L = armsFirst ? 3 : 2;
         if (!delayed && armsFirst) step(190, { line: 3 }, `190 ms: await popupPromise returns at once: the promise already resolved at 170 ms.`, { lane: 'test', label: 'popup ✓', tone: 'good' });
-        step(s.t + 20, { line: L + 1 }, `${s.t + 20} ms: toHaveTitle('New Window') on the popup. It is still loading; the web-first assertion retries.`, { lane: 'test', label: 'expect', tone: 'accent' }, armsFirst ? undefined : 'This test is about to pass. Is it a correct test?');
+        step(s.t + 20, { line: L + 1 }, `${s.t + 20} ms: toHaveTitle('New Window') on the popup. It is still loading; the web-first assertion retries.`, { lane: 'test', label: 'expect', tone: 'accent' });
         step(s.t + 200, { status: 'pass' }, `${s.t + 200} ms: the popup finishes loading with title "New Window"; the assertion passes.`, { lane: 'browser', label: 'load', tone: 'good' });
-        step(s.t, {}, 'Both tabs live in the same BrowserContext (same cookies). context.pages() now has 2 pages; the original page is untouched.');
+        step(s.t, {}, 'Both tabs live in the same BrowserContext (same cookies). context.pages() now has 2 pages; the original page is untouched.', undefined, armsFirst ? undefined : 'This test passed. Would it still pass if the tab opened instantly?');
         step(
           s.t,
           {},
@@ -242,14 +233,14 @@ export function simulate({ scenario: sc, timing }: Params): Frame[] {
             : 'Passed only because the tab opened 300 ms late. With an instant popup (Timing: immediately) the event fires before line 2 and the test times out: flaky.',
         );
       } else {
-        step(1000, {}, `1 s: waitForEvent('popup') is still waiting for a SECOND popup that will never come.`, undefined, 'How does this end?');
-        step(2000, {}, `2 s: context.pages() would list 2 pages: the tab is open and loaded. Only the EVENT was missed; waitForEvent never replays past events.`);
+        step(1000, {}, `1 s: waitForEvent('popup') is still waiting for a SECOND popup that will never come.`);
+        step(2000, {}, `2 s: context.pages() would list 2 pages: the tab is open and loaded. Only the EVENT was missed; waitForEvent never replays past events.`, undefined, 'The tab is open but the waiter never saw it. How does this test end?');
         step(TEST_TIMEOUT, { status: 'fail' }, `30 s: "Test timeout of 30000ms exceeded" while waiting for event "popup". The tab was open the whole time.`, { lane: 'test', label: 'timeout', tone: 'bad' });
         step(s.t, {}, 'Fix: const popupPromise = page.waitForEvent(\'popup\') BEFORE the click, then await popupPromise after it.');
       }
     } else {
-      if (!delayed) step(190, { line: 3 }, `190 ms: await downloadPromise returns the Download at once (it resolved at 170 ms).`, { lane: 'test', label: 'download ✓', tone: 'good' });
-      else step(A + 5, {}, `${A + 5} ms: await downloadPromise resolves with the Download.`, { lane: 'test', label: 'download ✓', tone: 'good' });
+      if (!delayed) step(190, { line: 3 }, `190 ms: await downloadPromise returns the Download at once (it resolved at 170 ms).`, { lane: 'test', label: 'download ✓', tone: 'good' }, 'Where are the downloaded bytes stored right now?');
+      else step(A + 5, {}, `${A + 5} ms: await downloadPromise resolves with the Download.`, { lane: 'test', label: 'download ✓', tone: 'good' }, 'Where are the downloaded bytes stored right now?');
       step(s.t + 10, { line: 4 }, `${s.t + 10} ms: suggestedFilename() is "some-file.txt" (from the server). The bytes sit in a temporary folder owned by the context.`);
       step(s.t + 40, { line: 4, download: 'saved' }, `${s.t + 40} ms: saveAs() copies the file to test-results/…/some-file.txt; now you can read it with fs and assert on it.`, { lane: 'test', label: 'saveAs', tone: 'good' }, 'The test ends now. What happens to the temporary file when the context closes?');
       step(s.t + 60, { download: 'deleted', status: 'pass' }, `${s.t + 60} ms: test ends; the context closes and its temporary downloads are deleted. Only the saveAs() copy survives.`, { lane: 'browser', label: 'ctx closed', tone: 'muted' });

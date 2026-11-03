@@ -1,6 +1,6 @@
 // Profile (M3): picture, name, password, feedback, delete account. Adapted from system-design-learn's Profile page;
 // exam and appearance settings stay on the Settings page, and the admin lists come with the Admin page (M9).
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { KeyRound, LogOut, MessageSquare, SlidersHorizontal, Trash2, TriangleAlert, Upload, UserRound } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
@@ -412,7 +412,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page pf-page">
-      <header className="saved-head">
+      <header className="saved-head rise">
         <span className="mlabel">
           <UserRound size={13} aria-hidden="true" /> Profile
         </span>
@@ -421,7 +421,7 @@ export default function ProfilePage() {
           <LogOut size={15} aria-hidden="true" /> Sign out
         </button>
       </header>
-      <div className="pf-layout">
+      <div className="pf-layout rise" style={{ '--i': 1 } as CSSProperties}>
         <nav className="pf-nav panel flat" aria-label="Profile sections">
           {PANES.map((it) => (
             <button

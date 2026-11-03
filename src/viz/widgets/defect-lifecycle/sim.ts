@@ -104,7 +104,7 @@ export function simulate({ scenario, bug }: Params): Frame[] {
   go('New', 'tester', 'unassigned', 'tester: attached video + HAR log',
     'A good report is reproducible on its own: exact steps, test data, build number and evidence. Before saving, the tester searched for an existing ticket.');
 
-  const triagePredict = 'At triage the lead decides what happens to a New bug. Which outcomes are possible besides "assign it"?';
+  const triagePredict = 'Triage is done. What status will BUG-311 have next?';
 
   if (sc === 'duplicate') {
     go('New', 'lead', 'unassigned', 'lead: triage', 'Triage: the QA/dev lead reviews New bugs daily, checks validity, sets priority and looks for duplicates.', triagePredict);
@@ -114,10 +114,10 @@ export function simulate({ scenario, bug }: Params): Frame[] {
       'The tester copies anything new (a second way to trigger it, the video) onto BUG-298 so no information is lost.');
     go('Closed', 'lead', '—', 'lead: closed as duplicate',
       'BUG-311 is Closed as a duplicate. Only one ticket is worked on, so developer effort and metrics are not double-counted.',
-      'BUG-311 is closed, but the defect still exists. How will the tester know the scenario from BUG-311 is really fixed?');
+      'BUG-311 is closed, but the defect still exists. Will anyone work on it now?');
     go('Assigned', 'lead', 'dev: Arjun', 'BUG-298: assigned to Arjun', 'Following the original: BUG-298 is Assigned to developer Arjun.');
     go('Open', 'developer', 'dev: Arjun', 'BUG-298: Arjun investigating', 'BUG-298 Open: Arjun reproduces it and finds the root cause.');
-    go('Fixed', 'developer', 'dev: Arjun', 'BUG-298: fix in build 2.4.1', 'BUG-298 Fixed: the fix is code-reviewed and deployed to the test environment in build 2.4.1.');
+    go('Fixed', 'developer', 'dev: Arjun', 'BUG-298: fix in build 2.4.1', 'BUG-298 Fixed: the fix is code-reviewed and deployed to the test environment in build 2.4.1.', 'How will the tester check that the BUG-311 scenario is fixed too?');
     go('Retest', 'tester', 'qa: Priya', 'BUG-298: retest incl. BUG-311 steps',
       'BUG-298 Retest: the tester runs the confirmation test with the steps from BOTH tickets, plus regression around checkout.');
     go('Verified', 'tester', 'qa: Priya', 'BUG-298: verified', 'Both reproduction paths now pass: BUG-298 is Verified.');

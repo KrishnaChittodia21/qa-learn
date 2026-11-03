@@ -114,8 +114,8 @@ export function simulate(p: Params): ArrFrame[] {
 
   if (p.method === 'map' || p.method === 'filter' || p.method === 'reduce') {
     const intro: Record<string, [string, string]> = {
-      map: [`${c}: map calls the callback once per item and collects every return value into a NEW array of the same length.`, 'Will the original array change after map?'],
-      filter: [`${c}: filter calls the predicate once per item and keeps the items for which it returns a truthy value.`, `How many of ${arr(input)} will survive?`],
+      map: [`${c}: map calls the callback once per item and collects every return value into a NEW array of the same length.`, `What will the callback return for ${show(input[0])}?`],
+      filter: [`${c}: filter calls the predicate once per item and keeps the items for which it returns a truthy value.`, `Will ${show(input[0])} pass the predicate?`],
       reduce: [`${c}: reduce threads an accumulator through every call; the initial value 0 is the first acc.`, 'What is acc after the first call?'],
     };
     if (p.method === 'reduce') acc = 0;
@@ -176,14 +176,14 @@ export function simulate(p: Params): ArrFrame[] {
     const stopOn = m === 'every' ? false : true;
     const what = m === 'find' ? 'the first item where the predicate is true (or undefined)' : m === 'some' ? 'true as soon as ONE call returns true' : 'false as soon as ONE call returns false';
     push(`${c}: ${m} returns ${what}, then STOPS calling the callback.`);
-    push(`Each call receives (x, i, array) and asks: is the value > ${t}?${p.preset === 'prices' ? ' The price strings are converted with Number(p.slice(1)) first.' : ''}`, '', `How many times will the callback be called on ${arr(input)}?`);
+    push(`Each call receives (x, i, array) and asks: is the value > ${t}?${p.preset === 'prices' ? ' The price strings are converted with Number(p.slice(1)) first.' : ''}`);
     let stopAt = -1;
     for (let i = 0; i < input.length; i++) {
       const v = input[i];
       const r = pred(v);
       set(i, 'active');
       calls++;
-      push(`Call ${calls}: is ${show(v)}${typeof v === 'string' ? ` (→ ${num(v)})` : ''} > ${t}? ${r}.`, `(x = ${show(v)}, i = ${i}) → ${r}`);
+      push(`Call ${calls}: is ${show(v)}${typeof v === 'string' ? ` (→ ${num(v)})` : ''} > ${t}? ${r}.`, `(x = ${show(v)}, i = ${i}) → ${r}`, i === 0 ? `Does ${m} stop here or keep going?` : i === input.length - 1 && r !== stopOn ? `The last item does not match either. What does ${m} return?` : undefined);
       if (r === stopOn) {
         set(i, 'hit');
         stopAt = i;
@@ -195,7 +195,7 @@ export function simulate(p: Params): ArrFrame[] {
       if (i === input.length - 1) {
         result = m === 'find' ? 'undefined' : String(m === 'every');
         push(`No ${stopOn ? 'true' : 'false'} anywhere, so ${m} checks all ${input.length} items and returns ${result}.`, '', undefined);
-      } else push(`${r}: keep going to index ${i + 1}.`, `(x = ${show(v)}, i = ${i}) → ${r}`, i === input.length - 2 ? 'Last item next. What will the method return if it does not match?' : undefined);
+      } else push(`${r}: keep going to index ${i + 1}.`, `(x = ${show(v)}, i = ${i}) → ${r}`);
     }
     if (stopAt >= 0 && stopAt < input.length - 1) {
       for (let i = stopAt + 1; i < input.length; i++) {
@@ -228,10 +228,9 @@ export function simulate(p: Params): ArrFrame[] {
       ? `${c}: the comparator returns a negative number if a comes first, positive if b comes first, 0 to keep order.`
       : `${c} with NO comparator converts every item to a string and compares UTF-16 code units, like a dictionary.`,
     '',
-    p.comparator ? 'compare(a, b) returns a positive number. Who goes first?' : `What does ${arr(input)}.sort() return?`,
+    `Compared ${p.comparator ? 'as numbers' : 'as strings'}, will ${show(input[0])} and ${show(input[1])} swap?`,
   );
   const order = items.map((x) => x.id);
-  let askedSwap = false;
   for (let i = 1; i < order.length; i++) {
     let j = i;
     while (j > 0) {
@@ -245,19 +244,18 @@ export function simulate(p: Params): ArrFrame[] {
       const why = p.comparator
         ? `${num(av)} - ${num(bv)} = ${Number((num(av) - num(bv)).toFixed(2))}`
         : `'${av}' vs '${bv}': ${firstDiff(String(av), String(bv))}`;
-      const ask = !askedSwap && r > 0;
-      if (ask) askedSwap = true;
       if (r > 0) {
         [order[j - 1], order[j]] = [order[j], order[j - 1]];
         order.forEach((id, k) => (items[id].slot = k));
       }
-      push(r > 0 ? `compare(${show(av)}, ${show(bv)}): ${why} → positive, so swap.` : `compare(${show(av)}, ${show(bv)}): ${why} → ${r === 0 ? 'zero' : 'negative'}, already in order; this pass stops.`, `compare(a = ${show(av)}, b = ${show(bv)}) → ${r > 0 ? '+' : r < 0 ? '−' : '0'}`, ask ? (p.comparator ? 'Which item will end up last?' : 'These are compared as strings. Which item will end up last?') : undefined, [a.id, b.id]);
+      push(r > 0 ? `compare(${show(av)}, ${show(bv)}): ${why} → positive, so swap.` : `compare(${show(av)}, ${show(bv)}): ${why} → ${r === 0 ? 'zero' : 'negative'}, already in order; this pass stops.`, `compare(a = ${show(av)}, b = ${show(bv)}) → ${r > 0 ? '+' : r < 0 ? '−' : '0'}`, undefined, [a.id, b.id]);
       a.state = b.state = 'idle';
       if (r <= 0) break;
       j--;
     }
   }
   items.forEach((x) => (x.state = 'done'));
+  frames[frames.length - 1].predict = 'What is the final order of the array?';
   const sorted = order.map((id) => input[id]);
   result = arr(sorted);
   push(
