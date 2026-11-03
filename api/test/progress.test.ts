@@ -117,3 +117,26 @@ test("one account can never read or change another's progress", { skip }, async 
   await bob.req('PATCH', '/api/progress', batch(0, [{ op: 'reset' }]))
   assert.equal((await ada.req('GET', '/api/progress')).json().progress.sections[t.id].length, t.sections.length)
 })
+
+test('Shorts and step lessons sync: watched, quiz result and step misses are stored; bad values are refused', { skip }, async () => {
+  const me = await verifiedUser(app, outbox, 'shorts@example.com')
+  const res = await me.req('PATCH', '/api/progress', batch(0, [
+    { op: 'short', id: 'test-pyramid', event: 'quiz-first' },
+    { op: 'short', id: 'test-pyramid', event: 'watched' },
+    { op: 'steps', topicId: t.id, index: 0, missed: 2 },
+    { op: 'saved', action: 'add', kind: 'short', ref: 'test-pyramid' },
+  ]))
+  assert.equal(res.statusCode, 200, res.body)
+  const p = (await me.req('GET', '/api/progress')).json().progress
+  assert.equal(p.shorts['test-pyramid'].quiz, 'first')
+  assert.equal(p.shorts['test-pyramid'].day, today())
+  assert.equal(p.steps[`${t.id}:0`].missed, 2)
+  assert.equal(p.saved[0].kind, 'short')
+  assert.ok(res.json().earned.some((e: { id: string }) => e.id === 'opening-scene'), 'the first watched Short earns its badge on the server too')
+
+  for (const op of [
+    { op: 'short', id: 'test-pyramid', event: 'skipped' },
+    { op: 'steps', topicId: t.id, index: 0, missed: -1 },
+    { op: 'steps', topicId: t.id, index: 0, missed: 2, extra: true },
+  ]) assert.equal((await me.req('PATCH', '/api/progress', batch(1, [op]))).statusCode, 400, JSON.stringify(op))
+})

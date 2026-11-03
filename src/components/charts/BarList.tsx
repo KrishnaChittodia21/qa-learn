@@ -71,8 +71,12 @@ export function BarList({
           return (
             <li key={r.id} className={r.actions ? 'has-actions' : ''}>
               {r.href ? (
-                <Link to={r.href} className="barlist-row" aria-label={r.ariaLabel} {...handlers}>
-                  {inner}
+                <Link to={r.href} className="barlist-row" {...handlers}>
+                  {/* the full sentence is the link's name; the drawn row repeats it visually */}
+                  <span className="sr-only">{r.ariaLabel}</span>
+                  <span aria-hidden="true" className="barlist-inner">
+                    {inner}
+                  </span>
                 </Link>
               ) : (
                 <div className="barlist-row" tabIndex={0} role="img" aria-label={r.ariaLabel} {...handlers}>

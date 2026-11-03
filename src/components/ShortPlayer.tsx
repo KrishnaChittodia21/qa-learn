@@ -390,7 +390,7 @@ export function ShortPlayer({ entry, onFinish, onQuiz, next: upNext }: { entry: 
         <span className="sp-save">
           <SaveButton kind="short" id={short.id} compact />
         </span>
-        <button type="button" className="sp-pp sp-speed" onClick={cycleSpeed} aria-label={`Reading speed: ${speed === 1 ? 'normal' : speed < 1 ? 'slower' : 'faster'}`} title="Reading speed">
+        <button type="button" className="sp-pp sp-speed" onClick={cycleSpeed} aria-label={`${speed}× reading speed (${speed === 1 ? 'normal' : speed < 1 ? 'slower' : 'faster'})`} title="Reading speed">
           {speed}×
         </button>
         <button type="button" className="sp-pp" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Play' : 'Pause'}>
@@ -444,7 +444,7 @@ export function ShortPlayer({ entry, onFinish, onQuiz, next: upNext }: { entry: 
 
       <div className="sp-foot">
         <div className="sp-navrow">
-          <button type="button" className="sp-nav" onClick={prev} disabled={cur === 0} aria-label="Previous beat">
+          <button type="button" className="sp-nav" onClick={prev} disabled={cur === 0}>
             ‹ Back
           </button>
           <span className="sp-count" aria-live="polite">
@@ -458,7 +458,6 @@ export function ShortPlayer({ entry, onFinish, onQuiz, next: upNext }: { entry: 
               setPaused(false);
             }}
             disabled={cur >= END || waiting}
-            aria-label="Next beat"
           >
             Next ›
           </button>

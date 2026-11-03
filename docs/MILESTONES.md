@@ -343,6 +343,9 @@ misses feed Weak areas, and a malformed step or `learnMore` fails validation.
 
 ### M9 · Admin · 5–8 h
 
+> **Skipped for now (2026-11-04):** one learner, no user database, so there is no one to administer. Revisit only if
+> accounts and the service are ever used for more than one person.
+
 - `GET /api/admin/stats` on `qa-api` (SDL's `admin.ts` as the starting point), read from `qa_learn` only: users, activity,
   sections read, exams passed, coding problems solved, Shorts watched, feedback, flagged accounts, 30-day sign-ups.
 - Port `pages/Admin.tsx` and `styles/admin.css` with the existing `src/components/charts` (`StatTile`, columns,
@@ -370,6 +373,28 @@ Fill the gaps left by M0–M9 so the audit starts from a green, broad suite.
 
 **Done when:** all suites pass in CI, every milestone's "Done when" has at least one test that would fail if it
 broke, and axe reports no serious or critical issues.
+
+**As built:**
+- **CI:** `.github/workflows/test.yml` runs on every push and pull request. One job does lint, `npm run validate`,
+  unit tests and the build (with its answers check); one runs the service tests against a `mongo:7` container;
+  one runs Playwright e2e + axe against the same container. All its steps pass locally; the workflow itself has
+  not run on GitHub yet.
+- **Accessibility:** `e2e/a11y.spec.ts` (`@axe-core/playwright` 4.14.0) scans 20 pages in light and dark (desktop) and
+  fails on serious or critical issues. It found and this milestone fixed:
+  - **Accessible names that didn't match the visible text** (WCAG 2.5.3) on the rail, search, brand, bar-list
+    rows, the stage chips on Contents, the Home badge link and the Shorts player buttons. The visible text is now
+    the name; counts and extra context are screen-reader-only text. The icon-only rail (≤1200px) hides its words
+    visually instead of with `display: none`.
+  - **Low contrast** on breadcrumb segments (a rule meant for the "/" separators dimmed whole segments) and the
+    Achievements note.
+  - **Scrollable code blocks** couldn't be reached by keyboard (now `tabIndex=0`), and the code editor's textarea
+    had no label (hidden `<label>` via `textareaId`).
+- **Gaps filled:** a service test that the M7/M8 ops (`short`, `steps`, Saved `short`) sync, earn the Shorts badge
+  on the server and refuse bad values; an e2e for the Shorts player's pause, speed and Back.
+- Most of the plan's list already existed from M0–M8 (progress ops and import, saved cap, badges, streaks across
+  DST, validators, the step and Shorts gating, Guide me, Read/Steps memory, account isolation, reveal caps).
+- **Not done:** admin tests (M9 skipped); e2e still runs against `vite` dev, not `vite preview`; phone pages are
+  not axe-scanned (same markup and colours as desktop).
 
 ### M11 · Security audit · 4–6 h
 

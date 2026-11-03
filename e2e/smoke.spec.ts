@@ -81,7 +81,7 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
   await expect(page).toHaveURL(/#\/short\/ariane-5-overflow/);
 
   const player = page.getByRole('region', { name: 'Ariane 5: 37 seconds' });
-  const next = player.locator('.sp-navrow').getByRole('button', { name: 'Next beat' });
+  const next = player.locator('.sp-navrow').getByRole('button', { name: /Next/ });
   // step through to the quiz: Next is disabled there until it is answered
   await expect(async () => {
     if (await next.isEnabled()) await next.click();
@@ -136,4 +136,27 @@ test('a section switches to Steps, a Your turn blocks Next until solved, and the
 
   await page.reload();
   await expect(page.locator('section.tp-sec').first().getByRole('button', { name: 'Steps' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('the Shorts player pauses, changes reading speed and goes back a beat', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  await page.goto('/#/short/test-pyramid');
+  const player = page.getByRole('region', { name: 'The test pyramid in 90 seconds' });
+  const nav = player.locator('.sp-navrow');
+  await expect(nav.getByRole('button', { name: /Back/ })).toBeDisabled();
+
+  await player.getByRole('button', { name: 'Pause' }).click();
+  await expect(player.getByText(/Paused · ▶ to play/)).toBeVisible();
+  // paused: the beat does not move on by itself
+  await page.waitForTimeout(6000);
+  await expect(player.getByText(/Paused/)).toBeVisible();
+  await player.getByRole('button', { name: 'Play' }).click();
+
+  await player.getByRole('button', { name: /1× reading speed/ }).click();
+  await expect(player.getByRole('button', { name: /1\.25× reading speed \(faster\)/ })).toBeVisible();
+
+  await nav.getByRole('button', { name: /Next/ }).click();
+  await expect(nav.getByText('2 / 5')).toBeVisible();
+  await nav.getByRole('button', { name: /Back/ }).click();
+  await expect(nav.getByText('1 / 5')).toBeVisible();
 });

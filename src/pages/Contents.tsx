@@ -1048,7 +1048,6 @@ function Matrix({
               type="button"
               className={`mx-stage ${state}`}
               onClick={() => onJump(ph.id)}
-              aria-label={`Stage ${ph.number}: ${ph.title}, ${done} of ${list.length} passed. Jump to its report`}
             >
               <span className="no">STAGE {pad2(ph.number)}</span>
               <span className="tt">{ph.title}</span>
@@ -1062,8 +1061,11 @@ function Matrix({
                   } as CSSProperties
                 }
               />
-              <span className="ct">
+              <span className="ct" aria-hidden="true">
                 {done}/{list.length}
+              </span>
+              <span className="sr-only">
+                , {done} of {list.length} passed. Jump to its report
               </span>
             </button>
           );

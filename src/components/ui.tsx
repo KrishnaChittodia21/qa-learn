@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ChevronRight, Play } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -84,7 +84,8 @@ export function CodeBlock({ snippet, compact }: { snippet: CodeSnippet; compact?
           {copied ? 'Copied' : 'Copy'}
         </button>
       </figcaption>
-      <pre className={`language-${lang}`}>
+      {/* focusable, so keyboard users can scroll long lines sideways */}
+      <pre className={`language-${lang}`} tabIndex={0}>
         <code dangerouslySetInnerHTML={{ __html: highlight(snippet.code, lang) }} />
       </pre>
     </figure>
@@ -100,9 +101,15 @@ export function CodeEditor({
   onChange: (v: string) => void;
   language: string;
 }) {
+  const id = useId();
   return (
     <div className="editor" data-theme="dark">
+      {/* the library can't put aria-label on its textarea, so a hidden label points at it */}
+      <label htmlFor={id} className="sr-only">
+        Code editor ({normalizeLang(language)})
+      </label>
       <Editor
+        textareaId={id}
         value={value}
         onValueChange={onChange}
         highlight={(c) => highlight(c, language)}

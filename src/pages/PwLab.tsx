@@ -740,7 +740,7 @@ function StepResultView({ r }: { r: StepResult }) {
                   <span className="tx">{f.title}</span>
                   <span className="d" />
                 </div>
-                <pre className="lab-trace">{f.error}</pre>
+                <pre className="lab-trace" tabIndex={0}>{f.error}</pre>
               </div>
             ))}
           </div>

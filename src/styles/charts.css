@@ -650,3 +650,5 @@ a.phase-bar-title:hover {
     animation: none;
   }
 }
+/* the drawn part of a linked row: hidden from screen readers (the link's sr-only sentence names it), no box of its own */
+.barlist-inner { display: contents; }

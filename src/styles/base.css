@@ -310,7 +310,8 @@ kbd,
   text-transform: uppercase;
 }
 .console .crumb b { color: var(--ink); font-weight: 600; }
-.console .crumb span { margin: 0 8px; opacity: .6; }
+/* the "/" separators only: dimming whole segments made the crumbs fail contrast */
+.console .crumb span[aria-hidden='true'] { margin: 0 8px; opacity: .6; }
 .console .sp { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
 .console .live { display: inline-flex; align-items: center; gap: 8px; color: var(--pass-t); }
 .console .live::before { content: ''; width: 6px; height: 6px; background: var(--pass); box-shadow: 0 0 8px var(--pass); animation: blink 2s steps(2) infinite; }

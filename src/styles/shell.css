@@ -783,16 +783,24 @@
 
 /* ---------- ≤1200px: icon-only rail ---------- */
 @media (max-width: 1200px) {
+  /* icon-only, but the words stay as the links' accessible names (visually hidden, not display: none) */
+  .rail .brand-text,
+  .rail-a .lbl,
+  .rail-search .lbl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
   .rail {
     padding: 20px 12px;
     align-items: center;
   }
-  .rail .brand-text,
-  .rail-a .lbl,
   .rail-a .ix,
   .rail-a .count-tag,
   .rail-label,
-  .rail-search .lbl,
   .rail-search .kbd,
   .rail-streak .row .mlabel,
   .rail-streak .wave14,

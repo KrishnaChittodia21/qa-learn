@@ -300,13 +300,19 @@ export default function Layout() {
   const savedCount = signedIn ? activeSaved(p.saved).length : 0;
   const countFor = (to: string) =>
     to === '/weak-areas' && weakCount > 0 ? (
-      <span className="count-tag fail" aria-label={`, ${weakCount} wrong answers`}>
-        {weakCount}
-      </span>
+      <>
+        <span className="count-tag fail" aria-hidden="true">
+          {weakCount}
+        </span>
+        <span className="sr-only">, {weakCount} wrong answers</span>
+      </>
     ) : to === '/saved' && savedCount > 0 ? (
-      <span className="count-tag" aria-label={`, ${savedCount} saved`}>
-        {savedCount}
-      </span>
+      <>
+        <span className="count-tag" aria-hidden="true">
+          {savedCount}
+        </span>
+        <span className="sr-only">, {savedCount} saved</span>
+      </>
     ) : null;
   const titleFor = (to: string, label: string) =>
     to === '/coding'
@@ -352,14 +358,17 @@ export default function Layout() {
 
       {/* ---- desktop: fixed left instrument rail ---- */}
       <aside className="rail" aria-label="Main navigation">
-        <Link to="/" className="brand" aria-label="QA.learn, today">
+        <Link to="/" className="brand">
           <BrandMark />
           <BrandName />
+          <span className="sr-only">, today</span>
         </Link>
-        <button type="button" className="rail-search" onClick={showPalette} aria-label="Search (Command K)" title="Search (⌘K)">
+        <button type="button" className="rail-search" onClick={showPalette} title="Search (⌘K)">
           <Search size={16} aria-hidden="true" />
           <span className="lbl">Search specs</span>
-          <kbd className="kbd">⌘K</kbd>
+          <kbd className="kbd" aria-hidden="true">
+            ⌘K
+          </kbd>
         </button>
         <div className="rail-label">Navigate</div>
         <nav className="rail-nav" aria-label="Main">
@@ -369,13 +378,14 @@ export default function Layout() {
               to={n.to}
               className="rail-a"
               aria-current={n.match(path) ? 'page' : undefined}
-              aria-label={n.label}
               title={titleFor(n.to, n.label)}
             >
               <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
               <span className="lbl">{n.label}</span>
               {countFor(n.to)}
-              <span className="ix">{String(i + 1).padStart(2, '0')}</span>
+              <span className="ix" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
             </Link>
           ))}
         </nav>
@@ -387,7 +397,6 @@ export default function Layout() {
               to={n.to}
               className="rail-a"
               aria-current={n.match(path) ? 'page' : undefined}
-              aria-label={n.label}
               title={titleFor(n.to, n.label)}
             >
               <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
@@ -395,10 +404,12 @@ export default function Layout() {
               {countFor(n.to)}
             </Link>
           ))}
-          <button type="button" className="rail-a" onClick={openGuide} aria-label="Guide me (press ?)" title="Open the guide (press ?)">
+          <button type="button" className="rail-a" onClick={openGuide} title="Open the guide (press ?)">
             <CircleHelp size={18} aria-hidden="true" strokeWidth={1.6} />
             <span className="lbl">Guide me</span>
-            <kbd className="kbd ix">?</kbd>
+            <kbd className="kbd ix" aria-hidden="true">
+              ?
+            </kbd>
           </button>
         </nav>
         <div className="rail-spacer" />
