@@ -39,6 +39,10 @@ import { useFocusTrap } from '../lib/useFocusTrap';
 import { useAchievementDetection } from '../lib/useAchievements';
 import { signOut, useSession } from '../lib/session';
 import { AvatarFace } from './Avatar';
+import PageGuide from './PageGuide';
+import Walkthrough from './Walkthrough';
+import { closePageGuide, openPageGuide, startWalk, useGuide } from '../lib/guide';
+import { guideFor, MENU_WALK } from '../lib/pageGuides';
 import { activeSaved } from '../pages/Saved';
 import { achievementById, TIER_LABEL } from '../content/achievements';
 
@@ -173,18 +177,29 @@ export default function Layout() {
     setPaletteLoaded(true);
     setPaletteOpen(true);
   }, []);
-  const closeTour = useCallback(() => setTourOpen(false), []);
+  // the first-visit tour carries on into the menu walkthrough when it closes
+  const firstRun = useRef(tourOpen);
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    if (firstRun.current) {
+      firstRun.current = false;
+      startWalk(MENU_WALK);
+    }
+  }, []);
   useEffect(() => {
     if (tourOpen) saveUiPrefs({ tourSeen: true });
   }, [tourOpen]);
-  useEffect(() => on('open-guide', () => setTourOpen(true)), []);
+  // "Guide me" and "?": this page's guide, or the welcome tour where a page has none (sign-in pages)
+  const openGuideHere = useCallback(() => (guideFor(path) ? openPageGuide() : setTourOpen(true)), [path]);
+  useEffect(() => on('open-guide', openGuideHere), [openGuideHere]);
+  const guide = useGuide();
 
   // ---- achievements: detect + store new badges; celebrate once the guide is closed ----
   const navigate = useNavigate();
-  // badges are an account feature: earned and celebrated only while signed in
+  // one learner, kept in this browser: badges are earned and celebrated signed in or not
   const session = useSession();
   const signedIn = session.status === 'in';
-  const { queue: unlocked, dismiss: dismissUnlocked } = useAchievementDetection(p, signedIn);
+  const { queue: unlocked, dismiss: dismissUnlocked } = useAchievementDetection(p);
   const viewAllAchievements = useCallback(() => {
     dismissUnlocked();
     navigate('/achievements');
@@ -205,12 +220,12 @@ export default function Layout() {
         else showPalette();
       } else if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !typingInField(e) && !paletteOpen) {
         e.preventDefault();
-        setTourOpen(true);
+        openGuideHere();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paletteOpen, showPalette]);
+  }, [paletteOpen, showPalette, openGuideHere]);
 
   // New page → top of page, except on app start, where we restore the saved scroll position.
   useEffect(() => {
@@ -643,6 +658,15 @@ export default function Layout() {
       <Suspense fallback={null}>
         {paletteLoaded && <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />}
         {tourOpen && <WelcomeTour onClose={closeTour} />}
+        {guide.page && (
+          <PageGuide
+            onFullTour={() => {
+              closePageGuide();
+              setTourOpen(true);
+            }}
+          />
+        )}
+        {guide.walk && <Walkthrough key={path} steps={guide.walk} />}
         {/* achievement unlocks wait until the guide is closed */}
         {unlocked.length > 0 && !tourOpen && <AchievementCelebration items={unlocked} onClose={dismissUnlocked} onViewAll={viewAllAchievements} />}
       </Suspense>

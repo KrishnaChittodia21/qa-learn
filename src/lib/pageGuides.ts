@@ -1,0 +1,259 @@
+// What each page is for (M4): shown by PageGuide when "Guide me" or "?" is used on that page, with a "Show me"
+// walkthrough that points at the real elements. Stops whose element isn't on screen (the phone layout, a locked tab)
+// are skipped, so a walk can list desktop and phone targets side by side.
+import type { WalkStep } from './guide';
+
+export interface Guide {
+  title: string;
+  intro: string;
+  /** "what is what" on this page */
+  items: [string, string][];
+  /** "Show me": the same ideas pointed out on the real page */
+  walk?: WalkStep[];
+}
+
+const rail = (to: string) => `.rail-a[href="#${to}"]`;
+
+/** The menu: the rail on a desktop, the top bar on a phone. Also the walk after the first-visit tour. */
+export const MENU_WALK: WalkStep[] = [
+  { target: rail('/'), title: 'Today', text: 'Your next step, your progress and what to revise. The app also reopens where you left off.' },
+  { target: rail('/contents'), title: 'Syllabus', text: 'Every phase and topic, in study order. Open a topic to learn it, practise it and take its exam.' },
+  { target: rail('/coding'), title: 'Coding', text: 'JavaScript problems for the live-coding round, judged by tests as you type.' },
+  { target: rail('/pw-lab'), title: 'Playwright Lab', text: 'Write real Playwright tests against a shop app with hidden bugs, then let the judge count what you caught.' },
+  { target: rail('/roadmap'), title: 'Roadmap', text: 'A week-by-week plan through the whole course.' },
+  { target: rail('/weak-areas'), title: 'Weak areas', text: 'The exam questions you got wrong, grouped by the section to reread. The number is how many are still wrong.' },
+  { target: rail('/achievements'), title: 'Achievements', text: 'Badges that climb from bronze to diamond as you study.' },
+  { target: rail('/saved'), title: 'Saved', text: 'Everything you pressed ☆ Save on, to come back to. The number is how many are still to do.' },
+  { target: '.rail-search, .mtop [aria-label="Search"]', title: 'Search', text: 'Jump to any topic, section, problem or question by typing.', shortcut: '⌘K or Ctrl K' },
+  { target: '.rail-account', title: 'Your account', text: 'Sign in to keep progress on any device. Signed in, your name opens your Profile.' },
+  { target: '.rail-a[aria-label^="Guide me"]', title: 'Guide me', text: 'Explains the page you are on, with a walkthrough like this one.', shortcut: '?' },
+];
+
+const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
+  {
+    match: (p) => p === '/',
+    guide: {
+      title: 'Today',
+      intro: 'Your dashboard: one next step, then everything that shows how you are doing.',
+      items: [
+        ['Next mission', 'The one thing to do next, in study order: read, practise, then pass the exam.'],
+        ['Readouts and coverage', 'Topics passed, exam average, company questions and study days at a glance.'],
+        ['Signal', 'Your study days over the last month and your streak.'],
+        ['Weak spot', 'The section your wrong answers point at, to reread before anything new.'],
+      ],
+      walk: [
+        { target: '.hero-cta', title: 'Your next step', text: 'Always one button: the next section to read, the next lab, or the exam.' },
+        { target: '[aria-label="Readouts"]', title: 'Readouts', text: 'Topics, exam average, company questions and study days.' },
+        { target: '[aria-label^="Coverage prism"]', title: 'Coverage', text: 'How much of each track you have passed.' },
+        { target: '.b-sig', title: 'Signal', text: 'Study days in the last 30 days and your streak.' },
+        ...MENU_WALK,
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/contents',
+    guide: {
+      title: 'Syllabus',
+      intro: 'The whole course, phase by phase. Topics are meant to be done in this order.',
+      items: [
+        ['Phases', 'Manual testing, API and SQL, JavaScript, Playwright, AI testing and interview prep.'],
+        ['Topic status', 'Not started, in progress or passed, from what you have read and the exams you passed.'],
+      ],
+    },
+  },
+  {
+    match: (p) => /^\/topic\/[^/]+\/exam$/.test(p),
+    guide: {
+      title: 'Exam',
+      intro: 'A timed exam on one topic. A full-length run that reaches the pass mark marks the topic passed.',
+      items: [
+        ['Interview mode', 'Lock each answer to see the verdict and the follow-up question at once, like a real interview.'],
+        ['Questions and time', 'Fewer questions makes a practice run; only full-length runs count towards passing.'],
+        ['Review', 'After submitting, every question with its explanation, and the sections to reread.'],
+      ],
+      walk: [
+        { target: '#ex-count', title: 'Questions', text: 'How many questions this run has. All of them counts towards passing.' },
+        { target: '[aria-label="Run summary"]', title: 'Run summary', text: 'The pass mark, time per question and your best score so far.' },
+        { target: '.ex-setup-act', title: 'Start', text: 'Starts the timer. Keys 1–5 pick an option, arrows move, F flags, L locks an answer.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p.startsWith('/topic/'),
+    guide: {
+      title: 'Topic',
+      intro: 'Each topic is a study loop: learn, practise, then pass the exam.',
+      items: [
+        ['Learn', 'Short sections with diagrams and animations. Tick “Mark as read” as you finish each one.'],
+        ['Labs', '“Improve This” exercises: turn weak tests and buggy code into strong ones.'],
+        ['Interview', 'Answer out loud or in writing first, then see the model answer and rate yourself.'],
+        ['Drills', 'Worked practice problems, revealed one step at a time.'],
+        ['Exam', 'Locked until every section is read (you can change that in Settings).'],
+        ['☆ Save', 'Puts the topic, a section or a question on your Saved list.'],
+      ],
+      walk: [
+        { target: '.tl', title: 'Study path', text: 'The steps of this topic, left to right. Each fills in as you finish it.' },
+        { target: '.tp-tick', title: 'Mark as read', text: 'Tick each section when you have read it. That unlocks the exam.' },
+        { target: '.save-btn', title: '☆ Save', text: 'Save the topic or a section to come back to it from Saved.' },
+        { target: '[aria-label="Topic pager"]', title: 'Next topic', text: 'Moves on to the previous or next topic in the course.' },
+      ],
+    },
+  },
+  {
+    match: (p) => /^\/coding\/.+/.test(p),
+    guide: {
+      title: 'Coding problem',
+      intro: 'Write the function, run the tests, then submit to run the hidden ones too.',
+      items: [
+        ['Hints', 'One at a time, so you only take the help you need.'],
+        ['Run and Submit', 'Run checks the visible tests; Submit adds the hidden ones and marks the problem solved.'],
+        ['Reference solution', 'Opens after your own attempt, with the explanation and follow-up questions.'],
+      ],
+      walk: [
+        { target: '.cx-stmt', title: 'The problem', text: 'What the function must do, with example tests.' },
+        { target: '.cx-hints', title: 'Hints', text: 'Reveal them one at a time.' },
+        { target: '.save-btn', title: '☆ Save', text: 'Keep this problem on your Saved list.' },
+        { target: '[aria-label="Problem navigation"]', title: 'Next problem', text: 'Moves through the problems in order.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/coding',
+    guide: {
+      title: 'Coding',
+      intro: 'JavaScript problems for the live-coding round, from arrays and strings to async and QA utilities.',
+      items: [
+        ['Categories and difficulty', 'Filter to what you want to practise.'],
+        ['Status', 'Solved, draft (started) or not started.'],
+      ],
+    },
+  },
+  {
+    match: (p) => p.startsWith('/pw-lab/'),
+    guide: {
+      title: 'Playwright Lab step',
+      intro: 'Write Playwright tests for one part of the shop app. The judge runs them against hidden bugs.',
+      items: [
+        ['Mission', 'What to test in this step and how many bugs are hidden in it.'],
+        ['Run it', 'Start the practice app, run your tests, then the judge.'],
+        ['Hints', 'Nudges towards the behaviour the hidden bugs break.'],
+      ],
+      walk: [
+        { target: '.lab-crumb', title: 'Where you are', text: 'Back to the lab overview.' },
+        { target: '.save-btn', title: '☆ Save', text: 'Keep this step on your Saved list.' },
+        { target: '.lab-cmd', title: 'Commands', text: 'Copy these to start the app, run your tests and grade them.' },
+        { target: '.lab-hints', title: 'Hints', text: 'Open one when you are stuck.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/pw-lab',
+    guide: {
+      title: 'Playwright Lab',
+      intro: 'A real app with hidden bugs, and eight steps of Playwright tests to catch them.',
+      items: [
+        ['Steps', 'Login, search, sorting, cart, checkout, promo codes, orders and the API.'],
+        ['The judge', 'Runs your tests against copies of the app with one bug each and counts the bugs you caught.'],
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/playground',
+    guide: { title: 'Playground', intro: 'A scratchpad to run JavaScript and try ideas from the lessons.', items: [['Run', 'Runs your code and shows its output.']] },
+  },
+  {
+    match: (p) => p === '/roadmap',
+    guide: { title: 'Roadmap', intro: 'A week-by-week plan through the course, with resources for each week.', items: [['Weeks', 'Each week lists its topics and practice.']] },
+  },
+  {
+    match: (p) => p === '/companies',
+    guide: {
+      title: 'Company questions',
+      intro: 'Questions candidates reported from real interviews, with the source of each.',
+      items: [
+        ['Filters', 'By company, area and difficulty.'],
+        ['Practised', 'Mark a question once you have answered it out loud.'],
+      ],
+      walk: [
+        { target: '.co-filters', title: 'Filters', text: 'Narrow the list by company, area or difficulty.' },
+        { target: '.co-list', title: 'Questions', text: 'Try each one first, then open the strong answer.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/weak-areas',
+    guide: {
+      title: 'Weak areas',
+      intro: 'Where your exam answers say to focus, weakest first.',
+      items: [
+        ['Topics', 'Failed or shaky topics, with the sections your wrong answers point at.'],
+        ['Mistakes drill', 'Retake only the questions you got wrong.'],
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/practice',
+    guide: { title: 'Mistakes drill', intro: 'An exam made of the questions you currently have wrong.', items: [['Fix them', 'A right answer takes a question out of the pile.']] },
+  },
+  {
+    match: (p) => p === '/achievements',
+    guide: {
+      title: 'Achievements',
+      intro: 'Badges for reading, practising, passing exams and studying regularly.',
+      items: [
+        ['Tiers', 'Most badges climb bronze, silver, gold, diamond.'],
+        ['Next up', 'The badge closest to its next tier.'],
+      ],
+      walk: [
+        { target: '.ach-filters', title: 'Filters', text: 'Show earned, in progress or locked badges.' },
+        { target: '.ach-bento', title: 'Badges', text: 'Each shows what earns its next tier.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/saved',
+    guide: {
+      title: 'Saved',
+      intro: 'Everything you pressed ☆ Save on, to come back to.',
+      items: [
+        ['Filters', 'Lessons, questions, or coding and lab.'],
+        ['Done', 'Mark an item done when you have gone back to it; it moves to the Done list.'],
+      ],
+      walk: [
+        { target: '.saved-chips', title: 'Filters', text: 'Show one kind of item at a time.' },
+        { target: '.saved-list', title: 'Your list', text: 'Open an item where it lives, mark it done or remove it.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/profile',
+    guide: {
+      title: 'Profile',
+      intro: 'Your picture, name, password and feedback.',
+      items: [
+        ['Avatar', 'Pick one of the built-in avatars, or go back to your initials.'],
+        ['Suggest or report', 'Send an idea or a bug; replies show under the form.'],
+        ['Danger zone', 'Delete your account and everything in it.'],
+      ],
+      walk: [
+        { target: '.pf-nav', title: 'Sections', text: 'One part of your profile at a time.' },
+        { target: '.pf-preset-grid', title: 'Avatars', text: 'Pick one, then Save picture.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/settings',
+    guide: {
+      title: 'Settings',
+      intro: 'How exams run and how the app looks.',
+      items: [
+        ['Exams', 'Pass mark, time per question and shuffling.'],
+        ['Study-first lock', 'Whether exams (and interview answers) wait until every section is read.'],
+        ['Appearance', 'Theme and accent colour.'],
+      ],
+    },
+  },
+];
+
+/** the guide for a page, or null (the sign-in pages: "Guide me" opens the welcome tour there) */
+export const guideFor = (path: string): Guide | null => GUIDES.find((g) => g.match(path))?.guide ?? null;

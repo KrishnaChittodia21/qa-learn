@@ -74,6 +74,9 @@ test('sign up keeps signed-out progress, grades an exam on the server, and syncs
   // the same account in a fresh browser: the progress is there
   const other = await browser.newContext();
   const second = await other.newPage();
+  // badges this browser hasn't celebrated yet (e.g. Midnight Deploy when the suite runs at night) pop up here too
+  const secondCelebration = second.getByRole('button', { name: 'Woohoo, keep going' });
+  await second.addLocatorHandler(secondCelebration, () => secondCelebration.click());
   await second.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
   await signIn(second, email);
   await second.goto('/#/topic/mt-fundamentals?tab=learn');

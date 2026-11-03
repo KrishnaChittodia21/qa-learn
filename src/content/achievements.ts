@@ -10,8 +10,8 @@
 //
 // Every measure reads only what src/lib/progress.ts actually records: read Learn sections, Improve This
 // exercises (cc), practice drills (boe), interview self-ratings (iq), exam records (tests, with attempt
-// history), exam answers (mcq), solved coding problems (code), practised company questions (company) and
-// the study days (activityDays).
+// history), exam answers (mcq), solved coding problems (code), practised company questions (company),
+// Save for later (saved) and the study days (activityDays).
 import type { CodingProblem, CompanyQuestion, PhaseId, Topic } from '../types';
 import type { Progress } from '../lib/progress';
 
@@ -122,6 +122,9 @@ function failsBeforePass(p: Progress, topicId: string): number | null {
   if (rec.attempts !== rec.history.length && before === 0) return null; // the earliest attempts were trimmed
   return before;
 }
+
+/** the difficulties present in a list of coding problems ('expert' counts as hard) */
+const difficulties = (qs: CodingProblem[]) => new Set(qs.map((q) => (q.difficulty === 'expert' ? 'hard' : q.difficulty)));
 
 const DAY_MS = 86_400_000;
 /** "2026-10-15" → a day number (UTC midnight, so DST never breaks a run) */
@@ -350,6 +353,17 @@ export const ACHIEVEMENTS: Achievement[] = [
     unit: 'solved',
   },
   {
+    id: 'full-spectrum',
+    name: 'Full Spectrum',
+    description: 'Solved a coding problem at every difficulty: easy, medium and hard.',
+    group: 'practice',
+    art: 'layers',
+    goal: (ctx) => difficulties(ctx.coding).size || 1,
+    measure: (p, ctx) => difficulties(ctx.coding.filter((q) => p.code[q.id])).size,
+    requirement: () => 'Solve one easy, one medium and one hard coding problem',
+    unit: 'difficulties',
+  },
+  {
     id: 'drill-sergeant',
     name: 'Drill Sergeant',
     description: 'Practice drills worked through to the answer.',
@@ -478,6 +492,22 @@ export const ACHIEVEMENTS: Achievement[] = [
     measure: (p) => new Set(p.activityDays ?? []).size,
     requirement: (goal) => `Study on ${plural(goal, 'different day')}`,
     unit: 'days',
+  },
+
+  {
+    id: 'backlog-burner',
+    name: 'Backlog Burner',
+    description: 'Things you saved for later and then marked done.',
+    group: 'consistency',
+    art: 'bookmark',
+    tiers: [
+      { tier: 'bronze', goal: 1 },
+      { tier: 'silver', goal: 10 },
+      { tier: 'gold', goal: 25 },
+    ],
+    measure: (p) => (p.saved ?? []).filter((s) => s.doneAt).length,
+    requirement: (goal) => `Save ${plural(goal, 'item')} for later and mark ${goal === 1 ? 'it' : 'them'} done`,
+    unit: 'done',
   },
 
   // ---- fun ----

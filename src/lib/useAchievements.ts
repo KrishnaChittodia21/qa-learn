@@ -18,15 +18,13 @@ export interface Unlocked {
  * the queue together and is shown as ONE celebration; anything already stored is never celebrated
  * again, and stored badges are never revoked.
  */
-export function useAchievementDetection(p: Progress, enabled = true) {
+export function useAchievementDetection(p: Progress) {
   const [queue, setQueue] = useState<Unlocked[]>([]);
   // `${id}:${tier}` already stored in this session (guards StrictMode's double effects and the
   // window before the store's update comes back round)
   const sent = useRef(new Set<string>());
 
-  // `enabled`: signed in. Badges are an account feature (the service earns them too; this finds them to celebrate)
   useEffect(() => {
-    if (!enabled) return;
     const timer = setTimeout(() => {
       const fresh = newlyEarned(evaluateAll(p, achievementCtx), p.achievements).filter((e) => !sent.current.has(`${e.id}:${e.tier}`));
       if (!fresh.length) return;
@@ -43,7 +41,7 @@ export function useAchievementDetection(p: Progress, enabled = true) {
       });
     }, SETTLE_MS);
     return () => clearTimeout(timer);
-  }, [p, enabled]);
+  }, [p]);
 
   // a reset wipes the stored badges, so they may be earned (and celebrated) again
   useEffect(() => {

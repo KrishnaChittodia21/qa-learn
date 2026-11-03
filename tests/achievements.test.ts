@@ -30,6 +30,7 @@ function finished(): Progress {
   for (const q of C.CODING_PROBLEMS) p.code[q.id] = true;
   for (const q of C.COMPANY_QUESTIONS) p.company[q.id] = true;
   p.activityDays = Array.from({ length: 400 }, (_, i) => day(i));
+  p.saved = C.CODING_PROBLEMS.slice(0, 25).map((q) => ({ kind: 'coding', ref: q.id, addedAt: '2026-02-01', doneAt: '2026-02-02' }));
   return p;
 }
 
@@ -149,4 +150,23 @@ test('earned list ignores unknown ids and lists the newest first', () => {
     'removed-badge': { tier: 'gold', earnedAt: 9 },
   });
   assert.deepEqual(list.map((e) => e.id), ['spec-reader', 'hello-tester']);
+});
+
+test('Full Spectrum needs one solved problem per difficulty; Backlog Burner counts only saved items marked done', () => {
+  const p = fresh();
+  const byDiff = (d: string) => C.CODING_PROBLEMS.find((q) => q.difficulty === d)!.id;
+  p.code[byDiff('easy')] = true;
+  p.code[C.CODING_PROBLEMS.filter((q) => q.difficulty === 'easy')[1].id] = true;
+  p.code[byDiff('medium')] = true;
+  assert.equal(A.evaluateAll(p, ctx)['full-spectrum'].tier, null, 'two difficulties is not enough');
+  p.code[byDiff('hard')] = true;
+  assert.equal(A.evaluateAll(p, ctx)['full-spectrum'].tier, 'standard');
+
+  p.saved = [
+    { kind: 'coding', ref: byDiff('easy'), addedAt: '2026-02-01' },
+    { kind: 'coding', ref: byDiff('medium'), addedAt: '2026-02-01', doneAt: '2026-02-03' },
+  ];
+  const ev = A.evaluateAll(p, ctx)['backlog-burner'];
+  assert.equal(ev.value, 1, 'a saved item not marked done does not count');
+  assert.equal(ev.tier, 'bronze');
 });

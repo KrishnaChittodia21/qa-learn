@@ -3,7 +3,8 @@
 Plan for bringing qa-learn up to what system-design-learn (`../system-design-learn`, "SDL" below) already has:
 Shorts, more achievements, more and interactive animations, profile, admin, sign-in with locked content, Save for
 later, Guide Me tour, "read less, view more" and "learn more" sections, and a real test suite. **Security audit
-and deployment come last.**
+and the release come last.** The site stays on GitHub Pages for now (no service deployment): the release is a static
+build that works without the service (M12); deploying the service is under "Later".
 
 **Approach:** copy what SDL already built instead of designing again, into **qa-learn's own service, database and
 collections**. SDL is read-only reference: nothing in `../system-design-learn` (code, service, database, Atlas
@@ -31,12 +32,12 @@ project, Render or Vercel project, secrets, CI) is changed. Its code is copied i
 |---|---|---|
 | Backend | **Own service `qa-api`** in `api/` in this repo: Fastify + TypeScript, started as a copy of SDL's `api/src` | Fully separate from SDL; the copy starts with SDL's auth, rate limits, validation and audit fixes already in it |
 | Database | **Own Atlas project and M0 cluster**, database `qa_learn` | No shared cluster, users, keys or quotas with SDL (an M0 is free per Atlas project) |
-| Service hosting | **Own Render service** under a separate Render account (or paid instance) | Render free gives ~750 h a month per account; SDL's always-on service already uses it, so a second always-on service on the same account runs out mid-month |
+| Service hosting | **Not deployed for now: runs locally only.** When it is (see "Later"): own Render service under a separate Render account (or paid instance) | Render free gives ~750 h a month per account; SDL's always-on service already uses it, so a second always-on service on the same account runs out mid-month |
 | Accounts | Separate users: a qa-learn account is not an SDL account | Own Better Auth collections in `qa_learn`; no SSO |
 | Answers | Same build-time split as SDL M1 | Locked content means nothing if the answer is already in the bundle |
 | Animation library | Keep `motion`; add GSAP only if a Short or step needs a timeline `motion` can't do | No second animation library for a few effects |
 | Tests | `node --test` for logic (as SDL), Playwright for app journeys | Playwright is already installed, and it's a QA app: its own suite is a showcase |
-| Hosting | Move to **Vercel** in the last milestone | GitHub Pages can't rewrite `/api/*` (needed for a first-party session cookie) or set CSP headers |
+| Hosting | **Stay on GitHub Pages** (decided 2026-11-04: no deployment yet). The Pages site gets a static build (M12) that works without the service; the service runs locally | GitHub Pages serves static files only: no service, no `/api/*` rewrite, no CSP headers. Moving to Vercel + Render is in "Later" |
 
 **Product rules (same as SDL, QA content names):**
 
@@ -120,7 +121,8 @@ public because the judge runs in the browser; moving them needs server-side judg
 check), `server.ts`, `sync-answer-keys.ts` (`npm run sync:answers`: 1,059 answer keys, 83 coding solutions, 200
 company answers; hash-skipped, all sets checked before any write, >10% deletes refused without `--allow-delete`).
 Tests: `cd api && TEST_MONGODB_URI=mongodb://127.0.0.1:27017 npm test` (15; the sync tests use a throwaway
-database). Vite proxies `/api` → `localhost:3001`. Atlas, Render and the other accounts are set up before M12.
+database). Vite proxies `/api` → `localhost:3001`. Atlas, Render and the other accounts are set up only when the
+service is deployed (see "Later").
 
 ### M2 · Sign-up, synced progress and locked content · 10–14 h
 
@@ -157,7 +159,7 @@ too). Tests: app 50, service 43, e2e 4 (`e2e/account.spec.ts`: signed-out tick i
 browser; the service runs on `qa_learn_e2e` and the tests read confirm links from `e2e/.api.log`). Bugs found by the
 e2e run and fixed: sign-in navigated twice (pulled the learner back), and an exam start raced the queued "mark all as
 read". **Do not merge to `main` before M12**: the Pages deploy would ship an app whose exams and answers need a service
-that isn't deployed yet. Left out on purpose: Google/GitHub sign-in (not needed), locking coding judge runs (they run
+that isn't deployed (and won't be for now); M12's static Pages build fixes that. Left out on purpose: Google/GitHub sign-in (not needed), locking coding judge runs (they run
 in the browser, locking protects nothing), the auth-event log and flagged-accounts list (moved to M9, where Admin reads
 them).
 
@@ -202,6 +204,16 @@ a name change wiped its own "Saved." note (form keyed on the name, also in SDL),
 **Done when:** a new visitor gets the tour once on any device; every page has a working Guide me; the walkthrough
 skips stops whose element isn't on screen.
 
+**As built:** `lib/guide.ts` (page guide and walkthrough state), `lib/pageGuides.ts` (a guide for every routed page,
+"Show me" stops on Today, Topic, Exam, Coding problem, PW Lab step, Companies, Achievements, Saved and Profile, and a
+menu walk), `components/PageGuide.tsx` (reuses the welcome tour's dialog; "Full course tour" opens the tour) and
+`components/Walkthrough.tsx` (spotlight, ←/→, Esc, focus trap, stops not on screen skipped, docked callout on phones).
+"Guide me" and `?` open the page's guide (the tour on pages without one); the first-visit tour carries on into the menu
+walk. "Tour seen" stays in the browser only (`qa-learn-ui-v1`), not on the account: the app is used by one person for
+now (decision 2026-11-04). Tests: app 56 (`tests/guides.test.ts`), e2e: first visit tour → walk, `?` → page guide →
+Show me → ← → Esc, desktop and phone. Found on the way: the `?` key would have opened the guide of the first page visited
+(stale closure), fixed.
+
 ### M5 · Achievements, second wave · 4–6 h
 
 - New badges for the features above: first Short, Shorts streak, Saved and finished 10, first step lesson,
@@ -212,6 +224,18 @@ skips stops whose element isn't on screen.
 
 **Done when:** every new badge unlocks from a test fixture, server and app agree on the earned list, and an unlock
 celebrates exactly once.
+
+**As built (one learner, kept in this browser):**
+- Badges are earned and celebrated signed out. Detection runs in the browser (`useAchievementDetection`, now
+  always on) and the Achievements page is no longer behind the sign-up prompt. The service still uses the same
+  catalogue (`src/content/achievements.ts`) when it's running.
+- New: **Full Spectrum** (a solved coding problem at each difficulty) and **Backlog Burner** (saved items marked
+  done: 1 / 10 / 25). Both have tests and are in the "finished the course" fixture.
+- Waiting on data that progress doesn't record yet: first Short and Shorts streak (M7), PW Lab finished
+  (results live in `judge-results.json`, not progress), Guide me completed (only a browser flag), profile set
+  up (account-only).
+- Celebrate-once was already in place: stored tiers are never celebrated again in a browser. Each browser
+  celebrates a badge it hasn't shown yet, so a second device gets its own celebration.
 
 ### M6 · More animations and interactive animations · 10–14 h
 
@@ -293,44 +317,48 @@ Fill the gaps left by M0–M9 so the audit starts from a green, broad suite.
 **Done when:** all suites pass in CI, every milestone's "Done when" has at least one test that would fail if it
 broke, and axe reports no serious or critical issues.
 
-### M11 · Security audit · 5–8 h
+### M11 · Security audit · 4–6 h
 
-Same format as `../system-design-learn/docs/SECURITY-AUDIT.md`, written to `docs/SECURITY-AUDIT.md`.
+Same format as `../system-design-learn/docs/SECURITY-AUDIT.md`, written to `docs/SECURITY-AUDIT.md`. It audits what
+is actually published (the static Pages site) and the service code as it runs locally; checks that only make sense on
+a deployed service move to "Later".
 
-- **Bundle:** no answers, solutions or company answers in `dist/` or `.map` files (bundle check), no secrets in
-  the bundle or git history.
-- **Access:** every locked feature refused by the service when logged out, not only hidden; cross-user reads
-  refused (IDOR); admin routes re-check the role in the database; the Atlas app user can reach `qa_learn` only.
-- **Re-check SDL's findings in the copied code:** rate limits through the `/api` rewrite and against Render
-  directly (SDL H1), email bombing (H2), reveal caps on submit (H3), progress import faking passes (M1), avatar
-  and name validation (M3), CSP (M4).
-- **App:** CSP and security headers in `vercel.json`, Markdown rendering without raw HTML, `localStorage` holding
-  no tokens, Playground and judge code running only in the sandbox they already use.
-- **Dependencies:** `npm audit`, pinned versions, lockfile review.
+- **Pages site:** no secrets in the bundle or git history; Markdown rendering without raw HTML; `localStorage`
+  holding no tokens; Playground and judge code running only in the sandbox they already use; no sign-in or `/api`
+  calls in the static build (M12). Note: the static build ships answers by design, so the repo being public (see
+  "Now") is the only answer exposure to decide on.
+- **Service build (local):** no answers, solutions or company answers in the service-mode `dist/` or `.map` files
+  (bundle check); every locked feature refused by the service when signed out, not only hidden; cross-user reads
+  refused (IDOR); admin routes re-check the role in the database.
+- **Re-check SDL's findings in the copied code** that apply without a deployment: email bombing (SDL H2), reveal
+  caps on submit (H3), progress import faking passes (M1), avatar and name validation (M3).
+- **Dependencies:** `npm audit` for the app and `api/`, pinned versions, lockfile review.
 - Fix Critical and High before M12; Medium and Low get an owner and a date.
 
 **Done when:** `docs/SECURITY-AUDIT.md` lists every check with evidence, no Critical or High is open, and each
 fix has a test.
 
-### M12 · Deployment · 4–6 h
+### M12 · GitHub Pages release (static build) · 6–9 h
 
-- Move from GitHub Pages to **Vercel**: `vercel.json` with `/api/*` → the Render service, security headers and CSP
-  from M11, immutable asset caching; `base` back to `/`. Remove `.github/workflows/deploy.yml` once Vercel is live.
-- `qa-api` on its own Render service (`render.yaml` in this repo, `/health`, secrets `sync: false`), `CORS_ORIGINS`
-  = the qa-learn Vercel URL, `TRUST_PROXY_HOPS` set for the Vercel → Render hop; two keep-awake pings.
-- CI on `main` (`.github/workflows/ci.yml`, modelled on SDL's): lint, validators, unit, service tests on a mongo
-  container, answer-free build and bundle check, then answer-key sync into `qa_learn`, Render deploy hook and
-  Vercel deploy. Production secrets in the `production` environment, not repository scope (SDL audit M7).
-- Nightly `mongodump` of `qa_learn` with the read-only user, restore-checked into a throwaway mongo, stored privately
-  (encrypted, SDL audit M6).
-- Sentry (no user data), uptime checks on the app and the service.
-- `docs/DEPLOY.md` (step-by-step account setup for qa-learn's own Atlas, Render, Vercel, Turnstile, email, Sentry)
-  and a launch checklist with rollback (Vercel instant rollback, Render previous deploy, answer key re-sync from the
-  previous commit).
+The site stays on GitHub Pages (decision 2026-11-04). Pages serves static files only, so it can't run qa-api: since
+M2 the app's exams, answers, sign-in, Saved and Profile need the service, and a plain Pages deploy of this branch would
+show sign-up prompts that can't work. This milestone adds a build that works without it.
 
-**Done when:** a push to `main` deploys the app and `qa-api` with no answers in the bundle, sign-up and sync work on
-the live URL against `qa_learn`, a backup restores, a rollback has been tried once, and nothing in SDL's projects
-or database changed.
+- **Two builds from one codebase:** `npm run build` (service mode, as now: answer-free, needs qa-api) and
+  `npm run build:pages` (static mode, `VITE_SERVICE=off`): content keeps its answers, exams are graded in the browser,
+  model answers, solutions, drill working and company answers show after an attempt with no wait, and progress stays in
+  the browser, as before M2.
+- **Static mode hides what needs the service:** sign-in, sign-up and the account control, Profile and feedback, the
+  Admin page, and every "Sign up to …" prompt; account-only pages (Achievements, Weak areas, streak) open again. Save for
+  later keeps working in the browser (the `saved` change already runs locally). No `/api` call is made.
+- `.github/workflows/deploy.yml` builds with `build:pages` (base `./` stays); CI runs lint, the validators, unit tests and
+  a static-mode e2e smoke before deploying.
+- Tests: the static build makes no `/api` request, grades an exam in the browser, shows a model answer after an
+  attempt, and contains no sign-in links; the service-mode e2e suite keeps running against the local service.
+
+**Done when:** a push to `main` publishes the static build to GitHub Pages; on the live site a visitor can study, take
+a graded exam and see answers with no service and no sign-in; the service mode still passes its own tests; and nothing
+in SDL's projects or database changed.
 
 ## Order and estimates
 
@@ -350,12 +378,28 @@ progress sooner; they only need M2 for syncing their progress.
 | M6–M8 · animations, Shorts, read less / view more / learn more | 34–48 |
 | M9 · admin | 5–8 |
 | M10 · test cases | 10–14 |
-| M11 · security audit | 5–8 |
-| M12 · deployment | 6–9 |
-| **Total** | **~105–151** |
+| M11 · security audit | 4–6 |
+| M12 · GitHub Pages release (static build) | 6–9 |
+| **Total** | **~104–149** |
 
 More Shorts and step-lesson sections after the first batch are ~20–30 min (Shorts) and ~40–60 min (steps) each,
 not in the totals.
+
+## Later: deploying the service (not planned yet)
+
+Until this is done, accounts, synced progress, server grading, Saved sync, Profile and Admin work only with qa-api running
+locally; the public site is the static Pages build (M12). When the service is deployed:
+
+- Atlas project + M0 cluster (`qa_learn`), a transactional email sender, Cloudflare Turnstile, Render (own account), and
+  a frontend host that can rewrite `/api/*` to the service for a first-party session cookie (Vercel; GitHub Pages can't).
+- `vercel.json` (rewrite, security headers and CSP, immutable assets), `render.yaml` for qa-api (`/health`, secrets
+  `sync: false`, `CORS_ORIGINS`, `TRUST_PROXY_HOPS`, `PROXY_SECRET`), two keep-awake pings.
+- CI on `main`: service tests on a mongo container, the answer-free build and bundle check, answer-key sync into
+  `qa_learn`, then the service and app deploys; production secrets in the `production` environment (SDL audit M7).
+- Nightly encrypted `mongodump` with restore check, Sentry with no user data, uptime checks, `docs/DEPLOY.md`, a launch
+  checklist and rollback.
+- The deploy-only security checks: rate limits through the rewrite and against Render directly (SDL H1), CSP (M4),
+  cookie flags on the live domain.
 
 ## Not included
 

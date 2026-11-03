@@ -60,11 +60,7 @@ const router = createHashRouter([
       { path: 'practice', element: <PracticePage /> },
       {
         path: 'achievements',
-        element: (
-          <LockedPreview feature="achievements" why="Earn badges for reading, passing exams, solving problems and keeping a study streak, saved to your account.">
-            <AchievementsPage />
-          </LockedPreview>
-        ),
+        element: <AchievementsPage />,
       },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'saved', element: <SavedPage /> },

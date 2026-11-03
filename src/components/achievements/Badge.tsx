@@ -1,6 +1,7 @@
 import {
   Award,
   BadgeCheck,
+  BookmarkCheck,
   BookOpen,
   Bot,
   Braces,
@@ -22,6 +23,7 @@ import {
   Gauge,
   GitBranch,
   History,
+  Layers,
   Lock,
   MessageSquare,
   Moon,
@@ -65,6 +67,8 @@ const ART: Record<string, LucideIcon> = {
   wrench: Wrench,
   coffee: Coffee,
   building: Building2,
+  bookmark: BookmarkCheck,
+  layers: Layers,
 };
 
 export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
