@@ -1,0 +1,93 @@
+/* account.css · the ☆ Save button (components/SaveButton.tsx), the Saved page (pages/Saved.tsx), the Profile page
+   (pages/Profile.tsx) and the avatar in the shell. Uses the tokens in tokens.css. */
+
+/* ---- ☆ Save ---- */
+.save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-2);
+  font: 600 0.85rem/1 var(--sans);
+  cursor: pointer;
+}
+.save-btn:hover { border-color: var(--mint); color: var(--ink); }
+.save-btn.on { color: var(--lime); border-color: color-mix(in oklab, var(--lime) 60%, transparent); }
+.save-btn.compact { padding: 4px 7px; }
+.save-btn.locked { color: var(--ink-3); }
+
+/* ---- Saved ---- */
+.saved-head { display: grid; gap: 6px; margin-bottom: var(--s-4); }
+.pf-signout { justify-self: start; }
+.saved-tools { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; justify-content: space-between; margin-bottom: var(--s-4); }
+.saved-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.saved-n { opacity: 0.7; margin-left: 4px; font-family: var(--mono); }
+.saved-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.saved-row { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); }
+.saved-ic { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: color-mix(in oklab, var(--mint) 12%, transparent); color: var(--mint); }
+.saved-main { flex: 1; min-width: 0; display: grid; gap: 2px; color: var(--ink); text-decoration: none; }
+.saved-main:hover .saved-title { text-decoration: underline; }
+.saved-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.saved-ctx { color: var(--ink-2); font-size: 0.88rem; }
+.saved-acts { flex: none; display: flex; gap: 6px; align-items: center; }
+.saved-empty { display: grid; justify-items: center; gap: var(--s-2); padding: var(--s-6) var(--s-4); text-align: center; color: var(--ink-2); }
+.saved-empty svg { color: var(--ink-3); }
+.saved-done { margin-top: var(--s-5); }
+.saved-done-head { display: flex; gap: var(--s-2); margin-bottom: var(--s-2); }
+.saved-done-head svg { transition: rotate var(--dur-fast, .15s); }
+.saved-done-head svg.open { rotate: 180deg; }
+.saved-list.done .saved-title { color: var(--ink-2); text-decoration: line-through; }
+
+/* ---- Profile ---- */
+.pf-layout { display: grid; grid-template-columns: 240px 1fr; gap: var(--s-4); align-items: start; }
+.pf-nav { display: grid; gap: 2px; padding: var(--s-2); }
+.pf-nav-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--ink-2); font: 500 0.92rem/1.2 var(--sans); text-align: left; text-decoration: none; cursor: pointer;
+}
+.pf-nav-item:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); }
+.pf-nav-item[aria-current='page'] { background: color-mix(in oklab, var(--mint) 14%, transparent); color: var(--ink); }
+.pf-nav-item.danger { color: var(--fail); }
+.pf-card { display: grid; gap: var(--s-4); padding: var(--s-5); }
+.pf-title { display: flex; align-items: center; gap: 8px; font: 700 1.2rem/1.2 var(--display); }
+.pf-hint { color: var(--ink-3); font-size: 0.85rem; }
+.pf-ok { color: var(--pass); font-size: 0.9rem; }
+.pf-sub { font: 600 1rem/1.3 var(--sans); margin-top: var(--s-3); }
+.pf-avatar-row { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3) var(--s-4); align-items: center; }
+.pf-avatar, .acct-face {
+  display: grid; place-items: center; overflow: hidden; border-radius: 50%;
+  background: color-mix(in oklab, var(--mint) 18%, var(--bg1)); color: var(--ink); font: 700 1.6rem/1 var(--display);
+}
+.pf-avatar { width: 88px; height: 88px; }
+.pf-avatar.draft { outline: 2px dashed var(--mint); outline-offset: 3px; }
+.pf-avatar svg, .pf-avatar img, .acct-face svg, .acct-face img { width: 100%; height: 100%; object-fit: cover; }
+.pf-avatar-acts { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.pf-avatar-acts .pf-hint { flex-basis: 100%; }
+.pf-presets { grid-column: 1 / -1; border: 0; padding: 0; margin: 0; }
+.pf-presets legend { font-size: 0.9rem; color: var(--ink-2); margin-bottom: var(--s-2); }
+.pf-preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 8px; }
+.pf-preset { aspect-ratio: 1; padding: 0; border: 2px solid transparent; border-radius: 50%; background: none; cursor: pointer; overflow: hidden; }
+.pf-preset svg { width: 100%; height: 100%; display: block; }
+.pf-preset:hover { border-color: var(--line-2); }
+.pf-preset.on { border-color: var(--mint); }
+.pf-preset:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.pf-feedback-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-3); }
+.pf-feedback-list p { margin-top: 4px; }
+.pf-reply { margin-top: 6px; padding: 8px 10px; border-left: 3px solid var(--mint); background: color-mix(in oklab, var(--mint) 7%, transparent); }
+.pf-delete { color: var(--fail); border-color: color-mix(in oklab, var(--fail) 50%, transparent); }
+
+/* ---- avatar in the shell ---- */
+.acct-face { width: 30px; height: 30px; flex: none; font-size: 0.8rem; }
+.rail-account .who { display: flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; }
+.nav-count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 10px; background: color-mix(in oklab, var(--lime) 25%, transparent); color: var(--ink); font: 600 0.72rem/1.4 var(--mono); text-align: center; }
+
+@media (max-width: 760px) {
+  .pf-layout { grid-template-columns: 1fr; }
+  .pf-nav { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; }
+  .saved-row { flex-wrap: wrap; }
+  .saved-acts { margin-left: auto; }
+}

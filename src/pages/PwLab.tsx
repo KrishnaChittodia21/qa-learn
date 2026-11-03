@@ -6,6 +6,7 @@ import { PW_LAB_ABOUT, PW_LAB_APP_URL, PW_LAB_STEPS, type PwLabStep } from '../c
 import { CodeBlock, Markdown } from '../components/ui';
 import { celebrate } from '../lib/celebrate';
 import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
+import { SaveButton } from '../components/SaveButton';
 
 // ---------- judge results (written by `npm run judge` to public/judge-results.json) ----------
 interface StepResult {
@@ -298,6 +299,7 @@ function Mission({ s, n, eyebrow, children }: { s: PwLabStep; n: number; eyebrow
           Step <b>{n}</b> of {PW_LAB_STEPS.length}
         </span>
         <span className="coord">{s.hiddenBugs} HIDDEN BUGS</span>
+        <SaveButton kind="pwlab" id={s.id} compact />
       </div>
       <h1 id="lab-mission-title" className="lab-m-title">
         <span className="holo-text">{s.title}</span>

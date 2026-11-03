@@ -6,6 +6,7 @@ import { CompanyCard } from '../components/CompanyCard';
 import type { CodeChallenge, CodeSnippet, EnvelopeQuestion, EnvelopeStep, FollowUp, InterviewQuestion, Topic } from '../types';
 import { isMulti, useReveal } from '../lib/answers';
 import { RevealButton } from '../components/RevealButton';
+import { SaveButton } from '../components/SaveButton';
 import {
   rateIQ,
   setDraft,
@@ -190,6 +191,7 @@ function ChapterPlate({ topic }: { topic: Topic }) {
           <b>Phase {pad2(phase?.number ?? 0)}</b> · {phase?.title} · topic {topic.order} of {inPhase.length}
         </span>
         <span className="coord">{topic.id.toUpperCase()}</span>
+        <SaveButton kind="topic" id={topic.id} compact />
       </div>
       <h1 className={`chap-title t-${size}`} style={{ '--lw': Math.max(...main.split(/\s+/).map((w) => w.length)) } as CSSProperties}>
         <span className="display holo-text">{main}</span>
@@ -512,6 +514,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                   <span className="coord">
                     {spec}.{i + 1} · ≈ {secMin} MIN
                   </span>
+                  <SaveButton kind="section" id={`${topic.id}:${i}`} compact />
                 </div>
                 <h2 className="h2" id={`s-${i}-t`}>
                   {main}
@@ -751,6 +754,7 @@ function InterviewCard({ q, n }: { q: InterviewQuestion; n: number }) {
         </span>
         <DifficultyBadge d={q.difficulty} />
         {rating && <span className={`chip ${rating === 'nailed' ? 'pass' : rating === 'partial' ? 'flaky' : 'fail'}`}>{rating}</span>}
+        <SaveButton kind="interview" id={q.id} compact />
       </div>
       <h3 className="card-q">{q.question}</h3>
       {q.context && <div className="context">{q.context}</div>}
@@ -840,6 +844,7 @@ function EnvelopeCard({ q, n }: { q: EnvelopeQuestion; n: number }) {
         <span className="mlabel">
           <b>Drill {pad2(n)}</b> · stage {Math.min(stage, total)}/{total}
         </span>
+        <SaveButton kind="drill" id={q.id} compact />
         {done && (
           <span className="chip pass">
             <span className="g">✓</span>Done

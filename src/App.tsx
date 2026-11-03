@@ -15,6 +15,8 @@ import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
 import { ForgotPage, LoginPage, ResetPage, SignupPage } from './pages/Auth';
 import { LockedPreview } from './components/LockedPreview';
+import SavedPage from './pages/Saved';
+import ProfilePage from './pages/Profile';
 import { resumeLocation } from './lib/uiPrefs';
 
 // A confirmation link that has expired (1 h) or is broken comes back with ?error=…: send the reader to Sign in
@@ -65,6 +67,8 @@ const router = createHashRouter([
         ),
       },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'saved', element: <SavedPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
       { path: 'forgot', element: <ForgotPage /> },

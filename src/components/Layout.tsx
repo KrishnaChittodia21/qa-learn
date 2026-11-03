@@ -18,6 +18,7 @@ import {
   Route,
   Search,
   SlidersHorizontal,
+  Star,
   Sun,
   Terminal,
   TriangleAlert,
@@ -37,6 +38,8 @@ import { applyThemeAttrs } from '../lib/theme';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { useAchievementDetection } from '../lib/useAchievements';
 import { signOut, useSession } from '../lib/session';
+import { AvatarFace } from './Avatar';
+import { activeSaved } from '../pages/Saved';
 import { achievementById, TIER_LABEL } from '../content/achievements';
 
 // overlays are lazy so cmdk and the tour stay out of the main bundle until first use
@@ -78,6 +81,7 @@ const PRIMARY: NavItem[] = [
 ];
 /** secondary tools (rail group "Tools"; the mobile "More" sheet holds these + the primary items without a dock slot) */
 const TOOLS: NavItem[] = [
+  { to: '/saved', label: 'Saved', icon: Star, match: (p) => p.startsWith('/saved') },
   { to: '/playground', label: 'Playground', icon: Terminal, match: (p) => p.startsWith('/playground') },
   { to: '/companies', label: 'Company Qs', icon: Building2, match: (p) => p.startsWith('/companies') },
   { to: '/settings', label: 'Settings', icon: SlidersHorizontal, match: (p) => p.startsWith('/settings') },
@@ -276,10 +280,15 @@ export default function Layout() {
   const syllabusPage = path.startsWith('/topic/') && !path.endsWith('/exam');
   const moreActive = MORE.some((n) => n.match(path));
 
+  const savedCount = signedIn ? activeSaved(p.saved).length : 0;
   const countFor = (to: string) =>
     to === '/weak-areas' && weakCount > 0 ? (
       <span className="count-tag fail" aria-label={`, ${weakCount} wrong answers`}>
         {weakCount}
+      </span>
+    ) : to === '/saved' && savedCount > 0 ? (
+      <span className="count-tag" aria-label={`, ${savedCount} saved`}>
+        {savedCount}
       </span>
     ) : null;
   const titleFor = (to: string, label: string) =>
@@ -366,6 +375,7 @@ export default function Layout() {
             >
               <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
               <span className="lbl">{n.label}</span>
+              {countFor(n.to)}
             </Link>
           ))}
           <button type="button" className="rail-a" onClick={openGuide} aria-label="Guide me (press ?)" title="Open the guide (press ?)">
@@ -666,15 +676,21 @@ function AccountControl({ compact = false }: { compact?: boolean }) {
     );
   }
   const out = () => void signOut();
+  // phones: the avatar opens Profile (which has Sign out); the rail below is desktop only
   return compact ? (
-    <button type="button" className="icon-btn m-ibtn" onClick={out} aria-label={`Sign out ${session.user.name}`}>
-      <LogOut size={18} aria-hidden="true" />
-    </button>
+    <Link to="/profile" className="icon-btn m-ibtn" aria-label={`Your profile (${session.user.name})`}>
+      <span className="acct-face" aria-hidden="true">
+        <AvatarFace image={session.user.image} name={session.user.name || session.user.email} />
+      </span>
+    </Link>
   ) : (
     <div className="rail-account">
-      <span className="who" title={session.user.email}>
+      <Link to="/profile" className="who" title={`${session.user.email} · your profile`}>
+        <span className="acct-face" aria-hidden="true">
+          <AvatarFace image={session.user.image} name={session.user.name || session.user.email} />
+        </span>
         {session.user.name}
-      </span>
+      </Link>
       <button type="button" className="btn-ghost btn-sm" onClick={out}>
         <LogOut size={15} aria-hidden="true" /> Sign out
       </button>

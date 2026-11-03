@@ -6,6 +6,7 @@ import { AREA_LABEL } from '../lib/companyAreas';
 import { useCompanyAnswer } from '../lib/answers';
 import { setFlag, useProgress } from '../lib/progress';
 import { FollowUps, Markdown } from './ui';
+import { SaveButton } from './SaveButton';
 
 /** One company-reported question: try it, reveal our answer (from qa-api, for a signed-in learner), check the source. */
 export function CompanyCard({ q, showTopic = true }: { q: CompanyQuestion; showTopic?: boolean }) {
@@ -23,6 +24,7 @@ export function CompanyCard({ q, showTopic = true }: { q: CompanyQuestion; showT
         <span className={`chip lvl lvl-${q.difficulty}`}>{q.difficulty}</span>
         {meta && <span className="mlabel company-q-round">{meta}</span>}
         {done && <span className="chip pass company-q-done">✓ Practised</span>}
+        <SaveButton kind="company" id={q.id} compact />
       </div>
       <h3 className="company-q-text">{q.question}</h3>
       {strong.answer ? (

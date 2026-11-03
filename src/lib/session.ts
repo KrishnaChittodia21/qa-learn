@@ -10,6 +10,8 @@ export interface User {
   email: string;
   name: string;
   role: 'user' | 'admin';
+  /** `preset:<id>` (a built-in avatar), an uploaded picture's URL, or none (initials) */
+  image?: string | null;
 }
 export type Session = { status: 'loading' } | { status: 'out'; offline?: boolean } | { status: 'in'; user: User };
 
@@ -30,13 +32,14 @@ export const useSession = () =>
   );
 export const getSession = () => state;
 
-/** Reads the cookie session from the service; called on load and after every login change. */
-export async function refreshSession() {
+/** Reads the cookie session from the service; called on load and after every login change. `fresh` skips the
+ * 5-minute session cache (after a name or picture change). */
+export async function refreshSession(fresh = false) {
   // a sleeping server can take ~30 s to answer: after 4 s show the signed-out view (Sign in button, open lessons)
   // instead of a half-empty page; the real answer still switches it when it arrives
   const slow = setTimeout(() => state.status === 'loading' && set({ status: 'out' }), 4000);
   try {
-    const s = await api<{ user: User } | null>('/api/auth/get-session');
+    const s = await api<{ user: User } | null>(`/api/auth/get-session${fresh ? '?disableCookieCache=true' : ''}`);
     if (s?.user) {
       // startSync swaps in the account's cached progress before its first await, so by the time the UI hears
       // "signed in" it already has the account's settings (no flash of the signed-out theme)

@@ -12,6 +12,7 @@ import { createAuth, SIGN_IN_FAILS, type Auth } from './auth.ts'
 import type { Config } from './config.ts'
 import { emailChecker, systemDns, type MailDns } from './email-check.ts'
 import { createMailer, type Mailer } from './mail.ts'
+import { accountRoutes, deleteAvatar } from './account.ts'
 import { practiceRoutes } from './practice.ts'
 import { progressRoutes } from './progress.ts'
 
@@ -125,7 +126,7 @@ export async function buildApp(config: Config, deps: { db: Db; mailer?: Mailer; 
 
   // ---- sign-in (Better Auth) ----
   const checkEmail = emailChecker(deps.dns ?? (config.production ? systemDns() : undefined))
-  const auth = createAuth(config, deps.db, deps.mailer ?? createMailer(config, app.log), app.log, undefined, checkEmail)
+  const auth = createAuth(config, deps.db, deps.mailer ?? createMailer(config, app.log), app.log, (userId) => deleteAvatar(config, userId), checkEmail)
   app.decorate('auth', auth)
   app.decorateRequest('user', null)
 
@@ -204,6 +205,7 @@ export async function buildApp(config: Config, deps: { db: Db; mailer?: Mailer; 
 
   const store = await progressRoutes(app, deps.db)
   await practiceRoutes(app, deps.db, config, store)
+  await accountRoutes(app, deps.db, config)
 
   return app
 }

@@ -5,6 +5,7 @@ import { ObjectId, type Db } from 'mongodb'
 import { loadContent } from '../../scripts/content-split.ts'
 import { buildAchievementContext, evaluateAll, mergeEarned, newlyEarned, type StoredAchievement } from '../../src/content/achievements.ts'
 import { PHASES } from '../../src/content/phases.ts'
+import { PW_LAB_STEPS } from '../../src/content/pwlab.ts'
 import type { Progress } from '../../src/lib/progress.ts'
 import { applyOps, buildContentIndex, DEFAULT_PROGRESS, mergeImport, type Op } from '../../src/lib/progress-ops.ts'
 import { httpError } from './app.ts'
@@ -45,6 +46,7 @@ const opSchemas = [
       accent: { enum: ['indigo', 'teal', 'rose', 'amber'] },
     }, []),
   }),
+  strict({ op: { const: 'saved' }, action: { enum: ['add', 'remove', 'done'] }, kind: { enum: ['topic', 'section', 'interview', 'drill', 'company', 'coding', 'pwlab'] }, ref: id }),
   strict({ op: { const: 'reset' } }),
 ]
 
@@ -63,7 +65,7 @@ const userKey = (userId: string) => (ObjectId.isValid(userId) ? new ObjectId(use
 export async function progressRoutes(app: FastifyInstance, db: Db) {
   const content = await loadContent()
   const { topics, coding, companyQuestions } = content
-  const ix = buildContentIndex(topics, coding.map((q) => q.id), companyQuestions.map((q) => q.id))
+  const ix = buildContentIndex(topics, coding.map((q) => q.id), companyQuestions.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id))
   const achievementCtx = buildAchievementContext({ topics, phases: PHASES, coding, companyQuestions })
   const col = db.collection<ProgressDoc>('progress')
   const users = db.collection('users')
@@ -174,11 +176,29 @@ export async function progressRoutes(app: FastifyInstance, db: Db) {
     return { version: doc.version + 1, progress, earned }
   })
 
-  // the signed-in account, for the app's header and role checks (name and preferences are edited in M3/M4)
+  // the signed-in account, for the app's header, profile and role checks
   app.get('/api/me', { preHandler: app.requireUser }, async (req) => {
     const u = await users.findOne({ _id: userKey(req.user!.id) as ObjectId })
     if (!u) throw httpError(401, 'UNAUTHENTICATED', 'Log in to continue')
-    return { id: req.user!.id, email: u.email, name: u.name, role: u.role, lastActiveAt: u.lastActiveAt ?? null, createdAt: u.createdAt }
+    return {
+      id: req.user!.id, email: u.email, name: u.name, image: u.image ?? null, role: u.role,
+      prefs: { tourSeen: false, ...u.prefs }, lastActiveAt: u.lastActiveAt ?? null, createdAt: u.createdAt,
+    }
+  })
+
+  // the profile basics (Better Auth's own update-user is off: it would store any name and any picture URL)
+  app.patch('/api/me', {
+    preHandler: app.requireUser,
+    schema: {
+      body: { ...strict({ name: { type: 'string', minLength: 1, maxLength: 60, pattern: '\\S' }, prefs: strict({ tourSeen: { type: 'boolean' } }, []) }, []), minProperties: 1 },
+    },
+  }, async (req) => {
+    const body = req.body as { name?: string; prefs?: { tourSeen?: boolean } }
+    const set: Record<string, unknown> = { updatedAt: new Date() }
+    if (body.name) set.name = body.name.trim()
+    for (const [k, v] of Object.entries(body.prefs ?? {})) set[`prefs.${k}`] = v
+    await users.updateOne({ _id: userKey(req.user!.id) as ObjectId }, { $set: set })
+    return { ok: true }
   })
 
   return { ix, content, load, record }

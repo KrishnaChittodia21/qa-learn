@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { mergeEarned, type EarnedNow, type StoredAchievement } from '../content/achievements';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS } from '../content';
+import { PW_LAB_STEPS } from '../content/pwlab';
 import { api, ApiError, localDate, timeZone } from './api';
 import { applyOps, buildContentIndex, DEFAULT_PROGRESS, type ContentIndex, type Op } from './progress-ops';
 
@@ -21,6 +22,15 @@ export interface McqRecord {
   wrong: number;
   lastCorrect: boolean;
   lastAt: string;
+}
+
+/** what the ☆ Save button can put on the Saved page; `ref` is the item's id ("topic:index" for a section) */
+export type SavedKind = 'topic' | 'section' | 'interview' | 'drill' | 'company' | 'coding' | 'pwlab';
+export interface SavedItem {
+  kind: SavedKind;
+  ref: string;
+  addedAt: string;
+  doneAt?: string;
 }
 
 /** Settings → Accent colour (applied as data-accent on <html>) */
@@ -55,6 +65,8 @@ export interface Progress {
   activityDays?: string[];
   /** earned badges (src/content/achievements.ts); optional for saves made before achievements existed */
   achievements?: Record<string, StoredAchievement>;
+  /** Save for later, oldest first (max 500); optional for saves made before it existed */
+  saved?: SavedItem[];
   settings: Settings;
 }
 
@@ -235,6 +247,18 @@ export function isPassed(p: Progress, topicId: string) {
   return !!p.tests[topicId]?.passedAt;
 }
 
+// ---- Save for later (M3): the same rule as the service (progress-ops.ts), so both agree on duplicates and limits ----
+function savedOp(action: 'add' | 'remove' | 'done', kind: SavedKind, ref: string) {
+  const op: Op = { op: 'saved', action, kind, ref };
+  update((p) => replay(p, [op]), false, op);
+}
+export const isSaved = (p: Progress, kind: SavedKind, ref: string) => !!p.saved?.some((s) => s.kind === kind && s.ref === ref && !s.doneAt);
+export const saveItem = (kind: SavedKind, ref: string) => savedOp('add', kind, ref);
+export const removeSaved = (kind: SavedKind, ref: string) => savedOp('remove', kind, ref);
+export const setSavedDone = (kind: SavedKind, ref: string) => savedOp('done', kind, ref);
+/** the ☆ button: save, or take it off the list again */
+export const toggleSaved = (kind: SavedKind, ref: string) => (isSaved(state, kind, ref) ? removeSaved(kind, ref) : saveItem(kind, ref));
+
 // ---- account sync (M2) ----
 // Signed in, the account's copy lives under its own key with the changes not yet sent. Changes go out as one batch
 // every 30 s, when the tab is hidden and on page close; a batch rejected as stale is replayed on the latest copy.
@@ -258,7 +282,8 @@ let sync: Sync | null = null;
 const accountKey = (userId: string) => `qa-learn-account-v1:${userId}`;
 const FLUSH_MS = 30_000;
 let contentIndex: ContentIndex | undefined;
-const index = () => (contentIndex ??= buildContentIndex(TOPICS, CODING_PROBLEMS.map((q) => q.id), COMPANY_QUESTIONS.map((q) => q.id)));
+const index = () =>
+  (contentIndex ??= buildContentIndex(TOPICS, CODING_PROBLEMS.map((q) => q.id), COMPANY_QUESTIONS.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id)));
 const replay = (p: Progress, ops: Op[]) => (ops.length ? applyOps(p, ops, index(), localDay(), new Date().toISOString()).progress : p);
 
 /** a newer change to the same thing replaces the queued one (drafts are saved on every keystroke) */
@@ -362,7 +387,9 @@ export async function refreshProgress() {
 }
 
 const hasProgress = (p: Progress) =>
-  [p.tests, p.sections, p.iq, p.boe, p.cc, p.code, p.drafts, p.company, p.mcq].some((x) => Object.keys(x).length) || !!p.activityDays?.length;
+  [p.tests, p.sections, p.iq, p.boe, p.cc, p.code, p.drafts, p.company, p.mcq].some((x) => Object.keys(x).length) ||
+  !!p.activityDays?.length ||
+  !!p.saved?.length;
 
 /** Signed in: show the cached account copy at once, then load the latest (importing this browser's progress once). */
 export async function startSync(userId: string) {

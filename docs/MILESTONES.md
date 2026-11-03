@@ -175,6 +175,20 @@ them).
 **Done when:** an avatar change shows everywhere; an item saved on one device opens the right section on another
 and can be marked done or removed; feedback is stored and only admins can read it.
 
+**As built:** service `api/src/account.ts` (built-in avatars `preset:<id>` from `src/lib/avatar-presets.ts`; signed
+Cloudinary upload into `qa-avatars/<userId>` only with `CLOUDINARY_URL`; any other picture URL refused; feedback 5 an
+hour per account, own list, admin read and reply; account deletion removes the uploaded picture) and `PATCH /api/me`
+(name 1–60 characters, `prefs.tourSeen` for M4). Save for later is a `saved` change in `progress-ops.ts` (topic, section,
+interview, drill, company, coding, PW Lab step; deduplicated, 500 max, unknown content refused, not study, kept by Reset,
+imported once), so it syncs like the rest of progress. App: `SaveButton` (☆ on the topic header, every section, interview
+and drill cards, company cards, coding problems, PW Lab steps; signed out it explains it needs an account), `pages/Saved.tsx`
+(filters, newest/oldest, Done list, Back to list, Clear done, gone content hidden, count on the Saved menu link),
+`pages/Profile.tsx` (avatar picker, name, password, feedback with replies, delete account, Sign out; exam and appearance
+settings stay on Settings; photo upload shows only with `VITE_AVATAR_UPLOADS=1`), `components/Avatar.tsx` (SDL's drawings,
+copied). The account control shows the avatar and opens Profile, on phones too. Tests: app 53, service 47 (4 new in
+`api/test/account.test.ts`), e2e account journey extended (save → Saved → done, rename, avatar, feedback). Found on the way:
+a name change wiped its own "Saved." note (form keyed on the name, also in SDL), and phones had no way to reach Profile.
+
 ### M4 · Guide Me tour · 5–7 h
 
 - Replace the single `WelcomeTour.tsx` flow with SDL's guide system: `lib/guide.ts` state, `PageGuide.tsx` (a

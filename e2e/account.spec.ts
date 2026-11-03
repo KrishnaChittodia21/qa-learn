@@ -25,7 +25,8 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Sign out/ }).filter({ visible: true })).toBeVisible();
+  // the account control: the name in the rail (desktop) or the avatar link in the phone bar
+  await expect(page.getByRole('link', { name: /E2E Learner/ }).filter({ visible: true }).first()).toBeVisible();
   // sign-in finishes once the account's progress has loaded, then the page goes Home: wait for that before moving on
   await expect(page).toHaveURL(/#\/$/);
 }
@@ -80,5 +81,32 @@ test('sign up keeps signed-out progress, grades an exam on the server, and syncs
   // account pages open once signed in
   await second.goto('/#/achievements');
   await expect(second.getByText(/Sign up to unlock/)).toHaveCount(0);
+
+  // ☆ Save a section, find it on Saved, mark it done
+  await second.goto('/#/topic/mt-fundamentals?tab=learn');
+  await second.getByRole('button', { name: 'Save for later' }).nth(1).click();
+  await second.goto('/#/saved');
+  const row = second.getByRole('listitem').filter({ hasText: 'Section 1' });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Done' }).click();
+  await expect(second.getByRole('heading', { name: 'Nothing saved yet' })).toBeVisible();
+  await second.getByRole('button', { name: /Done \(1\)/ }).click();
+  await expect(second.getByRole('button', { name: 'Back to list' })).toBeVisible();
+
+  // Profile: a new name and a built-in avatar show in the menu; feedback is sent
+  await second.goto('/#/profile');
+  await second.getByLabel('Name').fill('Renamed Learner');
+  await second.getByRole('button', { name: 'Save name' }).click();
+  await expect(second.getByText('Saved.')).toBeVisible();
+  await second.getByRole('radio', { name: /fox/i }).click();
+  await second.getByRole('button', { name: 'Save picture' }).click();
+  await expect(second.getByRole('heading', { name: 'Renamed Learner' })).toBeVisible();
+  // the account control (rail on desktop, the avatar in the phone bar) leads to the profile
+  await expect(second.getByRole('link', { name: /Renamed Learner/ }).filter({ visible: true }).first()).toBeVisible();
+  await second.goto('/#/profile?section=feedback');
+  await second.getByRole('textbox').fill('Please add a topic on contract testing.');
+  await second.getByRole('button', { name: 'Send' }).click();
+  await expect(second.getByText(/We read every message/)).toBeVisible();
+  await expect(second.getByText('Please add a topic on contract testing.')).toBeVisible();
   await other.close();
 });

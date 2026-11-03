@@ -7,7 +7,8 @@ import type { Progress } from '../src/lib/progress';
 
 const C = await load<typeof import('../src/content')>('/src/content/index.ts');
 const O = await load<typeof import('../src/lib/progress-ops')>('/src/lib/progress-ops.ts');
-const ix = O.buildContentIndex(C.TOPICS, C.CODING_PROBLEMS.map((q) => q.id), C.COMPANY_QUESTIONS.map((q) => q.id));
+const { PW_LAB_STEPS } = await load<typeof import('../src/content/pwlab')>('/src/content/pwlab.ts');
+const ix = O.buildContentIndex(C.TOPICS, C.CODING_PROBLEMS.map((q) => q.id), C.COMPANY_QUESTIONS.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id));
 const fresh = (): Progress => structuredClone(O.DEFAULT_PROGRESS);
 const DAY = '2026-10-31';
 const NOW = '2026-10-31T10:00:00.000Z';
@@ -110,6 +111,50 @@ test('import keeps only real, well-formed items and the furthest-along copy', ()
   // an account that already chose its settings keeps them
   const chosen = { ...server, settings: { ...server.settings, passMark: 60 } };
   assert.equal(O.mergeImport(chosen, local, ix).settings.passMark, 60);
+});
+
+test('saved items: real content only, no duplicates, done and back again, not study, kept by reset', () => {
+  const section = `${t.id}:1`;
+  let r = apply(fresh(), [
+    { op: 'saved', action: 'add', kind: 'section', ref: section },
+    { op: 'saved', action: 'add', kind: 'section', ref: section },
+    { op: 'saved', action: 'add', kind: 'pwlab', ref: PW_LAB_STEPS[0].id },
+    { op: 'saved', action: 'add', kind: 'coding', ref: C.CODING_PROBLEMS[0].id },
+    { op: 'saved', action: 'add', kind: 'section', ref: `${t.id}:1.5` },
+    { op: 'saved', action: 'add', kind: 'interview', ref: 'no-such-question' },
+    { op: 'saved', action: 'done', kind: 'topic', ref: t.id },
+  ]);
+  assert.deepEqual(r.progress.saved!.map((s) => s.kind), ['section', 'pwlab', 'coding']);
+  assert.deepEqual(r.skipped.map((s) => s.reason), ['unknown item', 'unknown item', 'not saved']);
+  assert.deepEqual(r.progress.activityDays, [], 'saving is not studying');
+  r = apply(r.progress, [{ op: 'saved', action: 'done', kind: 'section', ref: section }]);
+  assert.equal(r.progress.saved![0].doneAt, NOW);
+  // saving a done item again puts it back at the end of the list, not done
+  r = O.applyOps(r.progress, [{ op: 'saved', action: 'add', kind: 'section', ref: section }], ix, DAY, '2026-11-01T00:00:00.000Z');
+  assert.deepEqual([r.progress.saved!.at(-1)!.ref, r.progress.saved!.at(-1)!.doneAt], [section, undefined]);
+  r = apply(r.progress, [{ op: 'saved', action: 'remove', kind: 'pwlab', ref: PW_LAB_STEPS[0].id }, { op: 'reset' }]);
+  assert.equal(r.progress.saved!.length, 2, 'reset clears progress, not bookmarks');
+});
+
+test('the saved list is capped', () => {
+  const ids = C.TOPICS.flatMap((x) => x.sections.map((_, i) => `${x.id}:${i}`));
+  const full = { ...fresh(), saved: Array.from({ length: O.SAVED_MAX }, (_, i) => ({ kind: 'section' as const, ref: ids[i % ids.length] + `-${i}`, addedAt: NOW })) };
+  assert.deepEqual(apply(full, [{ op: 'saved', action: 'add', kind: 'topic', ref: t.id }]).skipped, [{ index: 0, reason: 'saved list full' }]);
+});
+
+test('import brings saved items that point at real content, without duplicates', () => {
+  const server = apply(fresh(), [{ op: 'saved', action: 'add', kind: 'topic', ref: t.id }]).progress;
+  const local = {
+    saved: [
+      { kind: 'topic', ref: t.id, addedAt: NOW },
+      { kind: 'section', ref: `${t.id}:0`, addedAt: NOW, doneAt: NOW },
+      { kind: 'topic', ref: 'gone-topic', addedAt: NOW },
+      { kind: 'topic', ref: t.id, addedAt: 'not a date' },
+      'junk',
+    ],
+  };
+  const m = O.mergeImport(server, local, ix);
+  assert.deepEqual(m.saved!.map((s) => [s.kind, s.ref, !!s.doneAt]), [['topic', t.id, false], ['section', `${t.id}:0`, true]]);
 });
 
 test('importing junk changes nothing', () => {

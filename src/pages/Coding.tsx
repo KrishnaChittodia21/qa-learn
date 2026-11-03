@@ -6,6 +6,7 @@ import { CODING_PROBLEMS } from '../content';
 import type { CodingProblem, Difficulty, FollowUp } from '../types';
 import { useReveal } from '../lib/answers';
 import { RevealButton } from '../components/RevealButton';
+import { SaveButton } from '../components/SaveButton';
 import { setDraft, setFlag, useProgress, type Progress } from '../lib/progress';
 import { celebrate } from '../lib/celebrate';
 import { RunnerConsole } from '../components/TestRunner';
@@ -532,6 +533,7 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
             <span className="mlabel cx-st-cat" style={{ '--c': cat?.c } as CSSProperties}>
               <i className="cx-dia" aria-hidden="true" /> {cat?.label} · <b>#{pad(n)}</b>
             </span>
+            <SaveButton kind="coding" id={q.id} compact />
           </div>
           <h1 id="cx-title" className="cx-title">
             {q.title}

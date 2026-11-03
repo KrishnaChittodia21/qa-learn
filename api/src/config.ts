@@ -20,6 +20,8 @@ export interface Config {
   /** Cloudflare Turnstile on sign-up; off when unset, required in production */
   turnstileSecret?: string
   emailsPerDay: number
+  /** picture uploads, from CLOUDINARY_URL=cloudinary://<key>:<secret>@<cloud>; off when unset (built-in avatars still work) */
+  cloudinary?: { cloud: string; key: string; secret: string }
 }
 
 /** Reads and checks the environment once at startup, so a bad setting stops the service instead of failing later. */
@@ -39,6 +41,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   for (const o of origins) if (!origin.test(o)) errors.push(`CORS_ORIGINS: "${o}" must look like https://host (no path)`)
   if (!env.MONGODB_URI) errors.push('MONGODB_URI is not set')
   if ((env.BETTER_AUTH_SECRET ?? '').length < 32) errors.push('BETTER_AUTH_SECRET must be at least 32 characters (openssl rand -base64 32)')
+  const cloud = /^cloudinary:\/\/(\w+):([\w-]+)@([\w-]+)$/.exec(env.CLOUDINARY_URL ?? '')
+  if (env.CLOUDINARY_URL && !cloud) errors.push('CLOUDINARY_URL must look like cloudinary://<api key>:<api secret>@<cloud name>')
   // both halves of the SMTP login, or neither
   if (!env.SMTP_USER !== !env.SMTP_PASS) errors.push('SMTP_USER and SMTP_PASS must be set together')
   const smtpLogin = env.SMTP_USER && env.SMTP_PASS ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined
@@ -71,6 +75,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     turnstileSecret: env.TURNSTILE_SECRET_KEY || undefined,
     // Brevo's free plan sends 300 a day; a little under leaves room for a race
     emailsPerDay: whole('EMAILS_PER_DAY', 280),
+    cloudinary: cloud ? { key: cloud[1], secret: cloud[2], cloud: cloud[3] } : undefined,
   }
   if (errors.length) throw new Error(`Bad config (see .env.example):\n- ${errors.join('\n- ')}`)
   return config

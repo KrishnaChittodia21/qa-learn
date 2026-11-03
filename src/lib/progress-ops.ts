@@ -2,7 +2,7 @@
 // and sends one batch every ~30 s. Pure: no React, no storage, so both sides run the same rules.
 // Adapted from system-design-learn's src/lib/progress-ops.ts. Type-only imports: the service loads this file in Node.
 import type { Topic } from '../types';
-import type { Progress, Rating, Settings } from './progress';
+import type { Progress, Rating, SavedItem, SavedKind, Settings } from './progress';
 
 export type FlagBucket = 'boe' | 'cc' | 'code' | 'company';
 
@@ -16,11 +16,14 @@ export type Op =
   | { op: 'rate'; id: string; rating: Rating | null }
   | { op: 'draft'; id: string; text: string }
   | { op: 'settings'; settings: Partial<Settings> }
-  /** Settings → Reset all progress: study progress goes, settings and earned badges stay */
+  /** Save for later (M3): the ☆ button and the Saved page */
+  | { op: 'saved'; action: 'add' | 'remove' | 'done'; kind: SavedKind; ref: string }
+  /** Settings → Reset all progress: study progress goes, settings, earned badges and saved items stay */
   | { op: 'reset' };
 
 /** changes that are not study, so they don't count towards the streak */
-const NOT_ACTIVITY = new Set<Op['op']>(['settings', 'reset']);
+const NOT_ACTIVITY = new Set<Op['op']>(['settings', 'saved', 'reset']);
+export const SAVED_MAX = 500;
 /** study days kept (the streak and the consistency badges read them) */
 export const ACTIVITY_DAYS_MAX = 400;
 /** keeps the progress document far below Mongo's 16 MB limit */
@@ -40,12 +43,12 @@ export const DEFAULT_PROGRESS: Progress = {
 /** Which ids exist, so stored progress only ever refers to real content. */
 export interface ContentIndex {
   sectionCount: Map<string, number>;
-  ids: Record<'iq' | 'boe' | 'cc' | 'code' | 'company' | 'mcq', Set<string>>;
+  ids: Record<'iq' | 'boe' | 'cc' | 'code' | 'company' | 'mcq' | 'pwlab', Set<string>>;
 }
 
 type TopicLike = Pick<Topic, 'id' | 'sections' | 'interviewQuestions' | 'envelopeQuestions' | 'codeChallenges' | 'test'>;
 
-export function buildContentIndex(topics: TopicLike[], codingIds: string[], companyIds: string[]): ContentIndex {
+export function buildContentIndex(topics: TopicLike[], codingIds: string[], companyIds: string[], pwlabIds: string[]): ContentIndex {
   return {
     sectionCount: new Map(topics.map((t) => [t.id, t.sections.length])),
     ids: {
@@ -55,9 +58,31 @@ export function buildContentIndex(topics: TopicLike[], codingIds: string[], comp
       code: new Set(codingIds),
       company: new Set(companyIds),
       mcq: new Set(topics.flatMap((t) => t.test.map((q) => q.id))),
+      pwlab: new Set(pwlabIds),
     },
   };
 }
+
+/** "topic:index" naming a real section, written exactly that way (no "t:0.5", "t:", "t:1:x") */
+const sectionKeyKnown = (key: string, ix: ContentIndex) => {
+  const [topic, i] = key.split(':');
+  const n = Number(i);
+  return Number.isInteger(n) && key === `${topic}:${n}` && n >= 0 && n < (ix.sectionCount.get(topic) ?? 0);
+};
+
+/** a saved item points at content that exists */
+export const savedKnown = (kind: SavedKind, ref: string, ix: ContentIndex) => {
+  switch (kind) {
+    case 'topic': return ix.sectionCount.has(ref);
+    case 'section': return sectionKeyKnown(ref, ix);
+    case 'interview': return ix.ids.iq.has(ref);
+    case 'drill': return ix.ids.boe.has(ref);
+    case 'company': return ix.ids.company.has(ref);
+    case 'coding': return ix.ids.code.has(ref);
+    case 'pwlab': return ix.ids.pwlab.has(ref);
+    default: return false;
+  }
+};
 
 const draftKnown = (id: string, ix: ContentIndex) => {
   const [prefix, ...rest] = id.split(':');
@@ -134,9 +159,20 @@ function applyOne(p: Progress, o: Op, ix: ContentIndex, now: string): Progress |
     }
     case 'settings':
       return { ...p, settings: { ...p.settings, ...o.settings } };
+    case 'saved': {
+      const list = p.saved ?? [];
+      const at = list.findIndex((s) => s.kind === o.kind && s.ref === o.ref);
+      if (o.action === 'remove') return at < 0 ? p : { ...p, saved: list.filter((_, i) => i !== at) };
+      if (o.action === 'done') return at < 0 ? 'not saved' : { ...p, saved: list.map((s, i) => (i === at ? { ...s, doneAt: now } : s)) };
+      // saving a done item again puts it back on the list
+      if (at >= 0) return list[at].doneAt ? { ...p, saved: [...list.filter((_, i) => i !== at), { kind: o.kind, ref: o.ref, addedAt: now }] } : p;
+      if (!savedKnown(o.kind, o.ref, ix)) return 'unknown item';
+      if (list.length >= SAVED_MAX) return 'saved list full';
+      return { ...p, saved: [...list, { kind: o.kind, ref: o.ref, addedAt: now }] };
+    }
     case 'reset':
-      // as the local reset always did: badges once earned are never taken away
-      return { ...DEFAULT_PROGRESS, settings: p.settings, achievements: p.achievements };
+      // as the local reset always did: badges once earned are never taken away; saved items are bookmarks, not progress
+      return { ...DEFAULT_PROGRESS, settings: p.settings, achievements: p.achievements, ...(p.saved && { saved: p.saved }) };
   }
 }
 
@@ -226,5 +262,14 @@ export function mergeImport(server: Progress, local: unknown, ix: ContentIndex):
   if (['off', 'exam', 'exam-interview'].includes(s.studyLock as string)) settings.studyLock = s.studyLock as Settings['studyLock'];
   if (['indigo', 'teal', 'rose', 'amber'].includes(s.accent as string)) settings.accent = s.accent as Settings['accent'];
   out.settings = JSON.stringify(server.settings) === JSON.stringify(DEFAULT_SETTINGS) ? { ...server.settings, ...settings } : server.settings;
+
+  const saved = new Map((out.saved ?? []).map((x) => [`${x.kind}|${x.ref}`, x]));
+  for (const raw of Array.isArray(l.saved) ? l.saved : []) {
+    const x = obj(raw) as unknown as SavedItem;
+    if (saved.size >= SAVED_MAX || typeof x.ref !== 'string' || saved.has(`${x.kind}|${x.ref}`) || !isoish(x.addedAt)) continue;
+    if (!savedKnown(x.kind, x.ref, ix)) continue;
+    saved.set(`${x.kind}|${x.ref}`, { kind: x.kind, ref: x.ref, addedAt: x.addedAt, ...(isoish(x.doneAt) && { doneAt: x.doneAt }) });
+  }
+  if (saved.size) out.saved = [...saved.values()];
   return out;
 }
