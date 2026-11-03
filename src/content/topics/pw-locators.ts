@@ -224,6 +224,95 @@ Teams with translated pages or icon-only buttons often use test ids for those el
         `Test ids are a clear agreement with developers. They suit translated pages and icon-only buttons.`,
       ],
       source: "Playwright docs — Locators (quick guide) & Best practices; Checkly — user-first selectors; Debbie O'Brien — How to locate elements in Playwright",
+      steps: {
+        actors: [
+          { id: 'role', label: 'getByRole', sub: "button 'Login'", x: 115, y: 150 },
+          { id: 'label', label: 'getByLabel', sub: "'Password'", x: 335, y: 150 },
+          { id: 'testid', label: 'getByTestId', sub: "'login-button'", x: 555, y: 150 },
+          { id: 'css', label: 'CSS path', sub: 'div:nth-child(3)', x: 775, y: 150 },
+        ],
+        steps: [
+          {
+            kind: 'watch',
+            title: 'What a user would say',
+            lines: ['Users say "the **Login** button", never "the third div".', 'Locators that read like that survive a redesign.'],
+            script: [{ say: 0 }, { lit: 'role' }, { badge: 'role', text: 'user-facing', tone: 'ok' }, { say: 1 }, { wait: 2000 }],
+          },
+          {
+            kind: 'watch',
+            title: 'The priority list',
+            lines: ['First **getByRole**, then getByLabel, getByPlaceholder, getByText.', 'Then **getByTestId**, and **CSS or XPath** last.'],
+            script: [{ say: 0 }, { lit: 'role' }, { lit: 'label' }, { say: 1 }, { lit: 'testid' }, { down: 'css' }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: first choice',
+            lines: ['A Login button with the visible text "Login".'],
+            task: { type: 'pick', question: 'Which locator should you try first for the Login button?', answer: 'role', hints: { label: 'getByLabel is for form fields with a label.', testid: 'Test ids come after the user-facing locators.', css: 'CSS is the last resort: it breaks when the page structure changes.' } },
+            solved: '**getByRole**: it matches what the user sees and checks the accessible name for free.',
+          },
+          {
+            kind: 'watch',
+            title: 'Fails for the right reason',
+            lines: ['If the button text becomes `HEROBUTTON_TXT`, getByRole fails.', 'That is a **real bug** a user would see; the CSS path still passes.'],
+            script: [{ say: 0 }, { badge: 'role', text: 'fails: real bug', tone: 'err' }, { say: 1 }, { badge: 'css', text: 'still passes', tone: 'miss' }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: a labelled field',
+            lines: ['An input with a visible `<label>` "Password".'],
+            task: { type: 'choose', question: 'Which locator is best for it?', options: [{ text: "getByLabel('Password')" }, { text: "getByPlaceholder('Password')", why: 'Placeholders are not labels; use them only when a field has no label.' }, { text: "locator('#password')", why: 'Ids work, but a label locator also checks the field is labelled.' }], answer: 0 },
+            solved: '**getByLabel**: the label is what users and screen readers rely on.',
+          },
+          {
+            kind: 'watch',
+            title: 'Where test ids fit',
+            lines: ['Use **getByTestId** when text is missing or changes: icon-only buttons, translated pages.', "Users can't see test ids, so they don't catch wrong-label bugs."],
+            script: [{ say: 0 }, { lit: 'testid' }, { badge: 'testid', text: 'stable', tone: 'ok' }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the order',
+            lines: ['Four kinds of locator.'],
+            task: { type: 'order', question: 'Order these from first choice to last resort.', items: ['getByRole', 'getByLabel', 'getByTestId', 'CSS or XPath'], hint: 'User-facing first, test ids next, page structure last.' },
+            solved: 'Role, label, test id, then CSS or XPath.',
+          },
+          {
+            kind: 'watch',
+            title: 'Strictness',
+            lines: ['An action needs the locator to match **exactly one** element.', 'Six "Add to cart" buttons: narrow it with `filter` or a parent locator.'],
+            script: [{ say: 0 }, { dots: 6, on: 6, l: '6 matches: the click fails strict mode', tone: 'err' }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the interview answer',
+            lines: ['"How do you choose a locator?"'],
+            task: { type: 'choose', question: 'Which answer is strongest?', options: [{ text: 'Role and label first, test ids when text changes, CSS or XPath last' }, { text: 'XPath, because it can reach anything', why: 'It can, but long XPath mirrors the page structure and breaks on refactors.' }, { text: 'Whatever codegen picks', why: 'Codegen follows the priority list, but you still read and adjust what it gives you.' }], answer: 0 },
+            solved: 'User-facing first, because it matches the user and checks accessibility.',
+          },
+        ],
+      },
+      learnMore: {
+        body: `**Edge cases**
+
+- **Two elements match.** \`getByRole('button', { name: 'Add to cart' })\` on a product list matches six buttons, and an action fails the strictness check. Narrow it: \`page.getByTestId('inventory-item').filter({ hasText: 'Backpack' }).getByRole('button')\`.
+- **Partial names.** \`name\` matches a substring, ignoring case, by default. \`{ name: 'Log', exact: true }\` stops "Log" from also matching "Logout".
+- **Hidden duplicates.** A mobile menu and a desktop menu can both contain "Login". Role locators skip elements hidden from the accessibility tree, so check what is actually visible before reaching for \`.first()\`.
+
+**In real projects**
+
+- Agree a \`data-testid\` convention with developers for the few elements without good text, and set \`testIdAttribute\` in the config if the team uses another attribute name.
+- Use codegen or the locator picker in UI mode to get a first suggestion, then read it: it may pick text that changes per environment.
+
+**Interview follow-ups**
+
+- *"Why not XPath everywhere?"* — It works, but long XPath mirrors the page structure and breaks on refactors. It also misses accessibility bugs a role locator would catch.
+- *"What would you do if a button has no accessible name?"* — Report it as an accessibility bug, use a test id in the meantime, and switch to a role locator once it is fixed.`,
+        links: [
+          { name: 'Playwright: Best practices', url: 'https://playwright.dev/docs/best-practices', what: 'Test user-visible behaviour, isolate tests, prefer role locators.' },
+          { name: 'Playwright documentation', url: 'https://playwright.dev/docs/intro', what: 'The Locators guide covers every getBy method, filtering and strictness.' },
+        ],
+      },
     },
     {
       heading: 'getByRole in depth',

@@ -9,12 +9,15 @@ import { RevealButton } from '../components/RevealButton';
 import { SaveButton } from '../components/SaveButton';
 import { ShortCard } from '../components/ShortCard';
 import { SHORTS, shortForSection } from '../lib/shorts';
+import { StepLesson } from '../components/steps/StepLesson';
+import { saveUiPrefs, useUiPrefs } from '../lib/uiPrefs';
 import {
   rateIQ,
   setDraft,
   markAllSectionsRead,
   setFlag,
   toggleSectionRead,
+  recordSteps,
   useProgress,
   type Progress,
   type Rating,
@@ -30,7 +33,7 @@ import { CoachTip } from '../components/CoachTip';
 import { NextUp } from '../components/NextUp';
 import { TAB_META, loopTabs, stepProgress, tabLabel, type TabId } from '../lib/studyLoop';
 import { celebrate } from '../lib/celebrate';
-import { ArrowRight, BookOpen, ChevronDown, Lightbulb, Play, PlayCircle, RotateCcw, Zap } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronDown, Footprints, Lightbulb, Play, PlayCircle, RotateCcw, Zap } from 'lucide-react';
 
 const TAB_IDS: TabId[] = ['learn', 'code', 'interview', 'envelope', 'cheat', 'exam', 'company'];
 
@@ -376,6 +379,9 @@ function SpecPanel({ topic, prev, next, onSelect }: { topic: Topic; prev?: Topic
 
 /* ---------------------------------------------------------------- learn */
 
+/** sections longer than this (markdown characters) open collapsed, with Read more; the key points below are the summary */
+const LONG_SECTION = 2000;
+
 function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabId) => void; locks: Partial<Record<TabId, boolean>> }) {
   const p = useProgress();
   const read = new Set(p.sections[topic.id] ?? []);
@@ -391,6 +397,10 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
   const next = TOPICS[idx + 1];
   const prev = TOPICS[idx - 1];
   const topicShorts = SHORTS.filter((e) => e.topic.id === topic.id);
+  // Read more / Read less, per section, for this visit
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  // Read or Steps for sections that have a step lesson; one choice, remembered in this browser
+  const mode = useUiPrefs().lessonMode ?? 'read';
 
   // deep link from weak-area reports: /topic/:id?tab=learn&s=<section index>
   useEffect(() => {
@@ -509,6 +519,8 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
         )}
         {topic.sections.map((s, i) => {
           const short = shortForSection(topic.id, i);
+          const long = s.body.length > LONG_SECTION;
+          const open = !!expanded[i];
           const isRead = read.has(i);
           const { main, sub } = splitTitle(s.heading);
           return (
@@ -550,10 +562,66 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                     <BookOpen size={14} aria-hidden="true" /> {s.source}
                   </div>
                 )}
-                <div className="prose">
+                {s.steps && (
+                  <div className="sl-mode" role="group" aria-label="How to learn this section">
+                    {(['read', 'steps'] as const).map((m) => (
+                      <button key={m} type="button" aria-pressed={mode === m} onClick={() => saveUiPrefs({ lessonMode: m })}>
+                        {m === 'steps' ? <Footprints size={14} aria-hidden="true" /> : <BookOpen size={14} aria-hidden="true" />} {m === 'steps' ? 'Steps' : 'Read'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {s.steps && mode === 'steps' ? (
+                  <StepLesson
+                    lesson={s.steps}
+                    onRead={() => saveUiPrefs({ lessonMode: 'read' })}
+                    onFinish={(missed) => {
+                      recordSteps(topic.id, i, missed);
+                      if (!isRead) toggleSectionRead(topic.id, i);
+                      if (i < total - 1) go(i + 1);
+                    }}
+                  />
+                ) : (
+                  <>
+                <div id={`s-${i}-body`} className={`prose ${long && !open ? 'is-clamped' : ''}`}>
                   <Markdown>{s.body}</Markdown>
                 </div>
+                {long && (
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm read-toggle"
+                    aria-expanded={open}
+                    aria-controls={`s-${i}-body`}
+                    onClick={() => setExpanded((x) => ({ ...x, [i]: !open }))}
+                  >
+                    {open ? 'Read less' : 'Read more'} <ChevronDown size={14} aria-hidden="true" className={open ? 'open' : ''} />
+                  </button>
+                )}
                 {s.diagram && <Diagram text={s.diagram} />}
+                {s.learnMore && (
+                  <details className="learn-more">
+                    <summary>
+                      <Lightbulb size={15} aria-hidden="true" /> Learn more
+                    </summary>
+                    <div className="prose">
+                      <Markdown>{s.learnMore.body}</Markdown>
+                    </div>
+                    {s.learnMore.links && s.learnMore.links.length > 0 && (
+                      <ul className="lm-links">
+                        {s.learnMore.links.map((l) => (
+                          <li key={l.url}>
+                            <a href={l.url} target="_blank" rel="noreferrer">
+                              {l.name} ↗
+                            </a>{' '}
+                            <span className="muted">{l.what}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </details>
+                )}
+                  </>
+                )}
                 <div className="sec-foot">
                   <label className={`tp-tick ${isRead ? 'on' : ''}`}>
                     <input type="checkbox" checked={isRead} onChange={() => toggleSectionRead(topic.id, i)} />

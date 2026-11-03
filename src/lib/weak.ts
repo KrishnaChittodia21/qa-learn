@@ -130,6 +130,8 @@ export interface TopicWeakness {
   sections: WeakSection[];
   /** interview questions self-rated missed/partial */
   shakyInterview: number;
+  /** sections whose latest step lesson run missed Your-turn steps (M8); a clean run clears it */
+  shakySteps: { index: number; heading: string; missed: number }[];
 }
 
 /** attempted topics that need work, weakest first */
@@ -139,6 +141,10 @@ export function weakTopics(p: Progress, topics: Topic[]): TopicWeakness[] {
       const rec = p.tests[topic.id];
       const wrong = currentlyWrong(p, topic);
       const shakyInterview = topic.interviewQuestions.filter((q) => p.iq[q.id] === 'missed' || p.iq[q.id] === 'partial').length;
+      const shakySteps = topic.sections.flatMap((s, index) => {
+        const missed = p.steps?.[`${topic.id}:${index}`]?.missed ?? 0;
+        return missed > 0 ? [{ index, heading: s.heading, missed }] : [];
+      });
       return {
         topic,
         last: rec?.last ?? 0,
@@ -149,9 +155,10 @@ export function weakTopics(p: Progress, topics: Topic[]): TopicWeakness[] {
         wrong,
         sections: weakSections(topic, wrong),
         shakyInterview,
+        shakySteps,
       };
     })
-    .filter((w) => w.wrong.length > 0 || w.shakyInterview > 0 || (w.attempts > 0 && !w.passed))
+    .filter((w) => w.wrong.length > 0 || w.shakyInterview > 0 || w.shakySteps.length > 0 || (w.attempts > 0 && !w.passed))
     .sort((a, b) => Number(a.passed) - Number(b.passed) || a.last - b.last || b.wrong.length - a.wrong.length);
 }
 

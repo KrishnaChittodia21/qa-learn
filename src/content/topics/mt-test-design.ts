@@ -205,6 +205,103 @@ Plus EP for non-boundary invalid types: "abc", 25.5, blank.`,
         'Each border between two partitions has two boundary values, so 3-value BVA gives four items per border.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.2 Boundary Value Analysis; ISTQB BVA white paper (2025)',
+      steps: {
+        actors: [],
+        steps: [
+          {
+            kind: 'watch',
+            title: 'Three partitions',
+            lines: ['**Equivalence partitioning** splits the input into groups the system treats the same.', 'Age 18–60 allowed gives **three** partitions.'],
+            script: [{ say: 0 }, { table: { cols: ['Age', 'Partition', 'Expected'], rows: [['0–17', 'too young', 'Error'], ['18–60', 'valid', 'Accepted'], ['61+', 'too old', 'Error']], tones: ['err', 'ok', 'err'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'watch',
+            title: 'One character, one bug',
+            lines: ['Developers write comparisons such as `age >= 18`.', 'Typing `>` instead of `>=` moves the edge by **one**.'],
+            script: [{ say: 0 }, { table: { cols: ['Code', 'Age 18', 'Age 19'], rows: [['age >= 18', 'Accepted', 'Accepted'], ['age > 18', 'Rejected', 'Accepted']], tones: ['ok', 'err'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: catch the typo',
+            lines: ['The code says `age > 18`, but 18 should be accepted.'],
+            task: { type: 'choose', question: 'Which single test value exposes the bug?', options: [{ text: '30', why: '30 is accepted by both versions.' }, { text: '18' }, { text: '17', why: '17 is rejected by both versions.' }], answer: 1 },
+            solved: '**18**: the boundary itself is where `>` and `>=` disagree.',
+          },
+          {
+            kind: 'watch',
+            title: 'Both sides of a border',
+            lines: ['17 is the **max** of "too young"; 18 is the **min** of valid.', 'So each border has **two** boundary values.'],
+            script: [{ say: 0 }, { table: { cols: ['Border', 'Boundary values'], rows: [['lower', '17 and 18'], ['upper', '60 and 61']] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'watch',
+            title: '2-value BVA',
+            lines: ['For each boundary value: the value and its **closest neighbour across the border**.', 'Age 18–60 gives four tests.'],
+            script: [{ say: 0 }, { eq: [{ v: '17' }, { op: '+' }, { v: '18' }, { op: '+' }, { v: '60' }, { op: '+' }, { v: '61' }], result: { to: 4, unit: 'tests', tone: 'ok' } }, { say: 1 }, { wait: 2000 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: a password',
+            lines: ['Password length 8–64. The shortest possible is 0 (empty).'],
+            task: { type: 'number', question: 'How many values does 2-value BVA give?', options: [4, 5, 6], answer: 5, hint: 'Two borders give four values, and the empty password (0) is an outer boundary too.' },
+            solved: '**5**: {0, 7, 8, 64, 65}.',
+          },
+          {
+            kind: 'watch',
+            title: '3-value BVA',
+            lines: ['For each boundary value: the value and **both** its neighbours.', 'At the 17 | 18 border that is **four** values.'],
+            script: [{ say: 0 }, { table: { cols: ['Boundary', 'Neighbours', 'Items'], rows: [['17', '16 and 18', '16, 17, 18'], ['18', '17 and 19', '17, 18, 19'], ['union', '', '16–19']], tones: [null, null, 'ok'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: count 3-value',
+            lines: ['Age 18–60 has two borders.'],
+            task: { type: 'number', question: 'How many values does 3-value BVA give in total?', options: [6, 8, 10], answer: 8, hint: 'Four values per border, two borders.' },
+            solved: '**8**: {16, 17, 18, 19, 59, 60, 61, 62}.',
+          },
+          {
+            kind: 'watch',
+            title: 'Why 3-value is stronger',
+            lines: ['Rule `x <= 10`, wrongly coded as `x == 10`.', '2-value tests 10 and 11, and both agree. Only **9** shows the bug.'],
+            script: [{ say: 0 }, { table: { cols: ['x', 'Correct', 'Buggy', 'Caught?'], rows: [['9', 'Accept', 'Reject', 'yes'], ['10', 'Accept', 'Accept', 'no'], ['11', 'Reject', 'Reject', 'no']], tones: ['err', null, null] } }, { say: 1 }, { wait: 2400 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the method',
+            lines: ['BVA is a short recipe.'],
+            task: { type: 'order', question: 'Put the steps for designing BVA tests in order.', items: ['Find the partitions', 'Find the boundary values at each border', 'Add the neighbours (2- or 3-value)', 'Write the expected result for each value'], hint: 'Partitions first, then borders, then neighbours, then expectations.' },
+            solved: 'Partition, find the edges, add neighbours, then write what each value should do.',
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: which variant?',
+            lines: ['3-value doubles the tests at each border.'],
+            task: { type: 'choose', question: 'When is 3-value BVA worth the extra tests?', options: [{ text: 'For risky rules such as money or eligibility' }, { text: 'Always, for every field', why: 'It doubles the tests; most fields are fine with 2-value.' }, { text: 'Never: 2-value finds every bug', why: 'The `x == 10` example is a bug only 3-value finds.' }], answer: 0 },
+            solved: '2-value by default, 3-value where an off-by-one is expensive.',
+          },
+        ],
+      },
+      learnMore: {
+        body: `**Edge cases that trip people up**
+
+- **Open ends.** "Age 18 or over" has no top boundary in the requirement. Ask what the system really stores (a 3-digit field? a 16-bit number?) and test that limit too.
+- **Boundaries that move.** "Free delivery over ₹499" — is ₹499 free or not? "Over" vs "from" is exactly the ambiguity BVA exposes. Ask before you write the test.
+- **Hidden boundaries.** A field may accept 60 in the UI but the API, the database column or a report may round, truncate or reject it. Test the boundary at every layer the value passes through.
+
+**In real projects**
+
+- Put boundary values in a data table and drive one test from it (Playwright: a \`for\` loop over cases, or a parameterised test). Adding a case is one row.
+- When a bug is found at a boundary, add the neighbour values too: one off-by-one often has a twin at the other end.
+
+**Interview follow-ups**
+
+- *"2-value or 3-value?"* — 2-value is cheaper and a sensible default; 3-value adds both neighbours of each boundary value, worth it for high-risk ranges such as money or eligibility.
+- *"Can you use BVA on a dropdown?"* — Only if its options are ordered (sizes S–XL, dates). Unordered options (colours) get equivalence partitioning instead.`,
+        links: [
+          { name: 'ISTQB Foundation Level (CTFL v4.0)', url: 'https://www.istqb.org/certifications/certified-tester-foundation-level', what: 'The syllabus section 4.2.2 defines 2-value and 3-value BVA.' },
+          { name: 'The Art of Software Testing (Glenford Myers)', url: 'https://www.wiley.com/en-us/The+Art+of+Software+Testing%2C+3rd+Edition-p-9781118031964', what: 'The classic chapter on boundary values and equivalence classes.' },
+        ],
+      },
     },
     {
       heading: 'BVA beyond integers: decimals, dates, lengths and open ends',

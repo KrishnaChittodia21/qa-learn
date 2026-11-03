@@ -49,6 +49,7 @@ const opSchemas = [
   }),
   strict({ op: { const: 'saved' }, action: { enum: ['add', 'remove', 'done'] }, kind: { enum: ['topic', 'section', 'interview', 'drill', 'company', 'coding', 'pwlab', 'short'] }, ref: id }),
   strict({ op: { const: 'short' }, id, event: { enum: ['watched', 'quiz-first', 'quiz-retry'] } }),
+  strict({ op: { const: 'steps' }, topicId: id, index: { type: 'integer', minimum: 0, maximum: 200 }, missed: { type: 'integer', minimum: 0, maximum: 50 } }),
   strict({ op: { const: 'reset' } }),
 ]
 

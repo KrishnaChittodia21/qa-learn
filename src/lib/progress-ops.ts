@@ -20,6 +20,8 @@ export type Op =
   | { op: 'saved'; action: 'add' | 'remove' | 'done'; kind: SavedKind; ref: string }
   /** Shorts (M7): watched to the end card, or the quiz answered (first try or after a miss) */
   | { op: 'short'; id: string; event: 'watched' | 'quiz-first' | 'quiz-retry' }
+  /** a section's step lesson (M8) finished: Your-turn steps missed on the first try (feeds Weak areas) */
+  | { op: 'steps'; topicId: string; index: number; missed: number }
   /** Settings → Reset all progress: study progress goes, settings, earned badges and saved items stay */
   | { op: 'reset' };
 
@@ -183,6 +185,10 @@ function applyOne(p: Progress, o: Op, ix: ContentIndex, now: string, day: string
         : prev.quiz ? prev : { ...prev, quiz: o.event === 'quiz-first' ? ('first' as const) : ('retry' as const) };
       return next === prev ? p : { ...p, shorts: { ...p.shorts, [o.id]: next } };
     }
+    case 'steps': {
+      if (!sectionKeyKnown(`${o.topicId}:${o.index}`, ix) || !Number.isInteger(o.missed) || o.missed < 0 || o.missed > 50) return 'unknown section';
+      return { ...p, steps: { ...p.steps, [`${o.topicId}:${o.index}`]: { missed: o.missed, at: now } } };
+    }
     case 'reset':
       // as the local reset always did: badges once earned are never taken away; saved items are bookmarks, not progress
       return { ...DEFAULT_PROGRESS, settings: p.settings, achievements: p.achievements, ...(p.saved && { saved: p.saved }) };
@@ -294,6 +300,12 @@ export function mergeImport(server: Progress, local: unknown, ix: ContentIndex):
       ...((r.quiz === 'first' || r.quiz === 'retry') && { quiz: r.quiz as ShortRecord['quiz'] }),
     };
     if (Object.keys(rec).length) out.shorts = { ...out.shorts, [id]: rec };
+  }
+  // step lessons: the latest run of each section wins
+  for (const [key, raw] of Object.entries(obj(l.steps))) {
+    const r = obj(raw);
+    if (!sectionKeyKnown(key, ix) || !int(r.missed, 0, 50) || !isoish(r.at)) continue;
+    if ((out.steps?.[key]?.at ?? '') < (r.at as string)) out.steps = { ...out.steps, [key]: { missed: r.missed as number, at: r.at as string } };
   }
   return out;
 }

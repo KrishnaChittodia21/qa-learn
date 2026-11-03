@@ -100,3 +100,40 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
   await expect(page.getByText(/1 of 12 watched/)).toBeVisible();
   await expect(page.getByRole('heading', { name: /Watched/ })).toBeVisible();
 });
+
+test('a long section collapses with Read more, and Learn more opens', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  await page.goto('/#/topic/pw-locators?tab=learn');
+  const section = page.locator('section.tp-sec', { has: page.getByRole('heading', { name: /The recommended locator priority/ }) });
+  const toggle = section.getByRole('button', { name: /Read more/ });
+  await toggle.scrollIntoViewIfNeeded();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
+  await expect(section.getByRole('button', { name: /Read less/ })).toHaveAttribute('aria-expanded', 'true');
+
+  const more = section.locator('details.learn-more');
+  await more.locator('summary').click();
+  await expect(more.getByRole('link', { name: /Playwright: Best practices/ })).toBeVisible();
+});
+
+test('a section switches to Steps, a Your turn blocks Next until solved, and the choice is remembered', async ({ page }) => {
+  // seed only once: the reload below must keep what the app saved
+  await page.addInitScript(() => localStorage.getItem('qa-learn-ui-v1') || localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  await page.goto('/#/topic/sql-joins-validation?tab=learn');
+  const section = page.locator('section.tp-sec').first();
+  await section.getByRole('button', { name: 'Steps' }).click();
+  await expect(section.getByRole('button', { name: 'Steps' })).toHaveAttribute('aria-pressed', 'true');
+
+  const lesson = section.locator('.sl');
+  await lesson.getByRole('button', { name: /^Next/ }).click();
+  await lesson.getByRole('button', { name: /^Next/ }).click();
+  await expect(lesson.getByText('3 / 10')).toBeVisible();
+  await expect(lesson.getByRole('button', { name: 'Solve it to continue' })).toBeDisabled();
+  await lesson.getByRole('button', { name: '4', exact: true }).click();
+  await expect(lesson.getByRole('button', { name: 'Solve it to continue' })).toBeDisabled();
+  await lesson.getByRole('button', { name: '3', exact: true }).click();
+  await expect(lesson.getByRole('button', { name: /^Next/ })).toBeEnabled();
+
+  await page.reload();
+  await expect(page.locator('section.tp-sec').first().getByRole('button', { name: 'Steps' })).toHaveAttribute('aria-pressed', 'true');
+});

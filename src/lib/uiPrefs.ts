@@ -19,6 +19,8 @@ export interface UiPrefs {
   celebratedPwSteps: string[];
   /** command palette: most recently chosen item ids, newest first */
   recentCommands: string[];
+  /** M8: how sections that have step lessons open, the text or the animated steps */
+  lessonMode?: 'read' | 'steps';
 }
 
 const KEY = 'qa-learn-ui-v1';

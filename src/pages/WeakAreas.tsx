@@ -323,6 +323,15 @@ function WeakTopicCard({ w, i, passMark, foil }: { w: TopicWeakness; i: number; 
           </span>
         </p>
       )}
+      {w.shakySteps.map((st) => (
+        <p key={st.index} className="wk-shaky">
+          <span className="chip flaky">Steps</span>
+          <span>
+            §{st.index + 1} {st.heading}: {st.missed} <em>Your turn</em> step{st.missed === 1 ? '' : 's'} missed.{' '}
+            <Link to={`/topic/${w.topic.id}?tab=learn&s=${st.index}`}>Redo the steps →</Link>
+          </span>
+        </p>
+      ))}
       <div className="wk-card-act">
         {w.wrong.length > 0 && (
           <Link to={`/practice?topic=${w.topic.id}`} className={`btn btn-sm ${foil ? 'btn-holo' : 'btn-line'}`}>

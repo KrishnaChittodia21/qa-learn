@@ -325,6 +325,22 @@ device, and `npm run validate` rejects a malformed Short.
 **Done when:** the three sections work in Read and Steps on desktop and phone, the switch is remembered, Your-turn
 misses feed Weak areas, and a malformed step or `learnMore` fails validation.
 
+**As built:**
+- **Step lessons:** SDL's engine is ported as is (`components/steps/StepLesson.tsx`, `stage.ts`, `scenes.ts`, its
+  types in `src/types.ts`) and so is its validator (`scripts/validate-steps.mjs`, also checks layout on both stage
+  sizes). `styles/steps.css` maps SDL's tokens onto qa-learn's on the lesson's own elements.
+- **Three lessons:** BVA (11 steps, 5 Your turns), locators (9 steps, including a click-the-diagram pick), SQL
+  joins (10 steps). Every number matches the section's own text (3-value BVA = 8 values, FULL JOIN = 5 rows).
+- **Read · Steps** shows only on sections that have steps; one choice for all of them, kept in `uiPrefs.lessonMode`.
+  Finishing marks the section read and moves to the next one.
+- **Weak areas:** a `steps` op stores the latest run's misses (app, service schema, first-login import);
+  `weakTopics` lists them as `shakySteps`, and a clean run clears them. Weak areas itself is still sign-in only.
+- **Read more / Read less:** sections over 2,000 characters (about a quarter) open clamped, with `aria-expanded` +
+  `aria-controls`. The key points after each section act as the summary. Per visit, not remembered.
+- **Learn more:** an optional `learnMore { body, links[] }` on a section, shown as a native `<details>`; written
+  for the same three sections, with links reused from the roadmap's vetted resources. Rules in
+  `content/sectionRules.ts`, used by `npm run validate` and `tests/sections.test.ts`.
+
 ### M9 · Admin · 5–8 h
 
 - `GET /api/admin/stats` on `qa-api` (SDL's `admin.ts` as the starting point), read from `qa_learn` only: users, activity,

@@ -76,6 +76,8 @@ export interface Progress {
   saved?: SavedItem[];
   /** Shorts (M7) by id: when first watched to the end (and that local day), and the first quiz result */
   shorts?: Record<string, ShortRecord>;
+  /** step lessons (M8) by "topicId:sectionIndex": Your-turn steps missed on the first try in the latest run */
+  steps?: Record<string, { missed: number; at: string }>;
   settings: Settings;
 }
 
@@ -271,6 +273,12 @@ export const toggleSaved = (kind: SavedKind, ref: string) => (isSaved(state, kin
 // ---- Shorts (M7): watched to the end, and the quiz result; the first of each is kept ----
 export function recordShort(id: string, event: 'watched' | 'quiz-first' | 'quiz-retry') {
   const op: Op = { op: 'short', id, event };
+  update((p) => replay(p, [op]), false, op);
+}
+
+// ---- step lessons (M8): finishing records the latest run's misses (Weak areas reads them) ----
+export function recordSteps(topicId: string, index: number, missed: number) {
+  const op: Op = { op: 'steps', topicId, index, missed };
   update((p) => replay(p, [op]), false, op);
 }
 

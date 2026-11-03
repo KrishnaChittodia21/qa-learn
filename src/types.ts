@@ -31,6 +31,16 @@ export interface Section {
   keyPoints?: string[];
   /** e.g. "Alex Xu Vol 2 — Ch 4 Distributed Message Queue" */
   source?: string;
+  /** M8: deeper material kept out of the main text (edge cases, real projects, follow-ups) and further reading */
+  learnMore?: LearnMore;
+  /** M8: the section as small animated steps, shown when the reader picks Steps over Read */
+  steps?: StepLesson;
+}
+
+export interface LearnMore {
+  /** markdown */
+  body: string;
+  links?: { name: string; url: string; what: string }[];
 }
 
 /** "Improve this" exercise: buggy code / weak test case / weak bug report → strong version */
@@ -245,4 +255,107 @@ export interface Short {
   beats: ShortBeat[];
   /** the end card: the one idea to keep */
   takeaway: { head: string; sub: string };
+}
+
+// ---------- Step lessons (M8) ----------
+// Adapted from system-design-learn (its M11). Text fields are plain text with two marks: **bold** and `code`.
+export type StepTone = 'req' | 'ok' | 'miss' | 'del' | 'err';
+
+export interface StepActor {
+  id: string;
+  label: string;
+  sub?: string;
+  /** centre, in the 900×300 stage */
+  x: number;
+  y: number;
+  /** starts hidden; a `show` action brings it in */
+  hidden?: boolean;
+}
+
+/** One move on the stage. A Watch step plays a list of these, looping like a GIF. */
+export type StepAction =
+  /** light up explanation line n (0-based); earlier lines turn "done" */
+  | { say: number }
+  /** a packet travels between two actors; `curve` arcs over the middle (e.g. the app reading the database itself), `count` sends several staggered */
+  | { send: [from: string, to: string]; label?: string; tone?: StepTone; curve?: boolean; count?: number }
+  /** a pill above an actor for a moment */
+  | { badge: string; text: string; tone?: StepTone; ms?: number }
+  | { lit: string; on?: boolean }
+  /** an actor goes grey (switched off) */
+  | { down: string; on?: boolean }
+  | { show: string; on?: boolean }
+  /** the keys shown under the scene's `keysUnder` actor; `gone` keys are drawn as deleted */
+  | { keys: { key: string; note?: string; gone?: boolean }[] }
+  | { wait: number }
+  | SceneAction;
+
+/** a number that counts up from `from` (default 0) to `to` */
+export interface SceneNumber {
+  to: number;
+  from?: number;
+  digits?: number;
+  prefix?: string;
+  unit?: string;
+  l?: string;
+  tone?: StepTone;
+}
+
+/** A scene replaces the actor boxes while its step plays (components/steps/scenes.ts); a new scene replaces the last. */
+export type SceneAction =
+  /** chips (a value with a small label) and operators arrive one by one, then the result counts up */
+  | { eq: ({ v: string; l?: string; tone?: StepTone } | { op: string })[]; result?: SceneNumber }
+  | { count: SceneNumber }
+  /** horizontal bars; `log` for values spanning powers of ten; `limit` draws a capacity line */
+  | { bars: { l: string; v: number; text?: string; tone?: StepTone }[]; log?: boolean; unit?: string; limit?: { v: number; l: string } }
+  /** a line that draws itself (e.g. traffic over a day), then horizontal marks (average, peak) */
+  | { curve: number[]; marks?: { v: number; l: string; tone?: StepTone }[]; x?: [string, string]; peak?: string }
+  /** a grid of `dots` where the first `on` light up */
+  | { dots: number; on: number; l: string; tone?: StepTone }
+  /** a log time axis from 1 ns to 1 s; `s` is seconds */
+  | { ladder: { l: string; s: number; tone?: StepTone }[] }
+  /** capacity bars that fill to v/max and turn red at `warn` (a fraction) */
+  | { meter: { l: string; v: number; max: number; unit: string; warn?: number; digits?: number }[] }
+  /** a sequence diagram: lanes across the top, messages one by one down the page; from === to is a note on that lane */
+  | { seq: { lanes: string[]; msgs: { from: number; to: number; l: string; tone?: StepTone; wait?: number }[] } }
+  /** a small table whose rows arrive one by one; `tones` highlights rows, `strike` crosses them out */
+  | { table: { cols: string[]; rows: string[][]; tones?: (StepTone | null)[]; strike?: number[]; l?: string } }
+  /** consistent hashing: nodes and keys at angles (0–359°, clockwise from the top); `add` joins a node and moves only its keys */
+  | { ring: { nodes: { l: string; at: number }[]; keys: { l: string; at: number }[]; add?: { l: string; at: number } } };
+
+/** A Your-turn task. Every task has buttons, so it works without the diagram (keyboard, screen readers, phones). */
+export type StepTask =
+  /** click an actor on the diagram (or its button) */
+  | { type: 'pick'; question: string; answer: string; hints: Record<string, string> }
+  /** one of a few options; `why` explains a wrong pick */
+  | { type: 'choose'; question: string; options: { text: string; why?: string }[]; answer: number }
+  | { type: 'number'; question: string; options: number[]; answer: number; hint: string }
+  /** tap the items in the right order (`items` is the right order; they are shown shuffled) */
+  | { type: 'order'; question: string; items: string[]; hint: string }
+  /** build a value from parts: like order, but the parts fill labelled slots joined by `join` */
+  | { type: 'build'; question: string; parts: { text: string; label: string }[]; join: string; hint: string }
+  /** drag until the chart is calm; `model` names a built-in chart */
+  | { type: 'slider'; question: string; model: 'ttl-jitter' | 'hit-ratio' | 'availability'; label: string; min: number; max: number; unit: string }
+  /** switch an actor off, then send a request and watch what happens */
+  | { type: 'break'; question: string; actor: string; offLabel: string; sendLabel: string }
+  /** type a number (2.3K, 2300, 2.3e3, 10^5 all work); right when within `within`× of the answer */
+  | { type: 'estimate'; question: string; answer: number; within: number; unit: string; hint: string }
+  /** drag how many units to provision: right when count × per covers `need` without passing need × slack (default 1.5) */
+  | { type: 'dial'; question: string; label: string; min: number; max: number; step?: number; per: number; need: number; unit: string; capUnit: string; slack?: number };
+
+interface StepBase {
+  title: string;
+  /** the explanation beside the diagram, one idea per line */
+  lines: string[];
+}
+
+export type Step =
+  | (StepBase & { kind: 'watch'; script: StepAction[] })
+  /** `then` plays (looping) once the task is solved; `solved` is the one-line takeaway */
+  | (StepBase & { kind: 'turn'; task: StepTask; solved: string; setup?: StepAction[]; then?: StepAction[] });
+
+export interface StepLesson {
+  actors: StepActor[];
+  /** the actor whose stored keys are drawn under it (e.g. the cache) */
+  keysUnder?: string;
+  steps: Step[];
 }
