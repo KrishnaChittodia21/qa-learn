@@ -2,7 +2,7 @@
 // and sends one batch every ~30 s. Pure: no React, no storage, so both sides run the same rules.
 // Adapted from system-design-learn's src/lib/progress-ops.ts. Type-only imports: the service loads this file in Node.
 import type { Topic } from '../types';
-import type { Progress, Rating, SavedItem, SavedKind, Settings } from './progress';
+import type { Progress, Rating, SavedItem, SavedKind, Settings, ShortRecord } from './progress';
 
 export type FlagBucket = 'boe' | 'cc' | 'code' | 'company';
 
@@ -18,6 +18,8 @@ export type Op =
   | { op: 'settings'; settings: Partial<Settings> }
   /** Save for later (M3): the ☆ button and the Saved page */
   | { op: 'saved'; action: 'add' | 'remove' | 'done'; kind: SavedKind; ref: string }
+  /** Shorts (M7): watched to the end card, or the quiz answered (first try or after a miss) */
+  | { op: 'short'; id: string; event: 'watched' | 'quiz-first' | 'quiz-retry' }
   /** Settings → Reset all progress: study progress goes, settings, earned badges and saved items stay */
   | { op: 'reset' };
 
@@ -43,12 +45,12 @@ export const DEFAULT_PROGRESS: Progress = {
 /** Which ids exist, so stored progress only ever refers to real content. */
 export interface ContentIndex {
   sectionCount: Map<string, number>;
-  ids: Record<'iq' | 'boe' | 'cc' | 'code' | 'company' | 'mcq' | 'pwlab', Set<string>>;
+  ids: Record<'iq' | 'boe' | 'cc' | 'code' | 'company' | 'mcq' | 'pwlab' | 'short', Set<string>>;
 }
 
 type TopicLike = Pick<Topic, 'id' | 'sections' | 'interviewQuestions' | 'envelopeQuestions' | 'codeChallenges' | 'test'>;
 
-export function buildContentIndex(topics: TopicLike[], codingIds: string[], companyIds: string[], pwlabIds: string[]): ContentIndex {
+export function buildContentIndex(topics: TopicLike[], codingIds: string[], companyIds: string[], pwlabIds: string[], shortIds: string[]): ContentIndex {
   return {
     sectionCount: new Map(topics.map((t) => [t.id, t.sections.length])),
     ids: {
@@ -59,6 +61,7 @@ export function buildContentIndex(topics: TopicLike[], codingIds: string[], comp
       company: new Set(companyIds),
       mcq: new Set(topics.flatMap((t) => t.test.map((q) => q.id))),
       pwlab: new Set(pwlabIds),
+      short: new Set(shortIds),
     },
   };
 }
@@ -80,6 +83,7 @@ export const savedKnown = (kind: SavedKind, ref: string, ix: ContentIndex) => {
     case 'company': return ix.ids.company.has(ref);
     case 'coding': return ix.ids.code.has(ref);
     case 'pwlab': return ix.ids.pwlab.has(ref);
+    case 'short': return ix.ids.short.has(ref);
     default: return false;
   }
 };
@@ -93,7 +97,7 @@ const draftKnown = (id: string, ix: ContentIndex) => {
 const draftChars = (drafts: Record<string, string>) => Object.values(drafts).reduce((n, t) => n + t.length, 0);
 
 /** One change. Returns the new progress, or why it was skipped (unknown content, drafts full…). */
-function applyOne(p: Progress, o: Op, ix: ContentIndex, now: string): Progress | string {
+function applyOne(p: Progress, o: Op, ix: ContentIndex, now: string, day: string): Progress | string {
   switch (o.op) {
     case 'test': {
       if (!ix.sectionCount.has(o.topicId)) return 'unknown topic';
@@ -170,6 +174,15 @@ function applyOne(p: Progress, o: Op, ix: ContentIndex, now: string): Progress |
       if (list.length >= SAVED_MAX) return 'saved list full';
       return { ...p, saved: [...list, { kind: o.kind, ref: o.ref, addedAt: now }] };
     }
+    case 'short': {
+      if (!ix.ids.short.has(o.id)) return 'unknown short';
+      const prev = p.shorts?.[o.id] ?? {};
+      // the first watch (and its day, for the Shorts streak) and the first quiz result are kept
+      const next =
+        o.event === 'watched' ? (prev.watchedAt ? prev : { ...prev, watchedAt: now, day })
+        : prev.quiz ? prev : { ...prev, quiz: o.event === 'quiz-first' ? ('first' as const) : ('retry' as const) };
+      return next === prev ? p : { ...p, shorts: { ...p.shorts, [o.id]: next } };
+    }
     case 'reset':
       // as the local reset always did: badges once earned are never taken away; saved items are bookmarks, not progress
       return { ...DEFAULT_PROGRESS, settings: p.settings, achievements: p.achievements, ...(p.saved && { saved: p.saved }) };
@@ -181,7 +194,7 @@ export function applyOps(p: Progress, ops: Op[], ix: ContentIndex, day: string, 
   const skipped: { index: number; reason: string }[] = [];
   let studied = false;
   ops.forEach((o, index) => {
-    const next = applyOne(p, o, ix, now);
+    const next = applyOne(p, o, ix, now, day);
     if (typeof next === 'string') skipped.push({ index, reason: next });
     else {
       p = next;
@@ -271,5 +284,16 @@ export function mergeImport(server: Progress, local: unknown, ix: ContentIndex):
     saved.set(`${x.kind}|${x.ref}`, { kind: x.kind, ref: x.ref, addedAt: x.addedAt, ...(isoish(x.doneAt) && { doneAt: x.doneAt }) });
   }
   if (saved.size) out.saved = [...saved.values()];
+
+  for (const [id, raw] of Object.entries(obj(l.shorts))) {
+    const r = obj(raw);
+    if (!ix.ids.short.has(id) || out.shorts?.[id]) continue;
+    const rec: ShortRecord = {
+      ...(isoish(r.watchedAt) && { watchedAt: r.watchedAt }),
+      ...(typeof r.day === 'string' && DAY.test(r.day) && { day: r.day }),
+      ...((r.quiz === 'first' || r.quiz === 'retry') && { quiz: r.quiz as ShortRecord['quiz'] }),
+    };
+    if (Object.keys(rec).length) out.shorts = { ...out.shorts, [id]: rec };
+  }
   return out;
 }

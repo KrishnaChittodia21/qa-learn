@@ -68,3 +68,35 @@ test('Guide me explains the page and "Show me" walks through it', async ({ page 
   await page.keyboard.press('Escape');
   await expect(page.getByText(/Show me · /)).toBeHidden();
 });
+
+test('a Short plays to its quiz and end card, and stays watched after a reload', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  // the first watched Short earns "Opening Scene"
+  const celebration = page.getByRole('button', { name: 'Woohoo, keep going' });
+  await page.addLocatorHandler(celebration, () => celebration.click());
+
+  await page.goto('/#/shorts');
+  await expect(page.getByText(/0 of 12 watched/)).toBeVisible();
+  await page.getByRole('link', { name: /Ariane 5: 37 seconds/ }).click();
+  await expect(page).toHaveURL(/#\/short\/ariane-5-overflow/);
+
+  const player = page.getByRole('region', { name: 'Ariane 5: 37 seconds' });
+  const next = player.locator('.sp-navrow').getByRole('button', { name: 'Next beat' });
+  // step through to the quiz: Next is disabled there until it is answered
+  await expect(async () => {
+    if (await next.isEnabled()) await next.click();
+    await expect(player.getByRole('group', { name: 'Your answer' })).toBeVisible({ timeout: 500 });
+  }).toPass();
+  await expect(next).toBeDisabled();
+  await player.getByRole('button', { name: 'A longer launch countdown' }).click();
+  await expect(player.getByText('Not that one:')).toBeVisible();
+  await player.getByRole('button', { name: /Ariane 5 flight data at its real boundaries/ }).click();
+  await expect(player.getByText('Right.')).toBeVisible();
+  await next.click();
+  await expect(player.getByRole('link', { name: /Read the full lesson/ })).toBeVisible();
+
+  await page.reload();
+  await page.goto('/#/shorts');
+  await expect(page.getByText(/1 of 12 watched/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Watched/ })).toBeVisible();
+});

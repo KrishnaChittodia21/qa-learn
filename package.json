@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build && node --no-warnings scripts/check-bundle.mjs dist",
     "lint": "oxlint",
     "preview": "vite preview",
-    "validate": "node --no-warnings scripts/validate-content.mjs && node --no-warnings scripts/validate-coding.mjs && node --no-warnings scripts/validate-company.mjs",
+    "validate": "node --no-warnings scripts/validate-content.mjs && node --no-warnings scripts/validate-coding.mjs && node --no-warnings scripts/validate-company.mjs && node --no-warnings scripts/validate-shorts.mjs",
     "practice-app": "node practice-app/server.mjs",
     "practice:test": "playwright test --config practice/playwright.config.ts",
     "judge": "node --no-warnings scripts/judge.mjs",

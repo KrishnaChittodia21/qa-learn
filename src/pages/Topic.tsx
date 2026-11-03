@@ -7,6 +7,8 @@ import type { CodeChallenge, CodeSnippet, EnvelopeQuestion, EnvelopeStep, Follow
 import { isMulti, useReveal } from '../lib/answers';
 import { RevealButton } from '../components/RevealButton';
 import { SaveButton } from '../components/SaveButton';
+import { ShortCard } from '../components/ShortCard';
+import { SHORTS, shortForSection } from '../lib/shorts';
 import {
   rateIQ,
   setDraft,
@@ -28,7 +30,7 @@ import { CoachTip } from '../components/CoachTip';
 import { NextUp } from '../components/NextUp';
 import { TAB_META, loopTabs, stepProgress, tabLabel, type TabId } from '../lib/studyLoop';
 import { celebrate } from '../lib/celebrate';
-import { ArrowRight, BookOpen, ChevronDown, Lightbulb, PlayCircle, RotateCcw, Zap } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronDown, Lightbulb, Play, PlayCircle, RotateCcw, Zap } from 'lucide-react';
 
 const TAB_IDS: TabId[] = ['learn', 'code', 'interview', 'envelope', 'cheat', 'exam', 'company'];
 
@@ -388,6 +390,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
   const idx = TOPICS.findIndex((t) => t.id === topic.id);
   const next = TOPICS[idx + 1];
   const prev = TOPICS[idx - 1];
+  const topicShorts = SHORTS.filter((e) => e.topic.id === topic.id);
 
   // deep link from weak-area reports: /topic/:id?tab=learn&s=<section index>
   useEffect(() => {
@@ -492,7 +495,20 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
       </aside>
 
       <div className="tp-article" role="tabpanel" aria-labelledby="tab-learn">
+        {topicShorts.length > 0 && (
+          <section className="tp-shorts" aria-label="Shorts for this topic">
+            <span className="mlabel">Shorts · {topicShorts.length}</span>
+            <ul className="sh-strip">
+              {topicShorts.map((e) => (
+                <li key={e.short.id}>
+                  <ShortCard entry={e} watched={!!p.shorts?.[e.short.id]?.watchedAt} mini />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {topic.sections.map((s, i) => {
+          const short = shortForSection(topic.id, i);
           const isRead = read.has(i);
           const { main, sub } = splitTitle(s.heading);
           return (
@@ -524,6 +540,11 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                     </>
                   )}
                 </h2>
+                {short && (
+                  <Link className="btn btn-sm sec-short" to={`/short/${short.short.id}`}>
+                    <Play size={14} aria-hidden="true" /> Watch the short · {short.short.title}
+                  </Link>
+                )}
                 {s.source && (
                   <div className="source">
                     <BookOpen size={14} aria-hidden="true" /> {s.source}

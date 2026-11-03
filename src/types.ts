@@ -203,3 +203,46 @@ export interface CompanyQuestion {
   topic?: string;
   source: CompanySource;
 }
+
+// ---------- Shorts (M7) ----------
+// Text fields are plain text with two marks: *gradient words* in `head`, **bold** in `sub`.
+
+export interface ShortStat {
+  /** a number counts up from 0; a string ("$440M") is shown as is */
+  value: number | string;
+  label: string;
+}
+
+interface BeatBase {
+  /** small caps line above the headline, e.g. "1996 · Kourou" */
+  kicker: string;
+  head?: string;
+  sub?: string;
+  stats?: ShortStat[];
+  /** override the reading time the player works out from the words */
+  seconds?: number;
+}
+
+export type ShortBeat =
+  | (BeatBase & { type: 'counter'; value: number; decimals?: number; suffix?: string; unit: string })
+  | (BeatBase & { type: 'spike'; head: string; mark: string })
+  | (BeatBase & { type: 'race'; head: string; lanes: { label: string; seconds: number; after?: number; tone: 'rose' | 'blue' | 'cyan' | 'amber' | 'green' }[] })
+  | (BeatBase & { type: 'grid'; head: string; cells: number; caption: string })
+  | (BeatBase & { type: 'ladder'; head: string; rungs: { label: string; amount: number }[]; unit: string })
+  | (BeatBase & { type: 'toggles'; head: string; items: { label: string; keep?: boolean }[]; keepLabel?: string })
+  | (BeatBase & { type: 'flow'; head: string; steps: string[]; broken?: number })
+  | (BeatBase & { type: 'quiz'; head: string; options: { text: string; why: string }[]; answer: number });
+
+/** A ~90-second animated story attached to one lesson section (src/content/shorts.ts). */
+export interface Short {
+  /** unique, kebab-case (it is the URL: #/short/<id>) */
+  id: string;
+  title: string;
+  /** the topic it belongs to and the section heading it tells (the heading must START with this text) */
+  topic: string;
+  heading: string;
+  tags: string[];
+  beats: ShortBeat[];
+  /** the end card: the one idea to keep */
+  takeaway: { head: string; sub: string };
+}

@@ -7,7 +7,9 @@ import { ArrowRight, BookOpen, Check, MessageSquare, RotateCcw, Target } from 'l
 import { CODING_PROBLEMS, COMPANY_BY_TOPIC, COMPANY_QUESTIONS, PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import { PW_LAB_STEPS } from '../content/pwlab';
 import { longestStreak } from '../content/achievements';
-import { useProgress, type Progress } from '../lib/progress';
+import { localDay, useProgress, type Progress } from '../lib/progress';
+import { shortOfTheDay } from '../lib/shorts';
+import { ShortCard } from '../components/ShortCard';
 import { nextStep, type NextStepResult } from '../lib/nextStep';
 import { getUiPrefs } from '../lib/uiPrefs';
 import { openGuide } from '../lib/appEvents';
@@ -155,6 +157,7 @@ export default function Home() {
         <Radar p={p} />
         <LabGrid judge={judge} />
         <AchievementsSummary p={p} />
+        <ShortOfTheDay p={p} />
       </div>
       <StudyRecord p={p} step={step} />
     </div>
@@ -1049,6 +1052,26 @@ function Coding({ p }: { p: Progress }) {
       ) : (
         <p className="ink2 small">Every problem solved.</p>
       )}
+    </section>
+  );
+}
+
+// ---------- Short of the day (M7) ----------
+
+function ShortOfTheDay({ p }: { p: Progress }) {
+  const pick = shortOfTheDay(p.shorts, localDay());
+  if (!pick) return null;
+  return (
+    <section className="panel hov b-short rise" style={v({ '--i': 11 })} aria-labelledby="short-t">
+      <div className="p-head">
+        <span className="mlabel" id="short-t">
+          Short of the day
+        </span>
+        <Link className="mlabel p-link" to="/shorts">
+          All Shorts ↗
+        </Link>
+      </div>
+      <ShortCard entry={pick.entry} watched={pick.watched} />
     </section>
   );
 }

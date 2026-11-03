@@ -62,7 +62,8 @@
 .today .b-lab { grid-column: 10 / 13; grid-row: 5; }
 .today .b-shelf { grid-column: 1 / 8; grid-row: 6; }
 .today .b-anext { grid-column: 8 / 13; grid-row: 6; }
-.today .b-shelf:last-child { grid-column: 1 / -1; }
+.today .b-shelf:not(:has(+ .b-anext)) { grid-column: 1 / -1; }
+.today .b-short { grid-column: 1 / -1; grid-row: 7; padding: 22px 24px 20px; }
 
 /* ---------- hero: next mission ---------- */
 .today .b-hero { padding: 30px 34px 26px; display: flex; flex-direction: column; min-height: 470px; overflow: hidden; }
@@ -480,6 +481,7 @@
   .today .b-lab { grid-column: 4 / 7; }
   .today .b-shelf { grid-column: 1 / 7; }
   .today .b-anext { grid-column: 1 / 7; }
+  .today .b-short { grid-column: 1 / 7; }
   .today .stage { min-height: 300px; }
   .today .rec-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .today .rec-grid > * { grid-column: span 3; grid-row: auto; }
@@ -512,6 +514,7 @@
   .today .bento > .b-lab { order: 10; }
   .today .bento > .b-radar { order: 11; }
   .today .bento > .b-anext { display: none; }
+  .today .bento > .b-short { order: 12; }
 
   /* one foil per screen: on phones it moves to the mission card */
   .today .b-hero { --fr: transparent; --cut: 22px; padding: 18px 18px 16px; }

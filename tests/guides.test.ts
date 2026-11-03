@@ -9,7 +9,7 @@ const G = await load<typeof import('../src/lib/pageGuides')>('/src/lib/pageGuide
 const PAGES = [
   '/', '/contents', '/topic/mt-fundamentals', '/topic/mt-fundamentals/exam', '/coding', '/coding/sum-array', '/roadmap',
   '/pw-lab', '/pw-lab/step1', '/playground', '/companies', '/weak-areas', '/practice', '/achievements', '/settings',
-  '/saved', '/profile',
+  '/saved', '/profile', '/shorts', '/short/test-pyramid',
 ];
 
 test('every page has a guide with a title, an intro and at least one item', () => {

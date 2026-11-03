@@ -8,7 +8,8 @@ import type { Progress } from '../src/lib/progress';
 const C = await load<typeof import('../src/content')>('/src/content/index.ts');
 const O = await load<typeof import('../src/lib/progress-ops')>('/src/lib/progress-ops.ts');
 const { PW_LAB_STEPS } = await load<typeof import('../src/content/pwlab')>('/src/content/pwlab.ts');
-const ix = O.buildContentIndex(C.TOPICS, C.CODING_PROBLEMS.map((q) => q.id), C.COMPANY_QUESTIONS.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id));
+const { SHORTS_DATA } = await load<typeof import('../src/content/shorts')>('/src/content/shorts.ts');
+const ix = O.buildContentIndex(C.TOPICS, C.CODING_PROBLEMS.map((q) => q.id), C.COMPANY_QUESTIONS.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id), SHORTS_DATA.map((s) => s.id));
 const fresh = (): Progress => structuredClone(O.DEFAULT_PROGRESS);
 const DAY = '2026-10-31';
 const NOW = '2026-10-31T10:00:00.000Z';
@@ -161,4 +162,25 @@ test('importing junk changes nothing', () => {
   for (const junk of [null, 42, 'x', [], { tests: 'x', sections: [1], mcq: null }]) {
     assert.deepEqual(O.mergeImport(fresh(), junk, ix), fresh());
   }
+});
+
+test('Shorts: the first watch (with its day) and the first quiz result are kept; unknown Shorts are refused', () => {
+  const id = SHORTS_DATA[0].id;
+  let { progress, skipped } = apply(fresh(), [
+    { op: 'short', id, event: 'quiz-retry' },
+    { op: 'short', id, event: 'quiz-first' },
+    { op: 'short', id, event: 'watched' },
+    { op: 'short', id: 'no-such-short', event: 'watched' },
+  ]);
+  assert.deepEqual(skipped, [{ index: 3, reason: 'unknown short' }]);
+  assert.deepEqual(progress.shorts?.[id], { quiz: 'retry', watchedAt: NOW, day: DAY });
+  assert.ok(progress.activityDays?.includes(DAY), 'watching a Short counts as study');
+  ({ progress } = O.applyOps(progress, [{ op: 'short', id, event: 'watched' }], ix, '2026-11-02', '2026-11-02T09:00:00.000Z'));
+  assert.equal(progress.shorts?.[id]?.day, DAY, 'a re-watch keeps the first day');
+
+  const saved = apply(fresh(), [{ op: 'saved', action: 'add', kind: 'short', ref: id }, { op: 'saved', action: 'add', kind: 'short', ref: 'nope' }]);
+  assert.equal(saved.progress.saved?.length, 1);
+
+  const merged = O.mergeImport(fresh(), { shorts: { [id]: { watchedAt: NOW, day: DAY, quiz: 'first' }, nope: { watchedAt: NOW }, [SHORTS_DATA[1].id]: { quiz: 'cheat' } } }, ix);
+  assert.deepEqual(merged.shorts, { [id]: { watchedAt: NOW, day: DAY, quiz: 'first' } });
 });

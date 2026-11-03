@@ -6,6 +6,7 @@ import { loadContent } from '../../scripts/content-split.ts'
 import { buildAchievementContext, evaluateAll, mergeEarned, newlyEarned, type StoredAchievement } from '../../src/content/achievements.ts'
 import { PHASES } from '../../src/content/phases.ts'
 import { PW_LAB_STEPS } from '../../src/content/pwlab.ts'
+import { SHORTS_DATA } from '../../src/content/shorts.ts'
 import type { Progress } from '../../src/lib/progress.ts'
 import { applyOps, buildContentIndex, DEFAULT_PROGRESS, mergeImport, type Op } from '../../src/lib/progress-ops.ts'
 import { httpError } from './app.ts'
@@ -46,7 +47,8 @@ const opSchemas = [
       accent: { enum: ['indigo', 'teal', 'rose', 'amber'] },
     }, []),
   }),
-  strict({ op: { const: 'saved' }, action: { enum: ['add', 'remove', 'done'] }, kind: { enum: ['topic', 'section', 'interview', 'drill', 'company', 'coding', 'pwlab'] }, ref: id }),
+  strict({ op: { const: 'saved' }, action: { enum: ['add', 'remove', 'done'] }, kind: { enum: ['topic', 'section', 'interview', 'drill', 'company', 'coding', 'pwlab', 'short'] }, ref: id }),
+  strict({ op: { const: 'short' }, id, event: { enum: ['watched', 'quiz-first', 'quiz-retry'] } }),
   strict({ op: { const: 'reset' } }),
 ]
 
@@ -65,7 +67,7 @@ const userKey = (userId: string) => (ObjectId.isValid(userId) ? new ObjectId(use
 export async function progressRoutes(app: FastifyInstance, db: Db) {
   const content = await loadContent()
   const { topics, coding, companyQuestions } = content
-  const ix = buildContentIndex(topics, coding.map((q) => q.id), companyQuestions.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id))
+  const ix = buildContentIndex(topics, coding.map((q) => q.id), companyQuestions.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id), SHORTS_DATA.map((s) => s.id))
   const achievementCtx = buildAchievementContext({ topics, phases: PHASES, coding, companyQuestions })
   const col = db.collection<ProgressDoc>('progress')
   const users = db.collection('users')

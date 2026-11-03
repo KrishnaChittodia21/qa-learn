@@ -8,6 +8,7 @@ import type { Progress } from '../src/lib/progress';
 
 const A = await load<typeof import('../src/content/achievements')>('/src/content/achievements.ts');
 const C = await load<typeof import('../src/content')>('/src/content/index.ts');
+const SH = await load<typeof import('../src/content/shorts')>('/src/content/shorts.ts');
 const ctx = A.buildAchievementContext({ topics: C.TOPICS, phases: C.PHASES, coding: C.CODING_PROBLEMS, companyQuestions: C.COMPANY_QUESTIONS });
 const { p: empty } = await freshProgress();
 const fresh = (): Progress => structuredClone(empty);
@@ -30,6 +31,8 @@ function finished(): Progress {
   for (const q of C.CODING_PROBLEMS) p.code[q.id] = true;
   for (const q of C.COMPANY_QUESTIONS) p.company[q.id] = true;
   p.activityDays = Array.from({ length: 400 }, (_, i) => day(i));
+  // one Short a day for a week (the Shorts streak's top tier is 7)
+  p.shorts = Object.fromEntries(SH.SHORTS_DATA.slice(0, 7).map((s, i) => [s.id, { watchedAt: `${day(i)}T12:00:00Z`, day: day(i) }]));
   p.saved = C.CODING_PROBLEMS.slice(0, 25).map((q) => ({ kind: 'coding', ref: q.id, addedAt: '2026-02-01', doneAt: '2026-02-02' }));
   return p;
 }
@@ -169,4 +172,17 @@ test('Full Spectrum needs one solved problem per difficulty; Backlog Burner coun
   const ev = A.evaluateAll(p, ctx)['backlog-burner'];
   assert.equal(ev.value, 1, 'a saved item not marked done does not count');
   assert.equal(ev.tier, 'bronze');
+});
+
+test('Shorts badges: the first watched Short, and a run of days with one watched', () => {
+  const p = fresh();
+  const [a, b, c] = SH.SHORTS_DATA.map((s) => s.id);
+  p.shorts = { [a]: { quiz: 'first' } };
+  assert.equal(A.evaluateAll(p, ctx)['opening-scene'].tier, null, 'answering the quiz is not watching to the end');
+  p.shorts = { [a]: { watchedAt: '2026-03-01T10:00:00Z', day: '2026-03-01' }, [b]: { watchedAt: '2026-03-02T10:00:00Z', day: '2026-03-02' } };
+  const ev = A.evaluateAll(p, ctx);
+  assert.equal(ev['opening-scene'].tier, 'standard');
+  assert.equal(ev['daily-short'].value, 2);
+  p.shorts[c] = { watchedAt: '2026-03-03T10:00:00Z', day: '2026-03-03' };
+  assert.equal(A.evaluateAll(p, ctx)['daily-short'].tier, 'bronze');
 });

@@ -285,6 +285,29 @@ mid-range phone (no layout properties animated), and reduced motion has no movem
 **Done when:** the 12 Shorts play end to end on desktop and phone, watched state survives reload and a second
 device, and `npm run validate` rejects a malformed Short.
 
+**As built (one learner, kept in this browser):**
+- **Engine:** `ShortPlayer.tsx` is ported from SDL and trimmed to the 8 beats; its styles in `styles/shorts.css` use
+  qa-learn's tokens. `lib/shorts.ts` has the beat timing, the length and "Short of the day". `ShortCard.tsx` is a
+  simple poster card instead of SDL's `ShortThumb` (no glimpse animation). No daily unlock: every Short is open.
+- **Content:** the Shorts live in `src/content/shorts.ts` (topic id + section heading), not on the topic
+  sections, so the topic files and the answer-key split are untouched. 12 Shorts: Ariane 5, Knight Capital,
+  Therac-25, Mars Climate Orbiter, CrowdStrike 2024, Heathrow T5, test pyramid, flaky triage, Playwright
+  auto-wait, CI gates, boundary values, risk-based testing. Figures are the commonly reported ones, with the source
+  named where it matters (SEC, Microsoft); disputed numbers are left out.
+- **Validation:** `shortProblems()` is shared by `scripts/validate-shorts.mjs` (part of `npm run validate`) and
+  `tests/shorts.test.ts`, which feeds it 8 kinds of malformed Short.
+- **Progress:** a `short` op records the first watch (with its local day) and the first quiz result. It goes
+  into `progress-ops.ts`, the service schema and the first-login import, so a signed-in sync still works.
+  `short` is also a Saved kind; Saved has a Shorts filter and "Play all".
+- **Where they show:** Shorts in the sidebar (Tools), "Short of the day" on Home (row 7 of the bento), a Shorts
+  strip at the top of a topic's Learn tab, and "Watch the short" on the sections that have one. Page guides
+  cover both new pages.
+- **Badges (deferred from M5):** Opening Scene (first Short watched) and Daily Short (3 / 7 days in a row).
+- **Phone fix:** `.main` is its own stacking context, so the full-screen player sat under the top bar and the dock;
+  `.main` is now lifted while a Short is open.
+- **Not done:** the second-device check (the service sync path has the op, but no e2e covers two browsers for
+  Shorts), and SDL's ~30 other beat types.
+
 ### M8 · Read less, view more · Learn more · 10–14 h, then ~40–60 min per section
 
 - **Read less, view more** (SDL M11, step lessons): a `Read · Steps` switch on sections that have steps. Steps are

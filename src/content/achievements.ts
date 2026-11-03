@@ -11,7 +11,7 @@
 // Every measure reads only what src/lib/progress.ts actually records: read Learn sections, Improve This
 // exercises (cc), practice drills (boe), interview self-ratings (iq), exam records (tests, with attempt
 // history), exam answers (mcq), solved coding problems (code), practised company questions (company),
-// Save for later (saved) and the study days (activityDays).
+// Save for later (saved), Shorts watched (shorts) and the study days (activityDays).
 import type { CodingProblem, CompanyQuestion, PhaseId, Topic } from '../types';
 import type { Progress } from '../lib/progress';
 
@@ -264,6 +264,17 @@ export const ACHIEVEMENTS: Achievement[] = [
     unit: 'exams passed',
   },
   {
+    id: 'opening-scene',
+    name: 'Opening Scene',
+    description: 'Watched your first Short to the end.',
+    group: 'start',
+    art: 'clapper',
+    goal: 1,
+    measure: (p) => Object.values(p.shorts ?? {}).filter((s) => s.watchedAt).length,
+    requirement: () => 'Watch any Short to its end card',
+    unit: 'Shorts',
+  },
+  {
     id: 'hello-console',
     name: 'Hello, Console',
     description: 'Solved your first JavaScript coding problem.',
@@ -494,6 +505,20 @@ export const ACHIEVEMENTS: Achievement[] = [
     unit: 'days',
   },
 
+  {
+    id: 'daily-short',
+    name: 'Daily Short',
+    description: 'Days in a row with a Short watched (your longest run).',
+    group: 'consistency',
+    art: 'film',
+    tiers: [
+      { tier: 'bronze', goal: 3 },
+      { tier: 'silver', goal: 7 },
+    ],
+    measure: (p) => longestStreak(Object.values(p.shorts ?? {}).flatMap((s) => (s.day ? [s.day] : []))),
+    requirement: (goal) => `Watch a Short ${goal} days in a row`,
+    unit: 'days',
+  },
   {
     id: 'backlog-burner',
     name: 'Backlog Burner',

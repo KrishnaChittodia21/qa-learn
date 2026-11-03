@@ -1,14 +1,15 @@
 // Saved for later (M3): everything shortlisted with the ☆ button. Adapted from system-design-learn's Saved page.
 import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Building2, Calculator, Check, ChevronDown, Code2, FlaskConical, Mic, Star, Trash2, Undo2 } from 'lucide-react';
+import { BookOpen, Building2, Calculator, Check, ChevronDown, Clapperboard, Code2, FlaskConical, Mic, PlayCircle, Star, Trash2, Undo2 } from 'lucide-react';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS, TOPIC_BY_ID } from '../content';
 import { PW_LAB_STEPS } from '../content/pwlab';
 import { removeSaved, saveItem, setSavedDone, useProgress, type SavedItem } from '../lib/progress';
 import { SignInCard } from '../components/SignInCard';
 import { useSession } from '../lib/session';
+import { SHORT_BY_ID } from '../lib/shorts';
 
-type Group = 'lessons' | 'questions' | 'coding';
+type Group = 'lessons' | 'questions' | 'coding' | 'shorts';
 interface Resolved {
   item: SavedItem;
   group: Group;
@@ -57,17 +58,22 @@ function resolve(item: SavedItem): Resolved | null {
       const s = pwlab.get(item.ref);
       return s ? { item, group: 'coding', kindLabel: 'Playwright Lab step', title: s.title, context: 'Playwright Lab', href: `/pw-lab/${s.id}` } : null;
     }
+    case 'short': {
+      const e = SHORT_BY_ID.get(item.ref);
+      return e ? { item, group: 'shorts', kindLabel: 'Short', title: e.short.title, context: e.topic.title, href: `/short/${e.short.id}` } : null;
+    }
     default:
       return null;
   }
 }
 
-const ICON = { topic: BookOpen, section: BookOpen, interview: Mic, drill: Calculator, company: Building2, coding: Code2, pwlab: FlaskConical };
+const ICON = { topic: BookOpen, section: BookOpen, interview: Mic, drill: Calculator, company: Building2, coding: Code2, pwlab: FlaskConical, short: Clapperboard };
 const FILTERS: { id: 'all' | Group; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'lessons', label: 'Lessons' },
   { id: 'questions', label: 'Questions' },
   { id: 'coding', label: 'Coding & Lab' },
+  { id: 'shorts', label: 'Shorts' },
 ];
 const ago = (iso: string) => {
   const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
@@ -97,6 +103,8 @@ export default function SavedPage() {
     .filter((r) => filter === 'all' || r.group === filter)
     .sort((a, b) => (oldestFirst ? 1 : -1) * a.item.addedAt.localeCompare(b.item.addedAt));
   const count = (g: 'all' | Group) => active.filter((r) => g === 'all' || r.group === g).length;
+  // Play all: the saved Shorts still to watch, oldest saved first, back to back
+  const shortQueue = active.filter((r) => r.item.kind === 'short').map((r) => r.item.ref);
 
   return (
     <div className="page saved-page">
@@ -116,6 +124,11 @@ export default function SavedPage() {
             </button>
           ))}
         </div>
+        {shortQueue.length > 0 && (
+          <Link className="btn btn-primary btn-sm" to={`/short/${shortQueue[0]}?queue=${shortQueue.join(',')}&from=saved`}>
+            <PlayCircle size={14} aria-hidden="true" /> Play {shortQueue.length === 1 ? 'the saved Short' : `all ${shortQueue.length} Shorts`}
+          </Link>
+        )}
         <button type="button" className="btn-ghost btn-sm" onClick={() => setOldestFirst((o) => !o)} aria-label={`Sorted ${oldestFirst ? 'oldest' : 'newest'} first. Change the order`}>
           {oldestFirst ? 'Oldest first' : 'Newest first'}
         </button>
@@ -156,7 +169,7 @@ export default function SavedPage() {
           <p className="muted">
             {active.length
               ? 'Try another filter.'
-              : 'Press ☆ Save on a topic, a Learn section, an interview question, a drill, a company question, a coding problem or a Playwright Lab step, and it lands here.'}
+              : 'Press ☆ Save on a topic, a Learn section, an interview question, a drill, a company question, a coding problem, a Playwright Lab step or a Short, and it lands here.'}
           </p>
           {!active.length && (
             <Link className="btn btn-primary btn-sm" to="/contents">

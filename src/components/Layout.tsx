@@ -19,6 +19,7 @@ import {
   Search,
   SlidersHorizontal,
   Star,
+  Clapperboard,
   Sun,
   Terminal,
   TriangleAlert,
@@ -85,6 +86,7 @@ const PRIMARY: NavItem[] = [
 ];
 /** secondary tools (rail group "Tools"; the mobile "More" sheet holds these + the primary items without a dock slot) */
 const TOOLS: NavItem[] = [
+  { to: '/shorts', label: 'Shorts', icon: Clapperboard, match: (p) => p.startsWith('/shorts') || p.startsWith('/short/') },
   { to: '/saved', label: 'Saved', icon: Star, match: (p) => p.startsWith('/saved') },
   { to: '/playground', label: 'Playground', icon: Terminal, match: (p) => p.startsWith('/playground') },
   { to: '/companies', label: 'Company Qs', icon: Building2, match: (p) => p.startsWith('/companies') },

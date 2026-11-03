@@ -16,6 +16,8 @@ import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
 import { ForgotPage, LoginPage, ResetPage, SignupPage } from './pages/Auth';
 import { LockedPreview } from './components/LockedPreview';
 import SavedPage from './pages/Saved';
+import ShortsPage from './pages/Shorts';
+import ShortPage from './pages/Short';
 import ProfilePage from './pages/Profile';
 import { resumeLocation } from './lib/uiPrefs';
 
@@ -64,6 +66,8 @@ const router = createHashRouter([
       },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'saved', element: <SavedPage /> },
+      { path: 'shorts', element: <ShortsPage /> },
+      { path: 'short/:id', element: <ShortPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },

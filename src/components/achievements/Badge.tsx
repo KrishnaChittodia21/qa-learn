@@ -10,6 +10,7 @@ import {
   Building2,
   CalendarCheck,
   CircleCheck,
+  Clapperboard,
   ClipboardCheck,
   ClipboardList,
   Code2,
@@ -18,6 +19,7 @@ import {
   Crosshair,
   Database,
   Dumbbell,
+  Film,
   Flame,
   Footprints,
   Gauge,
@@ -69,6 +71,8 @@ const ART: Record<string, LucideIcon> = {
   building: Building2,
   bookmark: BookmarkCheck,
   layers: Layers,
+  clapper: Clapperboard,
+  film: Film,
 };
 
 export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';

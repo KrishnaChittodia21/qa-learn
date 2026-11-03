@@ -226,6 +226,40 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
     },
   },
   {
+    match: (p) => p === '/shorts',
+    guide: {
+      title: 'Shorts',
+      intro: 'Ninety-second animated stories: famous software failures and how key testing ideas work.',
+      items: [
+        ['Unwatched first', 'A Short counts as watched once you reach its end card.'],
+        ['Play all', 'Plays every unwatched Short back to back.'],
+        ['One question each', 'Every Short ends with a quick question before the lesson it comes from.'],
+      ],
+      walk: [
+        { target: '.sh-status', title: 'Your count', text: 'How many you have watched, and Play all.' },
+        { target: '.sh-grid', title: 'The Shorts', text: 'Open one to play it.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p.startsWith('/short/'),
+    guide: {
+      title: 'Short',
+      intro: 'A Short plays itself, one beat at a time.',
+      items: [
+        ['Move', 'Tap the left or right side, use Back and Next, or the ← → keys.'],
+        ['Pause', 'Press and hold, the ❚❚ button, or Space.'],
+        ['Speed', 'The 1× button cycles normal, faster and slower reading.'],
+        ['Your turn', 'The quiz waits for your answer before Next works.'],
+      ],
+      walk: [
+        { target: '.sp-bars', title: 'Beats', text: 'One bar per beat; the last is the end card.' },
+        { target: '.sp-top', title: 'Controls', text: 'Save, reading speed and pause.' },
+        { target: '.sp-navrow', title: 'Back and Next', text: 'Read any beat again.' },
+      ],
+    },
+  },
+  {
     match: (p) => p === '/profile',
     guide: {
       title: 'Profile',
