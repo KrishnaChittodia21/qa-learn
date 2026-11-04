@@ -62,7 +62,28 @@
 .today .b-lab { grid-column: 10 / 13; grid-row: 5; }
 .today .b-shelf { grid-column: 1 / 8; grid-row: 6; }
 .today .b-anext { grid-column: 8 / 13; grid-row: 6; }
-.today .b-shelf:last-child { grid-column: 1 / -1; }
+.today .b-shelf:not(:has(+ .b-anext)) { grid-column: 1 / -1; }
+.today .b-short { grid-column: 1 / -1; grid-row: 7; padding: 22px 24px 20px; }
+
+/* Dashboard (#/) and Today (#/today) each show part of the bento; desktop places their cards here.
+   Tablet and phone already flow the cards automatically (the media queries below). */
+@media (min-width: 1201px) {
+  .today.view-dashboard .b-hero { grid-column: 1 / 8; grid-row: 1; }
+  .today.view-dashboard .b-weak { grid-column: 8 / 13; grid-row: 1; }
+  .today.view-dashboard .b-short { grid-column: 1 / 9; grid-row: 2; }
+  .today.view-dashboard .b-code { grid-column: 9 / 13; grid-row: 2; }
+  .today.view-dashboard .b-shelf { grid-column: 1 / 8; grid-row: 3; }
+  .today.view-dashboard .b-anext { grid-column: 8 / 13; grid-row: 3; }
+  .today.view-dashboard .b-shelf:not(:has(+ .b-anext)) { grid-column: 1 / -1; }
+
+  .today.view-today .b-read { grid-column: 1 / 8; grid-row: 1; }
+  .today.view-today .b-prism { grid-column: 8 / 13; grid-row: 1 / 3; }
+  .today.view-today .b-pipe { grid-column: 1 / 8; grid-row: 2; }
+  .today.view-today .b-run { grid-column: 1 / 6; grid-row: 3 / 5; }
+  .today.view-today .b-sig { grid-column: 6 / 13; grid-row: 3; }
+  .today.view-today .b-radar { grid-column: 6 / 10; grid-row: 4; }
+  .today.view-today .b-lab { grid-column: 10 / 13; grid-row: 4; }
+}
 
 /* ---------- hero: next mission ---------- */
 .today .b-hero { padding: 30px 34px 26px; display: flex; flex-direction: column; min-height: 470px; overflow: hidden; }
@@ -424,12 +445,10 @@
 .today .rec-grid > * { min-width: 0; margin: 0; }
 .today .r-scores { grid-column: 1 / 8; grid-row: span 2; }
 .today .r-ledger { grid-column: 8 / 13; }
-.today .r-status { grid-column: 8 / 13; }
 .today .r-weak { grid-column: 1 / 8; grid-row: span 2; }
 .today .r-howto { grid-column: 8 / 13; }
-.today .r-trend { grid-column: 1 / 6; }
-.today .r-levels { grid-column: 6 / 9; }
-.today .r-ratings { grid-column: 9 / 13; }
+.today .r-trend { grid-column: 1 / 7; }
+.today .r-levels { grid-column: 7 / 13; }
 .today .r-desk { grid-column: 8 / 13; }
 .today .r-heat { grid-column: 1 / 6; }
 .today .r-coding { grid-column: 6 / 13; }
@@ -480,6 +499,7 @@
   .today .b-lab { grid-column: 4 / 7; }
   .today .b-shelf { grid-column: 1 / 7; }
   .today .b-anext { grid-column: 1 / 7; }
+  .today .b-short { grid-column: 1 / 7; }
   .today .stage { min-height: 300px; }
   .today .rec-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .today .rec-grid > * { grid-column: span 3; grid-row: auto; }
@@ -512,6 +532,7 @@
   .today .bento > .b-lab { order: 10; }
   .today .bento > .b-radar { order: 11; }
   .today .bento > .b-anext { display: none; }
+  .today .bento > .b-short { order: 12; }
 
   /* one foil per screen: on phones it moves to the mission card */
   .today .b-hero { --fr: transparent; --cut: 22px; padding: 18px 18px 16px; }

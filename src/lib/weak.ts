@@ -74,10 +74,11 @@ export function sectionForQuestion(topic: Topic, q: MCQ): number {
   const hit = sectionCache.get(q.id);
   if (hit !== undefined) return hit;
   const { vectors, idf } = sectionIndex(topic);
-  const correct = q.correct.map((i) => q.options[i]).join(' ');
   const qv = termFreq(tokens(q.question), 2);
-  termFreq(tokens(correct), 2, qv);
-  termFreq(tokens(q.explanation), 1, qv);
+  // the app's build has no answers (they come from qa-api): every option then stands in for the right one
+  if (q.correct) termFreq(tokens(q.correct.map((i) => q.options[i]).join(' ')), 2, qv);
+  else termFreq(tokens(q.options.join(' ')), 1, qv);
+  if (q.explanation) termFreq(tokens(q.explanation), 1, qv);
   if (q.code?.title) termFreq(tokens(q.code.title), 1, qv);
   const weighted: Vec = new Map([...qv].map(([w, f]) => [w, (1 + Math.log(f)) * (idf.get(w) ?? 0)]));
   let best = 0;
@@ -129,6 +130,8 @@ export interface TopicWeakness {
   sections: WeakSection[];
   /** interview questions self-rated missed/partial */
   shakyInterview: number;
+  /** sections whose latest step lesson run missed Your-turn steps (M8); a clean run clears it */
+  shakySteps: { index: number; heading: string; missed: number }[];
 }
 
 /** attempted topics that need work, weakest first */
@@ -138,6 +141,10 @@ export function weakTopics(p: Progress, topics: Topic[]): TopicWeakness[] {
       const rec = p.tests[topic.id];
       const wrong = currentlyWrong(p, topic);
       const shakyInterview = topic.interviewQuestions.filter((q) => p.iq[q.id] === 'missed' || p.iq[q.id] === 'partial').length;
+      const shakySteps = topic.sections.flatMap((s, index) => {
+        const missed = p.steps?.[`${topic.id}:${index}`]?.missed ?? 0;
+        return missed > 0 ? [{ index, heading: s.heading, missed }] : [];
+      });
       return {
         topic,
         last: rec?.last ?? 0,
@@ -148,9 +155,10 @@ export function weakTopics(p: Progress, topics: Topic[]): TopicWeakness[] {
         wrong,
         sections: weakSections(topic, wrong),
         shakyInterview,
+        shakySteps,
       };
     })
-    .filter((w) => w.wrong.length > 0 || w.shakyInterview > 0 || (w.attempts > 0 && !w.passed))
+    .filter((w) => w.wrong.length > 0 || w.shakyInterview > 0 || w.shakySteps.length > 0 || (w.attempts > 0 && !w.passed))
     .sort((a, b) => Number(a.passed) - Number(b.passed) || a.last - b.last || b.wrong.length - a.wrong.length);
 }
 
@@ -179,7 +187,7 @@ export function accuracyBreakdown(p: Progress, topics: Topic[]) {
       const ok = r.lastCorrect ? 1 : 0;
       byDifficulty[q.difficulty].seen++;
       byDifficulty[q.difficulty].correct += ok;
-      const fmt = q.correct.length > 1 ? byFormat.multi : byFormat.single;
+      const fmt = (q.multi ?? (q.correct?.length ?? 0) > 1) ? byFormat.multi : byFormat.single;
       fmt.seen++;
       fmt.correct += ok;
       if (q.code) {

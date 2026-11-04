@@ -123,9 +123,13 @@ export function simulate({ scenario, n }: Params): Frame[] {
     const a = actsFor(c);
     cols = cols.map((col) => (col.id === id ? { ...col, acts: a ?? [], state: a === null ? 'infeasible' : 'normal' } : col));
     const label = c.map(tf).join('');
+    const next = full[id + 1];
+    // ask about the first infeasible rule after rule 1 if there is one, else about rule 2
     const predict =
-      id === 0 && n >= 3
-        ? `Before reading on: in which rules does at least one condition stop mattering?`
+      next && id + 1 === (infeasibleIds.find((k) => k > 0) ?? 1)
+        ? actsFor(next) === null
+          ? `Rule ${id + 2} is ${next.map(tf).join('')}. Can that combination ever happen?`
+          : `What must the system do for Rule ${id + 2} (${next.map(tf).join('')})?`
         : undefined;
     push('actions', a === null ? `Rule ${id + 1} (${label}): cannot happen, ${spec.why(c)}. Marked infeasible.` : `Rule ${id + 1} (${label}) → ${a.length ? a.join(' + ') : 'no discount, no free shipping'}.`, [id], predict);
   });

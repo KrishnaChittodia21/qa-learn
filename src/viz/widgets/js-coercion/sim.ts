@@ -124,17 +124,17 @@ export function simulate({ group, op }: Params): CoFrame[] {
 
   if (group === 'strnum') {
     if (op === '==') {
-      load(0, T("'5'", 'string'), T('5', 'number'), '==', "'5' == 5: a string on the left, a number on the right (think: badge text read from the page vs an expected count).", "Types differ. Will == answer true or false?");
+      load(0, T("'5'", 'string'), T('5', 'number'), '==', "'5' == 5: a string on the left, a number on the right (think: badge text read from the page vs an expected count).", "Types differ. Which side will == convert?");
       rule(2, 'Not the same type and not null/undefined, but number vs string matches: convert the STRING with ToNumber.');
       apply("ToNumber('5') is 5. The comparison is now 5 == 5.", 'left', T('5', 'number'), '5 == 5');
       rule(0, 'Back to the top of the list: both sides are numbers now, so compare them strictly.');
       verdict(B(true), "5 === 5 → true. == converted the string for you, which is exactly why '5' == 5 hides type bugs.");
-      load(1, T('0', 'number'), T("''", 'string'), '==', "0 == '': a number against an EMPTY string.", 'Will the empty string be equal to 0?');
-      rule(2, 'number vs string again: ToNumber the string.');
+      load(1, T('0', 'number'), T("''", 'string'), '==', "0 == '': a number against an EMPTY string.");
+      rule(2, 'number vs string again: ToNumber the string.', "What number does ToNumber('') give?");
       apply("ToNumber('') is 0: an empty or whitespace-only string converts to 0, not NaN.", 'right', T('0', 'number'), '0 == 0');
       rule(0, 'Same type now: strict compare.');
       verdict(B(true), "0 === 0 → true, so an empty field and the number 0 look \"equal\" to ==.");
-      load(2, T('[]', 'object'), T('false', 'boolean'), '==', '[] == false: an empty array against false. Remember Boolean([]) is true: arrays are truthy.', 'Is [] == false true or false?');
+      load(2, T('[]', 'object'), T('false', 'boolean'), '==', '[] == false: an empty array against false. Remember Boolean([]) is true: arrays are truthy.', 'No rule compares an object with a boolean directly. Which side gets converted first?');
       rule(3, 'No same-type, null or number/string rule applies; a boolean side matches rule 4: ToNumber(false).');
       apply('ToNumber(false) is 0. Now [] == 0.', 'right', T('0', 'number'), '[] == 0');
       rule(4, 'Object vs number: convert the object with ToPrimitive (hint "default" → try valueOf(), then toString()).');
@@ -166,11 +166,11 @@ export function simulate({ group, op }: Params): CoFrame[] {
       load(0, T('null', 'null'), T('undefined', 'undefined'), '==', 'null == undefined: two "no value" values of different types.', 'No rule converts null into undefined. True or false?');
       rule(1, 'Rule 2 is a hard-coded special case: null and undefined are loosely equal to each other.');
       verdict(B(true), 'true, with no conversion. That is why x == null is the one accepted use of ==: it matches null OR undefined.');
-      load(1, T('null', 'null'), T('0', 'number'), '==', 'null == 0. Careful: null >= 0 is true, because relational operators DO convert null to 0.', 'So is null == 0 true?');
+      load(1, T('null', 'null'), T('0', 'number'), '==', 'null == 0. Careful: null >= 0 is true, because relational operators DO convert null to 0.', 'Will == convert null to 0 here, like >= does?');
       rule(5, 'Not the same type; the null rule needs undefined on the other side; and null is not a string, boolean or object, so no conversion rule applies.');
       verdict(B(false), 'false. == never converts null or undefined: they equal each other and nothing else.');
-      load(2, T('NaN', 'number'), T('NaN', 'number'), '==', 'NaN == NaN: both sides are the number NaN ("not a number", e.g. Number(\'abc\')).', 'Same type, same value… equal?');
-      rule(0, 'Same type, so == hands over to the strict comparison.');
+      load(2, T('NaN', 'number'), T('NaN', 'number'), '==', 'NaN == NaN: both sides are the number NaN ("not a number", e.g. Number(\'abc\')).');
+      rule(0, 'Same type, so == hands over to the strict comparison.', 'Strictly compared, is NaN equal to NaN?');
       apply('IsStrictlyEqual: if either number is NaN the answer is false. NaN is not equal to anything, itself included.', 'both', [T('NaN', 'number'), T('NaN', 'number')]);
       verdict(B(false), 'false. Test for it with Number.isNaN(x) (or Object.is(x, NaN)), never x === NaN.');
     } else {
@@ -180,8 +180,8 @@ export function simulate({ group, op }: Params): CoFrame[] {
       load(1, T('null', 'null'), T('0', 'number'), '===', 'null === 0: Null vs Number.');
       rule(0, 'Types differ → false.');
       verdict(B(false), 'false, same as with ==, but for a simpler reason.');
-      load(2, T('NaN', 'number'), T('NaN', 'number'), '===', 'NaN === NaN: both are numbers.', 'Same type passes the first check. Is NaN === NaN true?');
-      rule(0, 'Type check passes: both are Number, so keep going.');
+      load(2, T('NaN', 'number'), T('NaN', 'number'), '===', 'NaN === NaN: both are numbers.');
+      rule(0, 'Type check passes: both are Number, so keep going.', 'Is NaN === NaN true?');
       rule(1, 'Number comparison: either side NaN → false.');
       verdict(B(false), 'false. NaN is the only value not equal to itself, so use Number.isNaN(x).');
     }
@@ -190,17 +190,17 @@ export function simulate({ group, op }: Params): CoFrame[] {
   }
 
   if (group === 'plus') {
-    load(0, T("'1'", 'string'), T('2', 'number'), '+', "'1' + 2 - 1: + and - have the same precedence and run left to right, so first '1' + 2.", 'Will the result be 2, \'11\' or 11?');
+    load(0, T("'1'", 'string'), T('2', 'number'), '+', "'1' + 2 - 1: + and - have the same precedence and run left to right, so first '1' + 2.", 'Will this + add or concatenate?');
     rule(0, '+ with a string on either side means string concatenation: ToString the other side.');
     apply("ToString(2) is '2', and '1' + '2' is '12'.", 'right', T("'2'", 'string'), "'12' - 1");
     st.left = T("'12'", 'string', true);
     st.right = T('1', 'number');
     st.op = '-';
-    rule(2, "Now '12' - 1. Minus has no string meaning, so BOTH sides go through ToNumber.");
+    rule(2, "Now '12' - 1. Minus has no string meaning, so BOTH sides go through ToNumber.", "What does '12' - 1 give?");
     apply("ToNumber('12') is 12, so 12 - 1 is 11.", 'left', T('12', 'number'), '11');
     verdict(T('11', 'number'), "11 (a number). The string became a number again; '1' + 2 + 1 would give '121' instead.");
 
-    load(1, T("'b'", 'string'), T("'a'", 'string'), '+', "'b' + 'a' + +'a' + 'a' parses as (('b' + 'a') + (+'a')) + 'a'. The middle +'a' is UNARY plus.", 'What does it evaluate to?');
+    load(1, T("'b'", 'string'), T("'a'", 'string'), '+', "'b' + 'a' + +'a' + 'a' parses as (('b' + 'a') + (+'a')) + 'a'. The middle +'a' is UNARY plus.");
     rule(0, "'b' + 'a': both strings, so join them.");
     apply("'ba'.", 'left', T("'ba'", 'string'), "'ba' + +'a' + 'a'");
     st.left = undefined;
@@ -214,7 +214,7 @@ export function simulate({ group, op }: Params): CoFrame[] {
     st.op = '+';
     rule(0, "'ba' + NaN: a string side, so ToString(NaN), which is 'NaN'.");
     apply("'ba' + 'NaN' is 'baNaN'.", 'both', [T("'baNaN'", 'string'), T("'a'", 'string')], "'baNaN' + 'a'");
-    rule(0, 'Last step: two strings, join them.');
+    rule(0, 'Last step: two strings, join them.', 'What is the final value?');
     verdict(T("'baNaNa'", 'string'), "'baNaNa'. Add .toLowerCase() and you get the famous 'banana'.");
     st = { expr: -1, op: '+', rule: -1, skipped: [], trace: ["Number('1') + 2 - 1", '2'] };
     snap("Text read from the page is always a string: convert with Number() before doing maths, otherwise + quietly concatenates.");

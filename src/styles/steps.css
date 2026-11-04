@@ -1,0 +1,939 @@
+/* Step lessons (M8): adapted from system-design-learn's steps.css. SDL's colour and font tokens are mapped onto
+   qa-learn's here, on the lesson's own elements, so the rest of the app is untouched and both themes follow. */
+.sl,
+.sl-mode {
+  --blue: var(--iris);
+  --amber: var(--flaky);
+  --rose: var(--fail);
+  --green: var(--pass);
+  --blue-s: color-mix(in srgb, var(--iris) 14%, transparent);
+  --cyan-s: color-mix(in srgb, var(--cyan) 13%, transparent);
+  --amber-s: color-mix(in srgb, var(--flaky) 13%, transparent);
+  --rose-s: color-mix(in srgb, var(--fail) 13%, transparent);
+  --green-s: color-mix(in srgb, var(--pass) 13%, transparent);
+  --cyan-b: color-mix(in srgb, var(--cyan) 38%, transparent);
+  --amber-b: color-mix(in srgb, var(--flaky) 40%, transparent);
+  --green-g: color-mix(in srgb, var(--pass) 45%, transparent);
+  --bg-2: var(--inset);
+  --glass-solid: var(--panel-top);
+  --ink-2: var(--text);
+  --ink-3: var(--muted);
+  --ink-4: var(--muted);
+}
+/* Step lessons (M11): a section as small animated steps. Follows the app theme, unlike Shorts. */
+.sl-mode {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 14px;
+  flex-wrap: wrap;
+}
+.sl-mode button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink-2);
+  font: 600 13px/1 var(--sans);
+  cursor: pointer;
+}
+.sl-mode button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--blue-s);
+  border-color: var(--blue);
+}
+/* the lesson is a solid, lifted card (not glass) so the animation holds the eye */
+.sl {
+  position: relative;
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 18px 16px 14px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--blue-s),
+    0 22px 48px -24px rgba(2, 6, 23, 0.55);
+  overflow: hidden;
+}
+.sl::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--cyan), var(--green));
+}
+.sl-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.sl-dot {
+  flex: 1;
+  height: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--line-2);
+  cursor: pointer;
+}
+.sl-dot.turn {
+  background: var(--amber-s);
+  box-shadow: inset 0 0 0 1px var(--amber-b);
+}
+.sl-dot.done {
+  background: var(--green);
+}
+.sl-dot.now {
+  background: var(--blue);
+}
+.sl-dot:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sl-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.7fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .sl-body {
+    grid-template-columns: 1fr;
+  }
+  .sl-stage {
+    order: -1;
+  }
+}
+.sl-kind {
+  font: 700 11.5px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.sl-kind.turn {
+  color: var(--amber);
+}
+.sl-title {
+  margin: 6px 0 10px;
+  font-size: 19px;
+}
+.sl-lines {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.sl-lines li {
+  color: var(--ink-3);
+  transition: color 0.25s;
+}
+.sl-lines li.on {
+  color: var(--ink);
+}
+.sl-lines li.on::marker {
+  color: var(--blue);
+}
+.sl-lines li.done {
+  color: var(--ink-2);
+}
+.sl-lines code,
+.sl-q code,
+.sl-fb code,
+.sl-opt code {
+  font: 600 0.9em var(--mono);
+  color: var(--cyan);
+}
+
+.sl-stage {
+  position: relative;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  /* a solid canvas: no dot grid (the page's scanline/grain texture sits behind .main, base.css) */
+  background: var(--panel-top);
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.sl-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* in the nav row, not over the diagram, so it never covers a box */
+.sl-pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* the diagram */
+.st-node rect {
+  fill: var(--glass-solid);
+  stroke: var(--line-2);
+  stroke-width: 1.5;
+  transition: stroke 0.25s, fill 0.25s, opacity 0.25s;
+}
+.st-node {
+  transition: opacity 0.3s;
+}
+.st-node.hidden {
+  opacity: 0;
+}
+.st-node-t {
+  font: 700 21px var(--sans);
+  fill: var(--ink);
+}
+.st-node-s {
+  font: 14px var(--mono);
+  fill: var(--ink-3);
+}
+.st-node.lit rect {
+  stroke: var(--blue);
+  stroke-width: 2.5;
+  fill: var(--blue-s);
+}
+.st-node.down {
+  opacity: 0.35;
+}
+.st-node.down rect {
+  stroke: var(--rose);
+  stroke-dasharray: 6 5;
+}
+.st-node.pickable {
+  cursor: pointer;
+}
+.st-node.pickable rect {
+  stroke: var(--amber);
+  stroke-dasharray: 5 4;
+}
+.st-node.pickable:hover rect,
+.st-node.pickable:focus-visible rect {
+  fill: var(--amber-s);
+}
+.st-node:focus {
+  outline: none;
+}
+.st-node.wrongpick rect {
+  stroke: var(--rose);
+  stroke-dasharray: none;
+}
+.st-pk circle {
+  fill: currentColor;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+.st-pk-l {
+  font: 700 15px var(--mono);
+  fill: currentColor;
+}
+.st-arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 5;
+  opacity: 0.45;
+}
+.st-badge rect {
+  fill: currentColor;
+  fill-opacity: 0.16;
+  stroke: currentColor;
+}
+.st-badge text {
+  font: 700 15px var(--mono);
+  fill: currentColor;
+}
+.st-key rect {
+  fill: var(--cyan-s);
+  stroke: var(--cyan-b);
+}
+.st-key text {
+  font: 600 14px var(--mono);
+  fill: var(--cyan);
+}
+.st-key .st-key-note {
+  fill: var(--ink-3);
+  font-size: 11px;
+}
+.st-key.gone rect {
+  fill: var(--rose-s);
+  stroke: var(--rose);
+}
+.st-key.gone text {
+  fill: var(--rose);
+}
+.tone-req {
+  color: var(--blue);
+}
+.tone-ok {
+  color: var(--green);
+}
+.tone-miss {
+  color: var(--amber);
+}
+.tone-del {
+  color: var(--cyan);
+}
+.tone-err {
+  color: var(--rose);
+}
+
+/* Your turn */
+.sl-act {
+  margin-top: 14px;
+}
+.sl-muted {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+.sl-task {
+  border: 1px solid var(--amber-b);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--amber-s);
+}
+.sl-task.is-done {
+  border-color: var(--green-g);
+  background: var(--green-s);
+}
+.sl-q {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.sl-task > .sl-muted {
+  margin: -4px 0 10px;
+}
+.sl-opts {
+  display: grid;
+  gap: 8px;
+}
+.sl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.sl-opt,
+.sl-num,
+.sl-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: var(--glass-solid);
+  color: var(--ink);
+  font: 600 14px/1.35 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.sl-num {
+  min-width: 48px;
+  justify-content: center;
+  font-family: var(--mono);
+}
+.sl-opt:hover:not(:disabled),
+.sl-num:hover:not(:disabled),
+.sl-token:hover:not(:disabled) {
+  border-color: var(--blue);
+}
+.sl-opt-k {
+  font: 700 12px var(--mono);
+  color: var(--ink-3);
+}
+.sl-opt.right,
+.sl-num.right {
+  border-color: var(--green);
+  background: var(--green-s);
+}
+.sl-opt.wrong,
+.sl-num.wrong {
+  border-color: var(--rose);
+  background: var(--rose-s);
+}
+.sl-token.used {
+  opacity: 0.35;
+}
+.sl-opt:disabled,
+.sl-num:disabled,
+.sl-token:disabled {
+  cursor: default;
+}
+.sl-slots {
+  margin: 12px 0 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 6px;
+}
+.sl-slots li {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+}
+.sl-slots li.filled {
+  border-style: solid;
+  border-color: var(--green-g);
+  background: var(--green-s);
+}
+.sl-build {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 12px;
+}
+.sl-part {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 76px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  font-size: 16px;
+}
+.sl-part small {
+  color: var(--ink-3);
+  font: 600 11px var(--mono);
+}
+.sl-part.filled {
+  border-style: solid;
+  border-color: var(--cyan-b);
+  background: var(--cyan-s);
+  color: var(--cyan);
+}
+.sl-join {
+  align-self: center;
+  font-size: 20px;
+  color: var(--ink-3);
+}
+.sl-slider {
+  display: grid;
+  gap: 10px;
+}
+.sl-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--line-2);
+}
+.sl-chart span {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: currentColor;
+  transition: height 0.2s;
+}
+.sl-slider-row input {
+  flex: 1;
+  min-width: 140px;
+}
+.sl-peak {
+  margin: 0;
+  font: 700 13px var(--mono);
+}
+.sl-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--glass-solid);
+  color: var(--ink);
+  font: 600 14px var(--sans);
+  cursor: pointer;
+}
+.sl-switch-tg {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--line-2);
+  transition: background 0.2s;
+}
+.sl-switch-tg::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 0.2s;
+}
+.sl-switch.on .sl-switch-tg {
+  background: var(--rose);
+}
+.sl-switch.on .sl-switch-tg::after {
+  transform: translateX(16px);
+}
+.sl-fb {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.sl-fb.ok {
+  background: var(--green-s);
+  color: var(--ink);
+}
+.sl-fb.ok b {
+  color: var(--green);
+}
+.sl-fb.no {
+  background: var(--rose-s);
+}
+.sl-fb.no b {
+  color: var(--rose);
+}
+.sl-reveal {
+  margin-top: 10px;
+}
+
+.sl-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.sl-count {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.sl-read {
+  margin-left: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-lines li,
+  .st-node,
+  .st-node rect,
+  .sl-chart span {
+    transition: none;
+  }
+}
+
+.sl-hit {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+}
+.sl-hit-l {
+  color: var(--ink-3);
+  font: 600 12.5px var(--mono);
+}
+.sl-hit-bar {
+  position: relative;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--line);
+}
+.sl-hit-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: currentColor;
+  transition: width 0.15s;
+}
+/* the database's limit, as a line on its bar */
+.sl-hit-bar b {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-hit-bar i {
+    transition: none;
+  }
+}
+
+.sl-nines {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.sl-nines span {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line-2);
+  text-align: center;
+  font: 700 13px var(--mono);
+  color: var(--ink-3);
+}
+.sl-nines span.on {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* scenes (components/steps/scenes.ts): charts and equations take the stage; the boxes step aside */
+.st-nodes,
+.st-keys {
+  transition: opacity 0.2s var(--ease-out);
+}
+.scene-on .st-nodes,
+.scene-on .st-keys {
+  opacity: 0;
+}
+.tone-ink {
+  color: var(--ink-2);
+}
+.sc-chip rect {
+  fill: currentColor;
+  fill-opacity: 0.1;
+  stroke: currentColor;
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+}
+.sc-chip-v {
+  font: 700 30px var(--mono);
+  fill: var(--ink);
+}
+.sc-chip-l {
+  font: 15px var(--mono);
+  fill: var(--ink-3);
+}
+.sc-cap {
+  font: 14px var(--mono);
+  fill: var(--ink-3);
+}
+.sc-op text {
+  font: 700 34px var(--mono);
+  fill: var(--ink-3);
+}
+.sc-big {
+  font-family: var(--display);
+  font-weight: 700;
+  fill: currentColor;
+}
+.sc-num.done .sc-big {
+  filter: drop-shadow(0 0 10px currentColor);
+  transition: filter 0.4s var(--ease-out);
+}
+.sc-bar rect {
+  fill: currentColor;
+  fill-opacity: 0.85;
+}
+.sc-bar-l {
+  font: 600 15px var(--sans);
+  fill: var(--ink-2);
+}
+.sc-bar-v {
+  font: 700 15px var(--mono);
+  fill: currentColor;
+}
+.sc-limit line,
+.sc-warn {
+  stroke: var(--rose);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+}
+.sc-limit text {
+  font: 700 13px var(--mono);
+  fill: var(--rose);
+}
+.sc-axis,
+.sc-tick {
+  stroke: var(--line-2);
+  stroke-width: 2;
+}
+.sc-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.sc-area {
+  fill: var(--blue);
+  fill-opacity: 0.12;
+}
+.sc-mark line {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+}
+.sc-mark text,
+.sc-peak text {
+  font: 700 15px var(--mono);
+  fill: currentColor;
+}
+.sc-rung text {
+  font: 700 17px var(--mono);
+  fill: currentColor;
+}
+.sc-peak circle,
+.sc-rung circle,
+.sc-probe {
+  fill: currentColor;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+.sc-probe {
+  color: var(--amber);
+}
+.sc-lead {
+  stroke: currentColor;
+  stroke-opacity: 0.5;
+}
+.sc-dot {
+  fill: var(--ink-4);
+  fill-opacity: 0.3;
+  transition: fill 0.2s var(--ease-out), fill-opacity 0.2s var(--ease-out);
+}
+.sc-dot.on {
+  fill: currentColor;
+  fill-opacity: 1;
+}
+.sc-dots-l,
+.sc-meter-l {
+  font: 600 16px var(--sans);
+  fill: var(--ink-2);
+}
+.sc-meter-v {
+  font: 700 15px var(--mono);
+  fill: currentColor;
+}
+.sc-meter-bg {
+  fill: var(--ink-4);
+  fill-opacity: 0.15;
+}
+.sc-meter-fill {
+  fill: currentColor;
+  fill-opacity: 0.8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .st-nodes,
+  .st-keys,
+  .sc-dot {
+    transition: none;
+  }
+}
+.sl-est {
+  align-items: center;
+}
+.sl-est-in {
+  width: 11em;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-2);
+  background: var(--glass-solid);
+  color: var(--ink);
+  font-size: 16px;
+}
+.sl-est-in:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.sl-est-u {
+  color: var(--ink-3);
+}
+.sc-life {
+  stroke: var(--line-2);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+}
+.sc-lane rect,
+.sc-note rect,
+.sc-th rect {
+  fill: var(--glass-solid);
+  stroke: var(--line-2);
+  stroke-width: 1.5;
+}
+.sc-lane text {
+  font: 700 17px var(--sans);
+  fill: var(--ink);
+}
+.sc-th-t {
+  font: 700 15px var(--sans);
+  fill: var(--ink);
+}
+.sc-msg line {
+  stroke: currentColor;
+  stroke-width: 2.5;
+}
+.sc-msg path {
+  fill: currentColor;
+}
+.sc-msg-l,
+.sc-note text {
+  font: 700 16px var(--mono);
+  fill: currentColor;
+}
+.sc-note rect {
+  stroke: currentColor;
+  fill: currentColor;
+  fill-opacity: 0.12;
+}
+.sc-td {
+  font: 15px var(--mono);
+  fill: var(--ink-2);
+}
+.sc-tr rect {
+  fill: var(--ink-4);
+  fill-opacity: 0.08;
+}
+.sc-tr.hl rect {
+  fill: currentColor;
+  fill-opacity: 0.16;
+  stroke: currentColor;
+  stroke-opacity: 0.6;
+}
+.sc-tr.hl .sc-td {
+  fill: var(--ink);
+}
+.sc-strike {
+  stroke: var(--rose);
+  stroke-width: 2.5;
+}
+.sc-ring {
+  fill: none;
+  stroke: var(--line-2);
+  stroke-width: 3;
+}
+.sc-rnode rect {
+  fill: currentColor;
+  fill-opacity: 0.25;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.sc-rnode text {
+  font: 700 15px var(--mono);
+  fill: currentColor;
+}
+.sc-rkey circle {
+  fill: currentColor;
+}
+.sc-rkey text {
+  font: 700 13px var(--mono);
+  fill: currentColor;
+}
+.sc-rlink {
+  stroke: var(--amber);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+}
+.sc-rlink.moved {
+  stroke: var(--green);
+}
+
+/* a step with nothing to draw (generated lessons' text steps and questions): the text takes the full width */
+.sl-body.no-visual { grid-template-columns: minmax(0, 1fr); }
+.sl-body.no-visual .sl-stage { display: none; }
+
+/* ---------- picture scenes (generated lessons): ten machines of icon pieces, no words in the box ---------- */
+.sl .sc-glyph { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sl .sc-ghost { fill: none; stroke: none; }
+.sl .tone-ink.sc-piece, .sl .sc-hero.tone-ink { color: var(--accent); }
+
+/* pieces: tiles, cards, dominoes, blocks and orbs */
+.sl .sc-piece { transition: opacity 0.5s ease-out; }
+.sl .sc-piece .sc-shape {
+  fill: color-mix(in srgb, currentColor 10%, var(--panel-top));
+  stroke: color-mix(in srgb, currentColor 40%, var(--line-2));
+  stroke-width: 2;
+  transition: fill 0.5s, stroke 0.5s, stroke-width 0.5s, filter 0.5s;
+}
+.sl .sc-piece:not(.now) .sc-shape { fill: color-mix(in srgb, currentColor 6%, var(--panel-top)); }
+.sl .sc-piece:not(.now) .sc-glyph { opacity: 0.75; transition: opacity 0.5s; }
+.sl .sc-piece.now .sc-shape {
+  fill: color-mix(in srgb, currentColor 18%, var(--panel-top));
+  stroke: currentColor;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, currentColor 45%, transparent));
+  animation: sc-breathe 2.4s ease-in-out infinite;
+}
+@keyframes sc-breathe { 50% { stroke-opacity: 0.5; } }
+.sl .sc-card-in { fill: none; stroke: color-mix(in srgb, currentColor 25%, transparent); stroke-dasharray: 4 5; }
+.sl .sc-card.face-down .sc-shape { fill: color-mix(in srgb, var(--accent) 30%, var(--panel-top)); }
+.sl .sc-card.face-down .sc-glyph, .sl .sc-card.face-down .sc-card-in { opacity: 0; }
+.sl .sc-domino-mid { stroke: color-mix(in srgb, currentColor 40%, transparent); stroke-width: 2; }
+.sl .sc-orb .sc-shape { stroke-width: 2.5; }
+
+/* shared bits */
+.sl .sc-burst { fill: none; stroke: var(--accent); stroke-width: 2; }
+.sl .sc-spin { transform-box: fill-box; transform-origin: center; animation: sc-spin 10s linear infinite; }
+.sl .sc-spin.rev { animation-direction: reverse; animation-duration: 14s; }
+.sl .sc-spin.fast { animation-duration: 1.6s; }
+.sl .sc-spin.sweep { animation-duration: 3.2s; }
+@keyframes sc-spin { to { rotate: 360deg; } }
+.sl .sc-spark { fill: var(--accent); filter: drop-shadow(0 0 6px var(--accent)); }
+.sl .sc-spark.s1 { fill: var(--cyan); filter: drop-shadow(0 0 6px var(--cyan)); }
+.sl .sc-spark.s2 { fill: var(--iris); }
+.sl .sc-floor { stroke: var(--line-2); stroke-width: 2; stroke-linecap: round; }
+
+/* orbit */
+.sl .sc-ring { fill: none; stroke: color-mix(in srgb, var(--accent) 28%, transparent); stroke-width: 1.5; stroke-dasharray: 2 8; }
+.sl .sc-spoke { stroke: color-mix(in srgb, var(--accent) 45%, transparent); stroke-width: 1.5; }
+.sl .sc-hub { color: var(--accent); }
+.sl .sc-hub-core { fill: color-mix(in srgb, var(--accent) 14%, var(--panel-top)); stroke: var(--accent); stroke-width: 2; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 45%, transparent)); }
+.sl .sc-hub-pulse { fill: none; stroke: var(--accent); transform-box: fill-box; transform-origin: center; animation: sc-pulse-out 2.4s ease-out infinite; }
+@keyframes sc-pulse-out { from { scale: 1; opacity: 0.6; } to { scale: 1.6; opacity: 0; } }
+
+/* conveyor */
+.sl .sc-belt { fill: var(--inset); stroke: var(--line-2); stroke-width: 1.5; }
+.sl .sc-belt-run { stroke: color-mix(in srgb, var(--accent) 55%, transparent); stroke-width: 3; stroke-dasharray: 8 14; stroke-linecap: round; animation: sc-run 0.9s linear infinite; }
+@keyframes sc-run { to { stroke-dashoffset: -22; } }
+.sl .sc-roller { fill: var(--panel-top); stroke: var(--line-2); stroke-width: 2; }
+.sl .sc-roller-l { stroke: var(--muted); stroke-width: 2; }
+.sl .sc-post { stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 3 5; }
+.sl .sc-parcel { color: var(--flaky); }
+.sl .sc-parcel rect { fill: color-mix(in srgb, var(--flaky) 22%, var(--panel-top)); stroke: var(--flaky); stroke-width: 2; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flaky) 60%, transparent)); }
+
+/* deal */
+.sl .sc-deck { fill: color-mix(in srgb, var(--accent) 22%, var(--panel-top)); stroke: color-mix(in srgb, var(--accent) 60%, transparent); stroke-width: 1.5; }
+
+/* constellation */
+.sl .sc-star { fill: var(--ink); animation: sc-twinkle 3s ease-in-out infinite; }
+@keyframes sc-twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.8; } }
+.sl .sc-constel { stroke: color-mix(in srgb, var(--cyan) 70%, transparent); stroke-width: 1.5; filter: drop-shadow(0 0 4px var(--cyan)); }
+
+/* tower */
+.sl .sc-dust { fill: var(--muted); }
+
+/* radar */
+.sl .sc-radar-ring { fill: none; stroke: color-mix(in srgb, var(--pass) 30%, transparent); stroke-width: 1.2; }
+.sl .sc-wedge { fill: color-mix(in srgb, var(--pass) 16%, transparent); }
+.sl .sc-sweep-edge { stroke: var(--pass); stroke-width: 2; filter: drop-shadow(0 0 6px var(--pass)); }
+.sl .sc-radar-dot { fill: var(--pass); }
+.sl .sc-beam { stroke: var(--pass); stroke-width: 2; filter: drop-shadow(0 0 6px var(--pass)); }
+
+/* balance */
+.sl .sc-stand { fill: var(--inset); stroke: var(--line-2); stroke-width: 1.5; }
+.sl .sc-beam-bar { stroke: var(--muted); stroke-width: 6; stroke-linecap: round; }
+.sl .sc-pivot { fill: var(--accent); }
+.sl .sc-string { stroke: var(--muted); stroke-width: 2; }
+.sl .sc-plate { fill: var(--inset); stroke: var(--muted); stroke-width: 2; }
+
+/* funnel */
+.sl .sc-funnel { fill: color-mix(in srgb, var(--iris) 8%, var(--panel-top)); stroke: color-mix(in srgb, var(--iris) 55%, var(--line-2)); stroke-width: 2; stroke-linejoin: round; }
+.sl .sc-funnel-flow { fill: none; stroke: color-mix(in srgb, var(--iris) 60%, transparent); stroke-width: 2; stroke-dasharray: 4 10; animation: sc-run 0.8s linear infinite; }
+
+/* stamp */
+.sl .sc-seal circle { fill: var(--pass); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--pass) 60%, transparent)); }
+.sl .sc-seal .sc-tick { fill: none; stroke: var(--on-fill, #fff); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* hero (the opening picture) */
+.sl .sc-hero > circle { fill: color-mix(in srgb, currentColor 12%, var(--panel-top)); stroke: currentColor; stroke-width: 3; filter: drop-shadow(0 0 22px color-mix(in srgb, currentColor 45%, transparent)); }
+.sl .sc-hero .sc-glyph { stroke-width: 1.6; }
+.sl .sc-portal { fill: none; stroke: color-mix(in srgb, var(--accent) 35%, transparent); stroke-width: 1.5; stroke-dasharray: 14 10 2 10; }
+.sl .sc-mote { fill: var(--cyan); animation: sc-drift 3s ease-out infinite; }
+@keyframes sc-drift { from { translate: 0 0; opacity: 0.9; } to { translate: var(--dx) var(--dy); opacity: 0; } }
+
+/* Pause freezes the looping motion too; reduced motion turns it off */
+.sl.paused .st-scene * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .sl .st-scene * { animation: none !important; }
+}

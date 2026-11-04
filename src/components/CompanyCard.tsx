@@ -2,12 +2,15 @@ import { Link } from 'react-router-dom';
 import { TOPIC_BY_ID } from '../content';
 import type { CompanyQuestion } from '../types';
 import { AREA_LABEL } from '../lib/companyAreas';
+import { useCompanyAnswer } from '../lib/answers';
 import { setFlag, useProgress } from '../lib/progress';
-import { FollowUps, Markdown, Reveal } from './ui';
+import { FollowUps, Markdown } from './ui';
+import { SaveButton } from './SaveButton';
 
 /** One company-reported question: try it, reveal our answer, check the source. */
 export function CompanyCard({ q, showTopic = true }: { q: CompanyQuestion; showTopic?: boolean }) {
   const p = useProgress();
+  const strong = useCompanyAnswer(q.id);
   const done = !!p.company[q.id];
   const topic = q.topic ? TOPIC_BY_ID.get(q.topic) : undefined;
   const meta = [q.role, q.round].filter(Boolean).join(' · ');
@@ -19,12 +22,21 @@ export function CompanyCard({ q, showTopic = true }: { q: CompanyQuestion; showT
         <span className={`chip lvl lvl-${q.difficulty}`}>{q.difficulty}</span>
         {meta && <span className="mlabel company-q-round">{meta}</span>}
         {done && <span className="chip pass company-q-done">✓ Practised</span>}
+        <SaveButton kind="company" id={q.id} compact />
       </div>
       <h3 className="company-q-text">{q.question}</h3>
-      <Reveal label="Show a strong answer">
-        <Markdown>{q.answer}</Markdown>
-        <FollowUps items={q.followUps} />
-      </Reveal>
+      {strong.answer ? (
+        <div className="company-q-answer">
+          <Markdown>{strong.answer.answer}</Markdown>
+          <FollowUps items={strong.answer.followUps} />
+        </div>
+      ) : (
+        <div className="reveal-gate">
+          <button className="btn btn-line btn-sm" type="button" onClick={strong.load}>
+            Show a strong answer
+          </button>
+        </div>
+      )}
       <div className="company-q-foot">
         <span className="company-q-src">
           <span className="mlabel">Reported</span>{' '}

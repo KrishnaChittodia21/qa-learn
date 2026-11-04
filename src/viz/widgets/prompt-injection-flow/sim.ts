@@ -108,7 +108,6 @@ export function simulate(p: Params): Frame[] {
     on
       ? "The app's database query is scoped to u-17, so only Alice's orders can ever reach the prompt."
       : 'To save a query the app pastes ALL recent orders into the prompt, including other customers. Nothing has leaked yet, but the data is now one sentence away.',
-    sc === 'direct' && !on ? 'Whose data can the model now see, and does the model know which of it Alice may see?' : undefined,
   );
   if (sc === 'indirect') {
     push(
@@ -127,6 +126,7 @@ export function simulate(p: Params): Frame[] {
   push(
     { blocks: add({ id: 'user', title: on ? 'User message in <user> tags' : 'User message', lines: L(MSG[sc], PW, hostile && sc !== 'indirect'), tone: hostile && sc !== 'indirect' ? 'bad' : 'muted', fenced: on }) },
     on ? "Alice's message is added inside <user> tags, marked as data." : "Alice's message is appended as plain text, right after the instructions.",
+    'The prompt now mixes developer text with text from users. Can the model reliably tell them apart?',
   );
   push(
     { token: { at: 'model', label: 'whole prompt', tone: 'accent' }, active: 'model' },
@@ -194,7 +194,6 @@ export function simulate(p: Params): Frame[] {
     reply.some((r) => r.leak)
       ? `Leak: Alice sees ${sc === 'extract' ? 'the hidden system instructions and the staff discount code' : "other customers' order ids and home addresses"}. In production this is a data breach.`
       : `Alice gets a safe reply${blocked ? ' (the filter replaced the draft)' : ''}.`,
-    sc === 'normal' && !on ? 'Would turning the defences on change this answer?' : undefined,
   );
 
   // tester's automated check
@@ -210,6 +209,7 @@ export function simulate(p: Params): Frame[] {
     pass
       ? `Tester check passes: "${checks[sc]}".`
         : `Tester check FAILS: "${checks[sc]}". This adversarial test caught the leak before users did.`,
+    sc === 'normal' && !on ? 'Would turning the defences on change this answer?' : undefined,
   );
   const lesson: Record<Scenario, string> = {
     normal: 'Normal questions behave the same with or without defences: always test that the defences do not break the happy path.',

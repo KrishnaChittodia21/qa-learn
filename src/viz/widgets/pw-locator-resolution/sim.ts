@@ -92,7 +92,7 @@ export function simulate({ locator, rerender }: Params): Frame[] {
 
   // --- creation ---
   if (locator === 'handle') {
-    push({ status: 'running' }, 'page.$() is NOT lazy: it queries the DOM right now (like querySelector, first match wins) and returns an ElementHandle bound to that one node.', re ? 'The list will be rebuilt before the click. Will the handle still work?' : undefined);
+    push({ status: 'running' }, 'page.$() is NOT lazy: it queries the DOM right now (like querySelector, first match wins) and returns an ElementHandle bound to that one node.');
     scanButtons(st.order, (s) => s === TARGET.slug, 'data-test', true);
     const b = blank();
     b[TARGET.slug] = 'target';
@@ -101,7 +101,7 @@ export function simulate({ locator, rerender }: Params): Frame[] {
     push(
       {},
       'Creating a locator does not touch the page. `add` is only a recipe (role + name, filter, test id…); nothing is matched yet.',
-      re ? 'The list will be rebuilt before the click. Will `add` still find the right button?' : 'Has Playwright found any button yet? When will it look?',
+      re ? undefined : 'Has Playwright found any button yet? When will it look?',
     );
   }
 

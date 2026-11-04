@@ -5,6 +5,9 @@ import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
+import { checkSteps } from './validate-steps.mjs';
+
+const { sectionProblems } = await import(pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), '../src/content/sectionRules.ts')).href);
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'src/content/topics');
@@ -125,6 +128,8 @@ for (const file of files) {
       const st = await judge(c.starter.code, c.fnName, c.tests);
       if (!st.error && !st.failed.length) errs.push(`${c.id}: buggy starter passes every test, so the tests don't catch the bug`);
     }
+    for (const sec of t.sections ?? []) errs.push(...sectionProblems(sec));
+    for (const [i, sec] of (t.sections ?? []).entries()) if (sec.steps) errs.push(...checkSteps(sec.steps, `§${i + 1} steps`));
     if (missing.length) errs.push(`${missing.length} item(s) without enough follow-ups (MCQ/BoE/lab ≥1, interview ≥2): ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ', …' : ''}`);
   }
   if (errs.length) {

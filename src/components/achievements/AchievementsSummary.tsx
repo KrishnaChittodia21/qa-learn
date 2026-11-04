@@ -100,7 +100,8 @@ export function AchievementsSummary({ p }: { p: Progress }) {
           </p>
         )}
         {next && (
-          <Link className="ma-next only-m" to="/achievements" aria-label={`Closest next badge: ${next.achievement.name}, ${nextText}`}>
+          <Link className="ma-next only-m" to="/achievements">
+            <span className="sr-only">Closest next badge: </span>
             <Badge art={next.achievement.art} tier={nextStored?.tier ?? 'standard'} locked={!nextStored?.tier} size="sm" />
             <span>
               <b>

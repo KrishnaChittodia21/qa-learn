@@ -13,6 +13,9 @@ import SettingsPage from './pages/Settings';
 import AchievementsPage from './pages/Achievements';
 import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
+import SavedPage from './pages/Saved';
+import ShortsPage from './pages/Shorts';
+import ShortPage from './pages/Short';
 import { resumeLocation } from './lib/uiPrefs';
 
 // On a fresh start at the dashboard URL, reopen the page the user was last reading.
@@ -28,6 +31,7 @@ const router = createHashRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <Home /> },
+      { path: 'today', element: <Home view="today" /> },
       { path: 'contents', element: <ContentsPage /> },
       { path: 'topic/:id', element: <TopicPage /> },
       { path: 'topic/:id/exam', element: <ExamPage /> },
@@ -38,10 +42,20 @@ const router = createHashRouter([
       { path: 'pw-lab/:step', element: <PwLabStepPage /> },
       { path: 'playground', element: <PlaygroundPage /> },
       { path: 'companies', element: <CompaniesPage /> },
-      { path: 'weak-areas', element: <WeakAreasPage /> },
+      {
+        path: 'weak-areas',
+        element: <WeakAreasPage />,
+      },
       { path: 'practice', element: <PracticePage /> },
-      { path: 'achievements', element: <AchievementsPage /> },
+      {
+        path: 'achievements',
+        element: <AchievementsPage />,
+      },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'build', element: <ContentsPage view="matrix" /> },
+      { path: 'saved', element: <SavedPage /> },
+      { path: 'shorts', element: <ShortsPage /> },
+      { path: 'short/:id', element: <ShortPage /> },
       { path: '*', element: <Home /> },
     ],
   },

@@ -63,7 +63,7 @@ export function simulate(p: Params): Frame[] {
     push('The examples become 4 acceptance criteria, including negatives (expired code, cart under 500) and an edge (two coupons). The story now meets the team\'s Definition of Ready.');
   } else {
     tester = ['not invited', 'story says only "user can apply a coupon"'];
-    push('Refinement is skipped to save time. The story goes into planning with one line, "user can apply a coupon", and no acceptance criteria.', 'With no agreed examples, who decides what "apply a coupon" means for an expired code or a second coupon?');
+    push('Refinement is skipped to save time. The story goes into planning with one line, "user can apply a coupon", and no acceptance criteria.');
   }
 
   day = 1;
@@ -89,6 +89,7 @@ export function simulate(p: Params): Frame[] {
     p.acFirst
       ? `Day ${day}, In test: the story is deployed to the test environment. The tester verifies the acceptance criteria and runs a short exploratory session.`
       : `Day ${day}, In test: the story is deployed, but there are no acceptance criteria to verify against. The tester has to ask the PO what "correct" means.`,
+    p.acFirst ? undefined : 'With no agreed examples, will the PO agree with the rules the developer picked for expired codes and second coupons?',
   );
 
   if (!p.acFirst) {
@@ -157,11 +158,11 @@ export function simulate(p: Params): Frame[] {
   const labels = ['Acceptance criteria verified', 'Regression suite passed on the RC', 'No open Critical/High defects', 'Known issues accepted + in release notes', 'Rollback plan / feature flag ready'];
   const finals: Check[] = [doneOk ? 'ok' : 'fail', 'ok', critOpen ? 'fail' : 'ok', p.bug === 'minor' ? 'warn' : 'ok', 'ok'];
   gate = labels.map((label) => ({ label, state: 'pending' }));
-  push(`Day ${day}: release validation on the release candidate. The go/no-go check compares the evidence against the exit criteria.`, 'Look at the story\'s path. Which exit criteria will pass, and what will the recommendation be?');
+  push(`Day ${day}: release validation on the release candidate. The go/no-go check compares the evidence against the exit criteria.`, 'Look at the story\'s path. Which of the first three exit criteria will pass?');
   gate = gate.map((g, k) => ({ ...g, state: k < 3 ? finals[k] : 'pending' }));
   push(`Exit criteria, part 1: ${gate.slice(0, 3).map((g) => `${g.label} ${g.state === 'ok' ? '✓' : '✗'}`).join('; ')}.`);
   gate = gate.map((g, k) => ({ ...g, state: finals[k] }));
-  push(`Exit criteria, part 2: ${p.bug === 'minor' ? 'BUG-913 is open but accepted and listed in the release notes' : 'no known issues to list'}; rollback plan and feature flag are ready.`);
+  push(`Exit criteria, part 2: ${p.bug === 'minor' ? 'BUG-913 is open but accepted and listed in the release notes' : 'no known issues to list'}; rollback plan and feature flag are ready.`, 'Given these results, what will QA recommend?');
 
   day = 10;
   outcome = finals.includes('fail') ? 'No-go' : finals.includes('warn') ? 'Go with conditions' : 'Go';

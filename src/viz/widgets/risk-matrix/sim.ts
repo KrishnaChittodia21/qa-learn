@@ -143,7 +143,7 @@ export function simulate(p: Params): Frame[] {
       cap = `#${pos + 1} ${ITEMS[k].id} (${lv}) gets no time. It is not silently skipped: it goes into the report as untested residual risk.`;
     }
     used += hours[k];
-    const predict = pos === 3 ? `${fmt(Math.max(0, p.hours - used))} left for the last two items. What does each get?` : undefined;
+    const predict = pos === 3 ? `${fmt(Math.max(0, p.hours - used))} left for the last two items. What does the next one get?` : undefined;
     push(cap, k, predict);
   });
   const highs = order.filter((k) => level(score(k)) === 'HIGH');

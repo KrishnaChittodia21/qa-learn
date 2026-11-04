@@ -105,7 +105,7 @@ export function simulate({ pom, change }: Params): Frame[] {
   push(
     { uiChanged: true, specs: SPECS.map(() => 'idle') },
     `A developer ships a UI change: ${c.title}. Nothing in the test code changed yet.`,
-    'The next CI run executes all 6 specs. How many fail?',
+    'Nothing in the test code changed. Will login.spec.ts still pass?',
   );
   for (let k = 0; k < 6; k++) {
     const specs = [...s.specs];
@@ -136,7 +136,7 @@ export function simulate({ pom, change }: Params): Frame[] {
     push(
       { poFixed: true, pencil: 6, focus: 6, edits: 1, lines: c.linesPerEdit, specs: SPECS.map(() => 'idle') },
       `One edit, in LoginPage.ts: ${c.after}${c.broken === -1 ? ' inside login()' : ` for the ${['username', 'password', 'login button'][c.broken]} locator`}. No spec file is touched.`,
-      'You changed only LoginPage.ts. After a re-run, how many specs are green?',
+      'You changed only LoginPage.ts. Will spec files you never opened pass on a re-run?',
     );
     for (let k = 0; k < 6; k += 2) {
       const specs = [...s.specs];

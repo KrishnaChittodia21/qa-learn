@@ -151,13 +151,12 @@ export function simulate({ build, smoke, scope }: Params): Frame[] {
       'The new feature works. Is the build ready to release?');
   } else {
     at = 'sanity';
-    push(`Sanity test: narrow and deep, only on the ${B.change}. It checks the fix is rational and works before investing in regression. Often unscripted, run by the tester who knows the area.`,
-      'The fixed area will get several deep checks. Will sanity also re-check search, account and notifications?');
+    push(`Sanity test: narrow and deep, only on the ${B.change}. It checks the fix is rational and works before investing in regression. Often unscripted, run by the tester who knows the area.`);
     for (let k = 0; k < san.length; k++) {
       san[k] = 'pass';
       testsRun++;
       minutes += 6;
-      if (k === 1 || k === san.length - 1) push(`Sanity: ${B.sanity.slice(0, k + 1).map((s) => `"${s}"`).slice(-2).join(', ')} pass (${k + 1}/${san.length}).`);
+      if (k === 1 || k === san.length - 1) push(`Sanity: ${B.sanity.slice(0, k + 1).map((s) => `"${s}"`).slice(-2).join(', ')} pass (${k + 1}/${san.length}).`, k === san.length - 1 ? 'The fixed area passed. Will sanity also re-check search, account and notifications?' : undefined);
     }
     passed = [...passed, 'sanity'];
     push(`No: sanity stayed narrow. The fix is verified (${san.length} deep checks).`, 'The fix works. Is the build ready to release?');

@@ -1,0 +1,44 @@
+/* guide.css · the page guide (components/PageGuide.tsx; it reuses the welcome tour's modal) and the "Show me"
+   spotlight walkthrough (components/Walkthrough.tsx). Uses the tokens in tokens.css. */
+
+.pg-items { display: grid; gap: var(--s-3); margin: var(--s-3) 0 0; }
+.pg-items dt { font-weight: 600; color: var(--ink); }
+.pg-items dd { margin: 2px 0 0; color: var(--ink-2); font-size: 0.92rem; }
+.pg-acts { display: flex; gap: var(--s-2); align-items: center; }
+
+.walk { position: fixed; inset: 0; z-index: 90; }
+.walk-shield { position: absolute; inset: 0; }
+/* the dimmed page is the spot's huge shadow; the spot itself stays clear */
+.walk-spot {
+  position: fixed;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px color-mix(in oklab, #000 58%, transparent), 0 0 0 2px var(--mint);
+  transition: top .25s ease, left .25s ease, width .25s ease, height .25s ease;
+  pointer-events: none;
+}
+.walk-pop { position: fixed; display: grid; gap: var(--s-2); padding: var(--s-4); box-shadow: var(--shadow-lg); }
+.walk-pop::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--ax) - 7px);
+  width: 14px;
+  height: 14px;
+  background: inherit;
+  rotate: 45deg;
+}
+.walk-pop.below::after { top: -7px; }
+.walk-pop.above::after { bottom: -7px; }
+.walk-top, .walk-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.walk-title { font: 700 1.1rem/1.2 var(--display); }
+.walk-pop p { color: var(--ink-2); font-size: 0.92rem; }
+.walk-meter { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.walk-meter i { display: block; height: 100%; background: var(--mint); transition: width .25s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .walk-spot, .walk-meter i { transition: none; }
+}
+/* phones: the callout docks to the bottom, full width */
+@media (max-width: 640px) {
+  .walk-pop { left: 12px !important; right: 12px; top: auto !important; bottom: 12px !important; width: auto !important; }
+  .walk-pop::after { display: none; }
+}

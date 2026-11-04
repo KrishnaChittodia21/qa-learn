@@ -123,7 +123,7 @@
 .ach-page .fchip[aria-pressed='true'] .mono { color: var(--mint-t); }
 .ach-page .fchip.g { height: 28px; font-size: 12px; padding: 0 10px; background: transparent; }
 .ach-page .ach-filters .brk { flex-basis: 100%; height: 0; }
-.ach-page .ach-filters .note { margin-left: auto; }
+.ach-page .ach-filters .note { margin-left: auto; color: var(--text); opacity: 1; }
 
 /* ---------- groups ---------- */
 .ach-page .ach-group { padding-top: 26px; scroll-margin-top: calc(var(--topbar-h) + 110px); }

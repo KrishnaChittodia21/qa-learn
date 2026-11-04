@@ -6,6 +6,7 @@ import { ArrowRight, Check } from 'lucide-react';
 import { celebrate } from '../lib/celebrate';
 import type { Difficulty, MCQ, Topic } from '../types';
 import { recordAnswers, recordTest, useProgress } from '../lib/progress';
+import { isMulti } from '../lib/answers';
 import { sectionForQuestion, weakSections } from '../lib/weak';
 import { practiceLocked } from '../lib/stats';
 import { StudyLock } from './Topic';
@@ -28,7 +29,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-const sameSet = (a: number[], b: number[]) => a.length === b.length && a.every((x) => b.includes(x));
+const sameSet = (a: number[], b: number[] = []) => a.length === b.length && a.every((x) => b.includes(x));
 
 /* ---------- small presentation helpers ---------- */
 const LETTERS = 'ABCDEFGHIJ';
@@ -170,18 +171,29 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
   // after a full run is recorded, attempts already includes this run
   const runNo = (recordTopicId ? (p.tests[recordTopicId]?.attempts ?? 0) : 0) + (phase === 'done' && items.length === total ? 0 : 1);
 
+  // picked, timed and graded in the browser: the content carries the answers
+  const submitting = useRef(false);
+  const answersRef = useRef<Answers>({});
+  const itemsRef = useRef<Item[]>([]);
+  useEffect(() => {
+    answersRef.current = answers;
+    itemsRef.current = items;
+  }, [answers, items]);
+
   const start = () => {
     const qs = shuffleOn ? shuffle(questions) : questions;
-    const chosen = qs.slice(0, count).map((q) => {
-      const idx = q.options.map((_, i) => i);
-      return { q, order: shuffleOn ? shuffle(idx) : idx };
-    });
-    setItems(chosen);
+    setItems(
+      qs.slice(0, count).map((q) => {
+        const idx = q.options.map((_, i) => i);
+        return { q, order: shuffleOn ? shuffle(idx) : idx };
+      }),
+    );
     setAnswers({});
     setFlagged(new Set());
     setLocked(new Set());
     setCur(0);
     setSpent({});
+    submitting.current = false;
     const secs = Math.max(1, minutes) * 60;
     startedAt.current = Date.now();
     deadline.current = Date.now() + secs * 1000;
@@ -218,27 +230,24 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
   }, [items, answers]);
 
   const submit = useCallback(() => {
+    if (submitting.current) return;
+    submitting.current = true;
+    // a full-length run counts as an exam attempt; every run records which questions were right
+    const its = itemsRef.current;
+    const results = its.map((it) => ({ id: it.q.id, correct: sameSet(answersRef.current[it.q.id] ?? [], it.q.correct) }));
+    const mark = its.length ? Math.round((results.filter((x) => x.correct).length / its.length) * 100) : 0;
+    recordAnswers(results);
+    if (recordTopicId && its.length === total) {
+      recordTest(recordTopicId, mark);
+      if (mark >= p.settings.passMark) celebrate('Exam passed!', `${title}: ${mark}%`);
+    }
     setElapsed(Math.round((Date.now() - startedAt.current) / 1000));
     setPhase('done');
-  }, []);
+  }, [p.settings.passMark, title, recordTopicId, total]);
   const confirmSubmit = () => {
     const un = items.filter((it) => !(answers[it.q.id] ?? []).length).length;
     if (!un || window.confirm(`${un} question(s) unanswered. Submit anyway?`)) submit();
   };
-
-  // record result once when finishing a full-length exam
-  const recorded = useRef(false);
-  useEffect(() => {
-    if (phase === 'running') recorded.current = false;
-    if (phase === 'done' && !recorded.current) {
-      recorded.current = true;
-      recordAnswers(items.map((it) => ({ id: it.q.id, correct: sameSet(answers[it.q.id] ?? [], it.q.correct) })));
-      if (recordTopicId && items.length === total) {
-        recordTest(recordTopicId, score);
-        if (score >= p.settings.passMark) celebrate('Exam passed!', `${title}: ${score}%`);
-      }
-    }
-  }, [phase, items, answers, total, recordTopicId, score, p.settings.passMark, title]);
 
   // countdown
   useEffect(() => {
@@ -269,8 +278,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
   const toggle = useCallback((item: Item, original: number) => {
     setAnswers((a) => {
       const prev = a[item.q.id] ?? [];
-      const multi = item.q.correct.length > 1;
-      const next = multi ? (prev.includes(original) ? prev.filter((x) => x !== original) : [...prev, original]) : [original];
+      const next = isMulti(item.q) ? (prev.includes(original) ? prev.filter((x) => x !== original) : [...prev, original]) : [original];
       return { ...a, [item.q.id]: next };
     });
   }, []);
@@ -282,6 +290,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
       return s;
     });
   }, []);
+  // interview mode: locking in shows the answer for that question at once
   const lockIn = useCallback((id: string) => setLocked((l) => new Set(l).add(id)), []);
 
   // keyboard: 1-5 choose, ←/→ navigate, f flag, l lock in (interview mode)
@@ -482,7 +491,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
   if (phase === 'running') {
     const item = items[cur];
     const selected = answers[item.q.id] ?? [];
-    const multi = item.q.correct.length > 1;
+    const multi = isMulti(item.q);
     const answered = items.filter((it) => (answers[it.q.id] ?? []).length > 0).length;
     const urgent = remaining <= 60;
     const isLocked = interviewMode && locked.has(item.q.id);
@@ -490,7 +499,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
     const isFlagged = flagged.has(item.q.id);
     const m = meta[cur];
     const last = cur === items.length - 1;
-    const rightPicks = selected.filter((x) => item.q.correct.includes(x)).length;
+    const rightPicks = selected.filter((x) => (item.q.correct ?? []).includes(x)).length;
     const wrongPicks = selected.length - rightPicks;
 
     const statuses = items.map((it) => {
@@ -620,7 +629,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
             <div className="opts" role="group" aria-label={multi ? 'Options (select all that apply)' : 'Options'}>
               {item.order.map((orig, di) => {
                 const on = selected.includes(orig);
-                const correct = item.q.correct.includes(orig);
+                const correct = (item.q.correct ?? []).includes(orig);
                 let cls = on ? 'sel' : '';
                 let verdict = on ? 'selected' : '';
                 if (isLocked) {
@@ -662,12 +671,12 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                   )}
                   <span className={`chip ${gotIt ? 'pass' : 'fail'}`}>{gotIt ? 'Pass' : 'Fail'}</span>
                   <span className="mlabel">
-                    {rightPicks} of {item.q.correct.length} right
+                    {rightPicks} of {item.q.correct?.length ?? 0} right
                     {wrongPicks > 0 && ` · ${wrongPicks} wrong pick${wrongPicks === 1 ? '' : 's'}`}
                   </span>
                 </div>
                 <div className="explanation">
-                  <Markdown>{item.q.explanation}</Markdown>
+                  <Markdown>{item.q.explanation ?? ''}</Markdown>
                 </div>
               </div>
             )}
@@ -1070,7 +1079,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
               {it.q.code && <CodeBlock snippet={it.q.code} compact />}
               <div className="opts">
                 {it.order.map((orig, di) => {
-                  const isC = it.q.correct.includes(orig);
+                  const isC = (it.q.correct ?? []).includes(orig);
                   const isS = sel.includes(orig);
                   const [cls, v] = isC && isS ? ['ok', '✓ your pick'] : isC ? ['miss', 'correct'] : isS ? ['bad', '✗ your pick'] : ['dim', ''];
                   return (
@@ -1085,7 +1094,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                 })}
               </div>
               <div className="explanation">
-                <Markdown>{it.q.explanation}</Markdown>
+                <Markdown>{it.q.explanation ?? ''}</Markdown>
               </div>
               <FollowUps items={it.q.followUps} startOpen={0} />
             </article>

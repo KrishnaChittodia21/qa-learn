@@ -4,29 +4,18 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
-  Building2,
   Check,
   ChevronDown,
-  Code2,
-  FlaskConical,
-  Map as MapIcon,
   PlayCircle,
   Search,
-  Settings as SettingsIcon,
-  Target,
-  Terminal,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import { CODING_PROBLEMS, COMPANY_BY_TOPIC, COMPANY_QUESTIONS, PHASES, TOPICS } from '../content';
-import { PW_LAB_STEPS } from '../content/pwlab';
-import { ROADMAP } from '../content/roadmap';
 import type { Topic } from '../types';
 import { useProgress, type Progress } from '../lib/progress';
 import { topicStatus } from '../lib/stats';
 import { VIZ, vizForSection } from '../viz/registry';
 import { TAB_META, tabLabel, type TabId } from '../lib/studyLoop';
-import { weakTopics } from '../lib/weak';
 import { useUiPrefs } from '../lib/uiPrefs';
 import { EmptyState } from '../components/Doodles';
 
@@ -164,11 +153,14 @@ interface TopicView {
   sectionHit: boolean;
 }
 
-const prefersReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ------------------------------------------------------------------ page */
 
-export default function ContentsPage() {
+/**
+ * `list` (#/contents): search, filters and every stage in one list, collapsed until opened.
+ * `matrix` (#/build): the course summary and the build matrix; a stage or job there opens it in the list.
+ */
+export default function ContentsPage({ view = 'list' }: { view?: 'list' | 'matrix' }) {
   const p = useProgress();
   const ui = useUiPrefs();
   const { hash } = useLocation();
@@ -179,7 +171,8 @@ export default function ContentsPage() {
   const [onlyViz, setOnlyViz] = useState(false);
   const [track, setTrack] = useState<TrackId | 'all'>('all');
   const [status, setStatus] = useState<StatusKey | null>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // every stage starts collapsed; a deep link or Expand all opens them
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => Object.fromEntries(PHASES.map((ph) => [ph.id, true])));
   const [openTopics, setOpenTopics] = useState<Record<string, boolean>>({});
   const q = query.trim().toLowerCase();
   const filtering = !!q || onlyUnread || onlyViz || track !== 'all' || !!status;
@@ -289,18 +282,6 @@ export default function ContentsPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const behavior = (): ScrollBehavior => (prefersReduced() ? 'auto' : 'smooth');
-  const jump = (phaseId: string) => {
-    setCollapsed((c) => ({ ...c, [phaseId]: false }));
-    nav(`/contents#phase-${phaseId}`, { replace: true });
-    document.getElementById(`phase-${phaseId}`)?.scrollIntoView({ behavior: behavior(), block: 'start' });
-  };
-  const openJob = (topicId: string, phaseId: string) => {
-    setCollapsed((c) => ({ ...c, [phaseId]: false }));
-    setOpenTopics((o) => ({ ...o, [topicId]: true }));
-    nav(`/contents#t-${topicId}`, { replace: true });
-    requestAnimationFrame(() => document.getElementById(`t-${topicId}`)?.scrollIntoView({ behavior: behavior(), block: 'center' }));
-  };
   const setAll = (open: boolean) => {
     setCollapsed(Object.fromEntries(PHASES.map((ph) => [ph.id, !open])));
     setOpenTopics(Object.fromEntries(TOPICS.map((t) => [t.id, open])));
@@ -313,7 +294,6 @@ export default function ContentsPage() {
     setStatus(null);
   };
 
-  const weakCount = weakTopics(p, TOPICS).length;
   const passMark = p.settings.passMark;
   const runPhase = running ? PHASES.find((ph) => ph.id === running.topic.phase) : undefined;
   const failed = jobs.filter((j) => j.state === 'fail');
@@ -331,79 +311,6 @@ export default function ContentsPage() {
   const anyStarted = jobs.some((j) => j.state !== 'queued');
   const consoleSlot = document.getElementById('console-slot');
 
-  const tools: {
-    to: string;
-    icon: LucideIcon;
-    title: string;
-    desc: string;
-    count?: string;
-  }[] = [
-    {
-      to: '/coding',
-      icon: Code2,
-      title: 'JS Coding Practice',
-      desc: 'Array, string, object and async problems asked in QA/SDET interviews, judged by real tests.',
-      count: `${Object.keys(p.code).length}/${CODING_PROBLEMS.length} solved`,
-    },
-    {
-      to: '/playground',
-      icon: Terminal,
-      title: 'JS Playground',
-      desc: 'Run any JavaScript in the browser; open lesson snippets here with “Try it”.',
-    },
-    {
-      to: '/pw-lab',
-      icon: FlaskConical,
-      title: 'Playwright Lab (Judge)',
-      desc: 'Write real Playwright tests against a shop app with hidden bugs and see which ones you catch.',
-      count: `${PW_LAB_STEPS.length} steps · ${PW_LAB_STEPS.reduce((a, s) => a + s.hiddenBugs, 0)} bugs`,
-    },
-    {
-      to: '/companies',
-      icon: Building2,
-      title: 'Company Questions',
-      desc: 'Questions candidates reported at named companies, each with its source.',
-      count: `${Object.keys(p.company).length}/${COMPANY_QUESTIONS.length} practised`,
-    },
-    {
-      to: '/roadmap',
-      icon: MapIcon,
-      title: '12-Week Roadmap & Projects',
-      desc: 'A week-by-week plan with deliverables, practice sites and portfolio projects.',
-      count: `${ROADMAP.length} weeks`,
-    },
-    {
-      to: '/weak-areas',
-      icon: Target,
-      title: 'Weak Areas',
-      desc: 'The sections behind the questions you missed, weakest first, with targeted practice.',
-      count: weakCount ? `${weakCount} to revise` : 'nothing yet',
-    },
-    {
-      to: '/settings',
-      icon: SettingsIcon,
-      title: 'Settings',
-      desc: 'Pass mark, exam timing, study-first lock, theme, coach tips and reset.',
-    },
-  ];
-
-  // stage reports: two masonry columns, filled greedily by size so neither runs long
-  // (on phones the columns dissolve and CSS `order` restores phase order)
-  const reportCols = useMemo(() => {
-    const cols: { phases: string[]; h: number }[] = [
-      { phases: [], h: 0 },
-      { phases: [], h: 0 },
-    ];
-    for (const ph of PHASES) {
-      const list = views.get(ph.id);
-      if (!list) continue;
-      const open = filtering || !collapsed[ph.id];
-      const col = cols[0].h <= cols[1].h ? cols[0] : cols[1];
-      col.phases.push(ph.id);
-      col.h += 4 + (open ? list.length * 2.2 : 0);
-    }
-    return cols;
-  }, [views, collapsed, filtering]);
 
   const renderReport = (phId: string) => {
     const ph = PHASES.find((x) => x.id === phId)!;
@@ -427,6 +334,12 @@ export default function ContentsPage() {
         className={`panel rep ${st}`}
         style={{ '--lc': tr.color, order: ph.number } as CSSProperties}
         aria-labelledby={`rep-${ph.id}`}
+        // a click anywhere on the card opens or closes it (the chevron stays the keyboard and screen-reader control);
+        // clicks inside the topic list, and on links and buttons, keep their own meaning
+        onClick={(e) => {
+          if (filtering || (e.target as HTMLElement).closest('.trows, a, button, input, select, label')) return;
+          setCollapsed((c) => ({ ...c, [ph.id]: open }));
+        }}
       >
         <span className="rep-ghost" aria-hidden="true">
           {pad2(ph.number)}
@@ -543,8 +456,8 @@ export default function ContentsPage() {
     );
   };
 
-  return (
-    <div className="page syl-page">
+  const portal = (
+    <>
       {consoleSlot &&
         createPortal(
           <span className="syl-slot">
@@ -557,6 +470,13 @@ export default function ContentsPage() {
           consoleSlot,
         )}
 
+    </>
+  );
+
+  if (view === 'matrix') {
+    return (
+      <div className="page syl-page">
+        {portal}
       <div className="syl-bento">
         {/* ---------- title plate ---------- */}
         <section className="panel cut-lg b-title rise" style={{ '--i': 1 } as CSSProperties} aria-labelledby="syl-t">
@@ -802,6 +722,61 @@ export default function ContentsPage() {
             </span>
             {runPhase && <span className="chip run">Stage {pad2(runPhase.number)} running</span>}
           </div>
+          <Matrix
+            jobs={jobs}
+            shown={null}
+            passMark={passMark}
+            onJump={(phaseId) => nav(`/contents#phase-${phaseId}`)}
+            onOpenJob={(topicId) => nav(`/contents#t-${topicId}`)}
+          />
+
+          <div className="mx-legend">
+            <span>
+              <i className="k pass" /> Passed
+            </span>
+            <span>
+              <i className="k flaky" /> Passed on retry
+            </span>
+            <span>
+              <i className="k fail" /> Exam failed
+            </span>
+            <span>
+              <i className="k run" /> Running
+            </span>
+            <span>
+              <i className="k part" /> In progress
+            </span>
+            <span>
+              <i className="k" /> Queued
+            </span>
+            <span className="sep" aria-hidden="true" />
+            <span>
+              <i className="w" /> Handoff · stage green
+            </span>
+            <span>
+              <i className="w dash" /> Waiting
+            </span>
+            <span className="mx-hint">Score = best exam % · bar = sections read</span>
+          </div>
+        </section>
+      </div>
+
+      </div>
+    );
+  }
+
+  return (
+    <div className="page syl-page">
+      {portal}
+      <header className="saved-head rise">
+        <span className="mlabel">Syllabus</span>
+        <h1 className="h1">Syllabus</h1>
+        <p className="muted">
+          Every stage and topic in course order. Open a stage to see its topics; the course summary and build matrix are on{' '}
+          <Link to="/build">Build report</Link>.
+        </p>
+      </header>
+      <section className="panel syl-filters rise" style={{ '--i': 1 } as CSSProperties} aria-label="Search and filters">
           <div className="fbar" role="search">
             <label className="fsearch">
               <span className="sr-only">Search the syllabus</span>
@@ -903,36 +878,6 @@ export default function ContentsPage() {
             </span>
           </div>
 
-          <Matrix jobs={jobs} shown={filtering ? shownIds : null} passMark={passMark} onJump={jump} onOpenJob={openJob} />
-
-          <div className="mx-legend">
-            <span>
-              <i className="k pass" /> Passed
-            </span>
-            <span>
-              <i className="k flaky" /> Passed on retry
-            </span>
-            <span>
-              <i className="k fail" /> Exam failed
-            </span>
-            <span>
-              <i className="k run" /> Running
-            </span>
-            <span>
-              <i className="k part" /> In progress
-            </span>
-            <span>
-              <i className="k" /> Queued
-            </span>
-            <span className="sep" aria-hidden="true" />
-            <span>
-              <i className="w" /> Handoff · stage green
-            </span>
-            <span>
-              <i className="w dash" /> Waiting
-            </span>
-            <span className="mx-hint">Score = best exam % · bar = sections read</span>
-          </div>
           <div className="mx-tools">
             <button type="button" className="btn btn-ghost btn-xs" onClick={() => setAll(true)}>
               Expand all
@@ -940,26 +885,12 @@ export default function ContentsPage() {
             <button type="button" className="btn btn-ghost btn-xs" onClick={() => setAll(false)}>
               Collapse all
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs"
-              onClick={() => document.getElementById('practice-tools')?.scrollIntoView({ behavior: behavior() })}
-            >
-              Practice &amp; tools ↓
-            </button>
           </div>
-        </section>
-      </div>
+      </section>
 
       {/* ---------- stage reports ---------- */}
       {views.size > 0 && (
-        <div className="reports">
-          {reportCols.map((col, i) => (
-            <div key={i} className="rep-col">
-              {col.phases.map(renderReport)}
-            </div>
-          ))}
-        </div>
+        <div className="reports one-list">{PHASES.filter((ph) => views.has(ph.id)).map((ph) => renderReport(ph.id))}</div>
       )}
       {filtering && !views.size && (
         <div className="syl-empty">
@@ -972,32 +903,6 @@ export default function ContentsPage() {
         </div>
       )}
 
-      {/* ---------- practice & tools ---------- */}
-      <section id="practice-tools" className="panel tools-panel" aria-labelledby="tools-t">
-        <div className="p-head">
-          <h2 className="p-title" id="tools-t">
-            Practice &amp; tools
-          </h2>
-          <span className="mlabel">Everything outside the topic lessons</span>
-        </div>
-        <ul className="tools-grid">
-          {tools.map((t) => {
-            const Icon = t.icon;
-            return (
-              <li key={t.to}>
-                <Link to={t.to} className="tool">
-                  <Icon size={18} aria-hidden="true" className="tool-icon" />
-                  <span className="tool-b">
-                    <b>{t.title}</b>
-                    <span className="tool-d">{t.desc}</span>
-                  </span>
-                  {t.count && <em className="tool-c">{t.count}</em>}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
     </div>
   );
 }
@@ -1048,7 +953,6 @@ function Matrix({
               type="button"
               className={`mx-stage ${state}`}
               onClick={() => onJump(ph.id)}
-              aria-label={`Stage ${ph.number}: ${ph.title}, ${done} of ${list.length} passed. Jump to its report`}
             >
               <span className="no">STAGE {pad2(ph.number)}</span>
               <span className="tt">{ph.title}</span>
@@ -1062,8 +966,11 @@ function Matrix({
                   } as CSSProperties
                 }
               />
-              <span className="ct">
+              <span className="ct" aria-hidden="true">
                 {done}/{list.length}
+              </span>
+              <span className="sr-only">
+                , {done} of {list.length} passed. Jump to its report
               </span>
             </button>
           );

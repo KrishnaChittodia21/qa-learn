@@ -191,7 +191,7 @@ export function simulate(p: Params): Frame[] {
     push(
       notes[part.key],
       part.key,
-      part.key === 'T' ? 'Which STAR block should take the most of the two minutes, and roughly how much?' : undefined,
+      part.key === 'T' ? 'Which STAR block should take the most of the two minutes?' : undefined,
     );
   });
 

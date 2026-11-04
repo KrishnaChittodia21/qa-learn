@@ -10,8 +10,8 @@
 //
 // Every measure reads only what src/lib/progress.ts actually records: read Learn sections, Improve This
 // exercises (cc), practice drills (boe), interview self-ratings (iq), exam records (tests, with attempt
-// history), exam answers (mcq), solved coding problems (code), practised company questions (company) and
-// the study days (activityDays).
+// history), exam answers (mcq), solved coding problems (code), practised company questions (company),
+// Save for later (saved), Shorts watched (shorts) and the study days (activityDays).
 import type { CodingProblem, CompanyQuestion, PhaseId, Topic } from '../types';
 import type { Progress } from '../lib/progress';
 
@@ -39,6 +39,10 @@ export interface AchievementContext {
   /** companies with at least COMPANY_MIN questions: their question ids */
   companyBank: { company: string; ids: string[] }[];
   totals: { sections: number; cc: number; boe: number; iq: number };
+  /** the learner's IANA time zone; the browser leaves it out and uses local time */
+  timeZone?: string;
+  /** Playwright Lab step ids */
+  pwlabSteps: string[];
 }
 
 type Goal = number | ((ctx: AchievementContext, p?: Progress) => number);
@@ -121,6 +125,9 @@ function failsBeforePass(p: Progress, topicId: string): number | null {
   return before;
 }
 
+/** the difficulties present in a list of coding problems ('expert' counts as hard) */
+const difficulties = (qs: CodingProblem[]) => new Set(qs.map((q) => (q.difficulty === 'expert' ? 'hard' : q.difficulty)));
+
 const DAY_MS = 86_400_000;
 /** "2026-10-15" → a day number (UTC midnight, so DST never breaks a run) */
 const dayNum = (d: string) => Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10))) / DAY_MS;
@@ -145,14 +152,17 @@ function fullWeekends(days: string[] = []): number {
 }
 
 /** exam attempts and exam answers stamped between 00:00 and 03:59 local time */
-function lateNightCount(p: Progress): number {
+function lateNightCount(p: Progress, timeZone?: string): number {
+  const hourOf = timeZone
+    ? (d: Date) => Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone }).format(d))
+    : (d: Date) => d.getHours();
   const stamps = [
     ...Object.values(p.tests).flatMap((t) => (t.history ?? []).map((h) => h.at)),
     ...Object.values(p.mcq).map((m) => m.lastAt),
   ];
   return stamps.filter((at) => {
     const d = new Date(at);
-    return !Number.isNaN(d.getTime()) && d.getHours() < 4;
+    return !Number.isNaN(d.getTime()) && hourOf(d) < 4;
   }).length;
 }
 
@@ -162,11 +172,13 @@ export function buildAchievementContext({
   phases,
   coding,
   companyQuestions,
+  pwlabSteps = [],
 }: {
   topics: Topic[];
   phases: { id: PhaseId; number: number; title: string }[];
   coding: CodingProblem[];
   companyQuestions: CompanyQuestion[];
+  pwlabSteps?: string[];
 }): AchievementContext {
   const topicsByPhase = new Map<PhaseId, Topic[]>();
   for (const t of topics) topicsByPhase.set(t.phase, [...(topicsByPhase.get(t.phase) ?? []), t]);
@@ -181,6 +193,7 @@ export function buildAchievementContext({
     coding,
     hardCoding: coding.filter((q) => q.difficulty === 'hard' || q.difficulty === 'expert'),
     companyBank,
+    pwlabSteps,
     totals: {
       sections: sum((t) => t.sections.length),
       cc: sum((t) => t.codeChallenges.length),
@@ -254,6 +267,28 @@ export const ACHIEVEMENTS: Achievement[] = [
     measure: (p, ctx) => ctx.topics.filter((t) => isPassed(p, t.id)).length,
     requirement: () => 'Pass any full-length topic exam',
     unit: 'exams passed',
+  },
+  {
+    id: 'opening-scene',
+    name: 'Opening Scene',
+    description: 'Watched your first Short to the end.',
+    group: 'start',
+    art: 'clapper',
+    goal: 1,
+    measure: (p) => Object.values(p.shorts ?? {}).filter((s) => s.watchedAt).length,
+    requirement: () => 'Watch any Short to its end card',
+    unit: 'Shorts',
+  },
+  {
+    id: 'shown-around',
+    name: 'Shown Around',
+    description: 'Followed a "Show me" walkthrough to the end.',
+    group: 'start',
+    art: 'compass',
+    goal: 1,
+    measure: (p) => p.walksDone ?? 0,
+    requirement: () => 'Open Guide me, press Show me and follow it to Done',
+    unit: 'walkthroughs',
   },
   {
     id: 'hello-console',
@@ -343,6 +378,31 @@ export const ACHIEVEMENTS: Achievement[] = [
     measure: (p, ctx) => ctx.hardCoding.filter((q) => p.code[q.id]).length,
     requirement: (goal) => (goal === 1 ? 'Solve a Hard coding problem' : `Solve all ${goal} Hard coding problems`),
     unit: 'solved',
+  },
+  {
+    id: 'full-spectrum',
+    name: 'Full Spectrum',
+    description: 'Solved a coding problem at every difficulty: easy, medium and hard.',
+    group: 'practice',
+    art: 'layers',
+    goal: (ctx) => difficulties(ctx.coding).size || 1,
+    measure: (p, ctx) => difficulties(ctx.coding.filter((q) => p.code[q.id])).size,
+    requirement: () => 'Solve one easy, one medium and one hard coding problem',
+    unit: 'difficulties',
+  },
+  {
+    id: 'bug-squasher',
+    name: 'Bug Squasher',
+    description: 'Playwright Lab steps where your tests caught every hidden bug.',
+    group: 'practice',
+    art: 'bug-off',
+    tiers: [
+      { tier: 'bronze', goal: 1 },
+      { tier: 'gold', goal: (ctx) => ctx.pwlabSteps.length },
+    ],
+    measure: (p, ctx) => ctx.pwlabSteps.filter((id) => p.pwlab?.[id]).length,
+    requirement: (goal) => (goal === 1 ? 'Catch every hidden bug in one Playwright Lab step' : `Catch every hidden bug in all ${goal} Playwright Lab steps`),
+    unit: 'steps',
   },
   {
     id: 'drill-sergeant',
@@ -475,6 +535,36 @@ export const ACHIEVEMENTS: Achievement[] = [
     unit: 'days',
   },
 
+  {
+    id: 'daily-short',
+    name: 'Daily Short',
+    description: 'Days in a row with a Short watched (your longest run).',
+    group: 'consistency',
+    art: 'film',
+    tiers: [
+      { tier: 'bronze', goal: 3 },
+      { tier: 'silver', goal: 7 },
+    ],
+    measure: (p) => longestStreak(Object.values(p.shorts ?? {}).flatMap((s) => (s.day ? [s.day] : []))),
+    requirement: (goal) => `Watch a Short ${goal} days in a row`,
+    unit: 'days',
+  },
+  {
+    id: 'backlog-burner',
+    name: 'Backlog Burner',
+    description: 'Things you saved for later and then marked done.',
+    group: 'consistency',
+    art: 'bookmark',
+    tiers: [
+      { tier: 'bronze', goal: 1 },
+      { tier: 'silver', goal: 10 },
+      { tier: 'gold', goal: 25 },
+    ],
+    measure: (p) => (p.saved ?? []).filter((s) => s.doneAt).length,
+    requirement: (goal) => `Save ${plural(goal, 'item')} for later and mark ${goal === 1 ? 'it' : 'them'} done`,
+    unit: 'done',
+  },
+
   // ---- fun ----
   {
     id: 'midnight-deploy',
@@ -483,7 +573,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     group: 'fun',
     art: 'moon',
     goal: 1,
-    measure: (p) => lateNightCount(p),
+    measure: (p, ctx) => lateNightCount(p, ctx.timeZone),
     requirement: () => 'Answer an exam between 00:00 and 03:59',
     unit: 'late runs',
   },

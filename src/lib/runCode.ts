@@ -2,6 +2,7 @@
 // so an infinite loop or a crash can never freeze the page. The worker is killed after
 // `timeoutMs` and on completion.
 import type { CodingTest } from '../types';
+import { TRACE_RUNTIME, type Trace } from './trace';
 
 export interface TestResult {
   index: number;
@@ -21,8 +22,9 @@ export interface RunResult {
   fatal?: string;
 }
 
-// Plain JS source for the worker (not bundled; built into a Blob URL at runtime).
-const WORKER_SRC = `
+// Plain JS source for the worker (not bundled; built into a Blob URL at runtime). It also carries the step
+// recorder (trace.ts): plain code never calls it; code from instrument() does, for the visualiser.
+const WORKER_SRC = `${TRACE_RUNTIME}
 const fmt = (v) => {
   if (typeof v === 'string') return v;
   try { return JSON.stringify(v); } catch { return String(v); }
@@ -39,7 +41,7 @@ const deepEqual = (a, b) => {
 const norm = (v) => (v === undefined ? null : JSON.parse(JSON.stringify(v)));
 
 self.onmessage = async (e) => {
-  const { src, fnName, tests } = e.data;
+  const { src, fnName, tests, trace } = e.data;
   const logs = [];
   const capture = (...xs) => { if (logs.length < 200) logs.push(xs.map(fmt).join(' ')); };
   console.log = capture; console.info = capture; console.warn = capture; console.error = capture;
@@ -52,6 +54,21 @@ self.onmessage = async (e) => {
   }
   if (!fn) {
     self.postMessage({ results: [], logs, fatal: 'Function "' + fnName + '" is not defined. Keep the starter function name.' });
+    return;
+  }
+  if (trace) {
+    // one test, recorded step by step
+    const t = tests[0];
+    const out = { steps: __T.steps, truncated: false };
+    try {
+      const got = await fn(...JSON.parse(JSON.stringify(t.args)));
+      out.got = got === undefined ? '(undefined)' : got;
+    } catch (err) {
+      out.error = (err && err.name ? err.name + ': ' : '') + (err && err.message ? err.message : String(err));
+      out.errorLine = __T.lastLine;
+    }
+    out.truncated = __T.truncated;
+    self.postMessage({ results: [], logs, trace: out });
     return;
   }
   const results = [];
@@ -73,7 +90,8 @@ self.onmessage = async (e) => {
 
 let workerUrl: string | undefined;
 
-export function runTests(src: string, fnName: string, tests: CodingTest[], timeoutMs = 4000): Promise<RunResult> {
+/** one job in a throwaway worker, killed after `timeoutMs` and when it answers */
+function inWorker(msg: { src: string; fnName: string; tests: CodingTest[]; trace?: boolean }, timeoutMs: number): Promise<RunResult & { trace?: Trace }> {
   workerUrl ??= URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
   const worker = new Worker(workerUrl);
   return new Promise((resolve) => {
@@ -85,7 +103,7 @@ export function runTests(src: string, fnName: string, tests: CodingTest[], timeo
         fatal: `Timed out after ${timeoutMs / 1000}s. Check for an infinite loop or a Promise that never resolves.`,
       });
     }, timeoutMs);
-    worker.onmessage = (e: MessageEvent<RunResult>) => {
+    worker.onmessage = (e: MessageEvent<RunResult & { trace?: Trace }>) => {
       clearTimeout(timer);
       worker.terminate();
       resolve(e.data);
@@ -95,6 +113,23 @@ export function runTests(src: string, fnName: string, tests: CodingTest[], timeo
       worker.terminate();
       resolve({ results: [], logs: [], fatal: e.message || 'The code crashed while loading.' });
     };
-    worker.postMessage({ src, fnName, tests });
+    worker.postMessage(msg);
   });
+}
+
+export function runTests(src: string, fnName: string, tests: CodingTest[], timeoutMs = 4000): Promise<RunResult> {
+  return inWorker({ src, fnName, tests }, timeoutMs);
+}
+
+/** Runs one test with every step recorded, for the visualiser. A syntax error or timeout comes back as `fatal`. */
+export async function runTrace(src: string, fnName: string, test: CodingTest, timeoutMs = 4000): Promise<Trace> {
+  let code: string;
+  try {
+    const { instrument } = await import('./instrument');
+    code = instrument(src);
+  } catch (err) {
+    return { steps: [], truncated: false, fatal: `SyntaxError: ${(err as Error).message}` };
+  }
+  const res = await inWorker({ src: code, fnName, tests: [test], trace: true }, timeoutMs);
+  return res.trace ?? { steps: [], truncated: false, fatal: res.fatal ?? 'The trace did not run.' };
 }

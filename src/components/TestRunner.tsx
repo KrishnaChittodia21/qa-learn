@@ -2,6 +2,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import { Check, Play } from 'lucide-react';
 import type { CodingTest } from '../types';
 import { runSummary, useTestRun, type RunRecord } from '../lib/testRun';
+import { TraceViewer } from './TraceViewer';
 
 const fmt = (v: unknown) => {
   if (v === '(undefined)') return 'undefined';
@@ -32,13 +33,14 @@ function DiffValue({ value, other }: { value: unknown; other: unknown }) {
   return fmt(value) === fmt(other) ? <>{fmt(value)}</> : <mark>{fmt(value)}</mark>;
 }
 
-/** The dark-island test console: ✓/✗ lines, expected/received diff, summary bar, session run history. */
+/** The dark-island test console: ✓/✗ lines, expected/received diff, the step-through visualiser, summary bar, run history. */
 export function RunnerConsole({
   run,
   busy,
   fnName,
   tests,
   history,
+  code,
   className = '',
 }: {
   run: RunRecord | null;
@@ -46,6 +48,8 @@ export function RunnerConsole({
   fnName: string;
   tests: CodingTest[];
   history?: RunRecord[];
+  /** the code that ran: given, the console gets the step-through visualiser */
+  code?: string;
   className?: string;
 }) {
   const hidden = tests.filter((t) => t.hidden).length;
@@ -155,6 +159,7 @@ export function RunnerConsole({
                 <span className="d">skip</span>
               </div>
             )}
+            {code !== undefined && !run.fatal && <TraceViewer key={run.no} code={code} fnName={fnName} tests={tests} run={run} />}
             {run.logs.length > 0 && (
               <>
                 <div className="mlabel tr-loglabel">
@@ -269,7 +274,7 @@ export function TestRunner({
   return (
     <div className="test-runner">
       <TestActions busy={t.busy} hasHidden={t.hasHidden} execute={(m) => void t.execute(m)} total={tests.length} extra={extraActions} />
-      {(t.run || t.busy) && <RunnerConsole run={t.run} busy={t.busy} fnName={fnName} tests={tests} />}
+      {(t.run || t.busy) && <RunnerConsole run={t.run} busy={t.busy} fnName={fnName} tests={tests} code={code} />}
     </div>
   );
 }

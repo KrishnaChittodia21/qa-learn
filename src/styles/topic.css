@@ -824,3 +824,36 @@
     word-break: normal;
   }
 }
+
+/* M8: long sections open collapsed (Read more / Read less); the key points after the section are the summary */
+.topic-page .prose.is-clamped {
+  max-height: 22em;
+  overflow: hidden;
+  mask-image: linear-gradient(#000 70%, transparent);
+}
+.read-toggle { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; }
+.read-toggle svg { transition: transform var(--dur-fast) var(--ease-out); }
+.read-toggle svg.open { transform: rotate(180deg); }
+
+/* M8: Learn more, a native <details> at the end of a section */
+.learn-more {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--inset);
+}
+.learn-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 650;
+  list-style: none;
+}
+.learn-more > summary::-webkit-details-marker { display: none; }
+.learn-more > summary::after { content: '+'; margin-left: auto; font-family: var(--mono); }
+.learn-more[open] > summary::after { content: '−'; }
+.learn-more > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.learn-more > .prose { margin: 0; padding: 0 16px 6px; }
+.lm-links { margin: 0; padding: 4px 16px 14px 34px; display: grid; gap: 6px; }

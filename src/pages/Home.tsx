@@ -7,7 +7,9 @@ import { ArrowRight, BookOpen, Check, MessageSquare, RotateCcw, Target } from 'l
 import { CODING_PROBLEMS, COMPANY_BY_TOPIC, COMPANY_QUESTIONS, PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import { PW_LAB_STEPS } from '../content/pwlab';
 import { longestStreak } from '../content/achievements';
-import { useProgress, type Progress } from '../lib/progress';
+import { localDay, useProgress, type Progress } from '../lib/progress';
+import { shortOfTheDay } from '../lib/shorts';
+import { ShortCard } from '../components/ShortCard';
 import { nextStep, type NextStepResult } from '../lib/nextStep';
 import { getUiPrefs } from '../lib/uiPrefs';
 import { openGuide } from '../lib/appEvents';
@@ -51,7 +53,6 @@ import { BarList } from '../components/charts/BarList';
 import { ColumnChart } from '../components/charts/ColumnChart';
 import { LineChart } from '../components/charts/LineChart';
 import { Heatmap } from '../components/charts/Heatmap';
-import { StackedBar } from '../components/charts/StackedBar';
 import { C, plural } from '../components/charts/core';
 
 const LOOKUP: LocationLookup = {
@@ -112,7 +113,11 @@ function useConsoleSlot() {
 
 // ---------- page ----------
 
-export default function Home() {
+/**
+ * `dashboard` (#/): what to do next — the next mission, the weak spot, today's Short, the next coding problem and badges.
+ * `today` (#/today): tracking — readouts, coverage, pipeline, study signal, run log, skills, the lab and the study record.
+ */
+export default function Home({ view = 'dashboard' }: { view?: 'dashboard' | 'today' }) {
   const p = useProgress();
   const judge = useJudge();
   const light = useLightTone(p.settings.theme);
@@ -133,7 +138,7 @@ export default function Home() {
   ).done;
 
   return (
-    <div className={`page today ${fresh ? 'is-fresh' : ''}`} data-tone={light ? 'light' : 'dark'}>
+    <div className={`page today view-${view} ${fresh ? 'is-fresh' : ''}`} data-tone={light ? 'light' : 'dark'}>
       {slot &&
         createPortal(
           <span className="today-run" title="Full exam attempts recorded">
@@ -141,21 +146,32 @@ export default function Home() {
           </span>,
           slot,
         )}
-      <h1 className="sr-only">Today</h1>
-      <div className="bento">
-        <Hero p={p} step={step} />
-        <PrismPanel tracks={tracks} passed={passedN} examAvg={k.avgBest} codeSolved={codeSolved} bugs={judge ? judgeCaught : null} bugsTotal={bugsTotal} />
-        <Readouts p={p} passed={passedN} />
-        <Pipeline p={p} current={step.topic} runNo={runNo} passed={passedN} />
-        <Signal p={p} />
-        <Runner p={p} step={step} judge={judge} />
-        {fresh ? <HowItWorks mark={mark} /> : <WeakSpot p={p} />}
-        <Coding p={p} />
-        <Radar p={p} />
-        <LabGrid judge={judge} />
-        <AchievementsSummary p={p} />
-      </div>
-      <StudyRecord p={p} step={step} />
+      {view === 'dashboard' ? (
+        <>
+          <h1 className="sr-only">Dashboard</h1>
+          <div className="bento">
+            <Hero p={p} step={step} />
+            {fresh ? <HowItWorks mark={mark} /> : <WeakSpot p={p} />}
+            <ShortOfTheDay p={p} />
+            <Coding p={p} />
+            <AchievementsSummary p={p} />
+          </div>
+        </>
+      ) : (
+        <>
+          <h1 className="sr-only">Today</h1>
+          <div className="bento">
+            <Readouts p={p} passed={passedN} />
+            <PrismPanel tracks={tracks} passed={passedN} examAvg={k.avgBest} codeSolved={codeSolved} bugs={judge ? judgeCaught : null} bugsTotal={bugsTotal} />
+            <Pipeline p={p} current={step.topic} runNo={runNo} passed={passedN} />
+            <Signal p={p} />
+            <Runner p={p} step={step} judge={judge} />
+            <Radar p={p} />
+            <LabGrid judge={judge} />
+          </div>
+          <StudyRecord p={p} step={step} />
+        </>
+      )}
     </div>
   );
 }
@@ -621,26 +637,28 @@ function Signal({ p }: { p: Progress }) {
   const first = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
   return (
     <section className="panel b-sig rise" style={v({ '--i': 5 })} aria-labelledby="sig-t">
-      <div className="p-head">
-        <span className="mlabel" id="sig-t">
-          Signal · 30d
-        </span>
-        <span className={`chip ${streak ? 'pass' : 'skip'}`}>{streak}-day streak</span>
-      </div>
-      <div className="sig-num">
-        <b>{active}</b>
-        <span className="ink2">
-          study days
-          <br />
-          <span className="ink3">best run {best}</span>
-        </span>
-      </div>
-      <Wave30 days={days} />
-      <div className="sig-axis" aria-hidden="true">
-        <span className="coord">{axisDate(first)}</span>
-        <span className="coord">{axisDate(mid)}</span>
-        <span className="coord">TODAY</span>
-      </div>
+      <>
+        <div className="p-head">
+          <span className="mlabel" id="sig-t">
+            Signal · 30d
+          </span>
+          <span className={`chip ${streak ? 'pass' : 'skip'}`}>{streak}-day streak</span>
+        </div>
+        <div className="sig-num">
+          <b>{active}</b>
+          <span className="ink2">
+            study days
+            <br />
+            <span className="ink3">best run {best}</span>
+          </span>
+        </div>
+        <Wave30 days={days} />
+        <div className="sig-axis" aria-hidden="true">
+          <span className="coord">{axisDate(first)}</span>
+          <span className="coord">{axisDate(mid)}</span>
+          <span className="coord">TODAY</span>
+        </div>
+      </>
     </section>
   );
 }
@@ -1049,6 +1067,26 @@ function Coding({ p }: { p: Progress }) {
   );
 }
 
+// ---------- Short of the day (M7) ----------
+
+function ShortOfTheDay({ p }: { p: Progress }) {
+  const pick = shortOfTheDay(p.shorts, localDay());
+  if (!pick) return null;
+  return (
+    <section className="panel hov b-short rise" style={v({ '--i': 11 })} aria-labelledby="short-t">
+      <div className="p-head">
+        <span className="mlabel" id="short-t">
+          Short of the day
+        </span>
+        <Link className="mlabel p-link" to="/shorts">
+          All Shorts ↗
+        </Link>
+      </div>
+      <ShortCard entry={pick.entry} watched={pick.watched} />
+    </section>
+  );
+}
+
 // ---------- Playwright Lab bug grid ----------
 
 function LabGrid({ judge }: { judge: JudgeSummary | null }) {
@@ -1118,7 +1156,6 @@ function StudyRecord({ p, step }: { p: Progress; step: NextStepResult }) {
   const scores = examScores(p, TOPICS);
   const timeline = examTimeline(p, TOPICS);
   const levels = difficultyAccuracy(p, TOPICS);
-  const ratings = ratingCounts(p, TOPICS);
   const weeks = activityWeeks(p.activityDays);
   const studyDays = (p.activityDays ?? []).length;
   const streak = studyStreak(p.activityDays);
@@ -1372,40 +1409,6 @@ function StudyRecord({ p, step }: { p: Progress; step: NextStepResult }) {
               tip: { value: `${l.pct}% correct`, label: `${LEVEL_LABEL[l.level]} questions`, detail: `${l.correct} of ${l.seen} answered` },
             }))}
           />
-        </ChartCard>
-
-        <ChartCard
-          className="r-ratings rise"
-          title="Interview self-ratings"
-          subtitle={ratings.total ? `How you rated your ${plural(ratings.total, 'practised answer')}.` : 'How you rate your practised interview answers.'}
-          empty={
-            !ratings.total && (
-              <p>
-                <strong>No ratings yet.</strong> Practise in any topic&apos;s Interview Qs tab and rate your answer to fill this in.
-              </p>
-            )
-          }
-          table={{
-            columns: ['Rating', 'Answers', 'Share'],
-            rows: (['nailed', 'partial', 'missed'] as const).map((r) => [
-              r === 'nailed' ? 'Nailed it' : r === 'partial' ? 'Partly' : 'Missed',
-              ratings[r],
-              `${Math.round((ratings[r] / Math.max(1, ratings.total)) * 100)}%`,
-            ]),
-          }}
-        >
-          <StackedBar
-            unit="answers"
-            ariaLabel="Interview self-ratings"
-            segments={[
-              { label: 'Nailed it', value: ratings.nailed, color: C.ord3 },
-              { label: 'Partly', value: ratings.partial, color: C.ord2 },
-              { label: 'Missed', value: ratings.missed, color: C.ord1 },
-            ]}
-          />
-          <p className="chart-note">
-            Answers rated <em>partly</em> or <em>missed</em> keep their topic in your weak areas until you re-rate them.
-          </p>
         </ChartCard>
 
         <ChartCard

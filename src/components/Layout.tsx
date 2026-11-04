@@ -12,10 +12,15 @@ import {
   LayoutGrid,
   Layers,
   ListTree,
+
   Moon,
   Route,
   Search,
   SlidersHorizontal,
+  Star,
+  LayoutDashboard,
+  Grid3x3,
+  Clapperboard,
   Sun,
   Terminal,
   TriangleAlert,
@@ -34,6 +39,11 @@ import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 import { applyThemeAttrs } from '../lib/theme';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { useAchievementDetection } from '../lib/useAchievements';
+import PageGuide from './PageGuide';
+import Walkthrough from './Walkthrough';
+import { closePageGuide, openPageGuide, startWalk, useGuide } from '../lib/guide';
+import { guideFor, MENU_WALK } from '../lib/pageGuides';
+import { activeSaved } from '../pages/Saved';
 import { achievementById, TIER_LABEL } from '../content/achievements';
 
 // overlays are lazy so cmdk and the tour stay out of the main bundle until first use
@@ -65,16 +75,20 @@ interface NavItem {
 
 /** primary instruments, in the mockup's order (numbered 01–07 in the rail) */
 const PRIMARY: NavItem[] = [
-  { to: '/', label: 'Today', icon: Crosshair, match: (p) => p === '/' },
+  { to: '/', label: 'Dashboard', dock: 'Home', icon: LayoutDashboard, match: (p) => p === '/' },
+  { to: '/today', label: 'Today', icon: Crosshair, match: (p) => p === '/today' },
   { to: '/contents', label: 'Syllabus', icon: Layers, match: (p) => p.startsWith('/contents') || p.startsWith('/topic/') },
   { to: '/coding', label: 'Coding', icon: Code2, match: (p) => p.startsWith('/coding') },
   { to: '/pw-lab', label: 'Playwright Lab', dock: 'Lab', icon: FlaskConical, match: (p) => p.startsWith('/pw-lab') },
   { to: '/roadmap', label: 'Roadmap', icon: Route, match: (p) => p.startsWith('/roadmap') },
+  { to: '/build', label: 'Build report', dock: 'Report', icon: Grid3x3, match: (p) => p.startsWith('/build') },
   { to: '/weak-areas', label: 'Weak areas', icon: TriangleAlert, match: (p) => p.startsWith('/weak-areas') || p.startsWith('/practice') },
   { to: '/achievements', label: 'Achievements', icon: Award, match: (p) => p.startsWith('/achievements') },
 ];
 /** secondary tools (rail group "Tools"; the mobile "More" sheet holds these + the primary items without a dock slot) */
 const TOOLS: NavItem[] = [
+  { to: '/shorts', label: 'Shorts', icon: Clapperboard, match: (p) => p.startsWith('/shorts') || p.startsWith('/short/') },
+  { to: '/saved', label: 'Saved', icon: Star, match: (p) => p.startsWith('/saved') },
   { to: '/playground', label: 'Playground', icon: Terminal, match: (p) => p.startsWith('/playground') },
   { to: '/companies', label: 'Company Qs', icon: Building2, match: (p) => p.startsWith('/companies') },
   { to: '/settings', label: 'Settings', icon: SlidersHorizontal, match: (p) => p.startsWith('/settings') },
@@ -166,11 +180,22 @@ export default function Layout() {
     setPaletteLoaded(true);
     setPaletteOpen(true);
   }, []);
-  const closeTour = useCallback(() => setTourOpen(false), []);
+  // the first-visit tour carries on into the menu walkthrough when it closes
+  const firstRun = useRef(tourOpen);
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    if (firstRun.current) {
+      firstRun.current = false;
+      startWalk(MENU_WALK);
+    }
+  }, []);
   useEffect(() => {
     if (tourOpen) saveUiPrefs({ tourSeen: true });
   }, [tourOpen]);
-  useEffect(() => on('open-guide', () => setTourOpen(true)), []);
+  // "Guide me" and "?": this page's guide, or the welcome tour where a page has none
+  const openGuideHere = useCallback(() => (guideFor(path) ? openPageGuide() : setTourOpen(true)), [path]);
+  useEffect(() => on('open-guide', openGuideHere), [openGuideHere]);
+  const guide = useGuide();
 
   // ---- achievements: detect + store new badges; celebrate once the guide is closed ----
   const navigate = useNavigate();
@@ -195,12 +220,12 @@ export default function Layout() {
         else showPalette();
       } else if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !typingInField(e) && !paletteOpen) {
         e.preventDefault();
-        setTourOpen(true);
+        openGuideHere();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paletteOpen, showPalette]);
+  }, [paletteOpen, showPalette, openGuideHere]);
 
   // New page → top of page, except on app start, where we restore the saved scroll position.
   useEffect(() => {
@@ -270,11 +295,22 @@ export default function Layout() {
   const syllabusPage = path.startsWith('/topic/') && !path.endsWith('/exam');
   const moreActive = MORE.some((n) => n.match(path));
 
+  const savedCount = activeSaved(p.saved).length;
   const countFor = (to: string) =>
     to === '/weak-areas' && weakCount > 0 ? (
-      <span className="count-tag fail" aria-label={`, ${weakCount} wrong answers`}>
-        {weakCount}
-      </span>
+      <>
+        <span className="count-tag fail" aria-hidden="true">
+          {weakCount}
+        </span>
+        <span className="sr-only">, {weakCount} wrong answers</span>
+      </>
+    ) : to === '/saved' && savedCount > 0 ? (
+      <>
+        <span className="count-tag" aria-hidden="true">
+          {savedCount}
+        </span>
+        <span className="sr-only">, {savedCount} saved</span>
+      </>
     ) : null;
   const titleFor = (to: string, label: string) =>
     to === '/coding'
@@ -320,14 +356,17 @@ export default function Layout() {
 
       {/* ---- desktop: fixed left instrument rail ---- */}
       <aside className="rail" aria-label="Main navigation">
-        <Link to="/" className="brand" aria-label="QA.learn, today">
+        <Link to="/" className="brand">
           <BrandMark />
           <BrandName />
+          <span className="sr-only">, today</span>
         </Link>
-        <button type="button" className="rail-search" onClick={showPalette} aria-label="Search (Command K)" title="Search (⌘K)">
+        <button type="button" className="rail-search" onClick={showPalette} title="Search (⌘K)">
           <Search size={16} aria-hidden="true" />
           <span className="lbl">Search specs</span>
-          <kbd className="kbd">⌘K</kbd>
+          <kbd className="kbd" aria-hidden="true">
+            ⌘K
+          </kbd>
         </button>
         <div className="rail-label">Navigate</div>
         <nav className="rail-nav" aria-label="Main">
@@ -337,13 +376,14 @@ export default function Layout() {
               to={n.to}
               className="rail-a"
               aria-current={n.match(path) ? 'page' : undefined}
-              aria-label={n.label}
               title={titleFor(n.to, n.label)}
             >
               <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
               <span className="lbl">{n.label}</span>
               {countFor(n.to)}
-              <span className="ix">{String(i + 1).padStart(2, '0')}</span>
+              <span className="ix" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
             </Link>
           ))}
         </nav>
@@ -355,38 +395,40 @@ export default function Layout() {
               to={n.to}
               className="rail-a"
               aria-current={n.match(path) ? 'page' : undefined}
-              aria-label={n.label}
               title={titleFor(n.to, n.label)}
             >
               <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
               <span className="lbl">{n.label}</span>
+              {countFor(n.to)}
             </Link>
           ))}
-          <button type="button" className="rail-a" onClick={openGuide} aria-label="Guide me (press ?)" title="Open the guide (press ?)">
+          <button type="button" className="rail-a" onClick={openGuide} title="Open the guide (press ?)">
             <CircleHelp size={18} aria-hidden="true" strokeWidth={1.6} />
             <span className="lbl">Guide me</span>
-            <kbd className="kbd ix">?</kbd>
+            <kbd className="kbd ix" aria-hidden="true">
+              ?
+            </kbd>
           </button>
         </nav>
         <div className="rail-spacer" />
-        <div className="rail-streak" title={`${streak}-day study streak`}>
-          <div className="row">
-            <span className="mlabel">Streak</span>
-            <b>
-              {streak}
-              <small>{streak === 1 ? 'day' : 'days'}</small>
-            </b>
+          <div className="rail-streak" title={`${streak}-day study streak`}>
+            <div className="row">
+              <span className="mlabel">Streak</span>
+              <b>
+                {streak}
+                <small>{streak === 1 ? 'day' : 'days'}</small>
+              </b>
+            </div>
+            <div className="wave14" role="img" aria-label="Study activity over the last 14 days">
+              {wave.map((d, i) => (
+                <i
+                  key={d.day}
+                  className={d.h === 0 ? 'off' : i === wave.length - 1 ? 'now' : undefined}
+                  style={{ '--h': Math.max(d.h, 8) } as CSSProperties}
+                />
+              ))}
+            </div>
           </div>
-          <div className="wave14" role="img" aria-label="Study activity over the last 14 days">
-            {wave.map((d, i) => (
-              <i
-                key={d.day}
-                className={d.h === 0 ? 'off' : i === wave.length - 1 ? 'now' : undefined}
-                style={{ '--h': Math.max(d.h, 8) } as CSSProperties}
-              />
-            ))}
-          </div>
-        </div>
         {themeSwitch}
         <div className="rail-status">
           <span className="dot" aria-hidden="true" />
@@ -402,10 +444,10 @@ export default function Layout() {
           <BrandMark size={30} />
           <BrandName sub={false} />
         </Link>
-        <span className="m-streak" title={`${streak}-day study streak`}>
-          <Zap size={14} aria-hidden="true" />
-          <b>{streak}</b>d<span className="sr-only"> study streak</span>
-        </span>
+          <span className="m-streak" title={`${streak}-day study streak`}>
+            <Zap size={14} aria-hidden="true" />
+            <b>{streak}</b>d<span className="sr-only"> study streak</span>
+          </span>
         <button type="button" className="icon-btn m-ibtn" onClick={showPalette} aria-label="Search">
           <Search size={18} aria-hidden="true" />
         </button>
@@ -519,17 +561,17 @@ export default function Layout() {
           </button>
         </div>
         <div className="ruler shell-ruler" aria-hidden="true" />
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={path}
-            className="page-host"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, ease: [0.2, 0.7, 0.2, 1] }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        {/* keyed by path, so each page mounts fresh and rises in. No AnimatePresence: with no exit animation it only
+            kept the old wrapper alive, and its <Outlet /> rendered the new page a second time */}
+        <motion.div
+          key={path}
+          className="page-host"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, ease: [0.2, 0.7, 0.2, 1] }}
+        >
+          <Outlet />
+        </motion.div>
         <SiteFooter />
       </main>
 
@@ -621,6 +663,15 @@ export default function Layout() {
       <Suspense fallback={null}>
         {paletteLoaded && <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />}
         {tourOpen && <WelcomeTour onClose={closeTour} />}
+        {guide.page && (
+          <PageGuide
+            onFullTour={() => {
+              closePageGuide();
+              setTourOpen(true);
+            }}
+          />
+        )}
+        {guide.walk && <Walkthrough key={path} steps={guide.walk} />}
         {/* achievement unlocks wait until the guide is closed */}
         {unlocked.length > 0 && !tourOpen && <AchievementCelebration items={unlocked} onClose={dismissUnlocked} onViewAll={viewAllAchievements} />}
       </Suspense>

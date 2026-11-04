@@ -19,6 +19,12 @@ export interface UiPrefs {
   celebratedPwSteps: string[];
   /** command palette: most recently chosen item ids, newest first */
   recentCommands: string[];
+  /** M8: how sections that have step lessons open, the text or the animated steps */
+  lessonMode?: 'read' | 'steps';
+  /** long sections the reader opened with Read more, by "topicId:index" */
+  openSections?: Record<string, true>;
+  /** the coding problem page's problem bank is folded to a thin rail */
+  codingBankCollapsed?: boolean;
 }
 
 const KEY = 'qa-learn-ui-v1';

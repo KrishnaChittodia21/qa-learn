@@ -1,61 +1,8 @@
 // Dashboard metrics: pure functions over Progress + content, used by the Home charts.
 import type { CodingProblem, Difficulty, Topic } from '../types';
-import type { Phase } from '../content/phases';
 import { localDay, type Progress } from './progress';
-import { topicCompletion, topicStatus } from './stats';
+import { topicCompletion } from './stats';
 import { accuracyBreakdown, currentlyWrong, weakTopics, type TopicWeakness } from './weak';
-
-export interface StatusCounts {
-  passed: number;
-  inProgress: number;
-  notStarted: number;
-  total: number;
-}
-
-/** topics by state: exam passed / touched but not passed / untouched */
-export function statusCounts(p: Progress, topics: Topic[]): StatusCounts {
-  const c = { passed: 0, inProgress: 0, notStarted: 0, total: topics.length };
-  for (const t of topics) {
-    const s = topicStatus(p, t);
-    if (s === 'passed') c.passed++;
-    else if (s === 'in-progress') c.inProgress++;
-    else c.notStarted++;
-  }
-  return c;
-}
-
-export interface PhaseProgress {
-  id: string;
-  number: number;
-  title: string;
-  /** average topic completion, 0–100 */
-  pct: number;
-  passed: number;
-  inProgress: number;
-  notStarted: number;
-  total: number;
-}
-
-/** completion and topic status mix per phase, in course order; phases without topics are skipped */
-export function phaseProgress(p: Progress, topics: Topic[], phases: Phase[]): PhaseProgress[] {
-  return phases
-    .map((ph) => {
-      const ts = topics.filter((t) => t.phase === ph.id);
-      const pct = ts.length ? Math.round(ts.reduce((a, t) => a + topicCompletion(p, t), 0) / ts.length) : 0;
-      const c = statusCounts(p, ts);
-      return {
-        id: ph.id,
-        number: ph.number,
-        title: ph.title,
-        pct,
-        passed: c.passed,
-        inProgress: c.inProgress,
-        notStarted: c.notStarted,
-        total: ts.length,
-      };
-    })
-    .filter((x) => x.total > 0);
-}
 
 export interface ExamScore {
   topic: Topic;

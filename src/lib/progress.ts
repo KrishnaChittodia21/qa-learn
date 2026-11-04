@@ -1,5 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import { mergeEarned, type EarnedNow, type StoredAchievement } from '../content/achievements';
+import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS } from '../content';
+import { PW_LAB_STEPS } from '../content/pwlab';
+import { SHORTS_DATA } from '../content/shorts';
+import { applyOps, buildContentIndex, DEFAULT_PROGRESS, type ContentIndex, type Op } from './progress-ops';
 
 export type Rating = 'nailed' | 'partial' | 'missed';
 
@@ -20,6 +24,15 @@ export interface McqRecord {
   lastAt: string;
 }
 
+/** what the ☆ Save button can put on the Saved page; `ref` is the item's id ("topic:index" for a section) */
+export type SavedKind = 'topic' | 'section' | 'interview' | 'drill' | 'company' | 'coding' | 'pwlab' | 'short';
+export interface SavedItem {
+  kind: SavedKind;
+  ref: string;
+  addedAt: string;
+  doneAt?: string;
+}
+
 /** Settings → Accent colour (applied as data-accent on <html>) */
 export type Accent = 'indigo' | 'teal' | 'rose' | 'amber';
 
@@ -32,6 +45,29 @@ export interface Settings {
   studyLock: 'off' | 'exam' | 'exam-interview';
   /** optional for saves made before accent themes existed; defaults to 'indigo' */
   accent?: Accent;
+}
+
+export interface ShortRecord {
+  watchedAt?: string;
+  day?: string;
+  quiz?: 'first' | 'retry';
+}
+
+/** Study plan (pace calculator, src/lib/pace.ts). Days are local YYYY-MM-DD. Adapted from system-design-learn. */
+export interface StudyPlan {
+  dailyMinutes: number;
+  /** 3–7; study days run Monday onwards (5 = Mon–Fri) */
+  daysPerWeek: number;
+  /** 'all', or a comma-separated list of 'phase:<id>', 'topic:<id>' and 'section:<topic id>:<index>' (see parseGoal in pace.ts) */
+  goal: string;
+  startedAt: string;
+  /** the pacer counts from here; moved to today whenever the pace changes or the finish date is moved */
+  baselineAt: string;
+  /** the pacer's minutes on baselineAt (= covered when the date is moved; kept when only the pace changes) */
+  baselineCovered: number;
+  /** "add N min a day until <day>" chosen from the behind-schedule warning */
+  catchUp?: { extraMinutes: number; until: string };
+  warningsOff?: boolean;
 }
 
 export interface Progress {
@@ -52,27 +88,23 @@ export interface Progress {
   activityDays?: string[];
   /** earned badges (src/content/achievements.ts); optional for saves made before achievements existed */
   achievements?: Record<string, StoredAchievement>;
+  /** Save for later, oldest first (max 500); optional for saves made before it existed */
+  saved?: SavedItem[];
+  /** Shorts (M7) by id: when first watched to the end (and that local day), and the first quiz result */
+  shorts?: Record<string, ShortRecord>;
+  /** step lessons (M8) by "topicId:sectionIndex": Your-turn steps missed on the first try in the latest run */
+  steps?: Record<string, { missed: number; at: string }>;
+  /** Playwright Lab steps whose hidden bugs were all caught (from the judge's results) */
+  pwlab?: Record<string, true>;
+  /** "Show me" walkthroughs finished with Done */
+  walksDone?: number;
+  /** the learner's study plan (Roadmap → Plan your journey) */
+  studyPlan?: StudyPlan;
   settings: Settings;
 }
 
 const KEY = 'qa-learn-progress-v1';
-
-const DEFAULT: Progress = {
-  tests: {},
-  sections: {},
-  iq: {},
-  boe: {},
-  cc: {},
-  drafts: {},
-  code: {},
-  company: {},
-  mcq: {},
-  // fresh progress already matches current content, so no migration applies
-  migrations: [],
-  activityDays: [],
-  achievements: {},
-  settings: { passMark: 70, secondsPerQuestion: 90, shuffle: true, theme: 'system', studyLock: 'exam', accent: 'indigo' },
-};
+const DEFAULT = DEFAULT_PROGRESS;
 
 function load(): Progress {
   try {
@@ -122,10 +154,8 @@ function withActivity(p: Progress): Progress {
   return { ...p, activityDays: [...days.filter((d) => d !== today), today].slice(-400) };
 }
 
-/** Apply a change. Study actions also record today in `activityDays`; settings changes pass activity=false. */
-export function update(fn: (p: Progress) => Progress, activity = true) {
-  state = fn(state);
-  if (activity) state = withActivity(state);
+function setState(next: Progress) {
+  state = next;
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
@@ -134,6 +164,14 @@ export function update(fn: (p: Progress) => Progress, activity = true) {
   listeners.forEach((l) => l());
 }
 
+/** Apply a change. Study actions also record today in `activityDays`; settings changes pass activity=false. */
+export function update(fn: (p: Progress) => Progress, activity = true) {
+  let next = fn(state);
+  if (activity) next = withActivity(next);
+  setState(next);
+}
+
+// Exam results, graded in the browser.
 export function recordTest(topicId: string, score: number) {
   update((p) => {
     const prev = p.tests[topicId];
@@ -167,12 +205,16 @@ export function recordAnswers(results: { id: string; correct: boolean }[]) {
 }
 
 export function toggleSectionRead(topicId: string, index: number) {
-  update((p) => {
-    const cur = new Set(p.sections[topicId] ?? []);
-    if (cur.has(index)) cur.delete(index);
-    else cur.add(index);
-    return { ...p, sections: { ...p.sections, [topicId]: [...cur].sort((a, b) => a - b) } };
-  });
+  const read = !(state.sections[topicId] ?? []).includes(index);
+  update(
+    (p) => {
+      const cur = new Set(p.sections[topicId] ?? []);
+      if (read) cur.add(index);
+      else cur.delete(index);
+      return { ...p, sections: { ...p.sections, [topicId]: [...cur].sort((a, b) => a - b) } };
+    },
+    true,
+  );
 }
 
 export function markAllSectionsRead(topicId: string, count: number) {
@@ -180,21 +222,27 @@ export function markAllSectionsRead(topicId: string, count: number) {
 }
 
 export function setFlag(bucket: 'boe' | 'cc' | 'code' | 'company', id: string, on: boolean) {
-  update((p) => {
-    const next = { ...p[bucket] };
-    if (on) next[id] = true;
-    else delete next[id];
-    return { ...p, [bucket]: next };
-  });
+  update(
+    (p) => {
+      const next = { ...p[bucket] };
+      if (on) next[id] = true;
+      else delete next[id];
+      return { ...p, [bucket]: next };
+    },
+    true,
+  );
 }
 
 export function rateIQ(id: string, r: Rating | null) {
-  update((p) => {
-    const next = { ...p.iq };
-    if (r) next[id] = r;
-    else delete next[id];
-    return { ...p, iq: next };
-  });
+  update(
+    (p) => {
+      const next = { ...p.iq };
+      if (r) next[id] = r;
+      else delete next[id];
+      return { ...p, iq: next };
+    },
+    true,
+  );
 }
 
 export function setDraft(id: string, text: string) {
@@ -218,3 +266,47 @@ export function resetProgress() {
 export function isPassed(p: Progress, topicId: string) {
   return !!p.tests[topicId]?.passedAt;
 }
+
+// ---- Save for later: the rules for duplicates and limits live in progress-ops.ts ----
+function savedOp(action: 'add' | 'remove' | 'done', kind: SavedKind, ref: string) {
+  update((p) => replay(p, [{ op: 'saved', action, kind, ref }]), false);
+}
+export const isSaved = (p: Progress, kind: SavedKind, ref: string) => !!p.saved?.some((s) => s.kind === kind && s.ref === ref && !s.doneAt);
+export const saveItem = (kind: SavedKind, ref: string) => savedOp('add', kind, ref);
+export const removeSaved = (kind: SavedKind, ref: string) => savedOp('remove', kind, ref);
+export const setSavedDone = (kind: SavedKind, ref: string) => savedOp('done', kind, ref);
+/** the ☆ button: save, or take it off the list again */
+export const toggleSaved = (kind: SavedKind, ref: string) => (isSaved(state, kind, ref) ? removeSaved(kind, ref) : saveItem(kind, ref));
+
+// ---- Shorts (M7): watched to the end, and the quiz result; the first of each is kept ----
+export function recordShort(id: string, event: 'watched' | 'quiz-first' | 'quiz-retry') {
+  update((p) => replay(p, [{ op: 'short', id, event }]), false);
+}
+
+// ---- step lessons (M8): finishing records the latest run's misses (Weak areas reads them) ----
+export function recordSteps(topicId: string, index: number, missed: number) {
+  update((p) => replay(p, [{ op: 'steps', topicId, index, missed }]), false);
+}
+
+// ---- badge inputs that live outside the study data ----
+/** Playwright Lab steps the judge reports with every bug caught; kept once seen, never removed */
+export function markPwLabDone(ids: string[]) {
+  const fresh = ids.filter((id) => !state.pwlab?.[id]);
+  if (fresh.length) update((p) => ({ ...p, pwlab: { ...p.pwlab, ...Object.fromEntries(fresh.map((id) => [id, true as const])) } }), false);
+}
+/** save, change or (undefined) remove the study plan; not study activity */
+export function setStudyPlan(plan: StudyPlan | undefined) {
+  update((p) => {
+    const { studyPlan: _old, ...rest } = p;
+    return plan ? { ...rest, studyPlan: plan } : rest;
+  }, false);
+}
+export function recordWalkDone() {
+  update((p) => ({ ...p, walksDone: (p.walksDone ?? 0) + 1 }), false);
+}
+
+// the shared change rules (progress-ops.ts) need to know which content exists
+let contentIndex: ContentIndex | undefined;
+const index = () =>
+  (contentIndex ??= buildContentIndex(TOPICS, CODING_PROBLEMS.map((q) => q.id), COMPANY_QUESTIONS.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id), SHORTS_DATA.map((s) => s.id)));
+const replay = (p: Progress, ops: Op[]) => (ops.length ? applyOps(p, ops, index(), localDay(), new Date().toISOString()).progress : p);

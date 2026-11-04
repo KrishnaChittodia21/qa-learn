@@ -32,7 +32,11 @@ export function BrandName({ sub = true }: { sub?: boolean }) {
       <span className="brand-name">
         QA<i>.</i>learn
       </span>
-      {sub && <span className="brand-sub">SPECTRAL LAB</span>}
+      {sub && (
+        <span className="brand-sub" aria-hidden="true">
+          SPECTRAL LAB
+        </span>
+      )}
     </span>
   );
 }

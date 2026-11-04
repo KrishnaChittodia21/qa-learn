@@ -119,6 +119,98 @@ SELECT c.name, o.id FROM customers c CROSS JOIN orders o;`,
         'Prefer LEFT over RIGHT; MySQL needs UNION to emulate FULL OUTER.',
       ],
       source: 'PostgreSQL 17 docs — 7.2.1.1 Joined Tables; MySQL 8.0 Manual — JOIN Clause; SQLBolt — Lessons 6–7 Multi-table queries with JOINs, OUTER JOINs',
+      steps: {
+        actors: [],
+        steps: [
+          {
+            kind: 'watch',
+            title: 'Two tables',
+            lines: ['**customers**: Asha, Ravi and Meera.', '**orders**: Asha has two, Ravi one, Meera none, and 104 is a guest order (NULL).'],
+            script: [{ say: 0 }, { table: { cols: ['id', 'name'], rows: [['1', 'Asha'], ['2', 'Ravi'], ['3', 'Meera']], l: 'customers' } }, { wait: 1600 }, { say: 1 }, { table: { cols: ['id', 'customer_id'], rows: [['101', '1'], ['102', '1'], ['103', '2'], ['104', 'NULL']], tones: [null, null, null, 'miss'], l: 'orders' } }, { wait: 2200 }],
+          },
+          {
+            kind: 'watch',
+            title: 'Who has a partner?',
+            lines: ['`JOIN` (INNER) keeps only rows where `o.customer_id = c.id`.', 'Meera has no order; order 104 has no customer.'],
+            script: [{ say: 0 }, { table: { cols: ['row', 'partner'], rows: [['Asha', '101, 102'], ['Ravi', '103'], ['Meera', 'none'], ['104', 'none (NULL)']], tones: ['ok', 'ok', 'miss', 'miss'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: INNER JOIN',
+            lines: ['customers INNER JOIN orders ON o.customer_id = c.id'],
+            task: { type: 'number', question: 'How many rows does it return?', options: [3, 4, 5], answer: 3, hint: 'Only pairs that match. Meera and order 104 have no partner.' },
+            solved: '**3 rows**: Asha-101, Asha-102, Ravi-103.',
+            then: [{ table: { cols: ['name', 'order'], rows: [['Asha', '101'], ['Asha', '102'], ['Ravi', '103']], tones: ['ok', 'ok', 'ok'] } }],
+          },
+          {
+            kind: 'watch',
+            title: 'LEFT JOIN',
+            lines: ['**LEFT JOIN** keeps every customer.', 'Meera comes back with **NULL** order columns: 4 rows.'],
+            script: [{ say: 0 }, { table: { cols: ['name', 'order'], rows: [['Asha', '101'], ['Asha', '102'], ['Ravi', '103'], ['Meera', 'NULL']], tones: [null, null, null, 'miss'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: never ordered',
+            lines: ['Find customers with no orders.'],
+            task: { type: 'choose', question: 'Which query finds them?', options: [{ text: 'LEFT JOIN orders … WHERE o.id IS NULL' }, { text: 'INNER JOIN orders … WHERE o.id IS NULL', why: 'INNER drops Meera before WHERE runs, so it returns nothing.' }, { text: 'RIGHT JOIN orders … WHERE c.id IS NULL', why: 'That finds orders without a customer: the guest order 104.' }], answer: 0 },
+            solved: 'LEFT JOIN + `IS NULL` (an anti-join): **Meera**.',
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: FULL OUTER JOIN',
+            lines: ['FULL OUTER JOIN keeps unmatched rows from **both** sides.'],
+            task: { type: 'number', question: 'How many rows does it return here?', options: [4, 5, 12], answer: 5, hint: 'The 3 matches, plus Meera with no order, plus order 104 with no customer.' },
+            solved: '**5 rows**. MySQL has no FULL OUTER JOIN: emulate it with LEFT JOIN UNION RIGHT JOIN.',
+            then: [{ table: { cols: ['name', 'order'], rows: [['Asha', '101'], ['Asha', '102'], ['Ravi', '103'], ['Meera', 'NULL'], ['NULL', '104']], tones: [null, null, null, 'miss', 'miss'] } }],
+          },
+          {
+            kind: 'watch',
+            title: 'CROSS JOIN',
+            lines: ['**CROSS JOIN** pairs every customer with every order, with no condition.', '3 customers × 4 orders.'],
+            script: [{ say: 0 }, { eq: [{ v: '3', l: 'customers' }, { op: '×' }, { v: '4', l: 'orders' }], result: { to: 12, unit: 'rows' } }, { say: 1 }, { wait: 2000 }],
+          },
+          {
+            kind: 'watch',
+            title: 'Rows multiply',
+            lines: ['Asha has two orders, so she appears **twice** after the join.', 'A `SUM` over a customer column after the join **double-counts** her.'],
+            script: [{ say: 0 }, { bars: [{ l: 'Asha before the join', v: 1, text: '1 row', tone: 'ok' }, { l: 'Asha after the join', v: 2, text: '2 rows', tone: 'miss' }] }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the NULL order',
+            lines: ['Order 104 has `customer_id` NULL.'],
+            task: { type: 'choose', question: 'Does `ON o.customer_id = c.id` ever match it?', options: [{ text: 'No: NULL never equals anything, not even NULL' }, { text: 'Yes, a customer with a NULL id', why: 'NULL = NULL is unknown, not true, so the row never matches.' }, { text: 'Only in a LEFT JOIN', why: 'LEFT keeps unmatched customers; order 104 is on the right side.' }], answer: 0 },
+            solved: 'NULL never matches: INNER drops it, RIGHT and FULL keep it with NULL customer columns.',
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: validate a join',
+            lines: ['Checking a report built on a join.'],
+            task: { type: 'order', question: 'Put the checks in order.', items: ['Check the relationship (one-to-many?)', 'Count the rows in each table', 'Run the join and count again', 'Compare: lost or duplicated rows?'], hint: 'Know the shape, count before, count after, compare.' },
+            solved: 'Counting before and after shows at once whether rows were lost or duplicated.',
+          },
+        ],
+      },
+      learnMore: {
+        body: `**Edge cases**
+
+- **NULL never matches.** A row whose join column is NULL never satisfies \`ON a.x = b.x\`, not even against another NULL. An INNER JOIN drops it silently; a LEFT JOIN keeps it with NULLs on the right.
+- **Duplicate keys multiply rows.** If the "one" side unexpectedly has two rows for a key, every match doubles. A join that suddenly returns more rows than the driving table is a data bug worth reporting.
+- **Filters in ON vs WHERE.** For a LEFT JOIN, a condition on the right table in \`WHERE\` throws away the unmatched rows and quietly turns it into an INNER JOIN. Put it in \`ON\` to keep them.
+
+**In real projects**
+
+- Validate UI or API numbers against a join, but count first: \`SELECT COUNT(*)\` on each table and on the join tells you at once whether rows were lost or duplicated.
+- Use LEFT JOIN … WHERE right.id IS NULL to find orphans (orders with no customer) after a migration.
+
+**Interview follow-ups**
+
+- *"INNER vs LEFT in one sentence?"* — INNER keeps only matches; LEFT keeps every row of the left table and fills NULLs where nothing matches.
+- *"How would you find customers who never ordered?"* — LEFT JOIN orders and keep the rows where the order id IS NULL, or use NOT EXISTS.`,
+        links: [
+          { name: 'SQLBolt', url: 'https://sqlbolt.com/', what: 'Lessons 6–7 practise INNER and OUTER joins in the browser.' },
+        ],
+      },
     },
     {
       heading: 'NULL in joins and the LEFT JOIN + WHERE trap',

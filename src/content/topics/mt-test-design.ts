@@ -205,6 +205,103 @@ Plus EP for non-boundary invalid types: "abc", 25.5, blank.`,
         'Each border between two partitions has two boundary values, so 3-value BVA gives four items per border.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.2 Boundary Value Analysis; ISTQB BVA white paper (2025)',
+      steps: {
+        actors: [],
+        steps: [
+          {
+            kind: 'watch',
+            title: 'Three partitions',
+            lines: ['**Equivalence partitioning** splits the input into groups the system treats the same.', 'Age 18–60 allowed gives **three** partitions.'],
+            script: [{ say: 0 }, { table: { cols: ['Age', 'Partition', 'Expected'], rows: [['0–17', 'too young', 'Error'], ['18–60', 'valid', 'Accepted'], ['61+', 'too old', 'Error']], tones: ['err', 'ok', 'err'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'watch',
+            title: 'One character, one bug',
+            lines: ['Developers write comparisons such as `age >= 18`.', 'Typing `>` instead of `>=` moves the edge by **one**.'],
+            script: [{ say: 0 }, { table: { cols: ['Code', 'Age 18', 'Age 19'], rows: [['age >= 18', 'Accepted', 'Accepted'], ['age > 18', 'Rejected', 'Accepted']], tones: ['ok', 'err'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: catch the typo',
+            lines: ['The code says `age > 18`, but 18 should be accepted.'],
+            task: { type: 'choose', question: 'Which single test value exposes the bug?', options: [{ text: '30', why: '30 is accepted by both versions.' }, { text: '18' }, { text: '17', why: '17 is rejected by both versions.' }], answer: 1 },
+            solved: '**18**: the boundary itself is where `>` and `>=` disagree.',
+          },
+          {
+            kind: 'watch',
+            title: 'Both sides of a border',
+            lines: ['17 is the **max** of "too young"; 18 is the **min** of valid.', 'So each border has **two** boundary values.'],
+            script: [{ say: 0 }, { table: { cols: ['Border', 'Boundary values'], rows: [['lower', '17 and 18'], ['upper', '60 and 61']] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'watch',
+            title: '2-value BVA',
+            lines: ['For each boundary value: the value and its **closest neighbour across the border**.', 'Age 18–60 gives four tests.'],
+            script: [{ say: 0 }, { eq: [{ v: '17' }, { op: '+' }, { v: '18' }, { op: '+' }, { v: '60' }, { op: '+' }, { v: '61' }], result: { to: 4, unit: 'tests', tone: 'ok' } }, { say: 1 }, { wait: 2000 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: a password',
+            lines: ['Password length 8–64. The shortest possible is 0 (empty).'],
+            task: { type: 'number', question: 'How many values does 2-value BVA give?', options: [4, 5, 6], answer: 5, hint: 'Two borders give four values, and the empty password (0) is an outer boundary too.' },
+            solved: '**5**: {0, 7, 8, 64, 65}.',
+          },
+          {
+            kind: 'watch',
+            title: '3-value BVA',
+            lines: ['For each boundary value: the value and **both** its neighbours.', 'At the 17 | 18 border that is **four** values.'],
+            script: [{ say: 0 }, { table: { cols: ['Boundary', 'Neighbours', 'Items'], rows: [['17', '16 and 18', '16, 17, 18'], ['18', '17 and 19', '17, 18, 19'], ['union', '', '16–19']], tones: [null, null, 'ok'] } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: count 3-value',
+            lines: ['Age 18–60 has two borders.'],
+            task: { type: 'number', question: 'How many values does 3-value BVA give in total?', options: [6, 8, 10], answer: 8, hint: 'Four values per border, two borders.' },
+            solved: '**8**: {16, 17, 18, 19, 59, 60, 61, 62}.',
+          },
+          {
+            kind: 'watch',
+            title: 'Why 3-value is stronger',
+            lines: ['Rule `x <= 10`, wrongly coded as `x == 10`.', '2-value tests 10 and 11, and both agree. Only **9** shows the bug.'],
+            script: [{ say: 0 }, { table: { cols: ['x', 'Correct', 'Buggy', 'Caught?'], rows: [['9', 'Accept', 'Reject', 'yes'], ['10', 'Accept', 'Accept', 'no'], ['11', 'Reject', 'Reject', 'no']], tones: ['err', null, null] } }, { say: 1 }, { wait: 2400 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the method',
+            lines: ['BVA is a short recipe.'],
+            task: { type: 'order', question: 'Put the steps for designing BVA tests in order.', items: ['Find the partitions', 'Find the boundary values at each border', 'Add the neighbours (2- or 3-value)', 'Write the expected result for each value'], hint: 'Partitions first, then borders, then neighbours, then expectations.' },
+            solved: 'Partition, find the edges, add neighbours, then write what each value should do.',
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: which variant?',
+            lines: ['3-value doubles the tests at each border.'],
+            task: { type: 'choose', question: 'When is 3-value BVA worth the extra tests?', options: [{ text: 'For risky rules such as money or eligibility' }, { text: 'Always, for every field', why: 'It doubles the tests; most fields are fine with 2-value.' }, { text: 'Never: 2-value finds every bug', why: 'The `x == 10` example is a bug only 3-value finds.' }], answer: 0 },
+            solved: '2-value by default, 3-value where an off-by-one is expensive.',
+          },
+        ],
+      },
+      learnMore: {
+        body: `**Edge cases that trip people up**
+
+- **Open ends.** "Age 18 or over" has no top boundary in the requirement. Ask what the system really stores (a 3-digit field? a 16-bit number?) and test that limit too.
+- **Boundaries that move.** "Free delivery over ₹499" — is ₹499 free or not? "Over" vs "from" is exactly the ambiguity BVA exposes. Ask before you write the test.
+- **Hidden boundaries.** A field may accept 60 in the UI but the API, the database column or a report may round, truncate or reject it. Test the boundary at every layer the value passes through.
+
+**In real projects**
+
+- Put boundary values in a data table and drive one test from it (Playwright: a \`for\` loop over cases, or a parameterised test). Adding a case is one row.
+- When a bug is found at a boundary, add the neighbour values too: one off-by-one often has a twin at the other end.
+
+**Interview follow-ups**
+
+- *"2-value or 3-value?"* — 2-value is cheaper and a sensible default; 3-value adds both neighbours of each boundary value, worth it for high-risk ranges such as money or eligibility.
+- *"Can you use BVA on a dropdown?"* — Only if its options are ordered (sizes S–XL, dates). Unordered options (colours) get equivalence partitioning instead.`,
+        links: [
+          { name: 'ISTQB Foundation Level (CTFL v4.0)', url: 'https://www.istqb.org/certifications/certified-tester-foundation-level', what: 'The syllabus section 4.2.2 defines 2-value and 3-value BVA.' },
+          { name: 'The Art of Software Testing (Glenford Myers)', url: 'https://www.wiley.com/en-us/The+Art+of+Software+Testing%2C+3rd+Edition-p-9781118031964', what: 'The classic chapter on boundary values and equivalence classes.' },
+        ],
+      },
     },
     {
       heading: 'BVA beyond integers: decimals, dates, lengths and open ends',
@@ -305,6 +402,77 @@ TC-DT-R6  Guest + >= 2000 + no coupon
         'Filling the table shows missing or conflicting requirements early.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.3 Decision Table Testing',
+      steps: {
+        actors: [],
+        steps: [
+          {
+            kind: 'watch',
+            title: 'Questions that combine',
+            lines: ['A **decision table** lists every combination of conditions and the result each one should give.', 'Use it when the answer depends on several yes/no questions **together**.'],
+            script: [{ say: 0 }, { table: { cols: ['Shop rule', 'Gives'], rows: [['Member', '10% off'], ['Order >= ₹2,000', 'free shipping'], ['Valid coupon', '15%, replaces 10%']], l: 'Discount rules for an online shop' } }, { say: 1 }, { wait: 2400 }],
+          },
+          {
+            kind: 'watch',
+            title: 'Count the rules',
+            lines: ['With **n** yes/no conditions there are **2^n** rules.', 'Three conditions give **8** rules: one test per rule.'],
+            script: [{ say: 0 }, { eq: [{ v: '2', l: 'Member?' }, { op: '×' }, { v: '2', l: 'Order >= ₹2,000?' }, { op: '×' }, { v: '2', l: 'Coupon?' }], result: { to: 8, unit: 'rules', tone: 'ok' } }, { say: 1 }, { wait: 2200 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: one more condition',
+            lines: ['2^n grows fast.'],
+            task: { type: 'number', question: 'How many rules do 4 yes/no conditions give?', options: [8, 12, 16], answer: 16, hint: 'Each yes/no condition doubles the count: 2^4.' },
+            solved: '**16** rules. Six conditions would give 64, so collapse or split big tables.',
+          },
+          {
+            kind: 'watch',
+            title: 'Fill it rule by rule',
+            lines: ['Conditions on top, actions below. Each **rule** is one combination.', 'First the four rules for a **member**.'],
+            script: [{ say: 0 }, { table: { cols: ['Rule', 'Member', '>=2000', 'Coupon', 'Discount', 'Ship'], rows: [['R1', 'Y', 'Y', 'Y', '15%', 'Yes'], ['R2', 'Y', 'Y', 'N', '10%', 'Yes'], ['R3', 'Y', 'N', 'Y', '15%', 'No'], ['R4', 'Y', 'N', 'N', '10%', 'No']] } }, { say: 1 }, { wait: 2600 }],
+          },
+          {
+            kind: 'watch',
+            title: 'Then the guests',
+            lines: ['The other four rules are for a **non-member**.', 'A guest with no coupon gets **0%** off.'],
+            script: [{ say: 0 }, { table: { cols: ['Rule', 'Member', '>=2000', 'Coupon', 'Discount', 'Ship'], rows: [['R5', 'N', 'Y', 'Y', '15%', 'Yes'], ['R6', 'N', 'Y', 'N', '0%', 'Yes'], ['R7', 'N', 'N', 'Y', '15%', 'No'], ['R8', 'N', 'N', 'N', '0%', 'No']], tones: [null, 'miss', null, 'miss'] } }, { say: 1 }, { wait: 2600 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: rule R1',
+            lines: ['A member adds ₹2,500 of items and applies SAVE15.'],
+            setup: [{ table: { cols: ['Rule', 'Member', '>=2000', 'Coupon', 'Discount', 'Ship'], rows: [['R1', 'Y', 'Y', 'Y', '?', '?']] } }],
+            task: { type: 'choose', question: 'What discount should R1 give?', options: [{ text: '25% (15% + 10%)', why: 'The coupon **replaces** the member discount: no stacking.' }, { text: '15%' }, { text: '10%', why: 'A valid coupon gives 15%, and it wins over the member 10%.' }], answer: 1 },
+            then: [{ table: { cols: ['Rule', 'Member', '>=2000', 'Coupon', 'Discount', 'Ship'], rows: [['R1', 'Y', 'Y', 'Y', '15%', 'Yes']], tones: ['ok'] } }],
+            solved: '**15%**, shipping ₹0, and no extra 10%.',
+          },
+          {
+            kind: 'watch',
+            title: 'Where the bug hides',
+            lines: ['R1 is exactly where a **stacking** bug (25% off) would hide.', 'Testing only the obvious combinations misses this **overlap**.'],
+            script: [{ say: 0 }, { table: { cols: ['R1', 'Expected', 'Stacking bug'], rows: [['Discount', '15%', '25%'], ['Member 10%', 'not applied', 'applied']], tones: [null, 'err'] } }, { say: 1 }, { wait: 2400 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the spec is silent',
+            lines: ['While filling R1 you ask: can the coupon and member discount stack? The spec does not say.'],
+            task: { type: 'choose', question: 'What do you do?', options: [{ text: 'Ask the product owner' }, { text: 'Guess 25% and move on', why: "Don't guess: the table just found a requirement gap." }, { text: 'Skip R1', why: 'R1 is exactly where the stacking bug would hide.' }], answer: 0 },
+            solved: 'Writing the table **finds requirement gaps** before any code exists.',
+          },
+          {
+            kind: 'watch',
+            title: 'Impossible rules',
+            lines: ['Some combinations cannot happen, like age < 18 and age > 60 both true.', 'Mark them **infeasible**. Coverage = rules tested ÷ **feasible** rules.'],
+            script: [{ say: 0 }, { table: { cols: ['Age < 18', 'Age > 60', 'Rule is'], rows: [['Y', 'Y', 'infeasible'], ['Y', 'N', 'feasible'], ['N', 'Y', 'feasible'], ['N', 'N', 'feasible']], strike: [0] } }, { say: 1 }, { eq: [{ v: 'rules tested' }, { op: '÷' }, { v: 'feasible rules' }] }, { wait: 2400 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: what counts',
+            lines: ['Coverage needs a fair denominator.'],
+            task: { type: 'choose', question: 'Which rules go into the coverage count?', options: [{ text: 'All 2^n, even impossible ones', why: 'Infeasible rules are left out of the count.' }, { text: 'Only the obvious combinations', why: 'That is the common mistake: it misses overlaps like coupon + member.' }, { text: 'Every feasible rule' }], answer: 2 },
+            solved: 'One test per **feasible** rule; infeasible ones are marked and left out.',
+          },
+        ],
+      },
     },
     {
       heading: 'Collapsing a decision table',
@@ -399,6 +567,91 @@ Full valid-transition coverage also gives all-states coverage. All-transitions c
         'Write the state table first. The diagram is for people; the table is for coverage.',
       ],
       source: 'ISTQB CTFL v4.0 syllabus — 4.2.4 State Transition Testing',
+      steps: {
+        actors: [
+          { id: 's0', label: 'S0 Idle', sub: 'no card', x: 110, y: 75 },
+          { id: 's1', label: 'S1 Attempt 1', sub: 'PIN try 1', x: 330, y: 75 },
+          { id: 's2', label: 'S2 Attempt 2', sub: 'PIN try 2', x: 550, y: 75 },
+          { id: 's3', label: 'S3 Attempt 3', sub: 'PIN try 3', x: 770, y: 75 },
+          { id: 's4', label: 'S4 Granted', sub: 'access granted', x: 440, y: 225 },
+          { id: 's5', label: 'S5 Retained', sub: 'card retained', x: 770, y: 225 },
+        ],
+        steps: [
+          {
+            kind: 'watch',
+            title: 'Same input, new result',
+            lines: ['At an ATM, a wrong PIN on the first try shows **"2 tries left"**.', 'A wrong PIN on the third try **keeps your card**.', 'The input is the same, but the **history** is different.'],
+            script: [{ say: 0 }, { lit: 's1' }, { send: ['s1', 's2'], label: 'wrong PIN', tone: 'miss' }, { badge: 's2', text: '2 tries left', tone: 'miss' }, { wait: 600 }, { say: 1 }, { lit: 's3' }, { send: ['s3', 's5'], label: 'wrong PIN', tone: 'err' }, { badge: 's5', text: 'card kept', tone: 'err' }, { say: 2 }, { wait: 1800 }],
+          },
+          {
+            kind: 'watch',
+            title: 'Four words',
+            lines: ['**State**: a situation the system is in.', '**Event**: something that happens, like PIN entered.', '**Guard**: a condition on the event, like [PIN correct].', '**Action**: what the system does during the move.'],
+            script: [{ say: 0 }, { lit: 's0' }, { say: 1 }, { send: ['s0', 's1'], label: 'insert card', tone: 'req' }, { say: 2 }, { send: ['s1', 's4'], label: 'PIN [correct]', tone: 'ok' }, { say: 3 }, { badge: 's4', text: 'show menu', tone: 'ok' }, { wait: 1800 }],
+          },
+          {
+            kind: 'watch',
+            title: 'Three wrong PINs',
+            lines: ['Each wrong PIN moves the card one attempt along.', 'The third wrong PIN retains the card: **S5**.'],
+            script: [{ say: 0 }, { send: ['s0', 's1'], label: 'insert card', tone: 'req' }, { send: ['s1', 's2'], label: '[wrong]', tone: 'miss' }, { send: ['s2', 's3'], label: '[wrong]', tone: 'miss' }, { badge: 's3', text: '1 try left', tone: 'miss' }, { say: 1 }, { send: ['s3', 's5'], label: '[wrong]', tone: 'err' }, { lit: 's5' }, { wait: 1800 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: right PIN at try 2',
+            lines: ['The ATM is in S2 Attempt 2.'],
+            setup: [{ lit: 's2' }],
+            task: { type: 'pick', question: 'The correct PIN is entered. Which state comes next?', answer: 's4', hints: { s3: 'Only a wrong PIN moves on to Attempt 3.', s0: 'Only Cancel or Finish go back to Idle.', s5: 'The card is retained only after the third wrong PIN.' } },
+            then: [{ send: ['s2', 's4'], label: 'PIN [correct]', tone: 'ok' }, { badge: 's4', text: 'show menu', tone: 'ok' }, { wait: 1600 }],
+            solved: 'A correct PIN at any attempt goes to **S4** and shows the menu.',
+          },
+          {
+            kind: 'watch',
+            title: 'Cancel and finish',
+            lines: ['**Cancel** in S1, S2 or S3 ejects the card and goes back to S0.', '**Finish** in S4 ejects the card too.', 'In total: **6 states** and **11 valid transitions**.'],
+            script: [{ say: 0 }, { send: ['s1', 's0'], label: 'cancel', tone: 'req' }, { send: ['s2', 's0'], label: 'cancel', tone: 'req', curve: true }, { send: ['s3', 's0'], label: 'cancel', tone: 'req', curve: true }, { say: 1 }, { send: ['s4', 's0'], label: 'finish', tone: 'ok' }, { say: 2 }, { wait: 1800 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: count the moves',
+            lines: ['Insert, three correct PINs, three wrong PINs, three cancels and one finish.'],
+            task: { type: 'number', question: 'How many valid transitions does the ATM have?', options: [8, 11, 14], answer: 11, hint: '1 + 3 + 3 + 3 + 1.' },
+            solved: '**11** valid transitions between 6 states.',
+          },
+          {
+            kind: 'watch',
+            title: 'An invalid transition',
+            lines: ['Some events should be **refused** in a state.', 'Try **enter PIN** in S0 Idle or in S5 Card retained.', 'Test **one invalid transition per test**, so a failure points to one cause.'],
+            script: [{ say: 0 }, { say: 1 }, { badge: 's0', text: 'enter PIN: no', tone: 'err' }, { wait: 900 }, { badge: 's5', text: 'enter PIN: no', tone: 'err' }, { say: 2 }, { wait: 1800 }],
+          },
+          {
+            kind: 'watch',
+            title: 'The coverage ladder',
+            lines: ['Weakest to strongest: **all states**, **valid transitions**, **all transitions**.', 'Valid-transition coverage also gives all-states coverage.'],
+            script: [{ say: 0 }, { table: { cols: ['Criterion', 'Covers'], rows: [['All states', 'every state visited'], ['Valid transitions', 'every valid move fired'], ['All transitions', 'valid + invalid tried']], tones: [null, null, 'ok'] } }, { say: 1 }, { wait: 2400 }],
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: the ladder',
+            lines: ['ISTQB v4.0 ranks three coverage levels.'],
+            task: { type: 'order', question: 'Order them from weakest to strongest.', items: ['All states', 'Valid transitions (0-switch)', 'All transitions'], hint: 'Visiting states is easiest; trying invalid moves too is strongest.' },
+            solved: 'Aim for at least **valid transitions**, plus a few invalid ones.',
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: name the bug',
+            lines: ['After a correct PIN, a later wrong attempt jumps straight to "1 try left".'],
+            task: { type: 'choose', question: 'What is the bug?', options: [{ text: 'The counter does not reset after a correct PIN' }, { text: 'Cancel does not eject the card', why: 'No Cancel happened here.' }, { text: 'The card is retained one try early', why: 'The card was not retained; the count started from the wrong place.' }], answer: 0 },
+            solved: 'The attempt counter must **reset** after a correct PIN.',
+          },
+          {
+            kind: 'turn',
+            title: 'Your turn: when to use it',
+            lines: ['State transition testing fits when behaviour depends on history.'],
+            task: { type: 'choose', question: 'Which feature suits it best?', options: [{ text: 'A login that locks after failed tries' }, { text: 'A single field with a length limit', why: 'Its result does not depend on what happened before.' }], answer: 0 },
+            solved: 'Logins, carts, orders, workflows and wizards all have **history**.',
+          },
+        ],
+      },
     },
     {
       heading: 'Use-case testing: main, alternative and exception flows',
