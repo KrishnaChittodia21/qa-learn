@@ -5,11 +5,11 @@ import { load } from './helpers.ts';
 
 const G = await load<typeof import('../src/lib/pageGuides')>('/src/lib/pageGuides.ts');
 
-// one example path per route in src/App.tsx (the sign-in pages open the welcome tour instead)
+// one example path per route in src/App.tsx
 const PAGES = [
   '/', '/contents', '/topic/mt-fundamentals', '/topic/mt-fundamentals/exam', '/coding', '/coding/sum-array', '/roadmap',
   '/pw-lab', '/pw-lab/step1', '/playground', '/companies', '/weak-areas', '/practice', '/achievements', '/settings',
-  '/saved', '/profile', '/shorts', '/short/test-pyramid',
+  '/saved', '/shorts', '/short/test-pyramid',
 ];
 
 test('every page has a guide with a title, an intro and at least one item', () => {
@@ -18,7 +18,7 @@ test('every page has a guide with a title, an intro and at least one item', () =
     assert.ok(g, `no guide for ${path}`);
     assert.ok(g.title && g.intro && g.items.length, `incomplete guide for ${path}`);
   }
-  assert.equal(G.guideFor('/login'), null, 'sign-in pages fall back to the welcome tour');
+  assert.equal(G.guideFor('/no-such-page'), null, 'an unknown path falls back to the welcome tour');
 });
 
 test('the exam page gets the exam guide, not the topic guide', () => {

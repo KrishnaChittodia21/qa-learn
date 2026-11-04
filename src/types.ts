@@ -51,8 +51,7 @@ export interface CodeChallenge {
   task: string;
   starter: CodeSnippet;
   hints: string[];
-  // answer fields are optional: the app's build ships content without them (scripts/content-split.ts) and they come
-  // from qa-api after an attempt; the source files and the service always have them
+  // answer fields are optional in the type for older content; every shipped item has them
   solution?: CodeSnippet;
   /** markdown: why the solution is better */
   explanation?: string;

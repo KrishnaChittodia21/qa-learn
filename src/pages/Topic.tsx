@@ -742,7 +742,7 @@ function ChallengeCard({ c, n, foil }: { c: CodeChallenge; n: number; foil: bool
                 {showSolution ? 'Hide solution' : 'Show solution'}
               </button>
             ) : (
-              <RevealButton r={ref} attempt={code} starter={c.starter.code} label="Compare with reference" what="compare with the reference" />
+              <RevealButton r={ref} attempt={code} starter={c.starter.code} label="Compare with reference" />
             )}
             <button className={`btn btn-sm ${!done && foil ? 'btn-primary' : 'btn-line'}`} type="button" onClick={() => setFlag('cc', c.id, !done)}>
               {done ? 'Mark not done' : 'Mark as done'}
@@ -855,7 +855,7 @@ function InterviewCard({ q, n }: { q: InterviewQuestion; n: number }) {
         rows={5}
         aria-label={`Your answer to question ${n}`}
       />
-      <RevealButton r={ref} attempt={draft} label="Reveal model answer" what="see the model answer" />
+      <RevealButton r={ref} attempt={draft} label="Reveal model answer" />
       {answer && (
         <Reveal label="What the interviewer is looking for">
           <div className="pr-list">
@@ -982,7 +982,7 @@ function EnvelopeCard({ q, n }: { q: EnvelopeQuestion; n: number }) {
         </div>
       )}
       <div className="row gap-s wrap">
-        <RevealButton r={ref} attempt={draft} label="Check my working" what="check your working" />
+        <RevealButton r={ref} attempt={draft} label="Check my working" />
         {a && stage < total && (
           <button className="btn btn-line btn-sm" type="button" onClick={() => setStage((s) => s + 1)}>
             {stage === 0 ? 'Reveal the givens' : stage < total - 1 ? `Reveal step ${stage}/${a.steps.length}` : 'Reveal answer'}

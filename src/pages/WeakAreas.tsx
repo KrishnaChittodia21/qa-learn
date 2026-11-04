@@ -3,9 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import type { Difficulty } from '../types';
-import { useProgress, useProgressLoaded } from '../lib/progress';
-import { useSession } from '../lib/session';
-import { SignInCard } from '../components/SignInCard';
+import { useProgress } from '../lib/progress';
 import { accuracyBreakdown, currentlyWrong, pct, weakTopics, type Accuracy, type TopicWeakness } from '../lib/weak';
 import { Exam } from './Exam';
 
@@ -347,17 +345,7 @@ function WeakTopicCard({ w, i, passMark, foil }: { w: TopicWeakness; i: number; 
 }
 
 /** Timed drill of questions whose latest answer was wrong, for one topic or all topics. */
-/** Mistakes drill: graded by qa-api, so it needs an account, and its snapshot waits for the account's progress */
 export function PracticePage() {
-  const session = useSession();
-  const loaded = useProgressLoaded();
-  if (session.status !== 'in' || !loaded) {
-    return (
-      <div className="page wk">
-        <SignInCard what="drill your mistakes" loading={session.status === 'loading' || session.status === 'in'} />
-      </div>
-    );
-  }
   return <MistakesDrill />;
 }
 

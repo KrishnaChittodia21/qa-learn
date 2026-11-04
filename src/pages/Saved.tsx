@@ -5,8 +5,6 @@ import { BookOpen, Building2, Calculator, Check, ChevronDown, Clapperboard, Code
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS, TOPIC_BY_ID } from '../content';
 import { PW_LAB_STEPS } from '../content/pwlab';
 import { removeSaved, saveItem, setSavedDone, useProgress, type SavedItem } from '../lib/progress';
-import { SignInCard } from '../components/SignInCard';
-import { useSession } from '../lib/session';
 import { SHORT_BY_ID } from '../lib/shorts';
 
 type Group = 'lessons' | 'questions' | 'coding' | 'shorts';
@@ -85,17 +83,9 @@ export const activeSaved = (saved: SavedItem[] = []) => saved.filter((s) => !s.d
 
 export default function SavedPage() {
   const p = useProgress();
-  const session = useSession();
   const [filter, setFilter] = useState<'all' | Group>('all');
   const [oldestFirst, setOldestFirst] = useState(false);
   const [showDone, setShowDone] = useState(false);
-  if (session.status !== 'in') {
-    return (
-      <div className="page saved-page">
-        <SignInCard what="save things for later" loading={session.status === 'loading'} />
-      </div>
-    );
-  }
   const all = (p.saved ?? []).map(resolve).filter((r): r is Resolved => !!r);
   const active = all.filter((r) => !r.item.doneAt);
   const done = all.filter((r) => r.item.doneAt);

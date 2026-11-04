@@ -1,8 +1,7 @@
-// Progress changes as data (M2). The service applies batches of these to the stored progress; the app queues them
-// and sends one batch every ~30 s. Pure: no React, no storage, so both sides run the same rules.
-// Adapted from system-design-learn's src/lib/progress-ops.ts. Type-only imports: the service loads this file in Node.
+// Progress changes as data: the rules for Save for later, Shorts and step lessons (duplicates, limits, unknown
+// content). Pure: no React, no storage, so the tests run them directly. Adapted from system-design-learn.
 import type { Topic } from '../types';
-import type { Progress, Rating, SavedItem, SavedKind, Settings, ShortRecord } from './progress';
+import type { Progress, Rating, SavedKind, Settings } from './progress';
 
 export type FlagBucket = 'boe' | 'cc' | 'code' | 'company';
 
@@ -210,102 +209,4 @@ export function applyOps(p: Progress, ops: Op[], ix: ContentIndex, day: string, 
   const days = p.activityDays ?? [];
   if (studied && !days.includes(day)) p = { ...p, activityDays: [...days, day].sort().slice(-ACTIVITY_DAYS_MAX) };
   return { progress: p, skipped };
-}
-
-// ---- first-login import: merge the browser's saved progress into the account once ----
-
-const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
-const isoish = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v));
-const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Merges untrusted local progress into the stored one. Only known ids and well-formed values are taken; for each item
- * the furthest-along copy wins (best scores, more attempts, union of read sections, done flags, all study days).
- * Exam passes and badges are not taken: passes come only from server grading, and the service re-evaluates badges.
- */
-export function mergeImport(server: Progress, local: unknown, ix: ContentIndex): Progress {
-  const l = obj(local);
-  const out: Progress = structuredClone(server);
-
-  for (const [topic, raw] of Object.entries(obj(l.tests))) {
-    const r = obj(raw);
-    if (!ix.sectionCount.has(topic) || !int(r.best, 0, 100) || !int(r.last, 0, 100) || !int(r.attempts, 1, 100_000)) continue;
-    const prev = out.tests[topic];
-    const history = (Array.isArray(r.history) ? r.history : [])
-      .map(obj)
-      .filter((h) => isoish(h.at) && int(h.score, 0, 100))
-      .map((h) => ({ at: h.at as string, score: h.score as number }));
-    // a pass is never imported: it only comes from a server-graded exam (it opens the study lock and company badges)
-    const passedAt = prev?.passedAt;
-    out.tests[topic] = {
-      best: Math.max(prev?.best ?? 0, r.best as number),
-      last: prev && (prev.history?.at(-1)?.at ?? '') > (history.at(-1)?.at ?? '') ? prev.last : (r.last as number),
-      attempts: Math.max(prev?.attempts ?? 0, r.attempts as number),
-      ...(passedAt && { passedAt }),
-      history: [...(prev?.history ?? []), ...history].sort((a, b) => a.at.localeCompare(b.at)).slice(-10),
-    };
-  }
-  for (const [topic, raw] of Object.entries(obj(l.sections))) {
-    const count = ix.sectionCount.get(topic) ?? 0;
-    const read = (Array.isArray(raw) ? raw : []).filter((i) => int(i, 0, count - 1)) as number[];
-    if (read.length) out.sections[topic] = [...new Set([...(out.sections[topic] ?? []), ...read])].sort((a, b) => a - b);
-  }
-  for (const bucket of ['boe', 'cc', 'code', 'company'] as const) {
-    for (const id of Object.keys(obj(l[bucket]))) if (ix.ids[bucket].has(id)) out[bucket][id] = true;
-  }
-  for (const [id, r] of Object.entries(obj(l.iq))) {
-    if (ix.ids.iq.has(id) && !out.iq[id] && ['nailed', 'partial', 'missed'].includes(r as string)) out.iq[id] = r as Rating;
-  }
-  for (const [id, text] of Object.entries(obj(l.drafts))) {
-    if (draftKnown(id, ix) && typeof text === 'string' && text && !out.drafts[id] && draftChars(out.drafts) + text.length <= DRAFTS_MAX_CHARS) {
-      out.drafts[id] = text;
-    }
-  }
-  for (const [id, raw] of Object.entries(obj(l.mcq))) {
-    const r = obj(raw);
-    if (!ix.ids.mcq.has(id) || !int(r.seen, 1, 100_000) || !int(r.wrong, 0, r.seen as number) || !isoish(r.lastAt)) continue;
-    const prev = out.mcq[id];
-    if (!prev || (r.seen as number) > prev.seen) out.mcq[id] = { seen: r.seen as number, wrong: r.wrong as number, lastCorrect: r.lastCorrect === true, lastAt: r.lastAt };
-  }
-  const days = (Array.isArray(l.activityDays) ? l.activityDays : []).filter((d): d is string => typeof d === 'string' && DAY.test(d));
-  if (days.length) out.activityDays = [...new Set([...(out.activityDays ?? []), ...days])].sort().slice(-ACTIVITY_DAYS_MAX);
-
-  // settings: the account's own win; the browser's only fill in while the account still has the defaults
-  const s = obj(l.settings);
-  const settings: Partial<Settings> = {};
-  if (int(s.passMark, 50, 100)) settings.passMark = s.passMark as number;
-  if (int(s.secondsPerQuestion, 30, 300)) settings.secondsPerQuestion = s.secondsPerQuestion as number;
-  if (typeof s.shuffle === 'boolean') settings.shuffle = s.shuffle;
-  if (['system', 'light', 'dark'].includes(s.theme as string)) settings.theme = s.theme as Settings['theme'];
-  if (['off', 'exam', 'exam-interview'].includes(s.studyLock as string)) settings.studyLock = s.studyLock as Settings['studyLock'];
-  if (['indigo', 'teal', 'rose', 'amber'].includes(s.accent as string)) settings.accent = s.accent as Settings['accent'];
-  out.settings = JSON.stringify(server.settings) === JSON.stringify(DEFAULT_SETTINGS) ? { ...server.settings, ...settings } : server.settings;
-
-  const saved = new Map((out.saved ?? []).map((x) => [`${x.kind}|${x.ref}`, x]));
-  for (const raw of Array.isArray(l.saved) ? l.saved : []) {
-    const x = obj(raw) as unknown as SavedItem;
-    if (saved.size >= SAVED_MAX || typeof x.ref !== 'string' || saved.has(`${x.kind}|${x.ref}`) || !isoish(x.addedAt)) continue;
-    if (!savedKnown(x.kind, x.ref, ix)) continue;
-    saved.set(`${x.kind}|${x.ref}`, { kind: x.kind, ref: x.ref, addedAt: x.addedAt, ...(isoish(x.doneAt) && { doneAt: x.doneAt }) });
-  }
-  if (saved.size) out.saved = [...saved.values()];
-
-  for (const [id, raw] of Object.entries(obj(l.shorts))) {
-    const r = obj(raw);
-    if (!ix.ids.short.has(id) || out.shorts?.[id]) continue;
-    const rec: ShortRecord = {
-      ...(isoish(r.watchedAt) && { watchedAt: r.watchedAt }),
-      ...(typeof r.day === 'string' && DAY.test(r.day) && { day: r.day }),
-      ...((r.quiz === 'first' || r.quiz === 'retry') && { quiz: r.quiz as ShortRecord['quiz'] }),
-    };
-    if (Object.keys(rec).length) out.shorts = { ...out.shorts, [id]: rec };
-  }
-  // step lessons: the latest run of each section wins
-  for (const [key, raw] of Object.entries(obj(l.steps))) {
-    const r = obj(raw);
-    if (!sectionKeyKnown(key, ix) || !int(r.missed, 0, 50) || !isoish(r.at)) continue;
-    if ((out.steps?.[key]?.at ?? '') < (r.at as string)) out.steps = { ...out.steps, [key]: { missed: r.missed as number, at: r.at as string } };
-  }
-  return out;
 }

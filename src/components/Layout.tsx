@@ -12,8 +12,7 @@ import {
   LayoutGrid,
   Layers,
   ListTree,
-  LogIn,
-  LogOut,
+
   Moon,
   Route,
   Search,
@@ -38,8 +37,6 @@ import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 import { applyThemeAttrs } from '../lib/theme';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { useAchievementDetection } from '../lib/useAchievements';
-import { signOut, useSession } from '../lib/session';
-import { AvatarFace } from './Avatar';
 import PageGuide from './PageGuide';
 import Walkthrough from './Walkthrough';
 import { closePageGuide, openPageGuide, startWalk, useGuide } from '../lib/guide';
@@ -191,16 +188,13 @@ export default function Layout() {
   useEffect(() => {
     if (tourOpen) saveUiPrefs({ tourSeen: true });
   }, [tourOpen]);
-  // "Guide me" and "?": this page's guide, or the welcome tour where a page has none (sign-in pages)
+  // "Guide me" and "?": this page's guide, or the welcome tour where a page has none
   const openGuideHere = useCallback(() => (guideFor(path) ? openPageGuide() : setTourOpen(true)), [path]);
   useEffect(() => on('open-guide', openGuideHere), [openGuideHere]);
   const guide = useGuide();
 
   // ---- achievements: detect + store new badges; celebrate once the guide is closed ----
   const navigate = useNavigate();
-  // one learner, kept in this browser: badges are earned and celebrated signed in or not
-  const session = useSession();
-  const signedIn = session.status === 'in';
   const { queue: unlocked, dismiss: dismissUnlocked } = useAchievementDetection(p);
   const viewAllAchievements = useCallback(() => {
     dismissUnlocked();
@@ -297,7 +291,7 @@ export default function Layout() {
   const syllabusPage = path.startsWith('/topic/') && !path.endsWith('/exam');
   const moreActive = MORE.some((n) => n.match(path));
 
-  const savedCount = signedIn ? activeSaved(p.saved).length : 0;
+  const savedCount = activeSaved(p.saved).length;
   const countFor = (to: string) =>
     to === '/weak-areas' && weakCount > 0 ? (
       <>
@@ -413,7 +407,6 @@ export default function Layout() {
           </button>
         </nav>
         <div className="rail-spacer" />
-        {signedIn && (
           <div className="rail-streak" title={`${streak}-day study streak`}>
             <div className="row">
               <span className="mlabel">Streak</span>
@@ -432,8 +425,6 @@ export default function Layout() {
               ))}
             </div>
           </div>
-        )}
-        <AccountControl />
         {themeSwitch}
         <div className="rail-status">
           <span className="dot" aria-hidden="true" />
@@ -449,16 +440,13 @@ export default function Layout() {
           <BrandMark size={30} />
           <BrandName sub={false} />
         </Link>
-        {signedIn && (
           <span className="m-streak" title={`${streak}-day study streak`}>
             <Zap size={14} aria-hidden="true" />
             <b>{streak}</b>d<span className="sr-only"> study streak</span>
           </span>
-        )}
         <button type="button" className="icon-btn m-ibtn" onClick={showPalette} aria-label="Search">
           <Search size={18} aria-hidden="true" />
         </button>
-        <AccountControl compact />
       </header>
 
       {/* ---- syllabus index: a drawer over the page (topic list by phase) ---- */}
@@ -686,51 +674,6 @@ export default function Layout() {
       <div className="sr-only" aria-live="assertive" aria-atomic="true">
         {unlockedNews}
       </div>
-    </div>
-  );
-}
-
-/** Sign in / create an account, or who is signed in and Sign out. `compact`: one icon for the phone top bar. */
-function AccountControl({ compact = false }: { compact?: boolean }) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
-  const next = encodeURIComponent(pathname + search);
-  if (session.status === 'loading') return null;
-  if (session.status === 'out') {
-    return compact ? (
-      <Link to={`/login?next=${next}`} className="icon-btn m-ibtn" aria-label="Sign in">
-        <LogIn size={18} aria-hidden="true" />
-      </Link>
-    ) : (
-      <div className="rail-account">
-        <Link to={`/login?next=${next}`} className="btn btn-sm">
-          <LogIn size={15} aria-hidden="true" /> Sign in
-        </Link>
-        <Link to={`/signup?next=${next}`} className="btn-ghost btn-sm">
-          Create account
-        </Link>
-      </div>
-    );
-  }
-  const out = () => void signOut();
-  // phones: the avatar opens Profile (which has Sign out); the rail below is desktop only
-  return compact ? (
-    <Link to="/profile" className="icon-btn m-ibtn" aria-label={`Your profile (${session.user.name})`}>
-      <span className="acct-face" aria-hidden="true">
-        <AvatarFace image={session.user.image} name={session.user.name || session.user.email} />
-      </span>
-    </Link>
-  ) : (
-    <div className="rail-account">
-      <Link to="/profile" className="who" title={`${session.user.email} · your profile`}>
-        <span className="acct-face" aria-hidden="true">
-          <AvatarFace image={session.user.image} name={session.user.name || session.user.email} />
-        </span>
-        {session.user.name}
-      </Link>
-      <button type="button" className="btn-ghost btn-sm" onClick={out}>
-        <LogOut size={15} aria-hidden="true" /> Sign out
-      </button>
     </div>
   );
 }

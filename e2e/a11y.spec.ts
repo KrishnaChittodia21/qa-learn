@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 const PAGES = [
   '/', '/contents', '/topic/mt-fundamentals?tab=learn', '/topic/sql-joins-validation?tab=learn', '/topic/mt-fundamentals/exam',
   '/coding', '/coding/sum-array', '/roadmap', '/pw-lab', '/pw-lab/step1', '/playground', '/companies', '/weak-areas',
-  '/achievements', '/settings', '/saved', '/shorts', '/short/test-pyramid', '/login', '/signup',
+  '/achievements', '/settings', '/saved', '/shorts', '/short/test-pyramid',
 ];
 
 for (const scheme of ['light', 'dark'] as const) {

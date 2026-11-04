@@ -642,7 +642,7 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
             ) : (
               <>
                 <p className="muted">Try it yourself first: the reference opens once your code differs from the starter.</p>
-                <RevealButton r={sol} attempt={code} starter={q.starter} label="Show the reference solution" what="see the reference solution" />
+                <RevealButton r={sol} attempt={code} starter={q.starter} label="Show the reference solution" />
               </>
             )}
           </section>

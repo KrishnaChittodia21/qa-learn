@@ -4,13 +4,9 @@ import { Link, useBlocker, useParams } from 'react-router-dom';
 import { MCQ_TOPIC, PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import { ArrowRight, Check } from 'lucide-react';
 import { celebrate } from '../lib/celebrate';
-import type { Difficulty, FollowUp, MCQ, Topic } from '../types';
-import { flushProgress, refreshProgress, useProgress } from '../lib/progress';
-import { api, ApiError, localDate, timeZone } from '../lib/api';
+import type { Difficulty, MCQ, Topic } from '../types';
+import { recordAnswers, recordTest, useProgress } from '../lib/progress';
 import { isMulti } from '../lib/answers';
-import { showToast } from '../lib/celebrate';
-import { useSession } from '../lib/session';
-import { SignInCard } from '../components/SignInCard';
 import { sectionForQuestion, weakSections } from '../lib/weak';
 import { practiceLocked } from '../lib/stats';
 import { StudyLock } from './Topic';
@@ -33,19 +29,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// `b` is missing until qa-api has graded the question (the app's build has no answers)
 const sameSet = (a: number[], b: number[] = []) => a.length === b.length && a.every((x) => b.includes(x));
-
-/** a question as graded by qa-api: the answer fields merged into the public question */
-interface Graded {
-  id: string;
-  correctOptions?: number[];
-  explanation?: string;
-  followUps?: FollowUp[];
-}
-const withAnswer = (it: Item, g: Graded): Item =>
-  g.correctOptions ? { ...it, q: { ...it.q, correct: g.correctOptions, explanation: g.explanation, followUps: g.followUps } } : it;
-const problem = (e: unknown, fallback: string) => (e instanceof ApiError ? e.message : fallback);
 
 /* ---------- small presentation helpers ---------- */
 const LETTERS = 'ABCDEFGHIJ';
@@ -123,20 +107,8 @@ function Keys({ lock }: { lock: boolean }) {
 export default function ExamPage() {
   const { id = '' } = useParams();
   const p = useProgress();
-  const session = useSession();
   const topic = TOPIC_BY_ID.get(id);
   if (!topic) return <div className="page">Topic not found</div>;
-  // exams are graded by qa-api, so they need an account
-  if (session.status !== 'in') {
-    return (
-      <div className="page">
-        <Link to={`/topic/${topic.id}`} className="muted small">
-          ← {topic.title}
-        </Link>
-        <SignInCard what="take graded exams" loading={session.status === 'loading'} />
-      </div>
-    );
-  }
   if (practiceLocked(p, topic, 'exam')) {
     return (
       <div className="page">
@@ -199,55 +171,36 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
   // after a full run is recorded, attempts already includes this run
   const runNo = (recordTopicId ? (p.tests[recordTopicId]?.attempts ?? 0) : 0) + (phase === 'done' && items.length === total ? 0 : 1);
 
-  // qa-api runs the exam: it picks the questions (a topic exam) or checks them (a drill), times it and grades it
-  const examId = useRef('');
-  const [startError, setStartError] = useState('');
-  const [serverScore, setServerScore] = useState<number | null>(null);
-  const [grading, setGrading] = useState(false);
+  // picked, timed and graded in the browser: the content carries the answers
   const submitting = useRef(false);
   const answersRef = useRef<Answers>({});
+  const itemsRef = useRef<Item[]>([]);
   useEffect(() => {
     answersRef.current = answers;
-  }, [answers]);
+    itemsRef.current = items;
+  }, [answers, items]);
 
-  const start = async () => {
-    setStartError('');
-    try {
-      // the service checks the study-first lock against saved progress: send what is still queued (e.g. sections just read)
-      await flushProgress();
-      const drill = (shuffleOn ? shuffle(questions) : questions).slice(0, count).map((q) => q.id);
-      const res = await api<{ examId: string; questionIds: string[]; deadline: string }>(
-        recordTopicId ? `/api/exams/topic/${recordTopicId}/start` : '/api/exams/drill/start',
-        { body: recordTopicId ? { size: count, minutes: Math.max(1, minutes) } : { questionIds: drill, minutes: Math.max(1, minutes) } },
-      );
-      const picked = new Set(res.questionIds);
-      const byId = new Map(questions.map((q) => [q.id, q]));
-      // the service draws them in random order; with shuffle off they keep the lesson's order
-      const qs = shuffleOn ? res.questionIds.flatMap((qid) => byId.get(qid) ?? []) : questions.filter((q) => picked.has(q.id));
-      examId.current = res.examId;
-      submitting.current = false;
-      setItems(
-        qs.map((q) => {
-          const idx = q.options.map((_, i) => i);
-          return { q, order: shuffleOn ? shuffle(idx) : idx };
-        }),
-      );
-      setAnswers({});
-      setFlagged(new Set());
-      setLocked(new Set());
-      setServerScore(null);
-      setCur(0);
-      setSpent({});
-      const secs = Math.max(1, Math.round((Date.parse(res.deadline) - Date.now()) / 1000));
-      startedAt.current = Date.now();
-      deadline.current = Date.parse(res.deadline);
-      setRemaining(secs);
-      setTotalSecs(secs);
-      setSwitchAt(secs);
-      setPhase('running');
-    } catch (e) {
-      setStartError(problem(e, 'Could not start the exam. Check your connection and try again.'));
-    }
+  const start = () => {
+    const qs = shuffleOn ? shuffle(questions) : questions;
+    setItems(
+      qs.slice(0, count).map((q) => {
+        const idx = q.options.map((_, i) => i);
+        return { q, order: shuffleOn ? shuffle(idx) : idx };
+      }),
+    );
+    setAnswers({});
+    setFlagged(new Set());
+    setLocked(new Set());
+    setCur(0);
+    setSpent({});
+    submitting.current = false;
+    const secs = Math.max(1, minutes) * 60;
+    startedAt.current = Date.now();
+    deadline.current = Date.now() + secs * 1000;
+    setRemaining(secs);
+    setTotalSecs(secs);
+    setSwitchAt(secs);
+    setPhase('running');
   };
 
   /** move to question `next`, banking the time spent on the current one */
@@ -270,42 +223,30 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
     return (spent[id] ?? 0) + (i === cur ? Math.max(0, switchAt - Math.max(0, remaining)) : 0);
   };
 
-  const localScore = useMemo(() => {
+  const score = useMemo(() => {
     if (!items.length) return 0;
     const correct = items.filter((it) => sameSet(answers[it.q.id] ?? [], it.q.correct)).length;
     return Math.round((correct / items.length) * 100);
   }, [items, answers]);
-  // the service's mark; past the daily answer cap it is the only mark (the per-question answers stay hidden)
-  const score = serverScore ?? localScore;
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(() => {
     if (submitting.current) return;
     submitting.current = true;
-    setGrading(true);
-    try {
-      const res = await api<{ score: number; items: Graded[]; revealsLimited: boolean; test?: { passedAt?: string } | null }>(
-        `/api/exams/${examId.current}/submit`,
-        { body: { answers: answersRef.current, day: localDate(), timeZone: timeZone() } },
-      );
-      setItems((its) => its.map((it) => withAnswer(it, res.items.find((g) => g.id === it.q.id) ?? { id: it.q.id })));
-      setServerScore(res.score);
-      if (res.revealsLimited) showToast('Score only today', 'You reached the daily limit for answers, so this run shows your score but not which answers were right. It resets at midnight UTC.', 8000);
-      setElapsed(Math.round((Date.now() - startedAt.current) / 1000));
-      setPhase('done');
-      if (res.test && res.score >= p.settings.passMark) celebrate('Exam passed!', `${title}: ${res.score}%`);
-      // scores, answers and badges were recorded by the service: bring them into this tab
-      void refreshProgress().catch(() => undefined);
-    } catch (e) {
-      // nothing was recorded: the learner can submit again
-      submitting.current = false;
-      showToast('Could not grade the exam', problem(e, 'Check your connection and submit again.'), 6000);
-    } finally {
-      setGrading(false);
+    // a full-length run counts as an exam attempt; every run records which questions were right
+    const its = itemsRef.current;
+    const results = its.map((it) => ({ id: it.q.id, correct: sameSet(answersRef.current[it.q.id] ?? [], it.q.correct) }));
+    const mark = its.length ? Math.round((results.filter((x) => x.correct).length / its.length) * 100) : 0;
+    recordAnswers(results);
+    if (recordTopicId && its.length === total) {
+      recordTest(recordTopicId, mark);
+      if (mark >= p.settings.passMark) celebrate('Exam passed!', `${title}: ${mark}%`);
     }
-  }, [p.settings.passMark, title]);
+    setElapsed(Math.round((Date.now() - startedAt.current) / 1000));
+    setPhase('done');
+  }, [p.settings.passMark, title, recordTopicId, total]);
   const confirmSubmit = () => {
     const un = items.filter((it) => !(answers[it.q.id] ?? []).length).length;
-    if (!un || window.confirm(`${un} question(s) unanswered. Submit anyway?`)) void submit();
+    if (!un || window.confirm(`${un} question(s) unanswered. Submit anyway?`)) submit();
   };
 
   // countdown
@@ -314,7 +255,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
     const t = setInterval(() => {
       const left = Math.round((deadline.current - Date.now()) / 1000);
       setRemaining(left);
-      if (left <= 0) void submit();
+      if (left <= 0) submit();
     }, 250);
     return () => clearInterval(t);
   }, [phase, submit]);
@@ -349,16 +290,8 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
       return s;
     });
   }, []);
-  // interview mode: qa-api grades the locked answer at once (and keeps it locked for the submit)
-  const lockIn = useCallback(async (id: string) => {
-    try {
-      const g = await api<Graded>(`/api/exams/${examId.current}/answer`, { body: { questionId: id, choice: answersRef.current[id] ?? [] } });
-      setItems((its) => its.map((it) => (it.q.id === id ? withAnswer(it, g) : it)));
-      setLocked((l) => new Set(l).add(id));
-    } catch (e) {
-      showToast("Couldn't lock that answer in", problem(e, 'Check your connection and try again.'), 5000);
-    }
-  }, []);
+  // interview mode: locking in shows the answer for that question at once
+  const lockIn = useCallback((id: string) => setLocked((l) => new Set(l).add(id)), []);
 
   // keyboard: 1-5 choose, ←/→ navigate, f flag, l lock in (interview mode)
   useEffect(() => {
@@ -481,7 +414,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
             </div>
 
             <div className="ex-setup-act">
-              <button className="btn btn-holo btn-lg" type="button" onClick={() => void start()}>
+              <button className="btn btn-holo btn-lg" type="button" onClick={start}>
                 Start run · {minutes} min{' '}
                 <span className="arr">
                   <ArrowRight size={16} aria-hidden="true" />
@@ -491,11 +424,6 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                 pass mark <b>{p.settings.passMark}%</b>
               </span>
             </div>
-            {startError && (
-              <p className="auth-err" role="alert">
-                {startError}
-              </p>
-            )}
           </section>
 
           <aside className="panel ex-brief rise" style={cssVars({ '--i': 2 })} aria-label="Run summary">
@@ -616,7 +544,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
           <span className="mlabel">
             <b>{answered}</b>/{items.length}
           </span>
-          <button className="btn btn-line btn-xs" type="button" tabIndex={hudOut ? 0 : -1} onClick={confirmSubmit} disabled={grading}>
+          <button className="btn btn-line btn-xs" type="button" tabIndex={hudOut ? 0 : -1} onClick={confirmSubmit}>
             Submit
           </button>
         </div>
@@ -672,7 +600,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                   <b className="t-flaky">{flagged.size}</b> flagged
                 </span>
               </div>
-              <button className="btn btn-line btn-sm" type="button" onClick={confirmSubmit} disabled={grading}>
+              <button className="btn btn-line btn-sm" type="button" onClick={confirmSubmit}>
                 Submit run
               </button>
             </div>
@@ -776,7 +704,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                   </button>
                 ))}
               {last ? (
-                <button className="btn btn-holo btn-sm" type="button" onClick={confirmSubmit} disabled={grading}>
+                <button className="btn btn-holo btn-sm" type="button" onClick={confirmSubmit}>
                   Finish run{' '}
                   <span className="arr">
                     <ArrowRight size={16} aria-hidden="true" />

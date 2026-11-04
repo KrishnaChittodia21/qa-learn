@@ -1,8 +1,8 @@
-// Smoke journey for a first-time, signed-out visitor: Home → first lesson → mark it read (kept in this browser) →
-// the graded exam and the account pages ask for an account. The signed-in journey is in account.spec.ts.
+// Smoke journey for a first-time visitor: Home → first lesson → mark it read (kept in this browser) → set up the exam
+// (one page per route change) → badges earned. Exams graded in the browser and answers: static.spec.ts.
 import { expect, test } from '@playwright/test';
 
-test('a new visitor can study the first topic; exams and account pages ask for an account', async ({ page }) => {
+test('a new visitor can study the first topic and reach its exam; badges are earned in this browser', async ({ page }) => {
   // ticking a section earns "Hello, Tester"; its celebration may pop up over whatever comes next
   const celebration = page.getByRole('button', { name: 'Woohoo, keep going' });
   await page.addLocatorHandler(celebration, () => celebration.click());
@@ -27,28 +27,18 @@ test('a new visitor can study the first topic; exams and account pages ask for a
   await page.reload();
   await expect(page.getByRole('checkbox').first()).toBeChecked();
 
-  // the exam is graded by qa-api, so it asks for an account
   const topicUrl = page.url().split('?')[0];
   await page.goto(`${topicUrl}?tab=exam`);
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: /mark all as read/ }).click();
   await page.getByRole('button', { name: /Set up exam/ }).click();
   // one copy only: the outgoing page must not render the new route too (fixed in M6)
-  const signUp = page.getByRole('heading', { name: 'Sign up to take graded exams' });
-  await expect(signUp).toHaveCount(1);
-  await expect(signUp).toBeVisible();
+  const startRun = page.getByRole('button', { name: /Start run/ });
+  await expect(startRun).toHaveCount(1);
+  await expect(startRun).toBeVisible();
 
-  // interview answers too
-  await page.goto(`${topicUrl}?tab=interview`);
-  await expect(page.getByRole('link', { name: /Sign up to see the model answer/ }).first()).toBeVisible();
-
-  // account pages are shown dimmed with the sign-up prompt
-  await page.goto('/#/weak-areas');
-  await expect(page.getByRole('note', { name: 'Weak areas is locked' })).toBeVisible();
-
-  // badges are earned in this browser, no account needed: the ticked section above earned "Hello, Tester"
+  // the ticked section above earned "Hello, Tester"
   await page.goto('/#/achievements');
-  await expect(page.getByRole('note', { name: /is locked/ })).toHaveCount(0);
   await expect(page.getByText('Hello, Tester').first()).toBeVisible();
 });
 

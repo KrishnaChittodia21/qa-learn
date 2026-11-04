@@ -25,7 +25,6 @@ export const MENU_WALK: WalkStep[] = [
   { target: rail('/achievements'), title: 'Achievements', text: 'Badges that climb from bronze to diamond as you study.' },
   { target: rail('/saved'), title: 'Saved', text: 'Everything you pressed ☆ Save on, to come back to. The number is how many are still to do.' },
   { target: '.rail-search, .mtop [aria-label="Search"]', title: 'Search', text: 'Jump to any topic, section, problem or question by typing.', shortcut: '⌘K or Ctrl K' },
-  { target: '.rail-account', title: 'Your account', text: 'Sign in to keep progress on any device. Signed in, your name opens your Profile.' },
   { target: '.rail-a[aria-label^="Guide me"]', title: 'Guide me', text: 'Explains the page you are on, with a walkthrough like this one.', shortcut: '?' },
 ];
 
@@ -260,22 +259,6 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
     },
   },
   {
-    match: (p) => p === '/profile',
-    guide: {
-      title: 'Profile',
-      intro: 'Your picture, name, password and feedback.',
-      items: [
-        ['Avatar', 'Pick one of the built-in avatars, or go back to your initials.'],
-        ['Suggest or report', 'Send an idea or a bug; replies show under the form.'],
-        ['Danger zone', 'Delete your account and everything in it.'],
-      ],
-      walk: [
-        { target: '.pf-nav', title: 'Sections', text: 'One part of your profile at a time.' },
-        { target: '.pf-preset-grid', title: 'Avatars', text: 'Pick one, then Save picture.' },
-      ],
-    },
-  },
-  {
     match: (p) => p === '/settings',
     guide: {
       title: 'Settings',
@@ -289,5 +272,5 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
   },
 ];
 
-/** the guide for a page, or null (the sign-in pages: "Guide me" opens the welcome tour there) */
+/** the guide for a page, or null for an unknown path ("Guide me" opens the welcome tour there) */
 export const guideFor = (path: string): Guide | null => GUIDES.find((g) => g.match(path))?.guide ?? null;

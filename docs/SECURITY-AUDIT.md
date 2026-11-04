@@ -4,13 +4,17 @@
 site) and the `qa-api` service as it runs locally for one learner. Checks that only make sense on a deployed service
 are listed under **Later**.
 
+> **Update 2026-11-04:** the service (`api/`), its database and every account feature were removed (M1–M3 deleted,
+> M9 dropped). The "Service (local)" checks and finding M1 no longer apply; they are kept below as history. What
+> remains is the static site: the "Published site" checks, H1 (Vite, still pinned and gated in CI), L1–L3.
+
 ## Findings
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
 | H1 | High | Vite 8.3.1 dev server: six advisories (cross-origin script execution through custom middleware, files outside `server.fs.allow`, `launch-editor` command injection). Dev only, never in the published site. | **Fixed:** pinned `vite@8.3.4`; CI now runs `npm audit --audit-level=high` for the app and `api/`. |
 | M1 | Medium | `qa-api` listened on `0.0.0.0`, so anyone on the same network (café, office Wi-Fi) could reach the local service and its sign-up / sign-in routes. | **Fixed:** listens on `127.0.0.1` unless `HOST` is set; the Vite proxy and Playwright use `127.0.0.1`. Test: `api/test/app.test.ts` "defaults". |
-| L1 | Low | The Pages site sends no Content-Security-Policy (GitHub Pages can't set headers; a `<meta>` CSP must allow the blob workers, inline styles from `motion` and the fonts). | Open. **Owner:** repo owner, with M12. **By:** the M12 release. |
+| L1 | Low | The Pages site sent no Content-Security-Policy (GitHub Pages can't set headers). | **Fixed in M12:** the static build carries a `<meta>` CSP (`'self'` only; `'unsafe-eval'` + `blob:` workers for the code runners, `'unsafe-inline'` styles). Test: `e2e-pages/static.spec.ts` fails on any CSP violation and runs learner code under it. |
 | L2 | Low | Learner code (Playground, coding problems) runs in a same-origin Web Worker, so it could call `fetch` with the learner's own cookies. It is only ever the learner's own code, so this is self-XSS at most. | Accepted. Revisit if code is ever shared between learners (an opaque-origin sandboxed iframe would close it). |
 | L3 | Low | 14 app and 2 service dependencies use `^` ranges in `package.json`. | Accepted: `package-lock.json` pins them and CI installs with `npm ci`; new direct dependencies are pinned exactly (`@axe-core/playwright`, `vite`). Review at M12. |
 
@@ -28,8 +32,8 @@ No Critical findings. No High open.
 | External links | Pass | Every `target="_blank"` in the app has `rel="noreferrer"`. |
 | `localStorage` holds no tokens | Pass | Keys: `qa-learn-progress-v1`, `qa-learn-account-v1:<userId>` (progress + queued changes), `qa-learn-ui-v1`, `qa-learn-playground-v1`. The session is an httpOnly cookie set by the service; no token is stored or readable by script. |
 | Learner code runs sandboxed | Pass (see L2) | `lib/runCode.ts` and `lib/runScript.ts` run code in a Web Worker from a blob URL: no DOM, no `localStorage`, killed after 4–5 s. |
-| Static build makes no sign-in or `/api` calls | **Pending M12** | The `VITE_SERVICE=off` build doesn't exist yet; M12's done-when includes it. |
-| Answers in the static build | Decision, not a bug | By design for M12 (local grading). The answer split only matters while the service grades; the repo being public is the only answer exposure to decide on. |
+| Static build makes no sign-in or `/api` calls | Pass (M12) | `npm run test:pages` records every request and fails on any `/api/` call; no Sign in / Sign up link on any page; `/login` etc. redirect home. |
+| Answers in the static build | Accepted (2026-11-04) | By design for M12 (local grading). Decision: the repo stays public and the static site ships every answer; for one self-studying learner they are study material, not secrets. |
 
 ### Service (local)
 

@@ -1,5 +1,4 @@
-// Progress changes as data (src/lib/progress-ops.ts): the rules the app and qa-api both apply, and the first-login
-// import that must never trust the browser with an exam pass. Run: npm test
+// Progress changes as data (src/lib/progress-ops.ts): the rules for Save for later, Shorts and step lessons. Run: npm test
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { load } from './helpers.ts';
@@ -78,42 +77,6 @@ test('activity days stay sorted, unique and capped', () => {
   assert.equal(p.activityDays!.at(-1), DAY);
 });
 
-test('import never takes an exam pass or a badge from the browser', () => {
-  const local = {
-    tests: { [t.id]: { best: 100, last: 100, attempts: 1, passedAt: NOW, history: [{ at: NOW, score: 100 }] } },
-    achievements: { 'release-candidate': { tier: 'diamond', earnedAt: 1 } },
-  };
-  const merged = O.mergeImport(fresh(), local, ix);
-  assert.equal(merged.tests[t.id].best, 100, 'the score is kept for Weak areas and history');
-  assert.equal(merged.tests[t.id].passedAt, undefined, 'but not the pass');
-  assert.deepEqual(merged.achievements, {});
-});
-
-test('import keeps only real, well-formed items and the furthest-along copy', () => {
-  const server = apply(fresh(), [{ op: 'section', topicId: t.id, index: 2, read: true }, { op: 'rate', id: t.interviewQuestions[0].id, rating: 'nailed' }]).progress;
-  const local = {
-    sections: { [t.id]: [0, 2, -1, 9999, 'x'], 'fake-topic': [0] },
-    iq: { [t.interviewQuestions[0].id]: 'missed', 'fake-iq': 'nailed' },
-    cc: { [t.codeChallenges[0].id]: true, 'fake-cc': true },
-    mcq: { [t.test[0].id]: { seen: 3, wrong: 1, lastCorrect: true, lastAt: NOW }, [t.test[1].id]: { seen: 1, wrong: 5, lastCorrect: true, lastAt: NOW } },
-    drafts: { [`iq:${t.interviewQuestions[1].id}`]: 'kept', 'iq:fake': 'dropped' },
-    activityDays: ['2026-10-01', 'not-a-day', 42],
-    settings: { passMark: 80, theme: 'neon' },
-  };
-  const m = O.mergeImport(server, local, ix);
-  assert.deepEqual(m.sections, { [t.id]: [0, 2] });
-  assert.equal(m.iq[t.interviewQuestions[0].id], 'nailed', "the account's own rating wins");
-  assert.deepEqual(Object.keys(m.cc), [t.codeChallenges[0].id]);
-  assert.deepEqual(Object.keys(m.mcq), [t.test[0].id], 'more wrong than seen is junk');
-  assert.deepEqual(Object.keys(m.drafts), [`iq:${t.interviewQuestions[1].id}`]);
-  assert.deepEqual(m.activityDays, ['2026-10-01', DAY]);
-  assert.equal(m.settings.passMark, 80);
-  assert.equal(m.settings.theme, 'system');
-  // an account that already chose its settings keeps them
-  const chosen = { ...server, settings: { ...server.settings, passMark: 60 } };
-  assert.equal(O.mergeImport(chosen, local, ix).settings.passMark, 60);
-});
-
 test('saved items: real content only, no duplicates, done and back again, not study, kept by reset', () => {
   const section = `${t.id}:1`;
   let r = apply(fresh(), [
@@ -143,27 +106,6 @@ test('the saved list is capped', () => {
   assert.deepEqual(apply(full, [{ op: 'saved', action: 'add', kind: 'topic', ref: t.id }]).skipped, [{ index: 0, reason: 'saved list full' }]);
 });
 
-test('import brings saved items that point at real content, without duplicates', () => {
-  const server = apply(fresh(), [{ op: 'saved', action: 'add', kind: 'topic', ref: t.id }]).progress;
-  const local = {
-    saved: [
-      { kind: 'topic', ref: t.id, addedAt: NOW },
-      { kind: 'section', ref: `${t.id}:0`, addedAt: NOW, doneAt: NOW },
-      { kind: 'topic', ref: 'gone-topic', addedAt: NOW },
-      { kind: 'topic', ref: t.id, addedAt: 'not a date' },
-      'junk',
-    ],
-  };
-  const m = O.mergeImport(server, local, ix);
-  assert.deepEqual(m.saved!.map((s) => [s.kind, s.ref, !!s.doneAt]), [['topic', t.id, false], ['section', `${t.id}:0`, true]]);
-});
-
-test('importing junk changes nothing', () => {
-  for (const junk of [null, 42, 'x', [], { tests: 'x', sections: [1], mcq: null }]) {
-    assert.deepEqual(O.mergeImport(fresh(), junk, ix), fresh());
-  }
-});
-
 test('Shorts: the first watch (with its day) and the first quiz result are kept; unknown Shorts are refused', () => {
   const id = SHORTS_DATA[0].id;
   let { progress, skipped } = apply(fresh(), [
@@ -181,6 +123,4 @@ test('Shorts: the first watch (with its day) and the first quiz result are kept;
   const saved = apply(fresh(), [{ op: 'saved', action: 'add', kind: 'short', ref: id }, { op: 'saved', action: 'add', kind: 'short', ref: 'nope' }]);
   assert.equal(saved.progress.saved?.length, 1);
 
-  const merged = O.mergeImport(fresh(), { shorts: { [id]: { watchedAt: NOW, day: DAY, quiz: 'first' }, nope: { watchedAt: NOW }, [SHORTS_DATA[1].id]: { quiz: 'cheat' } } }, ix);
-  assert.deepEqual(merged.shorts, { [id]: { watchedAt: NOW, day: DAY, quiz: 'first' } });
 });

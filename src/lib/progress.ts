@@ -3,7 +3,6 @@ import { mergeEarned, type EarnedNow, type StoredAchievement } from '../content/
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS } from '../content';
 import { PW_LAB_STEPS } from '../content/pwlab';
 import { SHORTS_DATA } from '../content/shorts';
-import { api, ApiError, localDate, timeZone } from './api';
 import { applyOps, buildContentIndex, DEFAULT_PROGRESS, type ContentIndex, type Op } from './progress-ops';
 
 export type Rating = 'nailed' | 'partial' | 'missed';
@@ -135,28 +134,21 @@ function withActivity(p: Progress): Progress {
 function setState(next: Progress) {
   state = next;
   try {
-    if (sync) localStorage.setItem(accountKey(sync.userId), JSON.stringify({ version: sync.version, pending: [...sync.sending, ...sync.pending], progress: state }));
-    else localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
     // storage full or blocked — keep in-memory state
   }
   listeners.forEach((l) => l());
 }
 
-/**
- * Apply a change. Study actions also record today in `activityDays`; settings changes pass activity=false. When signed
- * in, `op` (the same change as data) is queued for the account; the service applies it with the same rules
- * (progress-ops.ts).
- */
-export function update(fn: (p: Progress) => Progress, activity = true, op?: Op) {
+/** Apply a change. Study actions also record today in `activityDays`; settings changes pass activity=false. */
+export function update(fn: (p: Progress) => Progress, activity = true) {
   let next = fn(state);
   if (activity) next = withActivity(next);
-  if (sync && op) queue(op);
   setState(next);
 }
 
-// Exam results: recorded here only while signed out. Signed in, the service grades and records them itself (the app
-// can't send scores), and refreshProgress() brings the result back.
+// Exam results, graded in the browser.
 export function recordTest(topicId: string, score: number) {
   update((p) => {
     const prev = p.tests[topicId];
@@ -199,12 +191,11 @@ export function toggleSectionRead(topicId: string, index: number) {
       return { ...p, sections: { ...p.sections, [topicId]: [...cur].sort((a, b) => a - b) } };
     },
     true,
-    { op: 'section', topicId, index, read },
   );
 }
 
 export function markAllSectionsRead(topicId: string, count: number) {
-  update((p) => ({ ...p, sections: { ...p.sections, [topicId]: Array.from({ length: count }, (_, i) => i) } }), true, { op: 'sectionsAll', topicId });
+  update((p) => ({ ...p, sections: { ...p.sections, [topicId]: Array.from({ length: count }, (_, i) => i) } }));
 }
 
 export function setFlag(bucket: 'boe' | 'cc' | 'code' | 'company', id: string, on: boolean) {
@@ -216,7 +207,6 @@ export function setFlag(bucket: 'boe' | 'cc' | 'code' | 'company', id: string, o
       return { ...p, [bucket]: next };
     },
     true,
-    { op: 'flag', bucket, id, on },
   );
 }
 
@@ -229,39 +219,34 @@ export function rateIQ(id: string, r: Rating | null) {
       return { ...p, iq: next };
     },
     true,
-    { op: 'rate', id, rating: r },
   );
 }
 
 export function setDraft(id: string, text: string) {
-  update((p) => ({ ...p, drafts: { ...p.drafts, [id]: text } }), true, { op: 'draft', id, text: text.slice(0, 20_000) });
+  update((p) => ({ ...p, drafts: { ...p.drafts, [id]: text } }));
 }
 
 export function setSettings(s: Partial<Settings>) {
-  update((p) => ({ ...p, settings: { ...p.settings, ...s } }), false, { op: 'settings', settings: s });
+  update((p) => ({ ...p, settings: { ...p.settings, ...s } }), false);
 }
 
-/**
- * Store newly earned badges / tier-ups. Never downgrades, and doesn't count as study activity. For an account the
- * service earns them itself from the same rules, so nothing is queued.
- */
+/** Store newly earned badges / tier-ups. Never downgrades, and doesn't count as study activity. */
 export function earnAchievements(earned: EarnedNow[], at = Date.now()) {
   if (!earned.length) return;
   update((p) => ({ ...p, achievements: mergeEarned(p.achievements, earned, at) }), false);
 }
 
 export function resetProgress() {
-  update((p) => ({ ...DEFAULT, settings: p.settings, achievements: sync ? p.achievements : DEFAULT.achievements }), false, { op: 'reset' });
+  update((p) => ({ ...DEFAULT, settings: p.settings }), false);
 }
 
 export function isPassed(p: Progress, topicId: string) {
   return !!p.tests[topicId]?.passedAt;
 }
 
-// ---- Save for later (M3): the same rule as the service (progress-ops.ts), so both agree on duplicates and limits ----
+// ---- Save for later: the rules for duplicates and limits live in progress-ops.ts ----
 function savedOp(action: 'add' | 'remove' | 'done', kind: SavedKind, ref: string) {
-  const op: Op = { op: 'saved', action, kind, ref };
-  update((p) => replay(p, [op]), false, op);
+  update((p) => replay(p, [{ op: 'saved', action, kind, ref }]), false);
 }
 export const isSaved = (p: Progress, kind: SavedKind, ref: string) => !!p.saved?.some((s) => s.kind === kind && s.ref === ref && !s.doneAt);
 export const saveItem = (kind: SavedKind, ref: string) => savedOp('add', kind, ref);
@@ -272,224 +257,16 @@ export const toggleSaved = (kind: SavedKind, ref: string) => (isSaved(state, kin
 
 // ---- Shorts (M7): watched to the end, and the quiz result; the first of each is kept ----
 export function recordShort(id: string, event: 'watched' | 'quiz-first' | 'quiz-retry') {
-  const op: Op = { op: 'short', id, event };
-  update((p) => replay(p, [op]), false, op);
+  update((p) => replay(p, [{ op: 'short', id, event }]), false);
 }
 
 // ---- step lessons (M8): finishing records the latest run's misses (Weak areas reads them) ----
 export function recordSteps(topicId: string, index: number, missed: number) {
-  const op: Op = { op: 'steps', topicId, index, missed };
-  update((p) => replay(p, [op]), false, op);
+  update((p) => replay(p, [{ op: 'steps', topicId, index, missed }]), false);
 }
 
-// ---- account sync (M2) ----
-// Signed in, the account's copy lives under its own key with the changes not yet sent. Changes go out as one batch
-// every 30 s, when the tab is hidden and on page close; a batch rejected as stale is replayed on the latest copy.
-// Adapted from system-design-learn's src/lib/progress.ts.
-
-interface Sync {
-  userId: string;
-  version: number;
-  /** the service's copy has arrived (or could not be fetched): until then the shown copy may be a stale cache or none */
-  loaded: boolean;
-  /** queued, not yet sent */
-  pending: Op[];
-  /** the batch on the wire (kept apart, so new changes can't be merged into it) */
-  sending: Op[];
-  batchId?: string;
-  /** ops in the batch with that id: a resend must carry exactly the same ones, or the service's dedupe drops the rest */
-  batchLen?: number;
-  timer?: ReturnType<typeof setInterval>;
-}
-let sync: Sync | null = null;
-const accountKey = (userId: string) => `qa-learn-account-v1:${userId}`;
-const FLUSH_MS = 30_000;
+// the shared change rules (progress-ops.ts) need to know which content exists
 let contentIndex: ContentIndex | undefined;
 const index = () =>
   (contentIndex ??= buildContentIndex(TOPICS, CODING_PROBLEMS.map((q) => q.id), COMPANY_QUESTIONS.map((q) => q.id), PW_LAB_STEPS.map((s) => s.id), SHORTS_DATA.map((s) => s.id)));
 const replay = (p: Progress, ops: Op[]) => (ops.length ? applyOps(p, ops, index(), localDay(), new Date().toISOString()).progress : p);
-
-/** a newer change to the same thing replaces the queued one (drafts are saved on every keystroke) */
-const opKey = (o: Op) =>
-  o.op === 'draft' ? `draft|${o.id}`
-  : o.op === 'section' ? `section|${o.topicId}|${o.index}`
-  : o.op === 'flag' ? `flag|${o.bucket}|${o.id}`
-  : o.op === 'rate' ? `rate|${o.id}`
-  : o.op === 'settings' ? 'settings'
-  : null;
-
-function queue(op: Op) {
-  if (!sync) return;
-  if (op.op === 'settings') {
-    const prev = sync.pending.find((o) => o.op === 'settings');
-    if (prev && prev.op === 'settings') op = { op: 'settings', settings: { ...prev.settings, ...op.settings } };
-  }
-  const k = opKey(op);
-  sync.pending = [...sync.pending.filter((o) => k === null || opKey(o) !== k), op];
-}
-
-const hidden = () => {
-  if (document.visibilityState === 'hidden') void flushProgress(true);
-};
-const pagehide = () => void flushProgress(true);
-
-// the service refuses bodies over 100 KB, and browsers refuse keepalive (page closing) bodies over 64 KB
-const BATCH_BYTES = 90_000;
-const KEEPALIVE_BYTES = 60_000;
-const utf8 = new TextEncoder();
-
-/** How many of the oldest queued changes fit in one request (at most 200, always at least one). */
-export function batchSize(pending: Op[], maxBytes: number): number {
-  let bytes = 0;
-  let n = 0;
-  while (n < Math.min(200, pending.length)) {
-    bytes += utf8.encode(JSON.stringify(pending[n])).length + 1;
-    if (n > 0 && bytes > maxBytes) break;
-    n++;
-  }
-  return n;
-}
-
-/** Sends queued changes now. `keepalive` lets the request finish while the page is closing. */
-export async function flushProgress(keepalive = false): Promise<void> {
-  const s = sync;
-  if (!s || s.sending.length || !s.pending.length) return;
-  if (!s.batchId) {
-    s.batchId = crypto.randomUUID();
-    s.batchLen = batchSize(s.pending, keepalive ? KEEPALIVE_BYTES : BATCH_BYTES);
-  }
-  s.sending = s.pending.slice(0, s.batchLen);
-  s.pending = s.pending.slice(s.sending.length);
-  try {
-    const res = await api<{ version: number }>('/api/progress', {
-      method: 'PATCH',
-      keepalive,
-      body: { batchId: s.batchId, baseVersion: s.version, day: localDate(), timeZone: timeZone(), ops: s.sending },
-    });
-    if (sync !== s) return;
-    s.version = res.version;
-    s.sending = [];
-    s.batchId = undefined;
-    setState(state);
-    if (s.pending.length) void flushProgress(keepalive);
-  } catch (e) {
-    if (sync !== s) return;
-    const sent = s.sending.length;
-    const unsent = [...s.sending, ...s.pending];
-    s.sending = [];
-    if (e instanceof ApiError && e.code === 'VERSION_CONFLICT') {
-      // another device wrote first: take its copy and replay what we haven't sent on top
-      const current = (e.body as { current: { version: number; progress: Progress } }).current;
-      s.version = current.version;
-      s.batchId = undefined;
-      s.pending = unsent;
-      setState(replay(current.progress, unsent));
-      void flushProgress(keepalive);
-    } else if (e instanceof ApiError && e.status === 400) {
-      // a change the service refuses would block every later one: drop that batch (the rest stays queued)
-      s.batchId = undefined;
-      s.pending = unsent.slice(sent);
-      console.warn('progress batch refused', e.message);
-    } else {
-      // offline, signed out elsewhere or the service is down: keep everything (and the batch id) for the next try
-      s.pending = unsent;
-    }
-  }
-}
-
-/** Reloads the account's copy (after the service recorded something itself, e.g. a graded exam). */
-export async function refreshProgress() {
-  const s = sync;
-  if (!s) return;
-  await flushProgress();
-  const res = await api<{ version: number; progress: Progress }>('/api/progress');
-  if (sync !== s) return;
-  s.version = res.version;
-  // keep the badges this browser knew of: the ones the service just earned are then spotted and celebrated once
-  setState({ ...replay(res.progress, s.pending), achievements: state.achievements });
-}
-
-const hasProgress = (p: Progress) =>
-  [p.tests, p.sections, p.iq, p.boe, p.cc, p.code, p.drafts, p.company, p.mcq].some((x) => Object.keys(x).length) ||
-  !!p.activityDays?.length ||
-  !!p.saved?.length;
-
-/** Signed in: show the cached account copy at once, then load the latest (importing this browser's progress once). */
-export async function startSync(userId: string) {
-  if (sync?.userId === userId) return;
-  stopSync();
-  let cached: { version: number; pending: Op[]; progress: Progress } | null = null;
-  try {
-    cached = JSON.parse(localStorage.getItem(accountKey(userId)) ?? 'null');
-  } catch {
-    // a broken cache is simply ignored
-  }
-  const anonymous = load();
-  sync = { userId, version: cached?.version ?? 0, pending: cached?.pending ?? [], sending: [], loaded: false };
-  const s = sync;
-  if (cached) setState(cached.progress);
-  s.timer = setInterval(() => void flushProgress(), FLUSH_MS);
-  document.addEventListener('visibilitychange', hidden);
-  window.addEventListener('pagehide', pagehide);
-  try {
-    let res = await api<{ version: number; progress: Progress; imported: boolean }>('/api/progress');
-    if (!res.imported && hasProgress(anonymous)) {
-      try {
-        res = { ...(await api<{ version: number; progress: Progress }>('/api/progress/import', { body: { progress: anonymous, timeZone: timeZone() } })), imported: true };
-      } catch (e) {
-        if (!(e instanceof ApiError && e.code === 'ALREADY_IMPORTED')) throw e;
-        res = { ...(e.body as { current: { version: number; progress: Progress } }).current, imported: true };
-      }
-    }
-    if (sync !== s) return;
-    s.version = res.version;
-    s.loaded = true;
-    setState(replay(res.progress, s.pending));
-    void flushProgress();
-  } catch {
-    // offline: keep working on the cached copy; the timer retries the queue
-    if (sync === s) {
-      s.loaded = true;
-      listeners.forEach((l) => l());
-    }
-  }
-}
-
-/**
- * Signed out: the account's copy leaves this browser, and the visitor's own local progress is shown again.
- * `keepCache`: the session expired, so keep unsent changes for when this account signs in again.
- */
-export function stopSync(keepCache = false) {
-  if (!sync) return;
-  clearInterval(sync.timer);
-  document.removeEventListener('visibilitychange', hidden);
-  window.removeEventListener('pagehide', pagehide);
-  try {
-    if (!keepCache) localStorage.removeItem(accountKey(sync.userId));
-  } catch {
-    // blocked storage: nothing to remove
-  }
-  // the look stays on this device (theme, accent), so signing out doesn't flash the visitor's own theme
-  const { theme, accent } = state.settings;
-  sync = null;
-  const local = load();
-  state = { ...local, settings: { ...local.settings, theme, ...(accent && { accent }) } };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    // blocked storage: the look applies for this visit only
-  }
-  listeners.forEach((l) => l());
-}
-
-export const isSyncing = () => !!sync;
-
-/**
- * False while signed in and the account's progress has not arrived yet (the shown copy may be an old cache or the
- * signed-out one). Pages that take a one-off snapshot of progress (the mistakes drill) wait for it.
- */
-export const isProgressLoaded = () => !sync || sync.loaded;
-
-export function useProgressLoaded(): boolean {
-  return useSyncExternalStore(subscribe, isProgressLoaded);
-}

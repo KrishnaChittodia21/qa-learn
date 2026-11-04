@@ -13,20 +13,10 @@ import SettingsPage from './pages/Settings';
 import AchievementsPage from './pages/Achievements';
 import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
-import { ForgotPage, LoginPage, ResetPage, SignupPage } from './pages/Auth';
-import { LockedPreview } from './components/LockedPreview';
 import SavedPage from './pages/Saved';
 import ShortsPage from './pages/Shorts';
 import ShortPage from './pages/Short';
-import ProfilePage from './pages/Profile';
 import { resumeLocation } from './lib/uiPrefs';
-
-// A confirmation link that has expired (1 h) or is broken comes back with ?error=…: send the reader to Sign in
-// with a note (signing in emails a fresh link) instead of a home page that looks like it worked.
-const linkError = new URLSearchParams(window.location.search).get('error');
-if (linkError === 'TOKEN_EXPIRED' || linkError === 'INVALID_TOKEN') {
-  window.history.replaceState(null, '', `${window.location.pathname}#/login?link=${linkError === 'TOKEN_EXPIRED' ? 'expired' : 'invalid'}`);
-}
 
 // On a fresh start at the dashboard URL, reopen the page the user was last reading.
 // Deep links (any other hash) are respected as-is.
@@ -53,11 +43,7 @@ const router = createHashRouter([
       { path: 'companies', element: <CompaniesPage /> },
       {
         path: 'weak-areas',
-        element: (
-          <LockedPreview feature="Weak areas" why="See which topics and sections your exam answers say need work, and drill the questions you missed.">
-            <WeakAreasPage />
-          </LockedPreview>
-        ),
+        element: <WeakAreasPage />,
       },
       { path: 'practice', element: <PracticePage /> },
       {
@@ -68,11 +54,6 @@ const router = createHashRouter([
       { path: 'saved', element: <SavedPage /> },
       { path: 'shorts', element: <ShortsPage /> },
       { path: 'short/:id', element: <ShortPage /> },
-      { path: 'profile', element: <ProfilePage /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'signup', element: <SignupPage /> },
-      { path: 'forgot', element: <ForgotPage /> },
-      { path: 'reset', element: <ResetPage /> },
       { path: '*', element: <Home /> },
     ],
   },

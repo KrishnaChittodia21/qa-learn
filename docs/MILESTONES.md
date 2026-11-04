@@ -30,6 +30,8 @@ project, Render or Vercel project, secrets, CI) is changed. Its code is copied i
 
 | Area | Choice | Why |
 |---|---|---|
+| No accounts, no service (2026-11-04) | Removed M1–M3 (service, database, sign-in, sync, profile, server grading) and dropped M9 Admin | One learner: everything runs in the browser and progress stays there. One build, `npm run build`, published to Pages. |
+| Answers on the public site (2026-11-04) | Keep the repo public; the static Pages build ships every answer | One learner, self-study: answers are there to learn from, not to protect. The service build's answer split stays for if accounts ever return. |
 | Backend | **Own service `qa-api`** in `api/` in this repo: Fastify + TypeScript, started as a copy of SDL's `api/src` | Fully separate from SDL; the copy starts with SDL's auth, rate limits, validation and audit fixes already in it |
 | Database | **Own Atlas project and M0 cluster**, database `qa_learn` | No shared cluster, users, keys or quotas with SDL (an M0 is free per Atlas project) |
 | Service hosting | **Not deployed for now: runs locally only.** When it is (see "Later"): own Render service under a separate Render account (or paid instance) | Render free gives ~750 h a month per account; SDL's always-on service already uses it, so a second always-on service on the same account runs out mid-month |
@@ -93,6 +95,9 @@ celebrations as they appear. Found on the way: the duplicate page during route c
 
 ### M1 · Own service, database and answer-key split · 12–18 h
 
+> **Removed (2026-11-04).** qa-learn is browser-only for one learner: the service (`api/`), its database, sign-in,
+> sync, profile and server grading were deleted. Save for later stayed and runs locally. The notes below are history.
+
 - **Accounts:** a new Atlas project + M0 cluster (database `qa_learn`, an app user with read/write on `qa_learn`
   only, a read-only backup user), Render account, Turnstile site, email sender. `.env.example`, no secrets in git.
 - **Service:** copy SDL's `api/` into `api/` here and rename to `qa-api`: `config.ts` (checked env, `MONGODB_DB=qa_learn`),
@@ -125,6 +130,9 @@ database). Vite proxies `/api` → `localhost:3001`. Atlas, Render and the other
 service is deployed (see "Later").
 
 ### M2 · Sign-up, synced progress and locked content · 10–14 h
+
+> **Removed (2026-11-04).** qa-learn is browser-only for one learner: the service (`api/`), its database, sign-in,
+> sync, profile and server grading were deleted. Save for later stayed and runs locally. The notes below are history.
 
 - **Service:** Better Auth on `qa_learn` (copied from SDL's `auth.ts`, `auth-events.ts`, `email-check.ts`, `mail.ts`),
   per-IP limits on sign-in/sign-up/reset, `requireUser` / `requireAdmin`; progress routes (`progress.ts`: batched
@@ -164,6 +172,9 @@ in the browser, locking protects nothing), the auth-event log and flagged-accoun
 them).
 
 ### M3 · Profile and Save for later · 8–12 h
+
+> **Removed (2026-11-04).** qa-learn is browser-only for one learner: the service (`api/`), its database, sign-in,
+> sync, profile and server grading were deleted. Save for later stayed and runs locally. The notes below are history.
 
 - **Service:** `account.ts` copied (avatar upload to its own Cloudinary folder `qa-avatars/<userId>`, feedback,
   delete-account hook clearing this user's rows in `qa_learn`).
@@ -343,8 +354,7 @@ misses feed Weak areas, and a malformed step or `learnMore` fails validation.
 
 ### M9 · Admin · 5–8 h
 
-> **Skipped for now (2026-11-04):** one learner, no user database, so there is no one to administer. Revisit only if
-> accounts and the service are ever used for more than one person.
+> **Dropped (2026-11-04):** one learner and no accounts, so there is no one to administer.
 
 - `GET /api/admin/stats` on `qa-api` (SDL's `admin.ts` as the starting point), read from `qa_learn` only: users, activity,
   sections read, exams passed, coding problems solved, Shorts watched, feedback, flagged accounts, 30-day sign-ups.
@@ -449,6 +459,28 @@ show sign-up prompts that can't work. This milestone adds a build that works wit
 **Done when:** a push to `main` publishes the static build to GitHub Pages; on the live site a visitor can study, take
 a graded exam and see answers with no service and no sign-in; the service mode still passes its own tests; and nothing
 in SDL's projects or database changed.
+
+**As built:**
+- **The flag:** `src/lib/mode.ts` exports `SERVICE`, false when `VITE_SERVICE=off`. `npm run build:pages` builds `dist-pages/`
+  in that mode: the answer split is skipped (content keeps its answers) and a `<meta>` CSP is added. `npm run build`
+  is unchanged (answer-free, `check-bundle`).
+- **Static mode:**
+  - `refreshSession` never calls the service. `LockedPreview`, Save, Saved and Weak areas are open, and the streak
+    and Saved count show.
+  - The account control is hidden; `/profile`, `/login`, `/signup`, `/forgot` and `/reset` redirect home.
+  - `useReveal` / `useCompanyAnswer` (picked once per build) return the content's answer after the attempt, with no
+    wait.
+  - Exams start, grade and lock in locally and record through `recordTest` / `recordAnswers`, as before M2.
+- **Tests:** `playwright.pages.config.ts` + `e2e-pages/static.spec.ts` (`npm run test:pages`) build the static site
+  and serve it with `vite preview`, with no service. On desktop and phone they check:
+  - no `/api` request and no sign-in link;
+  - an exam graded in the browser and recorded;
+  - a model answer at once after an attempt;
+  - learner code running under the CSP, with any CSP violation failing the test.
+- **Deploy:** `deploy.yml` runs lint, validate, unit tests and `test:pages`, then publishes `dist-pages/`. `test.yml`
+  also runs `test:pages` on every push.
+- **Service mode:** unchanged; all its suites still pass.
+- **Not verified:** the live site itself, which needs a push to `main`.
 
 ## Order and estimates
 
