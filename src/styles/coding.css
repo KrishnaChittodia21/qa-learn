@@ -1607,6 +1607,10 @@ button.cx-grp-h:disabled {
 .tv-verdict.bad > b:first-child { color: var(--fail); }
 .tv-verdict .btn-ghost { display: inline-flex; margin-left: 8px; vertical-align: baseline; }
 .tv-verdict code { font: 500 12px var(--mono); }
+.tv-why { margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255, 77, 109, 0.35); }
+.tv-why .mlabel code { text-transform: none; letter-spacing: 0; color: var(--ink); }
+.tv-why ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.tv-why li b { color: var(--ink); }
 
 @media (max-width: 900px) {
   .tv-stage { grid-template-columns: minmax(0, 1fr); }

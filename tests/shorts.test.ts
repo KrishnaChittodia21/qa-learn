@@ -13,7 +13,7 @@ const headings = new Map(C.TOPICS.map((t) => [t.id, t.sections.map((s) => s.head
 test('every Short is valid and resolves to a section', () => {
   assert.deepEqual(D.shortProblems(D.SHORTS_DATA, headings), []);
   assert.equal(L.SHORTS.length, D.SHORTS_DATA.length, 'a Short whose section is missing would vanish');
-  assert.equal(D.SHORTS_DATA.length, 24);
+  assert.equal(D.SHORTS_DATA.length, 36);
 });
 
 test('the validator rejects malformed Shorts', () => {

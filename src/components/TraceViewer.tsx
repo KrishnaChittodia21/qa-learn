@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pause, Play } f
 import type { CodingTest } from '../types';
 import type { RunRecord } from '../lib/testRun';
 import { runTrace } from '../lib/runCode';
-import type { Trace, TraceStep } from '../lib/trace';
+import { whereItWentWrong, type Trace, type TraceStep } from '../lib/trace';
 
 const SPEEDS: [number, string][] = [
   [1400, '0.5×'],
@@ -160,15 +160,51 @@ function Verdict({ trace, test, fnName, go }: { trace: Trace; test: CodingTest; 
         </button>
       </div>
     );
+  const why = whereItWentWrong(trace, fnName, test.expected);
+  const exp = test.expected as unknown[];
   return (
     <div className="tv-verdict bad" role="status">
       <b>
         ✗ Returned {show(trace.got)} on line {trace.steps[retAt].line}
       </b>
-      , but the test expects <b>{show(test.expected)}</b>. Step back from the return to see where the values went off track.
+      , but the test expects <b>{show(test.expected)}</b>.
       <button type="button" className="btn-ghost btn-xs" onClick={() => go(retAt)}>
         Go to the return
       </button>
+      {why && (why.parts.length > 0 || why.length) && (
+        <div className="tv-why">
+          <span className="mlabel">
+            Where it went wrong in <code>{why.name}</code>
+          </span>
+          <ul>
+            {why.length && (
+              <li>
+                It has {why.length.got} items; the test expects {why.length.want}.
+              </li>
+            )}
+            {why.parts.slice(0, 4).map((p) => (
+              <li key={p.index ?? 'v'}>
+                {p.index === undefined ? <code>{why.name}</code> : <>cell {p.index}</>}{' '}
+                {p.never ? (
+                  <>
+                    never changed: it still holds its starting value
+                    {p.index !== undefined && <> instead of {show(exp[p.index])}</>}.
+                  </>
+                ) : (
+                  <>
+                    last changed on <b>line {p.line}</b>
+                    {p.index !== undefined && <> (should end as {show(exp[p.index])})</>}.
+                  </>
+                )}
+                <button type="button" className="btn-ghost btn-xs" onClick={() => go(p.step)}>
+                  {p.never ? 'Show the start' : 'Show it'}
+                </button>
+              </li>
+            ))}
+            {why.parts.length > 4 && <li>…and {why.parts.length - 4} more cells.</li>}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

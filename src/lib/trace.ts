@@ -73,3 +73,63 @@ globalThis.__r = function (line, fn, get, value) {
   return value;
 };
 `;
+
+// ---- where it went wrong ----
+
+/** one wrong part of the result and the step that last wrote it */
+export interface CulpritPart {
+  /** the array index, or undefined for a whole value */
+  index?: number;
+  /** index into trace.steps of the step that last changed it (the start, when it never changed) */
+  step: number;
+  line: number;
+  /** still the value it came in with: no line ever changed it */
+  never: boolean;
+}
+export interface Culprit {
+  /** the variable that was returned */
+  name: string;
+  parts: CulpritPart[];
+  /** set when the returned array has the wrong number of items */
+  length?: { got: number; want: number };
+}
+
+const eq = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/**
+ * For a wrong return: the variable that was returned, and for each wrong part of it (each wrong array cell, or the
+ * whole value) the step that last changed it. Uses only the learner's own trace, so it works whatever the approach.
+ * Null when there is nothing to point at: it passed, crashed, never returned, or returned an expression, not a variable.
+ */
+export function whereItWentWrong(trace: Trace, fnName: string, expected: unknown): Culprit | null {
+  if (trace.error || trace.fatal) return null;
+  const steps = trace.steps;
+  let retAt = -1;
+  for (let i = steps.length - 1; i >= 0; i--)
+    if (steps[i].returned && steps[i].fn === fnName) {
+      retAt = i;
+      break;
+    }
+  if (retAt < 0 || eq(steps[retAt].ret, expected)) return null;
+  const ret = steps[retAt].ret;
+  const name = Object.keys(steps[retAt].vars).find((k) => eq(steps[retAt].vars[k], ret));
+  if (!name) return null;
+  // the returned variable over time, in this function only (a callback's variable of the same name is another one)
+  const own = steps.map((s, i) => ({ s, i })).filter(({ s, i }) => i <= retAt && s.fn === fnName && name in s.vars);
+  const first = steps.findIndex((s) => s.fn === fnName);
+  const isParam = own.length > 0 && own[0].i === first;
+  /** the step where `pick(value)` last changed, among this function's steps */
+  const lastChange = (pick: (v: unknown) => unknown) => {
+    let at = own[0];
+    for (let k = 1; k < own.length; k++) if (!eq(pick(own[k].s.vars[name]), pick(own[k - 1].s.vars[name]))) at = own[k];
+    // a step records values before its line runs: the change first shows at `at`, so the line that made it ran just before
+    return { step: at.i, line: at.i > 0 ? steps[at.i - 1].line : at.s.line, never: isParam && at.i === own[0].i };
+  };
+  if (Array.isArray(ret) && Array.isArray(expected)) {
+    const parts: CulpritPart[] = [];
+    for (let j = 0; j < Math.min(ret.length, expected.length); j++)
+      if (!eq(ret[j], expected[j])) parts.push({ index: j, ...lastChange((v) => (Array.isArray(v) ? v[j] : undefined)) });
+    return { name, parts, length: ret.length === expected.length ? undefined : { got: ret.length, want: expected.length } };
+  }
+  return { name, parts: [lastChange((v) => v)] };
+}

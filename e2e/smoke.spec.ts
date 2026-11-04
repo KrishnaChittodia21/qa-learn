@@ -1,6 +1,10 @@
 // Smoke journey for a first-time visitor: Home → first lesson → mark it read (kept in this browser) → set up the exam
 // (one page per route change) → badges earned. Exams graded in the browser and answers: static.spec.ts.
 import { expect, test } from '@playwright/test';
+import { SHORTS_DATA } from '../src/content/shorts';
+
+/** the Shorts page counter, whatever the number of Shorts */
+const watched = (n: number) => new RegExp(`${n} of ${SHORTS_DATA.length} watched`);
 
 test('a new visitor can study the first topic and reach its exam; badges are earned in this browser', async ({ page }) => {
   // ticking a section earns "Hello, Tester"; its celebration may pop up over whatever comes next
@@ -66,7 +70,7 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
   await page.addLocatorHandler(celebration, () => celebration.click());
 
   await page.goto('/#/shorts');
-  await expect(page.getByText(/0 of 24 watched/)).toBeVisible();
+  await expect(page.getByText(watched(0))).toBeVisible();
   await page.getByRole('link', { name: /Ariane 5: 37 seconds/ }).click();
   await expect(page).toHaveURL(/#\/short\/ariane-5-overflow/);
 
@@ -87,7 +91,7 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
 
   await page.reload();
   await page.goto('/#/shorts');
-  await expect(page.getByText(/1 of 24 watched/)).toBeVisible();
+  await expect(page.getByText(watched(1))).toBeVisible();
   await expect(page.getByRole('heading', { name: /Watched/ })).toBeVisible();
 });
 

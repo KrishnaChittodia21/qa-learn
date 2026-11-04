@@ -1,6 +1,6 @@
 // Shorts (M7): ~90-second animated stories, each attached to one lesson section (topic id + the start of its heading).
-// Six famous software failures told as QA stories, and six "how X works". Figures are the commonly reported ones
-// (inquiry boards, the SEC, CrowdStrike's own review); where sources disagree the text says "about" or leaves it out.
+// Famous software failures told as QA stories, and "how X works" stories. Figures are the commonly reported ones
+// (inquiry boards, the SEC, the companies' own postmortems); where sources disagree the text says "about" or leaves it out.
 // Checked by scripts/validate-shorts.mjs (npm run validate) and tests/shorts.test.ts.
 import type { Short } from '../types';
 
@@ -439,6 +439,230 @@ export const SHORTS_DATA: Short[] = [
       ] },
     ],
     takeaway: { head: 'Clarify, slice, prioritise, *close*', sub: 'The same frame works for a pen, a login page or an ATM. **Safety and money first.**' },
+  },
+
+  // ---------------- batch 3: two more failures (from the companies' own postmortems) and ten "how it works" ----------------
+  {
+    id: 'cloudflare-regex-2019',
+    title: 'Cloudflare 2019: one regex, every server',
+    topic: 'js-objects-strings',
+    heading: 'Regex basics for testers',
+    tags: ['failure', 'regex', 'performance'],
+    beats: [
+      { type: 'counter', kicker: '2 July 2019', head: 'Sites behind Cloudflare return *502 errors*', value: 27, unit: 'minutes of worldwide outage', sub: 'Visitors everywhere see an error page instead of the site.' },
+      { type: 'spike', kicker: 'Inside every server', head: 'CPU use jumps to *100%*', mark: 'one new firewall rule', sub: 'A new WAF rule contained a **regular expression** that needed huge amounts of CPU to run.' },
+      { type: 'flow', kicker: 'The critical part: .*(?:.*=.*)', head: 'How a regex *backtracks*', steps: ['.* first grabs all of the text', 'The pattern still needs an =', 'The engine gives back one character and tries again', 'Two .* in a row: many ways to split the text', 'The work grows far faster than the text'], broken: 3 },
+      { type: 'toggles', kicker: 'Why it hit everyone', head: 'Shipped *everywhere at once*', items: [{ label: 'Rule pushed to the whole network in one go' }, { label: 'No staged rollout for rule changes' }, { label: 'Nobody timed the pattern on long inputs', keep: true }], keepLabel: 'THE GAP' },
+      { type: 'quiz', kicker: 'Your turn', head: 'Which check would have caught this rule before release?', answer: 1, options: [
+        { text: 'Checking the pattern matches the attacks it targets', why: 'It did match. The problem was how long it took on other text.' },
+        { text: 'Timing the pattern on long, tricky inputs, then rolling out in stages', why: 'A slow pattern shows up in a timing test, and a staged rollout limits the damage if one slips through.' },
+        { text: 'A test with an empty string', why: 'Short inputs finish instantly. The cost grows with long text.' },
+      ] },
+    ],
+    takeaway: { head: 'Test a regex for *speed*, not just matches', sub: 'Wildcards like .* next to each other can backtrack wildly. Time patterns on long inputs and roll changes out **in stages**.' },
+  },
+  {
+    id: 'gitlab-database-deletion-2017',
+    title: 'GitLab 2017: the wrong server',
+    topic: 'sql-joins-validation',
+    heading: 'INSERT, UPDATE, DELETE and transactions',
+    tags: ['failure', 'backups', 'data'],
+    beats: [
+      { type: 'spike', kicker: '31 January 2017 · GitLab.com', head: 'An engineer deletes the *wrong* database', mark: 'primary, not secondary', sub: 'While fixing replication, a delete meant for the secondary server ran on the **primary**.' },
+      { type: 'counter', kicker: 'Before it was stopped', head: 'Production data *removed*', value: 300, unit: 'GB (about)', sub: 'A single command, with no undo.' },
+      { type: 'toggles', kicker: 'Time to restore', head: 'The backups were *not working*', items: [{ label: 'Regular database dumps failed silently: wrong pg_dump version' }, { label: 'Nobody had noticed the failures' }, { label: 'A copy made about 6 hours earlier, for staging', keep: true }], keepLabel: 'SAVED THEM' },
+      { type: 'counter', kicker: 'The cost', head: 'Database changes *lost*', value: 6, unit: 'hours of issues, merge requests and comments (about)', sub: 'The Git repositories themselves were not affected.' },
+      { type: 'quiz', kicker: 'Your turn', head: 'Which habit would have limited the damage most?', answer: 0, options: [
+        { text: 'Check where you are and what the command touches, and test that restores really work', why: 'The same idea as previewing a DELETE with its exact WHERE: know what you will change, and know you can undo it.' },
+        { text: 'Run risky commands at night', why: 'Fewer users online, but exactly the same data loss.' },
+        { text: 'Take more backups with the same tool', why: 'More copies from a tool that was silently failing would still be empty.' },
+      ] },
+    ],
+    takeaway: { head: 'An undo you never tried is *not an undo*', sub: 'Preview with the exact WHERE, use a transaction you can ROLLBACK, and **restore your backups** for real before you need them.' },
+  },
+  {
+    id: 'event-loop-order',
+    title: 'sync, promise, timer: the event loop',
+    topic: 'js-output-puzzles',
+    heading: 'Event loop ordering',
+    tags: ['javascript', 'async', 'event-loop'],
+    beats: [
+      { type: 'flow', kicker: 'Three lines of code', head: 'Which prints *first*?', steps: ["setTimeout(() => log('timer'), 0)", "Promise.resolve().then(() => log('promise'))", "log('sync')"], sub: 'Written in this order. They do **not** print in this order.' },
+      { type: 'flow', kicker: 'The event loop', head: 'One thing at a time, in a *fixed order*', steps: ['All normal (synchronous) code', 'Every waiting microtask: .then, code after await', 'One timer: setTimeout, setInterval', 'All microtasks again, then the next timer'] },
+      { type: 'race', kicker: 'The result', head: 'sync, promise, *timer*', lanes: [{ label: 'sync: normal code', seconds: 0.6, tone: 'green' }, { label: 'promise: a microtask', seconds: 1.4, tone: 'cyan' }, { label: 'timer: waits for both', seconds: 2.6, tone: 'amber' }], sub: 'A 0 ms timer still waits for normal code and **every** microtask.' },
+      { type: 'toggles', kicker: 'Runs at once, as normal code', head: 'Two *surprises*', items: [{ label: 'The function passed to new Promise(fn)' }, { label: 'An async function, up to its first await' }, { label: 'The code after await', keep: true }], keepLabel: 'WAITS' },
+      { type: 'quiz', kicker: 'Your turn', head: "log('A'); setTimeout(log 'B', 0); .then(log 'C'); log('D'). The output?", answer: 2, options: [
+        { text: 'A, B, C, D', why: 'That is the source order. Timers and promises wait for normal code.' },
+        { text: 'A, D, B, C', why: 'The timer was created first, but microtasks always run before the next timer.' },
+        { text: 'A, D, C, B', why: 'Normal code (A, D), then the promise (C), then the timer (B).' },
+      ] },
+    ],
+    takeaway: { head: 'Normal code, then promises, then *timers*', sub: 'setTimeout(fn, 0) means **after everything already waiting**, never "now". That is why every Playwright call needs await.' },
+  },
+  {
+    id: 'closures-remember',
+    title: 'Closures: the function with a backpack',
+    topic: 'js-functions',
+    heading: 'Closures: functions that remember',
+    tags: ['javascript', 'closures', 'test-data'],
+    beats: [
+      { type: 'flow', kicker: 'makeCounter()', head: 'The outer function *finishes*', steps: ['let count = 0', 'return () => ++count', 'makeCounter() returns and is done', 'next() gives 1, next() gives 2'], sub: 'The inner function still remembers **count**.' },
+      { type: 'toggles', kicker: 'The backpack', head: 'Three facts about a *closure*', items: [{ label: 'It keeps the live variable, not a copy' }, { label: 'Each call of the outer function packs a new backpack' }, { label: 'The variables are private', keep: true }], keepLabel: 'SAFE' },
+      { type: 'flow', kicker: "makeEmailFactory('checkout')", head: 'Unique test data, *no globals*', steps: ['checkout_1@test.com', 'checkout_2@test.com', 'A login factory starts again at login_1@test.com'] },
+      { type: 'toggles', kicker: 'The loop puzzle', head: 'var has *one* i for the whole loop', items: [{ label: 'for (var i...): callbacks give 3, 3, 3' }, { label: 'for (let i...): callbacks give 0, 1, 2', keep: true }], keepLabel: 'USE LET' },
+      { type: 'quiz', kicker: 'Your turn', head: 'a and b both come from makeCounter(). a() runs twice, then b() once. What does b() return?', answer: 1, options: [
+        { text: '3', why: 'That would mean a and b share one count. They do not.' },
+        { text: '1', why: 'Each call of makeCounter makes a new backpack, so b has its own count.' },
+        { text: 'undefined', why: 'count still lives in the closure after makeCounter has finished.' },
+      ] },
+    ],
+    takeaway: { head: 'A function *remembers* where it was made', sub: 'Closures give private counters and run-once setup. **Each call** of the outer function gets fresh variables.' },
+  },
+  {
+    id: 'reference-vs-value',
+    title: 'Same house, two addresses',
+    topic: 'js-objects-strings',
+    heading: 'Reference vs value',
+    tags: ['javascript', 'objects', 'flaky'],
+    beats: [
+      { type: 'flow', kicker: 'Primitives', head: 'Copied by *value*', steps: ['let a = 5', 'let b = a (a separate copy)', 'b = 6', 'a is still 5'] },
+      { type: 'flow', kicker: 'Objects', head: 'Shared by *reference*', steps: ['const user2 = user1', 'Copies the address, not the house', "user2.name = 'Sally'", 'user1.name is now Sally too'], broken: 1 },
+      { type: 'toggles', kicker: '=== on objects', head: 'Same object, not same *content*', items: [{ label: '{ id: 1 } === { id: 1 } is false' }, { label: 'expect(actual).toEqual(expected)', keep: true }], keepLabel: 'COMPARES CONTENT' },
+      { type: 'flow', kicker: 'Shared test data', head: 'Passes alone, fails *together*', steps: ['Test A changes the shared validUser', 'Test B gets the changed user', 'Each test passes alone', 'Run together, B fails'], broken: 0 },
+      { type: 'quiz', kicker: 'Your turn', head: 'Your "expected" object is the same object as "actual". The check…', answer: 1, options: [
+        { text: 'Catches any change to actual', why: 'Any change to actual is also a change to expected: they are one object.' },
+        { text: 'Always passes, because it compares the object with itself', why: 'Two names, one object. The test cannot fail, so it proves nothing.' },
+        { text: 'Always fails', why: 'One object is always equal to itself, with === or toEqual.' },
+      ] },
+    ],
+    takeaway: { head: 'Objects are shared, *not copied*', sub: 'Build fresh data for each test or copy it with **structuredClone**. Compare content with toEqual, not ===.' },
+  },
+  {
+    id: 'sort-text-order',
+    title: '[10, 9, 1, 100].sort() is not what you think',
+    topic: 'js-arrays',
+    heading: 'Sorting: the text-order trap',
+    tags: ['javascript', 'arrays', 'playwright'],
+    beats: [
+      { type: 'flow', kicker: '[10, 9, 1, 100].sort()', head: 'Numbers sorted as *text*', steps: ['No compare function: items compared as text', '"100" vs "9": compare "1" with "9"', '"1" comes first, so 100 goes before 9', 'Result: [1, 10, 100, 9]'], broken: 3 },
+      { type: 'ladder', kicker: 'sort((a, b) => a - b)', head: 'Give it a *compare function*', rungs: [{ label: '1', amount: 1 }, { label: '9', amount: 9 }, { label: '10', amount: 10 }, { label: '100', amount: 100 }], unit: 'value', sub: 'b - a for big to small, **localeCompare** for text.' },
+      { type: 'toggles', kicker: 'Testing "Sort by price"', head: 'The check that can *never fail*', items: [{ label: 'expect(prices).toEqual(prices.sort())' }, { label: 'expect(prices).toEqual([...prices].sort((a, b) => a - b))', keep: true }], keepLabel: 'SORTED COPY', sub: 'sort changes the array and returns the **same** array, so the first check compares it with itself.' },
+      { type: 'quiz', kicker: 'Your turn', head: 'The page shows 9.99, 15.99, 7.99 after "low to high". Which check fails, as it should?', answer: 2, options: [
+        { text: 'expect(prices).toEqual(prices.sort((a, b) => a - b))', why: 'sort changes prices itself, so both sides are the same array and it passes.' },
+        { text: 'expect(prices.length).toBe(3)', why: 'The count is right. The order is never checked.' },
+        { text: 'expect(prices).toEqual([...prices].sort((a, b) => a - b))', why: 'An independent sorted copy differs from the page order, so the test fails and shows the bug.' },
+      ] },
+    ],
+    takeaway: { head: 'Sort a *copy*, with a comparator', sub: 'No compare function means text order, even for numbers. Use **a - b** for numbers and compare the page with a sorted copy.' },
+  },
+  {
+    id: 'idempotent-methods',
+    title: 'Retry safely: idempotent methods',
+    topic: 'api-http',
+    heading: 'HTTP methods: safe, idempotent',
+    tags: ['api', 'http', 'idempotency'],
+    beats: [
+      { type: 'toggles', kicker: 'Three everyday actions', head: 'Safe, idempotent, or *neither*', items: [{ label: 'Reading the menu: safe' }, { label: 'Pressing the lift button 5 times: idempotent' }, { label: 'Ordering a pizza 5 times: 5 pizzas', keep: true }], keepLabel: 'NOT IDEMPOTENT' },
+      { type: 'flow', kicker: 'RFC 9110', head: 'Which methods are *idempotent*?', steps: ['Safe, so idempotent: GET, HEAD, OPTIONS', 'Also idempotent: PUT, DELETE', 'Not guaranteed: POST, PATCH'] },
+      { type: 'race', kicker: 'The network drops the reply', head: 'The client *retries*', lanes: [{ label: 'POST /payments', seconds: 1, tone: 'rose' }, { label: 'Retry: the same POST again', seconds: 1, tone: 'rose', after: 1.5 }, { label: 'With Idempotency-Key: first result returned', seconds: 2, tone: 'green', after: 3 }], sub: 'Without a key, a retried POST payment can **charge twice**.' },
+      { type: 'quiz', kicker: 'Your turn', head: 'The same DELETE /booking/1093 is sent twice. The second returns 404. Bug?', answer: 1, options: [
+        { text: 'Yes: idempotent means the same response every time', why: 'Idempotency is about server state, not the response.' },
+        { text: 'No: the booking is gone either way, so the state is the same', why: 'DELETE is idempotent. A 404 the second time is fine.' },
+        { text: 'Yes: it should return 500', why: 'A 500 on the second DELETE would be the real bug to report.' },
+      ] },
+    ],
+    takeaway: { head: 'Retries are safe only when the method *is idempotent*', sub: 'GET, PUT and DELETE can be retried. POST needs an **Idempotency-Key** so a retry does not create or charge twice.' },
+  },
+  {
+    id: 'postman-chaining',
+    title: 'Postman chaining: pass the baton',
+    topic: 'api-postman',
+    heading: 'Chaining requests',
+    tags: ['api', 'postman'],
+    beats: [
+      { type: 'flow', kicker: 'A relay race', head: 'Pass the *baton*', steps: ['POST /auth returns a token', 'Post-response script saves it as a collection variable', 'Later requests send it as {{token}}', 'Cleanup: delete what you created'] },
+      { type: 'flow', kicker: 'No guard', head: 'One failed login, *20* confusing failures', steps: ['Login fails: "Bad credentials"', 'Restful Booker still returns 200', 'No token is saved', 'Every later request fails, far from the cause'], broken: 1 },
+      { type: 'toggles', kicker: 'The guard', head: 'Check *before* you save', items: [{ label: 'pm.test: the body has a token' }, { label: 'Save it only if it exists' }, { label: 'Otherwise setNextRequest(null): stop the run', keep: true }], keepLabel: 'FAIL FAST' },
+      { type: 'quiz', kicker: 'Your turn', head: 'You click Send on one request and setNextRequest(null) does nothing. Why?', answer: 2, options: [
+        { text: 'The variable scope is wrong', why: 'Scope is not involved: it controls the run order.' },
+        { text: 'It only works after a failed test', why: 'It works whenever the script reaches it, in a run.' },
+        { text: 'It only works in the Collection Runner and Newman', why: 'Run order only exists in a run. A single Send has no next request.' },
+      ] },
+    ],
+    takeaway: { head: 'Chain values, *guard* the chain', sub: 'Save tokens and ids in collection variables, assert the producer worked **before** saving, and clean up at the end.' },
+  },
+  {
+    id: 'rtm-traceability',
+    title: 'The RTM: every requirement, every test',
+    topic: 'mt-test-artifacts',
+    heading: 'Requirements Traceability Matrix',
+    tags: ['artifacts', 'coverage', 'rtm'],
+    beats: [
+      { type: 'grid', kicker: 'Coupon feature: 5 requirements', head: 'Which one has *no tests*?', cells: 5, caption: 'REQ-CPN-04, "one coupon per order": **not covered**.' },
+      { type: 'toggles', kicker: 'Three directions', head: 'Forward, backward, *both*', items: [{ label: 'Forward: is every requirement tested?' }, { label: 'Backward: why does this test exist?' }, { label: 'Bidirectional: what changes if a requirement changes?', keep: true }], keepLabel: 'MOST TEAMS' },
+      { type: 'flow', kicker: 'Impact analysis', head: 'Minimum cart 500 becomes *750*', steps: ['The PO changes REQ-CPN-02', 'The RTM lists TC-CPN-03, 04 and 05', 'Update exactly those tests', 'Re-run and record the results'] },
+      { type: 'counter', kicker: 'The coverage line', head: 'Requirements with *tests*', value: 80, suffix: '%', unit: '4 of 5 requirements covered', sub: 'Only **60%** fully pass: REQ-CPN-03 has a failed test and an open bug.' },
+      { type: 'quiz', kicker: 'Your turn', head: 'TC-CPN-09 "coupon on gift cards" has no requirement. What do you do?', answer: 0, options: [
+        { text: 'Ask the PO: a requirement is missing, or the test is out of date', why: 'Backward tracing found an orphan. The PO decides which it is.' },
+        { text: 'Delete it straight away', why: 'It may test a real rule nobody wrote down. Ask first.' },
+        { text: 'Ignore it, it passes', why: 'Passing does not tell you why the test exists.' },
+      ] },
+    ],
+    takeaway: { head: 'Trace *both* ways', sub: 'Forward finds untested requirements. Backward finds **orphan tests**. Add status and bugs, so the RTM shows quality too.' },
+  },
+  {
+    id: 'test-oracles',
+    title: 'No spec? You still have oracles',
+    topic: 'mt-exploratory-risk',
+    heading: 'Oracles: how you know it is a bug',
+    tags: ['exploratory', 'oracles', 'heuristics'],
+    beats: [
+      { type: 'spike', kicker: 'No spec for coupon codes', head: 'v3.3 rejects codes *over 20 characters*', mark: 'is this a bug?', sub: 'Nobody wrote down a limit. How do you **know**?' },
+      { type: 'flow', kicker: 'FEW HICCUPPS (Michael Bolton)', head: 'Inconsistent with *what*?', steps: ['History: v3.2 accepted 50 characters', 'Comparable products: other shops behave differently', 'Claims: what marketing promised', 'User desires, the Product itself, its Purpose', 'Statutes and standards: WCAG, PCI DSS'] },
+      { type: 'toggles', kicker: 'The bug report', head: 'Name the *oracle*', items: [{ label: '"I think this is wrong"' }, { label: '"Inconsistent with History: v3.2 accepted 50-character codes (TC-118)"', keep: true }], keepLabel: 'PERSUASIVE' },
+      { type: 'quiz', kicker: 'Your turn', head: 'A delivery date shows 31 June. No spec mentions dates. Which oracle?', answer: 2, options: [
+        { text: 'Claims', why: 'No promise was broken. The date itself is impossible.' },
+        { text: 'History', why: 'Older versions are not needed to see this one.' },
+        { text: 'World: June has 30 days', why: 'It is inconsistent with how the world works, spec or no spec.' },
+      ] },
+    ],
+    takeaway: { head: 'No spec does not mean *no oracle*', sub: 'An oracle **suggests** a problem, it does not prove it. Say which one you used, so a developer or PO can check it.' },
+  },
+  {
+    id: 'ai-hallucinations',
+    title: 'AI hallucinations: confident and wrong',
+    topic: 'ai-basics',
+    heading: 'Hallucinations',
+    tags: ['ai', 'verification'],
+    beats: [
+      { type: 'toggles', kicker: 'Ask AI for a Playwright check', head: 'It sounds right. It is *invented*.', items: [{ label: "page.waitForElementVisible('#cart')" }, { label: 'expect(title).toBeDisplayed()' }, { label: 'expect(locator).toBeVisible()', keep: true }], keepLabel: 'REAL' },
+      { type: 'flow', kicker: 'Why it happens', head: 'The model predicts *likely* text', steps: ['You ask about something it has no real information on', '"I don\'t know" is not the likely next text', 'A fluent answer is', 'It invents a field, method or rule'], broken: 3 },
+      { type: 'toggles', kicker: 'Test cases from a user story', head: 'An *invented requirement*', items: [{ label: '"Verify the account locks after 5 failed attempts"' }, { label: 'The story never mentions locking', keep: true }], keepLabel: 'CHECK THE SOURCE' },
+      { type: 'quiz', kicker: 'Your turn', head: 'AI says: assert the booking field totalAmount. Best next step?', answer: 0, options: [
+        { text: 'Check it against the API docs or a real response', why: 'The Restful Booker field is totalprice. A source of truth shows it in seconds.' },
+        { text: 'Trust it: it sounds correct', why: 'Sounding correct is exactly what a hallucination does.' },
+        { text: 'Ask the AI if it is sure', why: 'It may confirm its own mistake. Check a source of truth instead.' },
+      ] },
+    ],
+    takeaway: { head: 'Verify every *name*, field and requirement', sub: 'Give real context, ask it to cite its source and say "not specified", then check against **the docs or the running app**.' },
+  },
+  {
+    id: 'fill-vs-press-sequentially',
+    title: 'fill or pressSequentially?',
+    topic: 'pw-actions',
+    heading: 'Typing: fill vs pressSequentially',
+    tags: ['playwright', 'actions'],
+    beats: [
+      { type: 'race', kicker: "Typing 'standard_user'", head: 'Paste vs *type*', lanes: [{ label: 'fill: the whole value at once', seconds: 0.6, tone: 'green' }, { label: 'pressSequentially: one key at a time', seconds: 3, tone: 'amber' }], sub: 'fill clears the box and sets the value. **pressSequentially** sends keydown, keypress and keyup for each character.' },
+      { type: 'flow', kicker: 'A search box with suggestions', head: "fill('lap') shows *nothing*", steps: ["fill('lap') sets the text", 'The page only reacts to key presses', 'No key presses, no suggestions', "Use pressSequentially('lap')", 'Then ArrowDown and Enter'], broken: 2 },
+      { type: 'toggles', kicker: 'Pick the method', head: 'Each one has a *job*', items: [{ label: 'pressSequentially: autocomplete, input masks' }, { label: 'press: Enter, Tab, ControlOrMeta+A' }, { label: 'page.type(): deprecated' }, { label: 'fill: the default for inputs', keep: true }], keepLabel: 'DEFAULT' },
+      { type: 'quiz', kicker: 'Your turn', head: 'A suite uses pressSequentially for every field "to be realistic". The problem?', answer: 1, options: [
+        { text: 'It cannot type into normal inputs', why: 'It can. It is just slower than fill.' },
+        { text: 'It is slower and tests nothing extra on normal fields', why: 'Key-by-key typing is for pages that react to each key. Elsewhere fill does the same job faster.' },
+        { text: 'Nothing: it is best practice', why: 'fill is the default. Switch only when the page listens for keys.' },
+      ] },
+    ],
+    takeaway: { head: 'fill by default, *keys* when the page listens', sub: 'Use pressSequentially for autocomplete, masks and per-key checks. **press** is for Enter, Tab and shortcuts.' },
   },
 ];
 

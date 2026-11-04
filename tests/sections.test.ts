@@ -28,7 +28,21 @@ const W = await load<typeof import('../src/lib/weak')>('/src/lib/weak.ts');
 
 test('every step lesson is valid, and a malformed step fails', () => {
   const lessons = C.TOPICS.flatMap((t) => t.sections.flatMap((s, i) => (s.steps ? [{ t, i, steps: s.steps }] : [])));
-  assert.deepEqual(lessons.map((l) => l.t.id).sort(), ['mt-defects', 'mt-test-design', 'pw-assertions-waiting', 'pw-locators', 'sql-joins-validation']);
+  // the 18 hand-written lessons (the rest of the sections get generated ones: tests/autoSteps.test.ts)
+  assert.equal(lessons.length, 18);
+  assert.deepEqual([...new Set(lessons.map((l) => l.t.id))].sort(), [
+    'api-http',
+    'js-async',
+    'mt-defects',
+    'mt-exploratory-risk',
+    'mt-fundamentals',
+    'mt-test-design',
+    'mt-test-levels-types',
+    'pw-actions',
+    'pw-assertions-waiting',
+    'pw-locators',
+    'sql-joins-validation',
+  ]);
   for (const l of lessons) assert.deepEqual(V.checkSteps(l.steps, l.t.id), []);
 
   const good = structuredClone(lessons[0].steps);

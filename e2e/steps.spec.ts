@@ -7,8 +7,14 @@ import pwLocators from '../src/content/topics/pw-locators';
 import sqlJoins from '../src/content/topics/sql-joins-validation';
 import mtDefects from '../src/content/topics/mt-defects';
 import pwWaiting from '../src/content/topics/pw-assertions-waiting';
+import mtFundamentals from '../src/content/topics/mt-fundamentals';
+import mtLevels from '../src/content/topics/mt-test-levels-types';
+import mtRisk from '../src/content/topics/mt-exploratory-risk';
+import apiHttp from '../src/content/topics/api-http';
+import jsAsync from '../src/content/topics/js-async';
+import pwActions from '../src/content/topics/pw-actions';
 
-const TOPICS_WITH_STEPS: Topic[] = [mtTestDesign, pwLocators, sqlJoins, mtDefects, pwWaiting];
+const TOPICS_WITH_STEPS: Topic[] = [mtTestDesign, pwLocators, sqlJoins, mtDefects, pwWaiting, mtFundamentals, mtLevels, mtRisk, apiHttp, jsAsync, pwActions];
 const LESSONS = TOPICS_WITH_STEPS.flatMap((t) => t.sections.flatMap((s, i) => (s.steps ? [{ t, i, lesson: s.steps }] : [])));
 
 /** the task's text as the page shows it: **bold** and `code` marks dropped */

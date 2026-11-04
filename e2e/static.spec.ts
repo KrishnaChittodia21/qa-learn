@@ -120,5 +120,8 @@ test('the visualiser steps through a wrong solution and shows where it went off'
   await tv.getByRole('button', { name: 'Go to the return' }).click();
   await expect(tv.locator('.tv-cell.wrong')).toHaveCount(3);
   await expect(tv.locator('.tv-expect')).toBeVisible();
+  // and it says which cells went wrong: here the self-copy left cells 1–3 untouched
+  await expect(tv.locator('.tv-why')).toContainText('cell 1 never changed');
+  await expect(tv.locator('.tv-why li')).toHaveCount(3);
   done();
 });

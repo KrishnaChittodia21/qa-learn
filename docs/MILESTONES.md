@@ -516,6 +516,16 @@ were read as reference only).
   summary on a new Build report page; Settings in tabs; a Guide me walk on every page; 24 Shorts with thumbnails and
   Day labels.
 - **Look:** the scanline and grain texture now sits behind the content, so panels and the step stage are solid.
+- **More hand-written step lessons:** 13 more, 18 in all: defect life cycle, STLC, cost of defects, the test pyramid,
+  regression vs retest, decision tables, state transitions, risk-based testing, request/response anatomy, status codes,
+  the event loop, sequential vs parallel, and what a Playwright action does. `e2e/steps.spec.ts` plays every one to
+  the end on desktop and phone; `validate-steps.mjs` now also requires a 6-unit gap between actor boxes.
+- **"Where it went wrong" in the visualiser:** for a wrong return, `whereItWentWrong()` (`lib/trace.ts`) names the
+  returned variable and, for each wrong cell (or the whole value), the line that last changed it, or that it never
+  changed. It uses only the learner's own trace, so any approach works (comparing against the reference solution's
+  intermediate values would flag correct alternative approaches).
+- **36 Shorts:** 12 more, on sections that had none. Two are real incidents told from the companies' own postmortems
+  (Cloudflare's July 2019 regex outage, GitLab's January 2017 database deletion).
 - **Not verified:** the live Pages site (needs a push to `main`); animation smoothness on a slow real phone.
 
 ## Order and estimates

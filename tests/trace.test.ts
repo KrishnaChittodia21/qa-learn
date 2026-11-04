@@ -68,3 +68,49 @@ test('single-statement bodies, callbacks and a not-yet-declared name are handled
 test('a syntax error is reported, not swallowed', () => {
   assert.throws(() => T.instrument('function f( {'), SyntaxError);
 });
+
+/** runs code like the worker does in trace mode: the steps, plus what came back */
+function traceOf(code: string, fnName: string, args: unknown[]) {
+  const { fn, T: rec } = load1(T.instrument(code), fnName);
+  const got = fn(...structuredClone(args));
+  return { steps: rec.steps, truncated: false, got } as Parameters<typeof T.whereItWentWrong>[0];
+}
+
+test('where it went wrong: each wrong cell points at the line that last wrote it, or says it never changed', () => {
+  // the "right" branch copies each cell onto itself, so cells 1–3 keep their starting values; cell 0 is right
+  const rotate = [
+    'function rotateOne(arr, direction) {',
+    '  const last = arr[arr.length - 1];',
+    '  for (let i = arr.length - 1; i > 0; i--) arr[i] = arr[i];',
+    '  arr[0] = last;',
+    '  return arr;',
+    '}',
+  ].join('\n');
+  const c = T.whereItWentWrong(traceOf(rotate, 'rotateOne', [[1, 2, 3, 4], 'right']), 'rotateOne', [4, 1, 2, 3])!;
+  assert.equal(c.name, 'arr');
+  assert.deepEqual(
+    c.parts.map((p) => [p.index, p.never]),
+    [
+      [1, true],
+      [2, true],
+      [3, true],
+    ],
+  );
+  // an off-by-one: the last cell is written on line 3 with the wrong value
+  const double = ['function double(xs) {', '  const out = [];', '  for (let i = 0; i < xs.length; i++) out.push(xs[i] * (i < xs.length - 1 ? 2 : 3));', '  return out;', '}'].join('\n');
+  const d = T.whereItWentWrong(traceOf(double, 'double', [[1, 2, 3]]), 'double', [2, 4, 6])!;
+  assert.deepEqual(
+    d.parts.map((p) => [p.index, p.line, p.never]),
+    [[2, 3, false]],
+  );
+});
+
+test('where it went wrong: a wrong number points at its last change; a right answer or an expression gives nothing', () => {
+  const sum = ['function sum(xs) {', '  let total = 0;', '  for (const x of xs) {', '    if (x > 1) total += x;', '  }', '  return total;', '}'].join('\n');
+  const c = T.whereItWentWrong(traceOf(sum, 'sum', [[1, 2, 3]]), 'sum', 6)!;
+  assert.equal(c.name, 'total');
+  assert.equal(c.parts[0].line, 4);
+  assert.equal(T.whereItWentWrong(traceOf(sum, 'sum', [[2, 3]]), 'sum', 5), null);
+  const expr = 'function add(a, b) {\n  return a - b;\n}';
+  assert.equal(T.whereItWentWrong(traceOf(expr, 'add', [2, 3]), 'add', 5), null);
+});

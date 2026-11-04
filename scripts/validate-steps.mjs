@@ -6,6 +6,8 @@ const ACTIONS = ['say', 'send', 'badge', 'lit', 'down', 'show', 'keys', 'wait', 
 const MODELS = new Set(['ttl-jitter', 'hit-ratio', 'availability']);
 // must match src/components/steps/stage.ts: box size, the two stages, and how phones turn the wide stage tall
 const BOX = { w: 190, h: 72 };
+/** the least space between two boxes, in stage units */
+const GAP = 6;
 /** the key list drawn under `keysUnder`: 280 wide, centred on that actor */
 const KEYS_W = 280;
 /** a badge pill's width for its text (stage.ts: length × 9.6 + 26) */
@@ -154,7 +156,8 @@ function checkLayout(actors, where, keysUnder, maxKeys = 0) {
     }
     boxes.forEach((p, i) =>
       boxes.slice(i + 1).forEach((q) => {
-        if (Math.abs(p.x - q.x) < BOX.w && Math.abs(p.y - q.y) < BOX.h) e.push(`${where}: actors "${p.id}" and "${q.id}" overlap on the ${L.name} stage`);
+        // a few units of air between boxes: edge to edge reads as one shape
+        if (Math.abs(p.x - q.x) < BOX.w + GAP && Math.abs(p.y - q.y) < BOX.h + GAP) e.push(`${where}: actors "${p.id}" and "${q.id}" overlap or touch on the ${L.name} stage`);
       }),
     );
   }
