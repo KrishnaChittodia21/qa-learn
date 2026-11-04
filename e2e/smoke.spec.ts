@@ -91,14 +91,17 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
   await expect(page.getByRole('heading', { name: /Watched/ })).toBeVisible();
 });
 
-test('a long section collapses with Read more, and Learn more opens', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+test('a long section collapses with Read more (remembered), and Learn more opens', async ({ page }) => {
+  await page.addInitScript(() => localStorage.getItem('qa-learn-ui-v1') || localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
   await page.goto('/#/topic/pw-locators?tab=learn');
   const section = page.locator('section.tp-sec', { has: page.getByRole('heading', { name: /The recommended locator priority/ }) });
   const toggle = section.getByRole('button', { name: /Read more/ });
   await toggle.scrollIntoViewIfNeeded();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await toggle.click();
+  await expect(section.getByRole('button', { name: /Read less/ })).toHaveAttribute('aria-expanded', 'true');
+  // remembered: still open after a reload
+  await page.reload();
   await expect(section.getByRole('button', { name: /Read less/ })).toHaveAttribute('aria-expanded', 'true');
 
   const more = section.locator('details.learn-more');

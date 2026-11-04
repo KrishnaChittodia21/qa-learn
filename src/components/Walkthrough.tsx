@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { endWalk, type WalkStep } from '../lib/guide';
+import { recordWalkDone } from '../lib/progress';
 import { useFocusTrap } from '../lib/useFocusTrap';
 
 /** a mouse and keyboard (not a phone or tablet): only then are keyboard shortcuts worth mentioning */
@@ -128,7 +129,15 @@ export default function Walkthrough({ steps: all }: { steps: WalkStep[] }) {
               <ArrowLeft size={15} aria-hidden="true" />
             </button>
             {last ? (
-              <button type="button" className="btn btn-holo btn-sm" data-autofocus onClick={endWalk}>
+              <button
+                type="button"
+                className="btn btn-holo btn-sm"
+                data-autofocus
+                onClick={() => {
+                  recordWalkDone();
+                  endWalk();
+                }}
+              >
                 Done
               </button>
             ) : (

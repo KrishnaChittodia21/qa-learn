@@ -3,9 +3,10 @@
 import { useMemo } from 'react';
 import { buildAchievementContext, evaluateAll, TIER_LABEL, type Achievement, type AchievementEvaluation, type StoredAchievement } from '../content/achievements';
 import { CODING_PROBLEMS, COMPANY_QUESTIONS, PHASES, TOPICS } from '../content';
+import { PW_LAB_STEPS } from '../content/pwlab';
 import type { Progress } from './progress';
 
-export const achievementCtx = buildAchievementContext({ topics: TOPICS, phases: PHASES, coding: CODING_PROBLEMS, companyQuestions: COMPANY_QUESTIONS });
+export const achievementCtx = buildAchievementContext({ topics: TOPICS, phases: PHASES, coding: CODING_PROBLEMS, companyQuestions: COMPANY_QUESTIONS, pwlabSteps: PW_LAB_STEPS.map((s) => s.id) });
 
 /** { [id]: evaluation } for the current progress (memoised on the progress object). */
 export function useAchievementEvaluations(p: Progress) {

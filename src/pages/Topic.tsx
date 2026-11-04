@@ -397,10 +397,9 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
   const next = TOPICS[idx + 1];
   const prev = TOPICS[idx - 1];
   const topicShorts = SHORTS.filter((e) => e.topic.id === topic.id);
-  // Read more / Read less, per section, for this visit
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  // Read or Steps for sections that have a step lesson; one choice, remembered in this browser
-  const mode = useUiPrefs().lessonMode ?? 'read';
+  // Read or Steps for sections that have a step lesson (one choice), and Read more per section: remembered in this browser
+  const ui = useUiPrefs();
+  const mode = ui.lessonMode ?? 'read';
 
   // deep link from weak-area reports: /topic/:id?tab=learn&s=<section index>
   useEffect(() => {
@@ -520,7 +519,8 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
         {topic.sections.map((s, i) => {
           const short = shortForSection(topic.id, i);
           const long = s.body.length > LONG_SECTION;
-          const open = !!expanded[i];
+          const openKey = `${topic.id}:${i}`;
+          const open = !!ui.openSections?.[openKey];
           const isRead = read.has(i);
           const { main, sub } = splitTitle(s.heading);
           return (
@@ -592,7 +592,10 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                     className="btn-ghost btn-sm read-toggle"
                     aria-expanded={open}
                     aria-controls={`s-${i}-body`}
-                    onClick={() => setExpanded((x) => ({ ...x, [i]: !open }))}
+                    onClick={() => {
+                      const { [openKey]: _was, ...rest } = ui.openSections ?? {};
+                      saveUiPrefs({ openSections: open ? rest : { ...rest, [openKey]: true } });
+                    }}
                   >
                     {open ? 'Read less' : 'Read more'} <ChevronDown size={14} aria-hidden="true" className={open ? 'open' : ''} />
                   </button>

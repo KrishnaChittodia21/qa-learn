@@ -39,8 +39,10 @@ export interface AchievementContext {
   /** companies with at least COMPANY_MIN questions: their question ids */
   companyBank: { company: string; ids: string[] }[];
   totals: { sections: number; cc: number; boe: number; iq: number };
-  /** the learner's IANA time zone; the service passes it (it runs on UTC), the browser leaves it out and uses local time */
+  /** the learner's IANA time zone; the browser leaves it out and uses local time */
   timeZone?: string;
+  /** Playwright Lab step ids */
+  pwlabSteps: string[];
 }
 
 type Goal = number | ((ctx: AchievementContext, p?: Progress) => number);
@@ -170,11 +172,13 @@ export function buildAchievementContext({
   phases,
   coding,
   companyQuestions,
+  pwlabSteps = [],
 }: {
   topics: Topic[];
   phases: { id: PhaseId; number: number; title: string }[];
   coding: CodingProblem[];
   companyQuestions: CompanyQuestion[];
+  pwlabSteps?: string[];
 }): AchievementContext {
   const topicsByPhase = new Map<PhaseId, Topic[]>();
   for (const t of topics) topicsByPhase.set(t.phase, [...(topicsByPhase.get(t.phase) ?? []), t]);
@@ -189,6 +193,7 @@ export function buildAchievementContext({
     coding,
     hardCoding: coding.filter((q) => q.difficulty === 'hard' || q.difficulty === 'expert'),
     companyBank,
+    pwlabSteps,
     totals: {
       sections: sum((t) => t.sections.length),
       cc: sum((t) => t.codeChallenges.length),
@@ -273,6 +278,17 @@ export const ACHIEVEMENTS: Achievement[] = [
     measure: (p) => Object.values(p.shorts ?? {}).filter((s) => s.watchedAt).length,
     requirement: () => 'Watch any Short to its end card',
     unit: 'Shorts',
+  },
+  {
+    id: 'shown-around',
+    name: 'Shown Around',
+    description: 'Followed a "Show me" walkthrough to the end.',
+    group: 'start',
+    art: 'compass',
+    goal: 1,
+    measure: (p) => p.walksDone ?? 0,
+    requirement: () => 'Open Guide me, press Show me and follow it to Done',
+    unit: 'walkthroughs',
   },
   {
     id: 'hello-console',
@@ -373,6 +389,20 @@ export const ACHIEVEMENTS: Achievement[] = [
     measure: (p, ctx) => difficulties(ctx.coding.filter((q) => p.code[q.id])).size,
     requirement: () => 'Solve one easy, one medium and one hard coding problem',
     unit: 'difficulties',
+  },
+  {
+    id: 'bug-squasher',
+    name: 'Bug Squasher',
+    description: 'Playwright Lab steps where your tests caught every hidden bug.',
+    group: 'practice',
+    art: 'bug-off',
+    tiers: [
+      { tier: 'bronze', goal: 1 },
+      { tier: 'gold', goal: (ctx) => ctx.pwlabSteps.length },
+    ],
+    measure: (p, ctx) => ctx.pwlabSteps.filter((id) => p.pwlab?.[id]).length,
+    requirement: (goal) => (goal === 1 ? 'Catch every hidden bug in one Playwright Lab step' : `Catch every hidden bug in all ${goal} Playwright Lab steps`),
+    unit: 'steps',
   },
   {
     id: 'drill-sergeant',

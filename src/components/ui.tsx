@@ -31,7 +31,8 @@ export function Markdown({ children }: { children: string }) {
           },
           table({ children: c }) {
             return (
-              <div className="table-wrap">
+              // focusable and named, so keyboard users can scroll a wide table on a phone
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Table">
                 <table>{c}</table>
               </div>
             );
@@ -125,7 +126,11 @@ export function CodeEditor({
 }
 
 export function Diagram({ text }: { text: string }) {
-  return <pre className="diagram" data-theme="dark">{text}</pre>;
+  return (
+    <pre className="diagram" data-theme="dark" tabIndex={0}>
+      {text}
+    </pre>
+  );
 }
 
 export function DifficultyBadge({ d }: { d: Difficulty }) {

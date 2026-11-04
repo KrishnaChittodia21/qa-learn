@@ -13,7 +13,7 @@ export const SHORTS_DATA: Short[] = [
     heading: 'Error, defect, failure and root cause',
     tags: ['failure', 'reuse', 'boundaries'],
     beats: [
-      { type: 'counter', kicker: '4 June 1996 · Kourou', head: 'The first Ariane 5 *lifts off*', value: 37, unit: 'seconds of flight', sub: 'Then it veers off course, breaks up and **self-destructs**.' },
+      { type: 'counter', kicker: '4 June 1996 · Kourou', head: 'The first Ariane 5 *lifts off*', value: 37, unit: 'seconds after main-engine ignition', sub: 'Guidance is lost. It veers off course, breaks up and **self-destructs**.' },
       { type: 'spike', kicker: 'Inside the guidance computer', head: 'A *horizontal velocity* value grows', mark: 'too big for 16 bits', sub: 'A 64-bit float is converted to a **16-bit signed integer** (max 32,767). The conversion overflows.' },
       { type: 'flow', kicker: 'One unhandled error', head: 'How a number became a crash', steps: ['Overflow in the inertial reference system', 'Backup unit fails the same way', 'Diagnostic data read as flight data', 'Nozzles swing hard over', 'Rocket breaks up'], broken: 0 },
       { type: 'toggles', kicker: 'Why nobody caught it', head: 'The code came from *Ariane 4*', items: [{ label: 'Same software, reused' }, { label: 'Ariane 5 flies faster sideways' }, { label: 'Flight profile never re-tested', keep: true }], keepLabel: 'THE GAP', sub: 'On Ariane 4 the value could never get that big, so the check was left out.' },
@@ -72,7 +72,7 @@ export const SHORTS_DATA: Short[] = [
     beats: [
       { type: 'spike', kicker: '23 September 1999', head: 'A Mars probe goes *silent*', mark: 'lost on arrival', sub: 'It reaches Mars and is never heard from again.' },
       { type: 'flow', kicker: 'Two teams, one interface', head: 'The numbers crossed a *boundary*', steps: ['Ground software reports thruster impulse', 'In pound-force seconds', 'Navigation software expects newton-seconds', 'Every value is about 4.45× too small', 'Trajectory drifts for months'], broken: 2 },
-      { type: 'ladder', kicker: 'Planned vs actual', head: 'How close it came to Mars', rungs: [{ label: 'Planned', amount: 150 }, { label: 'Actual (estimate)', amount: 57 }], unit: 'km', sub: 'Far too low: it burned up or skipped off the atmosphere.' },
+      { type: 'counter', kicker: 'Arrival', head: 'How close it came to Mars', value: 57, unit: 'km above the surface (estimate)', sub: 'Far below the planned path: it burned up or skipped off the atmosphere.' },
       { type: 'quiz', kicker: 'Your turn', head: 'Which test level is built to catch this?', answer: 1, options: [
         { text: 'Unit testing of each program', why: 'Each program was right in its own units. The mismatch only exists between them.' },
         { text: 'Integration testing of the interface between them', why: 'Integration tests check that what one side sends is what the other side expects, units included.' },

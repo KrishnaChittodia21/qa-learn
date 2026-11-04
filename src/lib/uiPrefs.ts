@@ -21,6 +21,8 @@ export interface UiPrefs {
   recentCommands: string[];
   /** M8: how sections that have step lessons open, the text or the animated steps */
   lessonMode?: 'read' | 'steps';
+  /** long sections the reader opened with Read more, by "topicId:index" */
+  openSections?: Record<string, true>;
 }
 
 const KEY = 'qa-learn-ui-v1';

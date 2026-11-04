@@ -949,6 +949,10 @@
   align-items: center;
   gap: 6px;
   margin: 4px 0 12px;
+  /* a long Short title wraps instead of widening the page on phones */
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
 }
 @media (prefers-reduced-motion: reduce) {
   .sh-card:hover .sh-poster {

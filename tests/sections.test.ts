@@ -9,7 +9,7 @@ const C = await load<typeof import('../src/content')>('/src/content/index.ts');
 
 test('every section in the course passes the rules, and the three M8 sections have Learn more', () => {
   for (const t of C.TOPICS) for (const s of t.sections) assert.deepEqual(R.sectionProblems(s), [], `${t.id}: ${s.heading}`);
-  const withLearnMore = C.TOPICS.flatMap((t) => t.sections.filter((s) => s.learnMore).map((s) => t.id));
+  const withLearnMore = C.TOPICS.flatMap((t) => t.sections.filter((s) => s.learnMore).map(() => t.id));
   assert.deepEqual(withLearnMore.sort(), ['mt-test-design', 'pw-locators', 'sql-joins-validation']);
 });
 
@@ -26,9 +26,9 @@ const V = await load<{ checkSteps: (lesson: unknown, where: string) => string[] 
 const O = await load<typeof import('../src/lib/progress-ops')>('/src/lib/progress-ops.ts');
 const W = await load<typeof import('../src/lib/weak')>('/src/lib/weak.ts');
 
-test('the three M8 step lessons are valid, and a malformed step fails', () => {
+test('every step lesson is valid, and a malformed step fails', () => {
   const lessons = C.TOPICS.flatMap((t) => t.sections.flatMap((s, i) => (s.steps ? [{ t, i, steps: s.steps }] : [])));
-  assert.deepEqual(lessons.map((l) => l.t.id).sort(), ['mt-test-design', 'pw-locators', 'sql-joins-validation']);
+  assert.deepEqual(lessons.map((l) => l.t.id).sort(), ['mt-defects', 'mt-test-design', 'pw-assertions-waiting', 'pw-locators', 'sql-joins-validation']);
   for (const l of lessons) assert.deepEqual(V.checkSteps(l.steps, l.t.id), []);
 
   const good = structuredClone(lessons[0].steps);

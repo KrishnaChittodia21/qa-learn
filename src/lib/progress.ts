@@ -77,6 +77,10 @@ export interface Progress {
   shorts?: Record<string, ShortRecord>;
   /** step lessons (M8) by "topicId:sectionIndex": Your-turn steps missed on the first try in the latest run */
   steps?: Record<string, { missed: number; at: string }>;
+  /** Playwright Lab steps whose hidden bugs were all caught (from the judge's results) */
+  pwlab?: Record<string, true>;
+  /** "Show me" walkthroughs finished with Done */
+  walksDone?: number;
   settings: Settings;
 }
 
@@ -263,6 +267,16 @@ export function recordShort(id: string, event: 'watched' | 'quiz-first' | 'quiz-
 // ---- step lessons (M8): finishing records the latest run's misses (Weak areas reads them) ----
 export function recordSteps(topicId: string, index: number, missed: number) {
   update((p) => replay(p, [{ op: 'steps', topicId, index, missed }]), false);
+}
+
+// ---- badge inputs that live outside the study data ----
+/** Playwright Lab steps the judge reports with every bug caught; kept once seen, never removed */
+export function markPwLabDone(ids: string[]) {
+  const fresh = ids.filter((id) => !state.pwlab?.[id]);
+  if (fresh.length) update((p) => ({ ...p, pwlab: { ...p.pwlab, ...Object.fromEntries(fresh.map((id) => [id, true as const])) } }), false);
+}
+export function recordWalkDone() {
+  update((p) => ({ ...p, walksDone: (p.walksDone ?? 0) + 1 }), false);
 }
 
 // the shared change rules (progress-ops.ts) need to know which content exists

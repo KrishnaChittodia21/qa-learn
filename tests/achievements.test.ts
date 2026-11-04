@@ -9,7 +9,8 @@ import type { Progress } from '../src/lib/progress';
 const A = await load<typeof import('../src/content/achievements')>('/src/content/achievements.ts');
 const C = await load<typeof import('../src/content')>('/src/content/index.ts');
 const SH = await load<typeof import('../src/content/shorts')>('/src/content/shorts.ts');
-const ctx = A.buildAchievementContext({ topics: C.TOPICS, phases: C.PHASES, coding: C.CODING_PROBLEMS, companyQuestions: C.COMPANY_QUESTIONS });
+const LAB = (await load<typeof import('../src/content/pwlab')>('/src/content/pwlab.ts')).PW_LAB_STEPS.map((s) => s.id);
+const ctx = A.buildAchievementContext({ topics: C.TOPICS, phases: C.PHASES, coding: C.CODING_PROBLEMS, companyQuestions: C.COMPANY_QUESTIONS, pwlabSteps: LAB });
 const { p: empty } = await freshProgress();
 const fresh = (): Progress => structuredClone(empty);
 const day = (i: number) => new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString().slice(0, 10);
@@ -33,6 +34,8 @@ function finished(): Progress {
   p.activityDays = Array.from({ length: 400 }, (_, i) => day(i));
   // one Short a day for a week (the Shorts streak's top tier is 7)
   p.shorts = Object.fromEntries(SH.SHORTS_DATA.slice(0, 7).map((s, i) => [s.id, { watchedAt: `${day(i)}T12:00:00Z`, day: day(i) }]));
+  p.pwlab = Object.fromEntries(LAB.map((id) => [id, true as const]));
+  p.walksDone = 1;
   p.saved = C.CODING_PROBLEMS.slice(0, 25).map((q) => ({ kind: 'coding', ref: q.id, addedAt: '2026-02-01', doneAt: '2026-02-02' }));
   return p;
 }
@@ -185,4 +188,16 @@ test('Shorts badges: the first watched Short, and a run of days with one watched
   assert.equal(ev['daily-short'].value, 2);
   p.shorts[c] = { watchedAt: '2026-03-03T10:00:00Z', day: '2026-03-03' };
   assert.equal(A.evaluateAll(p, ctx)['daily-short'].tier, 'bronze');
+});
+
+test('Bug Squasher counts Lab steps with every bug caught; Shown Around needs a walkthrough followed to Done', () => {
+  const p = fresh();
+  p.pwlab = { [LAB[0]]: true, 'no-such-step': true };
+  let ev = A.evaluateAll(p, ctx);
+  assert.equal(ev['bug-squasher'].value, 1, 'unknown step ids are ignored');
+  assert.equal(ev['bug-squasher'].tier, 'bronze');
+  assert.equal(ev['shown-around'].tier, null);
+  p.walksDone = 1;
+  ev = A.evaluateAll(p, ctx);
+  assert.equal(ev['shown-around'].tier, 'standard');
 });

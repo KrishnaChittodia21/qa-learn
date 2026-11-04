@@ -6,6 +6,7 @@ import { PW_LAB_ABOUT, PW_LAB_APP_URL, PW_LAB_STEPS, type PwLabStep } from '../c
 import { CodeBlock, Markdown } from '../components/ui';
 import { celebrate } from '../lib/celebrate';
 import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
+import { markPwLabDone } from '../lib/progress';
 import { SaveButton } from '../components/SaveButton';
 
 // ---------- judge results (written by `npm run judge` to public/judge-results.json) ----------
@@ -51,6 +52,8 @@ function useJudgeResults(): Judge {
       const data = (await res.json()) as JudgeResults;
       if (!data?.steps) throw new Error('bad file');
       setLoad({ state: 'ok', data });
+      // the "Bug Squasher" badge reads these from progress
+      markPwLabDone(PW_LAB_STEPS.filter((s) => stepTone(data.steps[s.id]) === 'done').map((s) => s.id));
     } catch {
       setLoad({ state: 'missing' });
     }
