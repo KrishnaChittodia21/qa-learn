@@ -12,6 +12,9 @@ project, Render or Vercel project, secrets, CI) is changed. Its code is copied i
 
 ## Where qa-learn is today
 
+> This table is where qa-learn started when the plan was written. For what it has now, see
+> "After M12 · browser-only round" below.
+
 | Area | qa-learn now | SDL has (port from) |
 |---|---|---|
 | Hosting | GitHub Pages (`.github/workflows/deploy.yml`, `base: './'`) | Vercel app + Render service, `/api/*` rewrite (`vercel.json`, `render.yaml`) |
@@ -403,8 +406,9 @@ broke, and axe reports no serious or critical issues.
   on the server and refuse bad values; an e2e for the Shorts player's pause, speed and Back.
 - Most of the plan's list already existed from M0–M8 (progress ops and import, saved cap, badges, streaks across
   DST, validators, the step and Shorts gating, Guide me, Read/Steps memory, account isolation, reveal caps).
-- **Not done:** admin tests (M9 skipped); e2e still runs against `vite` dev, not `vite preview`; phone pages are
-  not axe-scanned (same markup and colours as desktop).
+- **Not done:** admin tests (M9 dropped).
+- **Since then:** e2e runs against the built site (`npm run build` + `vite preview`, `playwright.config.ts`), and
+  `e2e/a11y.spec.ts` axe-scans every page on the phone project as well as desktop.
 
 ### M11 · Security audit · 4–6 h
 
@@ -460,6 +464,12 @@ show sign-up prompts that can't work. This milestone adds a build that works wit
 a graded exam and see answers with no service and no sign-in; the service mode still passes its own tests; and nothing
 in SDL's projects or database changed.
 
+> **Replaced (2026-11-04).** With the service removed there is one build: `npm run build` → `dist/`, which already
+> works without a service. `build:pages`, `dist-pages/`, `mode.ts`, `playwright.pages.config.ts` and `e2e-pages/` were
+> deleted. Today `deploy.yml` (on push to `main`, or by hand) runs lint, validate, unit tests and the e2e suite against
+> the built site, then publishes `dist/`. The static checks (no `/api` call, an exam graded in the browser, a model
+> answer after an attempt, learner code under the CSP) moved to `e2e/static.spec.ts`. The notes below are history.
+
 **As built:**
 - **The flag:** `src/lib/mode.ts` exports `SERVICE`, false when `VITE_SERVICE=off`. `npm run build:pages` builds `dist-pages/`
   in that mode: the answer split is skipped (content keeps its answers) and a `<meta>` CSP is added. `npm run build`
@@ -481,6 +491,32 @@ in SDL's projects or database changed.
   also runs `test:pages` on every push.
 - **Service mode:** unchanged; all its suites still pass.
 - **Not verified:** the live site itself, which needs a push to `main`.
+
+## After M12 · browser-only round (2026-11-04)
+
+Requests made after the milestones, all browser-only (nothing in `../system-design-learn` or `../dsa-js` changed; both
+were read as reference only).
+
+- **Steps for every Syllabus section:** `src/lib/autoSteps.ts` builds a step lesson from a section's own text when it
+  has no hand-written one (exam questions that map to the section become Your-turn steps; key points close it).
+- **Picture-only step animations:** the stage shows icons only (81 Lucide icons copied into
+  `src/components/steps/glyphs.ts`); the words stay in the numbered lines. Ten machines in `scenes.ts`, chosen per
+  step by its words and kind and never repeating the last two: orbit, conveyor, dominoes, deal, constellation, tower,
+  radar, balance, funnel, stamp. Icons draw themselves on; Pause freezes the looping motion too.
+- **Coding visualiser:** the test runner traces the learner's own code on one visible test and plays it back: lit
+  line, arrays as cells with index pointers, changed values, the return against the expected value, or the crash line.
+  `src/lib/instrument.ts` (acorn 8.15.0, loaded only when a trace is asked for) adds a recorder call per statement;
+  `src/lib/trace.ts` is the recorder that runs in the same sandboxed worker as the tests (`runCode.ts`);
+  `src/components/TraceViewer.tsx` is the player. Hidden tests are never traced; a trace keeps at most 1,200 steps.
+  `tests/trace.test.ts` traces every reference solution and checks it returns exactly what the original does.
+- **Coding page:** problem, editor and test runner stacked in one column; the problem bank folds to a rail
+  (`uiPrefs.codingBankCollapsed`); a taller editor; the progress strip moved off the problem page.
+- **Pages:** Home split into Dashboard and Today; Today lost the self-ratings chart and Topics by status; Roadmap is
+  "Plan your journey" (`StudyPlanner.tsx`, `lib/pace.ts`); Syllabus is one collapsed list, with the build matrix and
+  summary on a new Build report page; Settings in tabs; a Guide me walk on every page; 24 Shorts with thumbnails and
+  Day labels.
+- **Look:** the scanline and grain texture now sits behind the content, so panels and the step stage are solid.
+- **Not verified:** the live Pages site (needs a push to `main`); animation smoothness on a slow real phone.
 
 ## Order and estimates
 
