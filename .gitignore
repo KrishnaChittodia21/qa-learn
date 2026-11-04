@@ -29,8 +29,6 @@ playwright-report/
 blob-report/
 public/judge-results.json
 
-# answer-free build (npm run build:split) and service secrets
-dist-split
+# local secrets
 .env*
 !.env.example
-e2e/.api.log
