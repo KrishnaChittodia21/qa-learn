@@ -10,6 +10,7 @@ import { SaveButton } from '../components/SaveButton';
 import { ShortCard } from '../components/ShortCard';
 import { SHORTS, shortForSection } from '../lib/shorts';
 import { StepLesson } from '../components/steps/StepLesson';
+import { lessonFor } from '../lib/autoSteps';
 import { saveUiPrefs, useUiPrefs } from '../lib/uiPrefs';
 import {
   rateIQ,
@@ -518,6 +519,8 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
         )}
         {topic.sections.map((s, i) => {
           const short = shortForSection(topic.id, i);
+          // hand-written step lesson, or one generated from the section's content
+          const lesson = lessonFor(topic, i);
           const long = s.body.length > LONG_SECTION;
           const openKey = `${topic.id}:${i}`;
           const open = !!ui.openSections?.[openKey];
@@ -562,7 +565,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                     <BookOpen size={14} aria-hidden="true" /> {s.source}
                   </div>
                 )}
-                {s.steps && (
+                {lesson && (
                   <div className="sl-mode" role="group" aria-label="How to learn this section">
                     {(['read', 'steps'] as const).map((m) => (
                       <button key={m} type="button" aria-pressed={mode === m} onClick={() => saveUiPrefs({ lessonMode: m })}>
@@ -571,9 +574,9 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                     ))}
                   </div>
                 )}
-                {s.steps && mode === 'steps' ? (
+                {lesson && mode === 'steps' ? (
                   <StepLesson
-                    lesson={s.steps}
+                    lesson={lesson}
                     onRead={() => saveUiPrefs({ lessonMode: 'read' })}
                     onFinish={(missed) => {
                       recordSteps(topic.id, i, missed);

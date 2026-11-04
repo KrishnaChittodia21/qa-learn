@@ -153,10 +153,8 @@
   position: relative;
   border: 1px solid var(--line-2);
   border-radius: 12px;
-  /* a solid canvas a shade deeper than the card, with a faint dot grid */
-  background-color: var(--bg-2);
-  background-image: radial-gradient(var(--line-2) 1px, transparent 1.2px);
-  background-size: 22px 22px;
+  /* a solid canvas: no dot grid (the page's scanline/grain texture sits behind .main, base.css) */
+  background: var(--panel-top);
   box-shadow: inset 0 1px 0 var(--line);
 }
 .sl-stage svg {
@@ -829,4 +827,113 @@
 }
 .sc-rlink.moved {
   stroke: var(--green);
+}
+
+/* a step with nothing to draw (generated lessons' text steps and questions): the text takes the full width */
+.sl-body.no-visual { grid-template-columns: minmax(0, 1fr); }
+.sl-body.no-visual .sl-stage { display: none; }
+
+/* ---------- picture scenes (generated lessons): ten machines of icon pieces, no words in the box ---------- */
+.sl .sc-glyph { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sl .sc-ghost { fill: none; stroke: none; }
+.sl .tone-ink.sc-piece, .sl .sc-hero.tone-ink { color: var(--accent); }
+
+/* pieces: tiles, cards, dominoes, blocks and orbs */
+.sl .sc-piece { transition: opacity 0.5s ease-out; }
+.sl .sc-piece .sc-shape {
+  fill: color-mix(in srgb, currentColor 10%, var(--panel-top));
+  stroke: color-mix(in srgb, currentColor 40%, var(--line-2));
+  stroke-width: 2;
+  transition: fill 0.5s, stroke 0.5s, stroke-width 0.5s, filter 0.5s;
+}
+.sl .sc-piece:not(.now) .sc-shape { fill: color-mix(in srgb, currentColor 6%, var(--panel-top)); }
+.sl .sc-piece:not(.now) .sc-glyph { opacity: 0.75; transition: opacity 0.5s; }
+.sl .sc-piece.now .sc-shape {
+  fill: color-mix(in srgb, currentColor 18%, var(--panel-top));
+  stroke: currentColor;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, currentColor 45%, transparent));
+  animation: sc-breathe 2.4s ease-in-out infinite;
+}
+@keyframes sc-breathe { 50% { stroke-opacity: 0.5; } }
+.sl .sc-card-in { fill: none; stroke: color-mix(in srgb, currentColor 25%, transparent); stroke-dasharray: 4 5; }
+.sl .sc-card.face-down .sc-shape { fill: color-mix(in srgb, var(--accent) 30%, var(--panel-top)); }
+.sl .sc-card.face-down .sc-glyph, .sl .sc-card.face-down .sc-card-in { opacity: 0; }
+.sl .sc-domino-mid { stroke: color-mix(in srgb, currentColor 40%, transparent); stroke-width: 2; }
+.sl .sc-orb .sc-shape { stroke-width: 2.5; }
+
+/* shared bits */
+.sl .sc-burst { fill: none; stroke: var(--accent); stroke-width: 2; }
+.sl .sc-spin { transform-box: fill-box; transform-origin: center; animation: sc-spin 10s linear infinite; }
+.sl .sc-spin.rev { animation-direction: reverse; animation-duration: 14s; }
+.sl .sc-spin.fast { animation-duration: 1.6s; }
+.sl .sc-spin.sweep { animation-duration: 3.2s; }
+@keyframes sc-spin { to { rotate: 360deg; } }
+.sl .sc-spark { fill: var(--accent); filter: drop-shadow(0 0 6px var(--accent)); }
+.sl .sc-spark.s1 { fill: var(--cyan); filter: drop-shadow(0 0 6px var(--cyan)); }
+.sl .sc-spark.s2 { fill: var(--iris); }
+.sl .sc-floor { stroke: var(--line-2); stroke-width: 2; stroke-linecap: round; }
+
+/* orbit */
+.sl .sc-ring { fill: none; stroke: color-mix(in srgb, var(--accent) 28%, transparent); stroke-width: 1.5; stroke-dasharray: 2 8; }
+.sl .sc-spoke { stroke: color-mix(in srgb, var(--accent) 45%, transparent); stroke-width: 1.5; }
+.sl .sc-hub { color: var(--accent); }
+.sl .sc-hub-core { fill: color-mix(in srgb, var(--accent) 14%, var(--panel-top)); stroke: var(--accent); stroke-width: 2; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 45%, transparent)); }
+.sl .sc-hub-pulse { fill: none; stroke: var(--accent); transform-box: fill-box; transform-origin: center; animation: sc-pulse-out 2.4s ease-out infinite; }
+@keyframes sc-pulse-out { from { scale: 1; opacity: 0.6; } to { scale: 1.6; opacity: 0; } }
+
+/* conveyor */
+.sl .sc-belt { fill: var(--inset); stroke: var(--line-2); stroke-width: 1.5; }
+.sl .sc-belt-run { stroke: color-mix(in srgb, var(--accent) 55%, transparent); stroke-width: 3; stroke-dasharray: 8 14; stroke-linecap: round; animation: sc-run 0.9s linear infinite; }
+@keyframes sc-run { to { stroke-dashoffset: -22; } }
+.sl .sc-roller { fill: var(--panel-top); stroke: var(--line-2); stroke-width: 2; }
+.sl .sc-roller-l { stroke: var(--muted); stroke-width: 2; }
+.sl .sc-post { stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 3 5; }
+.sl .sc-parcel { color: var(--flaky); }
+.sl .sc-parcel rect { fill: color-mix(in srgb, var(--flaky) 22%, var(--panel-top)); stroke: var(--flaky); stroke-width: 2; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flaky) 60%, transparent)); }
+
+/* deal */
+.sl .sc-deck { fill: color-mix(in srgb, var(--accent) 22%, var(--panel-top)); stroke: color-mix(in srgb, var(--accent) 60%, transparent); stroke-width: 1.5; }
+
+/* constellation */
+.sl .sc-star { fill: var(--ink); animation: sc-twinkle 3s ease-in-out infinite; }
+@keyframes sc-twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.8; } }
+.sl .sc-constel { stroke: color-mix(in srgb, var(--cyan) 70%, transparent); stroke-width: 1.5; filter: drop-shadow(0 0 4px var(--cyan)); }
+
+/* tower */
+.sl .sc-dust { fill: var(--muted); }
+
+/* radar */
+.sl .sc-radar-ring { fill: none; stroke: color-mix(in srgb, var(--pass) 30%, transparent); stroke-width: 1.2; }
+.sl .sc-wedge { fill: color-mix(in srgb, var(--pass) 16%, transparent); }
+.sl .sc-sweep-edge { stroke: var(--pass); stroke-width: 2; filter: drop-shadow(0 0 6px var(--pass)); }
+.sl .sc-radar-dot { fill: var(--pass); }
+.sl .sc-beam { stroke: var(--pass); stroke-width: 2; filter: drop-shadow(0 0 6px var(--pass)); }
+
+/* balance */
+.sl .sc-stand { fill: var(--inset); stroke: var(--line-2); stroke-width: 1.5; }
+.sl .sc-beam-bar { stroke: var(--muted); stroke-width: 6; stroke-linecap: round; }
+.sl .sc-pivot { fill: var(--accent); }
+.sl .sc-string { stroke: var(--muted); stroke-width: 2; }
+.sl .sc-plate { fill: var(--inset); stroke: var(--muted); stroke-width: 2; }
+
+/* funnel */
+.sl .sc-funnel { fill: color-mix(in srgb, var(--iris) 8%, var(--panel-top)); stroke: color-mix(in srgb, var(--iris) 55%, var(--line-2)); stroke-width: 2; stroke-linejoin: round; }
+.sl .sc-funnel-flow { fill: none; stroke: color-mix(in srgb, var(--iris) 60%, transparent); stroke-width: 2; stroke-dasharray: 4 10; animation: sc-run 0.8s linear infinite; }
+
+/* stamp */
+.sl .sc-seal circle { fill: var(--pass); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--pass) 60%, transparent)); }
+.sl .sc-seal .sc-tick { fill: none; stroke: var(--on-fill, #fff); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* hero (the opening picture) */
+.sl .sc-hero > circle { fill: color-mix(in srgb, currentColor 12%, var(--panel-top)); stroke: currentColor; stroke-width: 3; filter: drop-shadow(0 0 22px color-mix(in srgb, currentColor 45%, transparent)); }
+.sl .sc-hero .sc-glyph { stroke-width: 1.6; }
+.sl .sc-portal { fill: none; stroke: color-mix(in srgb, var(--accent) 35%, transparent); stroke-width: 1.5; stroke-dasharray: 14 10 2 10; }
+.sl .sc-mote { fill: var(--cyan); animation: sc-drift 3s ease-out infinite; }
+@keyframes sc-drift { from { translate: 0 0; opacity: 0.9; } to { translate: var(--dx) var(--dy); opacity: 0; } }
+
+/* Pause freezes the looping motion too; reduced motion turns it off */
+.sl.paused .st-scene * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .sl .st-scene * { animation: none !important; }
 }

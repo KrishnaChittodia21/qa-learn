@@ -2,7 +2,7 @@
    syllabus.css — OWNER: Syllabus/Achievements/overlays agent (wave 2).
    Scope: the Syllabus page (/contents, src/pages/Contents.tsx) per qa-learn-designs/Syllabus.html:
    title plate, build summary, BUILD MATRIX (tracks × stages of job tiles, wires, scan beam),
-   filter bar + legend, per-stage reports with topic rows and section lists, practice & tools.
+   filter bar + legend, per-stage reports with topic rows and section lists.
    Also keeps the shared topic-card grid helpers used by Weak areas / Playwright Lab.
    (The syllabus drawer itself lives in shell.css.)
    ===================================================================== */
@@ -317,20 +317,6 @@
 .syl-page .secs .sviz { display: inline-block; margin-left: 6px; vertical-align: -2px; color: var(--cyan-t); }
 .syl-page .syl-empty { display: grid; justify-items: center; gap: 12px; margin-top: var(--syl-gap); }
 
-/* ---- practice & tools ---- */
-.syl-page .tools-panel { margin-top: var(--syl-gap); scroll-margin-top: calc(var(--topbar-h) + 16px); }
-.syl-page .tools-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.syl-page .tool {
-  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px 10px; height: 100%; padding: 14px; text-decoration: none; color: var(--ink);
-  background: var(--inset); box-shadow: inset 0 0 0 1px var(--frame-n); border-radius: 3px; transition: box-shadow .2s, background .2s;
-}
-.syl-page .tool:hover { box-shadow: inset 0 0 0 1px var(--mint); background: color-mix(in oklab, var(--mint) 5%, var(--inset)); text-decoration: none; }
-.syl-page .tool-icon { color: var(--mint-t); margin-top: 1px; }
-.syl-page .tool-b { display: grid; gap: 4px; min-width: 0; }
-.syl-page .tool-b b { font: 600 14px/1.25 var(--sans); }
-.syl-page .tool-d { font-size: 12.5px; line-height: 1.45; color: var(--ink-3); font-weight: 400; }
-.syl-page .tool-c { grid-column: 2; font: 500 10.5px/1 var(--mono); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
-
 /* ---- responsive ---- */
 @media (max-width: 1200px) {
   .syl-page .syl-bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -352,7 +338,6 @@
   .syl-page .rep { padding: 22px 20px 12px; }
   .syl-page .tbody { padding-left: 6px; }
   .syl-page .secs { grid-template-columns: 1fr; }
-  .syl-page .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* phones: the matrix becomes a per-track list of stages; reports run in phase order */
 @media (max-width: 900px) {
@@ -389,7 +374,6 @@
   .syl-page .trow-sum { grid-template-columns: 22px minmax(0, 1fr); }
   .syl-page .trow .rt { grid-column: 2; }
   .syl-page .row2 { grid-column: 1 / -1; grid-template-columns: 1fr; }
-  .syl-page .tools-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 420px) {
   .syl-page .tot-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -401,3 +385,12 @@
   .syl-page .mx-wrap .scan { display: none; }
 }
 @media (max-width: 600px) { .syl-slot { display: none; } }
+
+/* the Syllabus list (M12 follow-up): search and filters on their own bar, every stage in one column */
+.syl-page .syl-filters { padding: 18px 22px; display: grid; gap: 12px; margin-top: var(--syl-gap); }
+.syl-page .syl-filters .fbar { margin: 0; }
+.syl-page .syl-filters .mx-tools { margin: 0; }
+.syl-page .reports.one-list { display: flex; flex-direction: column; align-items: stretch; }
+/* the whole stage card toggles it (Contents.tsx) */
+.syl-page .rep .rep-head,
+.syl-page .rep .rep-stats { cursor: pointer; }

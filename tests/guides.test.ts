@@ -7,16 +7,17 @@ const G = await load<typeof import('../src/lib/pageGuides')>('/src/lib/pageGuide
 
 // one example path per route in src/App.tsx
 const PAGES = [
-  '/', '/contents', '/topic/mt-fundamentals', '/topic/mt-fundamentals/exam', '/coding', '/coding/sum-array', '/roadmap',
+  '/', '/today', '/contents', '/build', '/topic/mt-fundamentals', '/topic/mt-fundamentals/exam', '/coding', '/coding/sum-array', '/roadmap',
   '/pw-lab', '/pw-lab/step1', '/playground', '/companies', '/weak-areas', '/practice', '/achievements', '/settings',
   '/saved', '/shorts', '/short/test-pyramid',
 ];
 
-test('every page has a guide with a title, an intro and at least one item', () => {
+test('every page has a guide with a title, an intro, at least one item and a walkthrough', () => {
   for (const path of PAGES) {
     const g = G.guideFor(path);
     assert.ok(g, `no guide for ${path}`);
     assert.ok(g.title && g.intro && g.items.length, `incomplete guide for ${path}`);
+    assert.ok(g.walk?.length, `no "Show me" walkthrough for ${path}`);
   }
   assert.equal(G.guideFor('/no-such-page'), null, 'an unknown path falls back to the welcome tour');
 });

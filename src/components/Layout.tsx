@@ -18,6 +18,8 @@ import {
   Search,
   SlidersHorizontal,
   Star,
+  LayoutDashboard,
+  Grid3x3,
   Clapperboard,
   Sun,
   Terminal,
@@ -73,11 +75,13 @@ interface NavItem {
 
 /** primary instruments, in the mockup's order (numbered 01–07 in the rail) */
 const PRIMARY: NavItem[] = [
-  { to: '/', label: 'Today', icon: Crosshair, match: (p) => p === '/' },
+  { to: '/', label: 'Dashboard', dock: 'Home', icon: LayoutDashboard, match: (p) => p === '/' },
+  { to: '/today', label: 'Today', icon: Crosshair, match: (p) => p === '/today' },
   { to: '/contents', label: 'Syllabus', icon: Layers, match: (p) => p.startsWith('/contents') || p.startsWith('/topic/') },
   { to: '/coding', label: 'Coding', icon: Code2, match: (p) => p.startsWith('/coding') },
   { to: '/pw-lab', label: 'Playwright Lab', dock: 'Lab', icon: FlaskConical, match: (p) => p.startsWith('/pw-lab') },
   { to: '/roadmap', label: 'Roadmap', icon: Route, match: (p) => p.startsWith('/roadmap') },
+  { to: '/build', label: 'Build report', dock: 'Report', icon: Grid3x3, match: (p) => p.startsWith('/build') },
   { to: '/weak-areas', label: 'Weak areas', icon: TriangleAlert, match: (p) => p.startsWith('/weak-areas') || p.startsWith('/practice') },
   { to: '/achievements', label: 'Achievements', icon: Award, match: (p) => p.startsWith('/achievements') },
 ];

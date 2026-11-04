@@ -23,6 +23,8 @@ export interface UiPrefs {
   lessonMode?: 'read' | 'steps';
   /** long sections the reader opened with Read more, by "topicId:index" */
   openSections?: Record<string, true>;
+  /** the coding problem page's problem bank is folded to a thin rail */
+  codingBankCollapsed?: boolean;
 }
 
 const KEY = 'qa-learn-ui-v1';

@@ -1,4 +1,5 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Check, Compass, Monitor, Moon, RotateCcw, Sun } from 'lucide-react';
 import { resetProgress, setSettings, useProgress, type Settings } from '../lib/progress';
 import { saveUiPrefs, useUiPrefs } from '../lib/uiPrefs';
@@ -16,6 +17,16 @@ const THEMES: { v: Settings['theme']; label: string; icon: typeof Sun }[] = [
   { v: 'light', label: 'Daylight', icon: Sun },
   { v: 'dark', label: 'Obsidian', icon: Moon },
 ];
+/** the Settings tabs, in order; the chosen one is kept in the URL (?tab=) */
+const TABS = [
+  { id: 'exam', label: 'Exams' },
+  { id: 'look', label: 'Appearance' },
+  { id: 'lock', label: 'Study lock' },
+  { id: 'guide', label: 'Guide & tips' },
+  { id: 'danger', label: 'Reset' },
+] as const;
+type SettingsTab = (typeof TABS)[number]['id'];
+
 /** each accent id (kept from older saves) → its Spectral hue */
 const ACCENT_HUE: Record<string, string> = { indigo: 'var(--mint)', teal: 'var(--cyan)', rose: 'var(--lilac)', amber: 'var(--lime)' };
 
@@ -41,6 +52,21 @@ export default function SettingsPage() {
   const ui = useUiPrefs();
   const accent = s.accent ?? 'indigo';
   const examMin = Math.round((s.secondsPerQuestion * 15) / 60);
+  const [params, setParams] = useSearchParams();
+  const tab: SettingsTab = TABS.find((t) => t.id === params.get('tab'))?.id ?? 'exam';
+  const select = (id: SettingsTab, focus = false) => {
+    setParams({ tab: id }, { replace: true });
+    if (focus) requestAnimationFrame(() => document.getElementById(`set-tab-${id}`)?.focus());
+  };
+  // tabs pattern: ← → move between tabs, Home / End jump to the ends
+  const onTabKey = (e: KeyboardEvent) => {
+    const i = TABS.findIndex((t) => t.id === tab);
+    const to = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : null;
+    if (to === null) return;
+    e.preventDefault();
+    select(TABS[(to + TABS.length) % TABS.length].id, true);
+  };
+  const panel = (id: SettingsTab) => ({ role: 'tabpanel', id: `set-panel-${id}`, 'aria-labelledby': `set-tab-${id}`, hidden: tab !== id });
 
   return (
     <div className="page set-page">
@@ -85,7 +111,25 @@ export default function SettingsPage() {
         </section>
 
         {/* ---------- exam calibration ---------- */}
-        <section className="panel set-exam rise" style={{ '--i': 2 } as CSSProperties} aria-labelledby="set-exam-t">
+        <div className="set-tabs saved-chips" role="tablist" aria-label="Settings sections" onKeyDown={onTabKey}>
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              id={`set-tab-${t.id}`}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              aria-controls={`set-panel-${t.id}`}
+              tabIndex={tab === t.id ? 0 : -1}
+              className={`chip ${tab === t.id ? 'on' : ''}`}
+              onClick={() => select(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <section {...panel('exam')} className="panel set-exam rise" style={{ '--i': 2 } as CSSProperties}>
           <div className="p-head">
             <h2 className="p-title" id="set-exam-t">
               Exam calibration
@@ -165,7 +209,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ---------- appearance ---------- */}
-        <section className="panel set-look rise" style={{ '--i': 3 } as CSSProperties} aria-labelledby="set-look-t">
+        <section {...panel('look')} className="panel set-look rise" style={{ '--i': 3 } as CSSProperties}>
           <div className="p-head">
             <h2 className="p-title" id="set-look-t">
               Appearance
@@ -219,7 +263,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ---------- study-first lock ---------- */}
-        <section className="panel set-lock rise" style={{ '--i': 4 } as CSSProperties} aria-labelledby="set-lock-t">
+        <section {...panel('lock')} className="panel set-lock rise" style={{ '--i': 4 } as CSSProperties}>
           <div className="p-head">
             <h2 className="p-title" id="set-lock-t">
               Study-first lock
@@ -241,7 +285,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ---------- guide ---------- */}
-        <section className="panel set-guide rise" style={{ '--i': 5 } as CSSProperties} aria-labelledby="set-guide-t">
+        <section {...panel('guide')} className="panel set-guide rise" style={{ '--i': 5 } as CSSProperties}>
           <div className="p-head">
             <h2 className="p-title" id="set-guide-t">
               Guide
@@ -272,7 +316,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ---------- fresh start ---------- */}
-        <section className="panel flat set-danger rise" style={{ '--i': 6 } as CSSProperties} aria-labelledby="set-danger-t">
+        <section {...panel('danger')} className="panel flat set-danger rise" style={{ '--i': 6 } as CSSProperties}>
           <div>
             <span className="mlabel t-fail">Danger zone</span>
             <h2 className="p-title" id="set-danger-t">

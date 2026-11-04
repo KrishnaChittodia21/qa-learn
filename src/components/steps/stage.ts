@@ -205,7 +205,8 @@ export class Stage {
 
   async do(a: StepAction) {
     if (isScene(a)) {
-      this.clearScene();
+      // a glyphs scene builds on itself line by line (scenes.ts clears it when the picture changes)
+      if (!('glyphs' in a)) this.clearScene();
       this.svg.classList.add('scene-on');
       await drawScene({ g: this.scene, tall: this.tall, tween: (ms, f, e) => this.tween(ms, f, e), sleep: (ms) => this.sleep(ms) }, a);
     } else if ('say' in a) this.onSay(a.say);

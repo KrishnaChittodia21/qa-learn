@@ -371,7 +371,7 @@ export function ShortPlayer({ entry, onFinish, onQuiz, next: upNext }: { entry: 
   const lesson = `/topic/${topic.id}?tab=learn&s=${section}`;
 
   return (
-    <div className={`sp ${paused || held ? 'paused' : ''}`} role="region" aria-roledescription="short video" aria-label={short.title}>
+    <div className={`sp-player ${paused || held ? 'paused' : ''}`} role="region" aria-roledescription="short video" aria-label={short.title}>
       <div className="sp-bars" ref={bars} aria-hidden="true">
         {[...beats, null].map((b, i) => (
           <div key={i} className={`sp-bar ${b?.type === 'quiz' ? 'q' : ''}`}>

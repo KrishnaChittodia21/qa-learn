@@ -1,13 +1,14 @@
 import { useEffect, useState, type CSSProperties, type ReactNode, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, Lightbulb, Play, RotateCcw, Search, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, Lightbulb, PanelLeftClose, PanelLeftOpen, Play, RotateCcw, Search, Send } from 'lucide-react';
 import { CODING_PROBLEMS } from '../content';
 import type { CodingProblem, Difficulty, FollowUp } from '../types';
 import { useReveal } from '../lib/answers';
 import { RevealButton } from '../components/RevealButton';
 import { SaveButton } from '../components/SaveButton';
 import { setDraft, setFlag, useProgress, type Progress } from '../lib/progress';
+import { saveUiPrefs, useUiPrefs } from '../lib/uiPrefs';
 import { celebrate } from '../lib/celebrate';
 import { RunnerConsole } from '../components/TestRunner';
 import { runSummary, useTestRun } from '../lib/testRun';
@@ -429,6 +430,20 @@ function ProblemBank({ p, current }: { p: Progress; current: CodingProblem }) {
       return n;
     });
 
+  const collapsed = !!useUiPrefs().codingBankCollapsed;
+  if (collapsed)
+    return (
+      <aside className="panel cx-bank is-rail" aria-label="Problem bank">
+        <button type="button" className="cx-bank-tog" onClick={() => saveUiPrefs({ codingBankCollapsed: false })} aria-expanded={false} title="Show the problem bank">
+          <PanelLeftOpen size={18} aria-hidden="true" />
+          <span className="sr-only">Show the problem bank</span>
+        </button>
+        <span className="cx-rail-label mlabel" aria-hidden="true">
+          Problem bank · {solved}/{CODING_PROBLEMS.length}
+        </span>
+      </aside>
+    );
+
   return (
     <aside className="panel cx-bank" aria-label="Problem bank">
       <div className="p-head">
@@ -436,6 +451,10 @@ function ProblemBank({ p, current }: { p: Progress; current: CodingProblem }) {
         <span className="mlabel">
           <b>{solved}</b> / {CODING_PROBLEMS.length} solved
         </span>
+        <button type="button" className="cx-bank-tog" onClick={() => saveUiPrefs({ codingBankCollapsed: true })} aria-expanded={true} title="Hide the problem bank">
+          <PanelLeftClose size={16} aria-hidden="true" />
+          <span className="sr-only">Hide the problem bank</span>
+        </button>
       </div>
       <FilterControls f={f} set={setF} p={p} compact />
       <div className="cx-bank-scroll">
@@ -509,6 +528,7 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
     document.getElementById('cx-solution')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }, [showSol]);
   const hiddenN = q.tests.length - visible.length;
+  const bankFolded = !!useUiPrefs().codingBankCollapsed;
 
   return (
     <div className="page cx-page cx-problem">
@@ -517,9 +537,10 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
           problem {pad(n)} / {CODING_PROBLEMS.length} · {STATE_LABEL[st]}
         </span>
       </ConsoleSlot>
-      <div className="cx-bento cx-prob-bento">
+      <div className={`cx-prob-layout ${bankFolded ? 'bank-folded' : ''}`}>
         <ProblemBank p={p} current={q} />
-        <Readouts p={p} current={q} />
+        {/* one column, top to bottom: the problem, the editor, the test runner, then the solution and pager */}
+        <div className="cx-prob-main">
 
         <section className="panel cx-stmt rise" style={{ '--i': 2 } as CSSProperties} aria-labelledby="cx-title">
           <div className="cx-st-top">
@@ -669,6 +690,7 @@ function ProblemView({ q, n, prev, next }: { q: CodingProblem; n: number; prev?:
             </Link>
           )}
         </nav>
+        </div>
       </div>
     </div>
   );
@@ -759,7 +781,7 @@ function Workbench({
           <span className="ok">◆ sandbox</span>
         </div>
       </section>
-      <RunnerConsole className="cx-run" run={t.run} busy={t.busy} fnName={q.fnName} tests={q.tests} history={t.history} />
+      <RunnerConsole className="cx-run" run={t.run} busy={t.busy} fnName={q.fnName} tests={q.tests} history={t.history} code={code} />
     </>
   );
 }

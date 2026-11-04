@@ -4,6 +4,7 @@
 // Pause freezes it, Back/Next cancels it and reduced motion jumps to the end.
 // Sizes here are mirrored in scripts/validate-steps.mjs, which checks every scene fits both stages.
 import type { SceneAction, SceneNumber, StepTone } from '../../types';
+import { GLYPHS } from './glyphs';
 
 const NS = 'http://www.w3.org/2000/svg';
 export function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>, parent?: Element) {
@@ -443,6 +444,584 @@ async function ring(c: SceneCtx, a: Extract<SceneAction, { ring: unknown }>) {
   }
 }
 
+// ---- picture scenes (generated lessons): icons only, the words stay in the lines beside the stage ----
+// Each `glyphs` style is its own little machine: an orbit, a conveyor, dominoes, a dealt hand, a constellation, a
+// tower, a radar, a balance, a funnel or a stamped checklist. `at` is the line being lit: what is already drawn stays,
+// and only the new item animates in, so the picture builds up in step with the lines. Looping background motion is
+// CSS (it freezes with Pause via .sl.paused); every entrance runs on the Stage clock.
+
+type GlyphsAction = Extract<SceneAction, { glyphs: unknown }>['glyphs'];
+type Style = GlyphsAction['layout'];
+type Item = { icon: string; tone?: StepTone };
+type Kind = 'tile' | 'card' | 'domino' | 'block' | 'orb';
+
+/** a springy settle: overshoots a little, then rests at 1 */
+const spring = (k: number) => 1 - Math.cos(k * Math.PI * 2.4) * Math.exp(-5 * k);
+const easeIn = (k: number) => k * k * k;
+function bounce(k: number) {
+  const n = 7.5625;
+  const d = 2.75;
+  if (k < 1 / d) return n * k * k;
+  if (k < 2 / d) return n * (k -= 1.5 / d) * k + 0.75;
+  if (k < 2.5 / d) return n * (k -= 2.25 / d) * k + 0.9375;
+  return n * (k -= 2.625 / d) * k + 0.984375;
+}
+const setT = (g: Element, x: number, y: number, rot = 0, s: number | [number, number] = 1) =>
+  g.setAttribute('transform', `translate(${x} ${y}) rotate(${rot}) scale(${Array.isArray(s) ? s.join(' ') : s})`);
+const lerp = (a: number, b: number, e: number) => a + (b - a) * e;
+/** runs alongside the main motion: a Back/Next mid-way cancels it quietly instead of as an unhandled rejection */
+function bg<T>(p: Promise<T>) {
+  p.catch(() => {});
+  return p;
+}
+
+/** rings that expand and fade where something just landed */
+function burst(c: SceneCtx, parent: Element, x: number, y: number, r: number, n = 2) {
+  const rings = Array.from({ length: n }, () => el('circle', { class: 'sc-burst', cx: x, cy: y, r: 4 }, parent));
+  return c
+    .tween(900, (e) => rings.forEach((ring, k) => {
+      const f = Math.max(0, Math.min(1, e * 1.3 - k * 0.3));
+      ring.setAttribute('r', String(4 + r * f));
+      ring.style.opacity = String(0.6 * (1 - f));
+    }), easeOut)
+    .finally(() => rings.forEach((r) => r.remove()));
+}
+/** a 24 × 24 stroke icon (glyphs.ts), centred on 0,0 at `size`; each stroke can be drawn on (pathLength 1) */
+function glyph(parent: Element, name: string, size: number, dy = 0) {
+  const g = el('g', { class: 'sc-glyph', transform: `translate(${-size / 2} ${dy - size / 2}) scale(${size / 24})` }, parent);
+  for (const [tag, attrs] of GLYPHS[name] ?? GLYPHS.sparkles) el(tag as 'path', { ...attrs, pathLength: 1 }, g);
+  return g;
+}
+/** strokes an icon on, as if drawn by hand */
+function drawOn(c: SceneCtx, g: Element, ms = 650) {
+  const parts = [...g.querySelectorAll<SVGElement>('.sc-glyph > *')];
+  for (const p of parts) {
+    p.style.strokeDasharray = '1';
+    p.style.strokeDashoffset = '1';
+  }
+  return c.tween(ms, (e) => parts.forEach((p) => (p.style.strokeDashoffset = String(1 - e))), easeOut);
+}
+/** a line that draws itself from its start to its end */
+function drawLine(c: SceneCtx, line: SVGElement, ms = 420) {
+  line.setAttribute('pathLength', '1');
+  line.style.strokeDasharray = '1';
+  line.style.strokeDashoffset = '1';
+  return c.tween(ms, (e) => (line.style.strokeDashoffset = String(1 - e)), easeOut);
+}
+async function pop(c: SceneCtx, g: SVGGElement, x: number, y: number, rot = 0, ms = 560) {
+  await c.tween(ms, (e) => {
+    g.style.opacity = String(Math.min(1, e * 2.5));
+    setT(g, x, y, rot, 0.3 + 0.7 * spring(e));
+  });
+}
+/** an icon on a shape; (0,0) is its centre (a domino's: its foot) */
+function shape(parent: Element, it: Item, w: number, h: number, kind: Kind) {
+  const g = el('g', { class: `sc-piece sc-${kind} ${toneOf(it.tone)}` }, parent);
+  if (kind === 'orb') el('circle', { class: 'sc-shape', r: w / 2 }, g);
+  else el('rect', { class: 'sc-shape', x: -w / 2, y: kind === 'domino' ? -h : -h / 2, width: w, height: h, rx: kind === 'block' ? 10 : kind === 'card' ? 12 : Math.min(w, h) * 0.26 }, g);
+  if (kind === 'card') el('rect', { class: 'sc-card-in', x: -w / 2 + 6, y: -h / 2 + 6, width: w - 12, height: h - 12, rx: 8 }, g);
+  if (kind === 'domino') el('line', { class: 'sc-domino-mid', x1: -w / 2 + 8, x2: w / 2 - 8, y1: -h * 0.36, y2: -h * 0.36 }, g);
+  glyph(g, it.icon, Math.min(w, kind === 'domino' ? h * 0.55 : h) * 0.52, kind === 'domino' ? -h * 0.66 : 0);
+  return g;
+}
+
+interface Kit {
+  c: SceneCtx;
+  root: SVGGElement;
+  back: SVGGElement;
+  items: Item[];
+  n: number;
+  at: number;
+  W: number;
+  H: number;
+  tall: boolean;
+  hub: string;
+  /** item i's piece: tagged with its index, lit when it is the line being read, hidden until a live entrance shows it */
+  piece: (i: number, parent: Element, w: number, h: number, kind: Kind, live: boolean) => SVGGElement;
+}
+interface Machine {
+  build(): void;
+  add(i: number, live: boolean): Promise<void> | void;
+}
+
+function orbit(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const cx = k.W / 2;
+  const cy = k.H / 2;
+  const rx = tall ? 165 : 330;
+  const ry = tall ? 245 : 105;
+  const size = tall ? 78 : 58;
+  const hubR = tall ? 62 : 46;
+  // wide: start at the side (and turn a ring of 4 by 45°) so items spread out sideways instead of crowding the hub
+  const ang = (i: number) => ((tall ? -90 : n % 4 === 0 ? 45 : 0) + (i * 360) / n) * (Math.PI / 180);
+  const pt = (a: number, r = 1) => ({ x: cx + rx * r * Math.cos(a), y: cy + ry * r * Math.sin(a) });
+  return {
+    build() {
+      el('ellipse', { class: 'sc-ring', cx, cy, rx, ry }, k.back);
+      const squash = el('g', { transform: `translate(${cx} ${cy}) scale(1 ${ry / rx})` }, k.back);
+      const spin = el('g', { class: 'sc-spin' }, squash);
+      el('circle', { class: 'sc-ghost', r: rx }, spin);
+      [0, 1, 2].forEach((j) => el('circle', { class: `sc-spark s${j}`, r: 5 - j, cx: rx * Math.cos(j * 2.1), cy: rx * Math.sin(j * 2.1) }, spin));
+      const h = el('g', { class: 'sc-hub' }, k.root);
+      el('circle', { class: 'sc-hub-pulse', r: hubR }, h);
+      el('circle', { class: 'sc-hub-core', r: hubR }, h);
+      glyph(h, k.hub, hubR * 0.95);
+      setT(h, cx, cy);
+    },
+    async add(i, live) {
+      const a = ang(i);
+      const end = pt(a);
+      const spoke = el('line', { class: 'sc-spoke', x1: cx, y1: cy, x2: end.x, y2: end.y }, k.back);
+      const g = k.piece(i, k.root, size, size, 'tile', live);
+      if (!live) return setT(g, end.x, end.y);
+      // spirals out of the hub onto its place on the ring
+      await c.tween(900, (e) => {
+        const p = pt(a - 2.4 * (1 - e), e);
+        g.style.opacity = String(Math.min(1, e * 3));
+        setT(g, p.x, p.y, 0, 0.35 + 0.65 * e);
+      }, easeOut);
+      bg(burst(c, k.back, end.x, end.y, size));
+      bg(drawLine(c, spoke));
+      await drawOn(c, g);
+    },
+  };
+}
+
+function conveyor(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const gap = n > 1 ? (tall ? 520 : 680) / (n - 1) : 0;
+  const size = Math.min(tall ? 84 : 86, (n > 1 ? gap : 200) - 18);
+  const slot = (i: number) => (tall ? { x: 190, y: n > 1 ? 90 + i * gap : 350 } : { x: n > 1 ? 110 + i * gap : 450, y: 108 });
+  const belt = (i: number) => (tall ? { x: 392, y: slot(i).y } : { x: slot(i).x, y: 234 });
+  const start = tall ? { x: 392, y: 30 } : { x: 30, y: 234 };
+  return {
+    build() {
+      if (tall) el('rect', { class: 'sc-belt', x: 378, y: 30, width: 28, height: 640, rx: 14 }, k.back);
+      else el('rect', { class: 'sc-belt', x: 20, y: 220, width: 860, height: 28, rx: 14 }, k.back);
+      el('line', tall ? { class: 'sc-belt-run', x1: 392, y1: 40, x2: 392, y2: 660 } : { class: 'sc-belt-run', x1: 30, y1: 234, x2: 870, y2: 234 }, k.back);
+      for (const end of tall ? [{ x: 392, y: 44 }, { x: 392, y: 656 }] : [{ x: 34, y: 234 }, { x: 866, y: 234 }]) {
+        const r = el('g', { transform: `translate(${end.x} ${end.y})` }, k.back);
+        const s = el('g', { class: 'sc-spin fast' }, r);
+        el('circle', { class: 'sc-roller', r: 11 }, s);
+        el('line', { class: 'sc-roller-l', x1: -11, x2: 11, y1: 0, y2: 0 }, s);
+      }
+      for (let i = 0; i < n; i++) {
+        const s = slot(i);
+        const b = belt(i);
+        el('line', { class: 'sc-post', x1: s.x, y1: s.y, x2: b.x, y2: b.y }, k.back);
+      }
+    },
+    async add(i, live) {
+      const s = slot(i);
+      const g = k.piece(i, k.root, size, size, 'tile', live);
+      if (!live) return setT(g, s.x, s.y);
+      const parcel = el('g', { class: 'sc-parcel' }, k.root);
+      el('rect', { x: -17, y: -17, width: 34, height: 34, rx: 8 }, parcel);
+      glyph(parcel, 'package', 20);
+      const b = belt(i);
+      await c.tween(650, (e) => setT(parcel, lerp(start.x, b.x, e), lerp(start.y, b.y, e)), easeInOut);
+      // hops off the belt up into its station
+      await c.tween(420, (e) => setT(parcel, lerp(b.x, s.x, e), lerp(b.y, s.y, e) - Math.sin(e * Math.PI) * 46, e * 200, 1 - 0.4 * e), easeInOut);
+      parcel.remove();
+      bg(burst(c, k.back, s.x, s.y, size * 0.9));
+      await pop(c, g, s.x, s.y);
+      await drawOn(c, g, 450);
+    },
+  };
+}
+
+function dominoes(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const per = tall ? Math.min(4, n) : n;
+  // close together, so a tipping domino lands on the next one
+  const gap = per > 1 ? Math.min(tall ? 110 : 120, (tall ? 330 : 680) / (per - 1)) : 0;
+  const w = Math.min(tall ? 56 : 62, (per > 1 ? gap : 200) * 0.55);
+  const h = w * 1.75;
+  const rows = Math.ceil(n / per);
+  const floor = (r: number) => (tall ? 350 - (rows - 1) * 150 + r * 300 : 262);
+  const foot = (i: number) => ({ x: (tall ? 250 : 450) + ((i % per) - (per - 1) / 2) * gap, y: floor(Math.floor(i / per)) });
+  const LEAN = per > 1 ? Math.min(32, (Math.asin(Math.min(1, (gap - w * 0.9) / h)) * 180) / Math.PI) : 0;
+  return {
+    build() {
+      for (let r = 0; r < rows; r++) el('line', { class: 'sc-floor', x1: tall ? 40 : 40, x2: tall ? 460 : 860, y1: floor(r), y2: floor(r) }, k.back);
+    },
+    async add(i, live) {
+      const f = foot(i);
+      const g = k.piece(i, k.root, w, h, 'domino', live);
+      if (!live) return setT(g, f.x, f.y, i < k.at && i % per !== per - 1 ? LEAN : 0);
+      // stands up from the floor…
+      await c.tween(520, (e) => {
+        g.style.opacity = String(Math.min(1, e * 3));
+        setT(g, f.x, f.y, 0, [1, 0.08 + 0.92 * spring(e)]);
+      });
+      bg(drawOn(c, g, 450));
+      // …then the one before tips over into it, and it wobbles from the knock
+      const prev = k.root.querySelector<SVGGElement>(`[data-i="${i - 1}"]`);
+      if (prev && (i - 1) % per !== per - 1) {
+        const pf = foot(i - 1);
+        await c.tween(380, (e) => setT(prev, pf.x, pf.y, LEAN * e), easeIn);
+        bg(burst(c, k.back, f.x - w / 2, f.y - h * 0.8, 26, 1));
+        await c.tween(420, (e) => setT(g, f.x, f.y, 7 * Math.sin(e * Math.PI * 2) * (1 - e)));
+      }
+    },
+  };
+}
+
+function deal(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const rows = Math.ceil(n / 2);
+  const rowGap = Math.min(170, 580 / rows);
+  const spacing = Math.min(130, 760 / n);
+  const w = tall ? (rowGap - 18) * 0.8 : Math.min(96, spacing * 0.9);
+  const h = tall ? rowGap - 18 : w * 1.3;
+  const slot = (i: number) => {
+    if (tall) return { x: 250 + (i % 2 ? 100 : -100), y: 350 + (Math.floor(i / 2) - (rows - 1) / 2) * rowGap, rot: i % 2 ? 5 : -5 };
+    const off = i - (n - 1) / 2;
+    return { x: 450 + off * spacing, y: 150 + off * off * 4, rot: off * 5 };
+  };
+  const deck = tall ? { x: 250, y: 650 } : { x: 60, y: 236 };
+  return {
+    build() {
+      for (let d = 2; d >= 0; d--) el('rect', { class: 'sc-deck', x: deck.x - 24 + d * 3, y: deck.y - 32 - d * 3, width: 48, height: 64, rx: 7 }, k.back);
+    },
+    async add(i, live) {
+      const s = slot(i);
+      const g = k.piece(i, k.root, w, h, 'card', live);
+      if (!live) return setT(g, s.x, s.y, s.rot);
+      // flies off the deck, spinning, and flips face up halfway
+      await c.tween(760, (e) => {
+        g.style.opacity = String(Math.min(1, e * 4));
+        g.classList.toggle('face-down', e < 0.5);
+        setT(g, lerp(deck.x, s.x, e), lerp(deck.y, s.y, e) - Math.sin(e * Math.PI) * 50, s.rot - 220 * (1 - e), [Math.max(0.02, Math.abs(Math.cos(e * Math.PI))) * lerp(0.5, 1, e), lerp(0.5, 1, e)]);
+      }, easeOut);
+      g.classList.remove('face-down');
+      bg(burst(c, k.back, s.x, s.y, w));
+      await drawOn(c, g, 500);
+    },
+  };
+}
+
+function constellation(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const size = 74;
+  const slot = (i: number) =>
+    tall ? { x: 250 + (n > 1 ? (i % 2 ? 105 : -105) : 0), y: n > 1 ? 90 + i * (520 / (n - 1)) : 350 } : { x: n > 1 ? 100 + i * (700 / (n - 1)) : 450, y: 150 + (n > 1 ? (i % 2 ? 62 : -62) : 0) };
+  return {
+    build() {
+      let seed = 7 + n;
+      const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+      for (let s = 0; s < 34; s++) {
+        const star = el('circle', { class: 'sc-star', cx: rnd() * k.W, cy: rnd() * k.H, r: 0.8 + rnd() * 1.6 }, k.back);
+        star.style.animationDelay = `${(rnd() * -3).toFixed(2)}s`;
+      }
+    },
+    async add(i, live) {
+      const s = slot(i);
+      const link = i > 0 ? el('line', { class: 'sc-constel', x1: slot(i - 1).x, y1: slot(i - 1).y, x2: s.x, y2: s.y }, k.back) : null;
+      const g = k.piece(i, k.root, size, size, 'orb', live);
+      if (!live) return setT(g, s.x, s.y);
+      if (link) await drawLine(c, link, 520);
+      bg(burst(c, k.back, s.x, s.y, size * 1.1, 3));
+      await pop(c, g, s.x, s.y, 0, 620);
+      await drawOn(c, g, 500);
+    },
+  };
+}
+
+function tower(k: Kit): Machine {
+  const { c, tall, n } = k;
+  // wide: a staircase rising left to right; tall: a pyramid stacked bottom up
+  const colW = Math.min(130, 720 / n);
+  const tallH = Math.min(78, 580 / n);
+  const box = (i: number) =>
+    tall
+      ? { x: 250, y: 660 - tallH * (i + 0.5) - i * 3, w: 420 - (i * 240) / Math.max(n, 1), h: tallH }
+      : (() => {
+          const bh = 70 + (n > 1 ? i * Math.min(48, 160 / (n - 1)) : 60);
+          return { x: 450 + (i - (n - 1) / 2) * colW, y: 282 - bh / 2, w: colW - 12, h: bh };
+        })();
+  const ground = tall ? 662 : 284;
+  return {
+    build() {
+      el('line', { class: 'sc-floor', x1: 30, x2: k.W - 30, y1: ground, y2: ground }, k.back);
+    },
+    async add(i, live) {
+      const b = box(i);
+      const g = k.piece(i, k.root, b.w, b.h, 'block', live);
+      if (!live) return setT(g, b.x, b.y);
+      // drops from above the stage and bounces to rest, with a puff of dust
+      await c.tween(760, (e) => {
+        g.style.opacity = '1';
+        setT(g, b.x, lerp(-b.h, b.y, e));
+      }, bounce);
+      const foot = b.y + b.h / 2;
+      const dust = [-1, 1].map((d) => ({ d, n: el('circle', { class: 'sc-dust', cx: b.x + (d * b.w) / 2, cy: foot, r: 4 }, k.back) }));
+      const squash = bg(c.tween(300, (e) => setT(g, b.x, b.y, 0, [1 + 0.06 * Math.sin(e * Math.PI), 1 - 0.08 * Math.sin(e * Math.PI)])));
+      await c.tween(420, (e) => dust.forEach(({ d, n: p }) => {
+        p.setAttribute('cx', String(b.x + (d * b.w) / 2 + d * 30 * e));
+        p.setAttribute('cy', String(foot - 10 * Math.sin(e * Math.PI)));
+        p.style.opacity = String(1 - e);
+      }), easeOut);
+      dust.forEach(({ n: p }) => p.remove());
+      await squash;
+      await drawOn(c, g, 450);
+    },
+  };
+}
+
+function radar(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const cx = k.W / 2;
+  const cy = k.H / 2;
+  const R = tall ? 205 : 134;
+  const rr = R * 0.66;
+  const size = Math.min(tall ? 72 : 52, ((2 * Math.PI * rr) / n) * 0.7);
+  const pos = (i: number) => {
+    const a = (-70 + (i * 360) / n) * (Math.PI / 180);
+    return { x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) };
+  };
+  return {
+    build() {
+      for (const r of [R / 3, (2 * R) / 3, R]) el('circle', { class: 'sc-radar-ring', cx, cy, r }, k.back);
+      el('line', { class: 'sc-radar-ring', x1: cx - R, x2: cx + R, y1: cy, y2: cy }, k.back);
+      el('line', { class: 'sc-radar-ring', x1: cx, x2: cx, y1: cy - R, y2: cy + R }, k.back);
+      const at = el('g', { transform: `translate(${cx} ${cy})` }, k.back);
+      const spin = el('g', { class: 'sc-spin sweep' }, at);
+      el('circle', { class: 'sc-ghost', r: R }, spin);
+      const a = (-42 * Math.PI) / 180;
+      el('path', { class: 'sc-wedge', d: `M0 0 L${R} 0 A${R} ${R} 0 0 0 ${R * Math.cos(a)} ${R * Math.sin(a)} Z` }, spin);
+      el('line', { class: 'sc-sweep-edge', x1: 0, y1: 0, x2: R, y2: 0 }, spin);
+      el('circle', { class: 'sc-radar-dot', cx, cy, r: 5 }, k.back);
+    },
+    async add(i, live) {
+      const p = pos(i);
+      const g = k.piece(i, k.root, size, size, 'orb', live);
+      if (!live) return setT(g, p.x, p.y);
+      const beam = el('line', { class: 'sc-beam', x1: cx, y1: cy, x2: p.x, y2: p.y }, k.back);
+      await drawLine(c, beam, 300);
+      bg(burst(c, k.back, p.x, p.y, size, 3));
+      await pop(c, g, p.x, p.y);
+      bg(c.tween(500, (e) => (beam.style.opacity = String(1 - e))).then(() => beam.remove()));
+      await drawOn(c, g, 450);
+    },
+  };
+}
+
+function balance(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const pv = tall ? { x: 250, y: 250 } : { x: 450, y: 92 };
+  const L = tall ? 180 : 270;
+  const hang = tall ? 200 : 62;
+  const size = tall ? 64 : 50;
+  const m = Math.ceil(n / 2);
+  const local = (j: number) =>
+    tall && m > 2 ? { x: ((j % 2) - 0.5) * (size + 8), y: -size / 2 - 6 - Math.floor(j / 2) * (size + 6) } : { x: (j - (m - 1) / 2) * (size + 6), y: -size / 2 - 6 };
+  const plateW = (tall && m > 2 ? 2 : m) * (size + 6) + 20;
+  const q = <T extends Element>(s: string) => k.root.querySelector<T>(s)!;
+  const tiltFor = (count: number) => {
+    const left = Math.ceil(count / 2);
+    return Math.max(-14, Math.min(14, (count - left - left) * 8));
+  };
+  /** the beam at angle θ (degrees): the strings and pans follow its ends */
+  const pose = (deg: number) => {
+    const t = (deg * Math.PI) / 180;
+    q<SVGGElement>('.sc-beam-g').setAttribute('transform', `rotate(${deg} ${pv.x} ${pv.y})`);
+    [-1, 1].forEach((s) => {
+      const ex = pv.x + s * L * Math.cos(t);
+      const ey = pv.y + s * L * Math.sin(t);
+      const str = q<SVGLineElement>(`.sc-string.s${s + 1}`);
+      str.setAttribute('x1', String(ex));
+      str.setAttribute('y1', String(ey));
+      str.setAttribute('x2', String(ex));
+      str.setAttribute('y2', String(ey + hang));
+      setT(q(`.sc-pan.s${s + 1}`), ex, ey + hang);
+    });
+    k.root.dataset.tilt = String(deg);
+  };
+  return {
+    build() {
+      el('path', { class: 'sc-stand', d: `M${pv.x} ${pv.y} L${pv.x - 34} ${tall ? 660 : 286} L${pv.x + 34} ${tall ? 660 : 286} Z` }, k.back);
+      const beam = el('g', { class: 'sc-beam-g' }, k.root);
+      el('line', { class: 'sc-beam-bar', x1: pv.x - L, x2: pv.x + L, y1: pv.y, y2: pv.y }, beam);
+      el('circle', { class: 'sc-pivot', cx: pv.x, cy: pv.y, r: 9 }, beam);
+      [-1, 1].forEach((s) => {
+        el('line', { class: `sc-string s${s + 1}` }, k.root);
+        const pan = el('g', { class: `sc-pan s${s + 1}` }, k.root);
+        el('path', { class: 'sc-plate', d: `M${-plateW / 2} 0 Q0 22 ${plateW / 2} 0 Z` }, pan);
+      });
+      pose(0);
+    },
+    async add(i, live) {
+      const s = i % 2 ? 1 : -1;
+      const j = Math.floor(i / 2);
+      const pan = q<SVGGElement>(`.sc-pan.s${s + 1}`);
+      const p = local(j);
+      const g = k.piece(i, pan, size, size, 'tile', live);
+      const from = Number(k.root.dataset.tilt ?? 0);
+      const to = tiltFor(i + 1);
+      if (!live) {
+        setT(g, p.x, p.y);
+        return pose(to);
+      }
+      // drops into its pan, then the beam swings to the new weight
+      await c.tween(560, (e) => {
+        g.style.opacity = String(Math.min(1, e * 3));
+        setT(g, p.x, lerp(p.y - 160, p.y, e));
+      }, bounce);
+      await c.tween(900, (e) => pose(lerp(from, to, spring(e))));
+      await drawOn(c, g, 450);
+    },
+  };
+}
+
+function funnel(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const rows = Math.ceil(n / 2);
+  const size = tall ? 70 : 50;
+  const out = (i: number) =>
+    tall
+      ? { x: 250 + (i % 2 ? 80 : -80), y: 485 + (Math.floor(i / 2) - (rows - 1) / 2) * Math.min(90, 330 / rows) }
+      : { x: 690 + (i % 2 ? 100 : 0), y: 150 + (Math.floor(i / 2) - (rows - 1) / 2) * 64 };
+  const mouth = tall ? { x: 250, y: 90 } : { x: 330, y: 150 };
+  const neck = tall ? { x: 250, y: 300 } : { x: 545, y: 150 };
+  const entry = (i: number) => (tall ? { x: 110 + (i % 3) * 140, y: 30 } : { x: 70, y: 60 + (i % 3) * 90 });
+  return {
+    build() {
+      const d = tall ? 'M60 70 L440 70 L275 270 L275 320 L225 320 L225 270 Z' : 'M310 30 L310 270 L500 172 L560 172 L560 128 L500 128 Z';
+      el('path', { class: 'sc-funnel', d }, k.back);
+      el('path', { class: 'sc-funnel-flow', d: tall ? 'M120 90 Q250 150 250 310' : 'M330 60 Q420 150 555 150 M330 240 Q420 150 555 150' }, k.back);
+    },
+    async add(i, live) {
+      const o = out(i);
+      const g = k.piece(i, k.root, size, size, 'tile', live);
+      if (!live) return setT(g, o.x, o.y);
+      const e0 = entry(i);
+      // sucked into the mouth, spun through the neck, and dropped into its place in the sorted pile
+      await c.tween(520, (e) => {
+        g.style.opacity = String(Math.min(1, e * 3));
+        setT(g, lerp(e0.x, mouth.x, e), lerp(e0.y, mouth.y, e), 0, lerp(1, 0.8, e));
+      }, easeIn);
+      await c.tween(460, (e) => setT(g, lerp(mouth.x, neck.x, e), lerp(mouth.y, neck.y, e), 360 * e, lerp(0.8, 0.35, e)), easeInOut);
+      await c.tween(560, (e) => setT(g, lerp(neck.x, o.x, e), lerp(neck.y, o.y, e) - Math.sin(e * Math.PI) * 30, 0, 0.35 + 0.65 * spring(e)), easeOut);
+      bg(burst(c, k.back, o.x, o.y, size));
+      await drawOn(c, g, 450);
+    },
+  };
+}
+
+function stamp(k: Kit): Machine {
+  const { c, tall, n } = k;
+  const cols = tall ? Math.min(2, n) : Math.min(5, n);
+  const rows = Math.ceil(n / cols);
+  const gapX = tall ? 200 : 160;
+  const gapY = tall ? Math.min(170, 600 / rows) : Math.min(140, 270 / rows);
+  const size = Math.min(tall ? 120 : 100, gapY - 28, gapX - 44);
+  const pos = (i: number) => {
+    const r = Math.floor(i / cols);
+    const inRow = Math.min(cols, n - r * cols);
+    return { x: k.W / 2 + ((i % cols) - (inRow - 1) / 2) * gapX, y: k.H / 2 + (r - (rows - 1) / 2) * gapY };
+  };
+  const seal = (g: SVGGElement) => {
+    const m = el('g', { class: 'sc-seal' }, g);
+    el('circle', { r: 16 }, m);
+    el('path', { class: 'sc-tick', d: 'M -7 0 L -2 5 L 7 -5' }, m);
+    return m;
+  };
+  return {
+    build() {},
+    async add(i, live) {
+      const p = pos(i);
+      const g = k.piece(i, k.root, size, size, 'tile', live);
+      const m = seal(g);
+      const sx = size / 2 - 4;
+      const sy = size / 2 - 4;
+      if (!live) {
+        setT(m, sx, sy);
+        return setT(g, p.x, p.y);
+      }
+      m.style.opacity = '0';
+      await c.tween(420, (e) => {
+        g.style.opacity = String(e);
+        setT(g, p.x, p.y + 40 * (1 - e));
+      }, easeOut);
+      await drawOn(c, g, 420);
+      // the stamp slams down, the card jolts and a shockwave rolls out
+      await c.tween(240, (e) => {
+        m.style.opacity = String(e);
+        setT(m, sx, sy, -30 * (1 - e), lerp(2.8, 1, e));
+      }, easeIn);
+      bg(burst(c, k.back, p.x + sx, p.y + sy, 44, 2));
+      await c.tween(300, (e) => setT(g, p.x + 4 * Math.sin(e * Math.PI * 6) * (1 - e), p.y));
+    },
+  };
+}
+
+const MACHINES: Record<Style, (k: Kit) => Machine> = { orbit, conveyor, dominoes, deal, constellation, tower, radar, balance, funnel, stamp };
+
+async function glyphs(c: SceneCtx, a: Extract<SceneAction, { glyphs: unknown }>) {
+  const { items, layout, hub, at } = a.glyphs;
+  const n = items.length;
+  const key = JSON.stringify([items, layout, hub, c.tall]);
+  let root = c.g.querySelector<SVGGElement>(':scope > .sc-machine');
+  const fresh = !root || root.dataset.key !== key || Number(root.dataset.drawn) > at;
+  if (fresh) {
+    c.g.replaceChildren();
+    root = el('g', { class: `sc-machine sc-${layout}` }, c.g);
+    root.dataset.key = key;
+    root.dataset.drawn = '0';
+    el('g', { class: 'sc-back' }, root);
+  }
+  const r = root!;
+  const back = r.querySelector<SVGGElement>(':scope > .sc-back')!;
+  const kit: Kit = {
+    c, root: r, back, items, n, at, W: c.tall ? 500 : 900, H: c.tall ? 700 : 300, tall: c.tall, hub: hub ?? 'sparkles',
+    piece: (i, parent, w, h, kind, live) => {
+      const g = shape(parent, items[i], w, h, kind);
+      g.dataset.i = String(i);
+      if (i === at) g.classList.add('now');
+      if (live) g.style.opacity = '0';
+      return g;
+    },
+  };
+  const m = MACHINES[layout](kit);
+  if (fresh) m.build();
+  for (const old of r.querySelectorAll('.sc-piece.now')) old.classList.remove('now');
+  for (let i = Number(r.dataset.drawn); i <= at && i < n; i++) {
+    r.dataset.drawn = String(i + 1);
+    await m.add(i, i === at);
+    const g = r.querySelector<SVGGElement>(`[data-i="${i}"]`);
+    if (g) g.style.opacity = '';
+  }
+  r.querySelector(`[data-i="${at}"]`)?.classList.add('now');
+}
+
+/** the opening picture: a portal of counter-rotating rings, drifting motes and the subject's icon drawing itself */
+async function hero(c: SceneCtx, a: Extract<SceneAction, { hero: unknown }>) {
+  const cx = c.tall ? 250 : 450;
+  const cy = c.tall ? 330 : 150;
+  const R = c.tall ? 120 : 88;
+  const back = el('g', { transform: `translate(${cx} ${cy})` }, c.g);
+  for (const [r, cls] of [[R + 20, ''], [R + 40, 'rev']] as const) {
+    const s = el('g', { class: `sc-spin ${cls}` }, back);
+    el('circle', { class: 'sc-portal', r }, s);
+    el('circle', { class: 'sc-spark s0', r: 4, cx: r, cy: 0 }, s);
+  }
+  for (let m = 0; m < 8; m++) {
+    const ang = (m / 8) * Math.PI * 2;
+    const mote = el('circle', { class: 'sc-mote', r: 2.5, cx: Math.cos(ang) * (R + 8), cy: Math.sin(ang) * (R + 8) }, back);
+    mote.style.animationDelay = `${(-m * 0.37).toFixed(2)}s`;
+    mote.style.setProperty('--dx', `${(Math.cos(ang) * 26).toFixed(1)}px`);
+    mote.style.setProperty('--dy', `${(Math.sin(ang) * 26).toFixed(1)}px`);
+  }
+  const g = el('g', { class: `sc-hero ${toneOf(a.hero.tone)}` }, c.g);
+  el('circle', { r: R }, g);
+  glyph(g, a.hero.icon, R * 0.95);
+  g.style.opacity = '0';
+  bg(burst(c, c.g, cx, cy, R + 30, 3));
+  await pop(c, g, cx, cy, 0, 640);
+  await drawOn(c, g, 1100);
+}
+
 /** draws one scene; the caller has already cleared the previous one */
 export async function drawScene(c: SceneCtx, a: SceneAction) {
   if ('eq' in a) return eq(c, a);
@@ -454,7 +1033,10 @@ export async function drawScene(c: SceneCtx, a: SceneAction) {
   if ('seq' in a) return seq(c, a);
   if ('table' in a) return table(c, a);
   if ('ring' in a) return ring(c, a);
+  if ('hero' in a) return hero(c, a);
+  if ('glyphs' in a) return glyphs(c, a);
   return countUp(c, el('g', {}, c.g), a.count, c.tall ? 250 : 450, c.tall ? 340 : 150, c.tall ? 52 : 64);
 }
 
-export const isScene = (a: object): a is SceneAction => ['eq', 'bars', 'curve', 'dots', 'ladder', 'meter', 'count', 'seq', 'table', 'ring'].some((k) => k in a);
+export const SCENE_KEYS = ['eq', 'bars', 'curve', 'dots', 'ladder', 'meter', 'count', 'seq', 'table', 'ring', 'hero', 'glyphs'];
+export const isScene = (a: object): a is SceneAction => SCENE_KEYS.some((k) => k in a);

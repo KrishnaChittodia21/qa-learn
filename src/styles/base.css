@@ -259,7 +259,8 @@ kbd,
 .grain {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  /* behind .main (z 1): the texture is for the backdrop, so panels and the step stage stay solid */
+  z-index: 0;
   pointer-events: none;
   opacity: var(--grain-o);
   mix-blend-mode: overlay;
@@ -269,7 +270,7 @@ kbd,
 .scanlines {
   position: fixed;
   inset: 0;
-  z-index: 59;
+  z-index: 0;
   pointer-events: none;
   opacity: var(--scan-o);
   background: repeating-linear-gradient(180deg, #fff 0 1px, transparent 1px 3px);

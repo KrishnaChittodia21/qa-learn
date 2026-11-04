@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Pause, Play } from 'lucide-react';
 import type { Step, StepLesson as Lesson, StepTask } from '../../types';
+import { isScene } from './scenes';
 import { HIT, NINES, NINES_TARGET, Stage, VIEW, dbLoad, effLatency, hitCalm, jitterCalm, jitterPeak, parseAmount, quiet, shuffleFor, timesOff } from './stage';
 
 /** **bold** and `code`, nothing else */
@@ -46,6 +47,9 @@ export function StepLesson({ lesson, onFinish, onRead, end }: Props) {
   const isSolved = solved.has(cur);
   const blocked = step.kind === 'turn' && !isSolved;
   const last = cur === steps.length - 1;
+  // nothing to draw on this step (no boxes, no scene): the text takes the full width
+  const actions = step.kind === 'watch' ? step.script : [...(step.setup ?? []), ...(step.then ?? [])];
+  const visual = lesson.actors.length > 0 || actions.some((a) => isScene(a));
 
   useEffect(() => {
     const box = svg.current!.parentElement!;
@@ -100,7 +104,7 @@ export function StepLesson({ lesson, onFinish, onRead, end }: Props) {
   };
 
   return (
-    <div className="sl" ref={root}>
+    <div className={`sl ${paused ? 'paused' : ''}`} ref={root}>
       <div className="sl-dots" aria-label="Steps">
         {steps.map((s, k) => (
           <button
@@ -115,7 +119,7 @@ export function StepLesson({ lesson, onFinish, onRead, end }: Props) {
         ))}
       </div>
 
-      <div className="sl-body">
+      <div className={`sl-body ${visual ? '' : 'no-visual'}`}>
         <div className="sl-text">
           <div className={`sl-kind ${step.kind}`}>{step.kind === 'turn' ? '✎ Your turn' : '▶ Watch'}</div>
           <h3 className="sl-title">{step.title}</h3>
@@ -134,7 +138,7 @@ export function StepLesson({ lesson, onFinish, onRead, end }: Props) {
 
       <div className="sl-act">
         {step.kind === 'watch' ? (
-          <p className="sl-muted">{last && end ? end : 'Watch the diagram: it loops, and each line lights up as it happens.'}</p>
+          <p className="sl-muted">{last && end ? end : visual ? 'Watch the diagram: it loops, and each line lights up as it happens.' : 'Read each line as it lights up, then press Next.'}</p>
         ) : (
           <Task key={cur} step={step} stage={stage} done={isSolved} onSolve={solve} labels={labels} />
         )}

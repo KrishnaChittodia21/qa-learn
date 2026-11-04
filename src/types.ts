@@ -319,7 +319,12 @@ export type SceneAction =
   /** a small table whose rows arrive one by one; `tones` highlights rows, `strike` crosses them out */
   | { table: { cols: string[]; rows: string[][]; tones?: (StepTone | null)[]; strike?: number[]; l?: string } }
   /** consistent hashing: nodes and keys at angles (0–359°, clockwise from the top); `add` joins a node and moves only its keys */
-  | { ring: { nodes: { l: string; at: number }[]; keys: { l: string; at: number }[]; add?: { l: string; at: number } } };
+  | { ring: { nodes: { l: string; at: number }[]; keys: { l: string; at: number }[]; add?: { l: string; at: number } } }
+  // ---- picture scenes (generated lessons): icons only, no words; `at` is the line being lit now ----
+  /** one big picture: a section's subject, or a question mark for a Your turn */
+  | { hero: { icon: string; tone?: StepTone } }
+  /** one icon tile per line, numbered to match it; earlier tiles are drawn at once, tile `at` arrives */
+  | { glyphs: { items: { icon: string; tone?: StepTone }[]; layout: 'orbit' | 'conveyor' | 'dominoes' | 'deal' | 'constellation' | 'tower' | 'radar' | 'balance' | 'funnel' | 'stamp'; hub?: string; at: number } };
 
 /** A Your-turn task. Every task has buttons, so it works without the diagram (keyboard, screen readers, phones). */
 export type StepTask =

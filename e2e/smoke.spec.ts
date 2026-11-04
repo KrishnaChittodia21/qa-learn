@@ -66,7 +66,7 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
   await page.addLocatorHandler(celebration, () => celebration.click());
 
   await page.goto('/#/shorts');
-  await expect(page.getByText(/0 of 12 watched/)).toBeVisible();
+  await expect(page.getByText(/0 of 24 watched/)).toBeVisible();
   await page.getByRole('link', { name: /Ariane 5: 37 seconds/ }).click();
   await expect(page).toHaveURL(/#\/short\/ariane-5-overflow/);
 
@@ -87,7 +87,7 @@ test('a Short plays to its quiz and end card, and stays watched after a reload',
 
   await page.reload();
   await page.goto('/#/shorts');
-  await expect(page.getByText(/1 of 12 watched/)).toBeVisible();
+  await expect(page.getByText(/1 of 24 watched/)).toBeVisible();
   await expect(page.getByRole('heading', { name: /Watched/ })).toBeVisible();
 });
 
@@ -152,4 +152,62 @@ test('the Shorts player pauses, changes reading speed and goes back a beat', asy
   await expect(nav.getByText('2 / 5')).toBeVisible();
   await nav.getByRole('button', { name: /Back/ }).click();
   await expect(nav.getByText('1 / 5')).toBeVisible();
+});
+
+test('every page has its own Guide me, and "Show me" finds something on the page', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'the same guides run on phones; the menu stops differ');
+  test.setTimeout(120_000);
+  await page.addInitScript(() => localStorage.getItem('qa-learn-ui-v1') || localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  const pages: [string, string][] = [
+    ['/', 'Dashboard'], ['/today', 'Today'], ['/contents', 'Syllabus'], ['/build', 'Build report'], ['/topic/mt-fundamentals?tab=learn', 'Topic'],
+    ['/coding', 'Coding'], ['/roadmap', 'Roadmap'], ['/pw-lab', 'Playwright Lab'], ['/playground', 'Playground'], ['/companies', 'Company questions'],
+    ['/weak-areas', 'Weak areas'], ['/practice', 'Mistakes drill'], ['/achievements', 'Achievements'], ['/settings', 'Settings'], ['/saved', 'Saved'],
+    ['/shorts', 'Shorts'], ['/short/test-pyramid', 'Short'],
+  ];
+  for (const [path, title] of pages) {
+    await page.goto(`/#${path}`);
+    await page.locator('main').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('?');
+    const guide = page.getByRole('dialog', { name: title });
+    await expect(guide, `guide for ${path}`).toBeVisible();
+    await guide.getByRole('button', { name: 'Show me' }).click();
+    await expect(page.getByText(/Show me · 1 of \d+/), `walkthrough for ${path}`).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByText(/Show me · /)).toBeHidden();
+  }
+});
+
+test('Settings shows one section at a time in tabs; the tab is kept on reload and arrow keys move between tabs', async ({ page }) => {
+  await page.addInitScript(() => localStorage.getItem('qa-learn-ui-v1') || localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  await page.goto('/#/settings');
+  const tabs = page.getByRole('tablist', { name: 'Settings sections' });
+  await expect(tabs.getByRole('tab', { name: 'Exams' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
+
+  await tabs.getByRole('tab', { name: 'Appearance' }).click();
+  await expect(page.getByRole('tabpanel', { name: 'Appearance' })).toBeVisible();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Appearance' })).toHaveAttribute('aria-selected', 'true');
+
+  await page.getByRole('tab', { name: 'Appearance' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Study lock' })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Study lock' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('clicking a Syllabus stage card opens it, and again closes it; clicks inside its topics do not close it', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
+  await page.goto('/#/contents');
+  const card = page.locator('#phase-manual-basics');
+  const toggle = card.locator('.rep-tg');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await card.locator('.rep-blurb').click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await card.locator('.trows').first().click({ position: { x: 4, y: 4 } });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await card.locator('.rep-stats').click({ position: { x: 4, y: 4 } });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 });

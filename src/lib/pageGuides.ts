@@ -16,11 +16,12 @@ const rail = (to: string) => `.rail-a[href="#${to}"]`;
 
 /** The menu: the rail on a desktop, the top bar on a phone. Also the walk after the first-visit tour. */
 export const MENU_WALK: WalkStep[] = [
-  { target: rail('/'), title: 'Today', text: 'Your next step, your progress and what to revise. The app also reopens where you left off.' },
+  { target: rail('/'), title: 'Dashboard', text: 'Your next step, the spot to fix and today’s Short. The app also reopens where you left off.' },
+  { target: rail('/today'), title: 'Today', text: 'Tracking: progress, study days, skills and every chart.' },
   { target: rail('/contents'), title: 'Syllabus', text: 'Every phase and topic, in study order. Open a topic to learn it, practise it and take its exam.' },
   { target: rail('/coding'), title: 'Coding', text: 'JavaScript problems for the live-coding round, judged by tests as you type.' },
   { target: rail('/pw-lab'), title: 'Playwright Lab', text: 'Write real Playwright tests against a shop app with hidden bugs, then let the judge count what you caught.' },
-  { target: rail('/roadmap'), title: 'Roadmap', text: 'A week-by-week plan through the whole course.' },
+  { target: rail('/roadmap'), title: 'Roadmap', text: 'Plan your journey: your pace decides when you finish each phase.' },
   { target: rail('/weak-areas'), title: 'Weak areas', text: 'The exam questions you got wrong, grouped by the section to reread. The number is how many are still wrong.' },
   { target: rail('/achievements'), title: 'Achievements', text: 'Badges that climb from bronze to diamond as you study.' },
   { target: rail('/saved'), title: 'Saved', text: 'Everything you pressed ☆ Save on, to come back to. The number is how many are still to do.' },
@@ -32,20 +33,35 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
   {
     match: (p) => p === '/',
     guide: {
-      title: 'Today',
-      intro: 'Your dashboard: one next step, then everything that shows how you are doing.',
+      title: 'Dashboard',
+      intro: 'Where to go next: one next step, the spot to fix, today’s Short, the next coding problem and your badges.',
       items: [
         ['Next mission', 'The one thing to do next, in study order: read, practise, then pass the exam.'],
-        ['Readouts and coverage', 'Topics passed, exam average, company questions and study days at a glance.'],
-        ['Signal', 'Your study days over the last month and your streak.'],
         ['Weak spot', 'The section your wrong answers point at, to reread before anything new.'],
+        ['Short of the day', 'A 90-second story; a new one each day you watch.'],
+        ['Tracking', 'Your numbers, charts and streak are on Today.'],
       ],
       walk: [
         { target: '.hero-cta', title: 'Your next step', text: 'Always one button: the next section to read, the next lab, or the exam.' },
+        { target: '.b-short', title: 'Short of the day', text: 'A quick story that ends with one question.' },
+        ...MENU_WALK,
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/today',
+    guide: {
+      title: 'Today',
+      intro: 'How you are doing: progress, study days, skills, the lab and every chart.',
+      items: [
+        ['Readouts and coverage', 'Topics passed, exam average, company questions and study days at a glance.'],
+        ['Signal', 'Your study days over the last month and your streak.'],
+        ['Study record', 'Exam scores, weakest topics, accuracy, ratings and coding by category.'],
+      ],
+      walk: [
         { target: '[aria-label="Readouts"]', title: 'Readouts', text: 'Topics, exam average, company questions and study days.' },
         { target: '[aria-label^="Coverage prism"]', title: 'Coverage', text: 'How much of each track you have passed.' },
         { target: '.b-sig', title: 'Signal', text: 'Study days in the last 30 days and your streak.' },
-        ...MENU_WALK,
       ],
     },
   },
@@ -56,8 +72,25 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
       intro: 'The whole course, phase by phase. Topics are meant to be done in this order.',
       items: [
         ['Phases', 'Manual testing, API and SQL, JavaScript, Playwright, AI testing and interview prep.'],
+        ['Collapsed by default', 'Open a stage to see its topics, or use Expand all.'],
         ['Topic status', 'Not started, in progress or passed, from what you have read and the exams you passed.'],
       ],
+      walk: [
+        { target: '.syl-filters .fbar', title: 'Search and filters', text: 'Find a topic by word, track or status.' },
+        { target: '.reports', title: 'Stages', text: 'Every stage in course order. Open one to see its topics.' },
+      ],
+    },
+  },
+  {
+    match: (p) => p === '/build',
+    guide: {
+      title: 'Build report',
+      intro: 'Your progress through the whole course at a glance.',
+      items: [
+        ['Summary', 'Topics passed, sections read and time left.'],
+        ['Build matrix', 'Every topic as a cell, by track and stage. Click a stage or a cell to open it in the Syllabus.'],
+      ],
+      walk: [{ target: '.b-matrix', title: 'Build matrix', text: 'Each cell is a topic: its colour is its status, its bar the sections read.' }],
     },
   },
   {
@@ -125,6 +158,7 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
         ['Categories and difficulty', 'Filter to what you want to practise.'],
         ['Status', 'Solved, draft (started) or not started.'],
       ],
+      walk: [{ target: '.cx-filterbar', title: 'Filters', text: 'Search, difficulty and category: find the next problem to solve.' }, { target: '.cx-prog', title: 'Your progress', text: 'Problems solved, by difficulty.' }, { target: '.cx-grp-h', title: 'Groups', text: 'Problems grouped by category; open one to see its list.' }],
     },
   },
   {
@@ -154,15 +188,26 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
         ['Steps', 'Login, search, sorting, cart, checkout, promo codes, orders and the API.'],
         ['The judge', 'Runs your tests against copies of the app with one bug each and counts the bugs you caught.'],
       ],
+      walk: [{ target: '.lab-intro', title: 'The lab', text: 'Write Playwright tests against a shop app with hidden bugs.' }, { target: '.lab-setup', title: 'Set up', text: 'Start the practice app, then run the judge to score your tests.' }, { target: '.lab-scoring', title: 'Scoring', text: 'A step is done when your tests pass on the correct app and catch every hidden bug.' }, { target: '.lab-cta', title: 'Start', text: 'Opens the next step to work on.' }],
     },
   },
   {
     match: (p) => p === '/playground',
-    guide: { title: 'Playground', intro: 'A scratchpad to run JavaScript and try ideas from the lessons.', items: [['Run', 'Runs your code and shows its output.']] },
+    guide: { title: 'Playground', intro: 'A scratchpad to run JavaScript and try ideas from the lessons.', items: [['Run', 'Runs your code and shows its output.']], walk: [{ target: '.pg-editor', title: 'Editor', text: 'Write any JavaScript here. It runs in your browser.' }, { target: '.pg-examples', title: 'Examples', text: 'Load a ready-made snippet to start from.' }, { target: '.pg-output', title: 'Output', text: 'console.log output and errors, with line numbers.' }] },
   },
   {
     match: (p) => p === '/roadmap',
-    guide: { title: 'Roadmap', intro: 'A week-by-week plan through the course, with resources for each week.', items: [['Weeks', 'Each week lists its topics and practice.']] },
+    guide: {
+      title: 'Roadmap',
+      intro: 'Plan your journey: how much time you have decides when you finish each phase.',
+      items: [
+        ['Pace', 'Minutes a day and days a week. The finish date updates as you change them.'],
+        ['Goal', 'The whole course, or just the phases or topics you pick.'],
+        ['Pacer', 'Where your plan expects you today. Fall behind and it suggests how to catch up.'],
+        ['Below', 'Practice projects, what to prioritise, and resources.'],
+      ],
+      walk: [{ target: '.pl-calc', title: 'Your pace', text: 'Set your minutes and days, pick a goal, then start the plan.' }],
+    },
   },
   {
     match: (p) => p === '/companies',
@@ -188,11 +233,12 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
         ['Topics', 'Failed or shaky topics, with the sections your wrong answers point at.'],
         ['Mistakes drill', 'Retake only the questions you got wrong.'],
       ],
+      walk: [{ target: '.wk-head', title: 'Weak areas', text: 'Topics your exam answers, interview ratings and missed steps say need work.' }, { target: '.wk-empty', title: 'Nothing yet', text: 'Take an exam and missed questions show up here.' }, { target: '.wk-card', title: 'A weak topic', text: 'Its missed sections, with buttons to drill the mistakes or retake the exam.' }],
     },
   },
   {
     match: (p) => p === '/practice',
-    guide: { title: 'Mistakes drill', intro: 'An exam made of the questions you currently have wrong.', items: [['Fix them', 'A right answer takes a question out of the pile.']] },
+    guide: { title: 'Mistakes drill', intro: 'An exam made of the questions you currently have wrong.', items: [['Fix them', 'A right answer takes a question out of the pile.']], walk: [{ target: '.wk-head', title: 'Mistakes drill', text: 'Only the questions whose latest answer was wrong.' }, { target: '.ex-setup-act', title: 'Start', text: 'A timed run; answering right takes a question off the list.' }] },
   },
   {
     match: (p) => p === '/achievements',
@@ -268,6 +314,7 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
         ['Study-first lock', 'Whether exams (and interview answers) wait until every section is read.'],
         ['Appearance', 'Theme and accent colour.'],
       ],
+      walk: [{ target: '.set-tabs', title: 'Sections', text: 'One section at a time: exams, appearance, study lock, guide and tips, reset.' }, { target: '.set-read', title: 'At a glance', text: 'Your current pass mark, timing, lock and theme.' }, { target: '#set-tab-danger', title: 'Reset', text: 'Clears your progress; settings stay.' }],
     },
   },
 ];

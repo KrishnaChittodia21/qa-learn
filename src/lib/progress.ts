@@ -53,6 +53,23 @@ export interface ShortRecord {
   quiz?: 'first' | 'retry';
 }
 
+/** Study plan (pace calculator, src/lib/pace.ts). Days are local YYYY-MM-DD. Adapted from system-design-learn. */
+export interface StudyPlan {
+  dailyMinutes: number;
+  /** 3–7; study days run Monday onwards (5 = Mon–Fri) */
+  daysPerWeek: number;
+  /** 'all', or a comma-separated list of 'phase:<id>', 'topic:<id>' and 'section:<topic id>:<index>' (see parseGoal in pace.ts) */
+  goal: string;
+  startedAt: string;
+  /** the pacer counts from here; moved to today whenever the pace changes or the finish date is moved */
+  baselineAt: string;
+  /** the pacer's minutes on baselineAt (= covered when the date is moved; kept when only the pace changes) */
+  baselineCovered: number;
+  /** "add N min a day until <day>" chosen from the behind-schedule warning */
+  catchUp?: { extraMinutes: number; until: string };
+  warningsOff?: boolean;
+}
+
 export interface Progress {
   tests: Record<string, TestRecord>;
   sections: Record<string, number[]>;
@@ -81,6 +98,8 @@ export interface Progress {
   pwlab?: Record<string, true>;
   /** "Show me" walkthroughs finished with Done */
   walksDone?: number;
+  /** the learner's study plan (Roadmap → Plan your journey) */
+  studyPlan?: StudyPlan;
   settings: Settings;
 }
 
@@ -274,6 +293,13 @@ export function recordSteps(topicId: string, index: number, missed: number) {
 export function markPwLabDone(ids: string[]) {
   const fresh = ids.filter((id) => !state.pwlab?.[id]);
   if (fresh.length) update((p) => ({ ...p, pwlab: { ...p.pwlab, ...Object.fromEntries(fresh.map((id) => [id, true as const])) } }), false);
+}
+/** save, change or (undefined) remove the study plan; not study activity */
+export function setStudyPlan(plan: StudyPlan | undefined) {
+  update((p) => {
+    const { studyPlan: _old, ...rest } = p;
+    return plan ? { ...rest, studyPlan: plan } : rest;
+  }, false);
 }
 export function recordWalkDone() {
   update((p) => ({ ...p, walksDone: (p.walksDone ?? 0) + 1 }), false);

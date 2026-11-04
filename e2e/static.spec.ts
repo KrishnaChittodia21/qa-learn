@@ -82,3 +82,43 @@ test('learner code still runs under the CSP: a coding problem runs its tests', a
   await expect(page.getByText(/Timed out|Content Security Policy|EvalError/)).toHaveCount(0);
   done();
 });
+
+test('the visualiser steps through a wrong solution and shows where it went off', async ({ page }) => {
+  const done = noApi(page);
+  await page.goto('/#/coding/code-arrays-rotate-one');
+  // right rotation copies each cell onto itself: the "right" test fails
+  await page.locator('.cx-ed textarea').fill(
+    [
+      'function rotateOne(arr, direction) {',
+      "  if (direction === 'left') {",
+      '    const first = arr[0];',
+      '    for (let i = 0; i < arr.length - 1; i++) arr[i] = arr[i + 1];',
+      '    arr[arr.length - 1] = first;',
+      '  } else {',
+      '    const last = arr[arr.length - 1];',
+      '    for (let i = arr.length - 1; i > 0; i--) arr[i] = arr[i];',
+      '    arr[0] = last;',
+      '  }',
+      '  return arr;',
+      '}',
+    ].join('\n'),
+  );
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  const tv = page.getByRole('region', { name: 'Step-through visualiser' });
+  // it opens on the first failing visible test and plays it
+  await expect(tv.getByRole('button', { name: /✗ 02/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(tv.locator('.tv-code li.now')).toHaveCount(1);
+  // it autoplays unless reduced motion is on; either way, scrub back to the start
+  const pause = tv.getByRole('button', { name: 'Pause' });
+  if (await pause.isVisible()) await pause.click();
+  await tv.getByRole('slider', { name: 'Step' }).fill('0');
+  await expect(tv.locator('.tv-count')).toHaveText(/^1\//);
+  await tv.getByRole('button', { name: 'Next step' }).click();
+  await expect(tv.locator('.tv-count')).toHaveText(/^2\//);
+  // the verdict names the return and the expected value, and jumps there with the wrong cells marked
+  await expect(tv.locator('.tv-verdict')).toContainText('Returned [4, 2, 3, 4] on line 11');
+  await tv.getByRole('button', { name: 'Go to the return' }).click();
+  await expect(tv.locator('.tv-cell.wrong')).toHaveCount(3);
+  await expect(tv.locator('.tv-expect')).toBeVisible();
+  done();
+});

@@ -1,7 +1,7 @@
 // Adapted from system-design-learn's scripts/validate-steps.mjs (M8 in qa-learn).
 // ---------- Step lessons (M11): the player needs real actors, answerable tasks and lines the script can light ----------
 const TASKS = new Set(['pick', 'choose', 'number', 'order', 'build', 'slider', 'break', 'estimate', 'dial']);
-const SCENES = ['eq', 'count', 'bars', 'curve', 'dots', 'ladder', 'meter', 'seq', 'table', 'ring'];
+const SCENES = ['eq', 'count', 'bars', 'curve', 'dots', 'ladder', 'meter', 'seq', 'table', 'ring', 'hero', 'glyphs'];
 const ACTIONS = ['say', 'send', 'badge', 'lit', 'down', 'show', 'keys', 'wait', ...SCENES];
 const MODELS = new Set(['ttl-jitter', 'hit-ratio', 'availability']);
 // must match src/components/steps/stage.ts: box size, the two stages, and how phones turn the wide stage tall
@@ -28,6 +28,17 @@ const ladderPos = (s, tall) => ((Math.log10(s) + 9) / 9) * (tall ? 570 : 780) + 
 function checkScene(a, at) {
   const e = [];
   const bad = (m) => e.push(`${at}: ${m}`);
+  // picture scenes (qa-learn's generated lessons): icons only, so only the counts, the names and the cursor matter
+  const named = (x) => typeof x?.icon === 'string' && /^[a-z0-9-]+$/.test(x.icon);
+  if ('hero' in a && !named(a.hero)) bad('hero needs an icon name');
+  if ('glyphs' in a) {
+    const g = a.glyphs;
+    if (!Array.isArray(g.items) || g.items.length < 1 || g.items.length > 8) bad('glyphs needs 1–8 items');
+    else if (!g.items.every(named)) bad('every glyph needs an icon name');
+    if (!['orbit', 'conveyor', 'dominoes', 'deal', 'constellation', 'tower', 'radar', 'balance', 'funnel', 'stamp'].includes(g.layout)) bad(`glyphs: unknown layout "${g.layout}"`);
+    if (g.layout === 'orbit' && !g.hub) bad('an orbit needs a hub icon');
+    if (!(Number.isInteger(g.at) && g.at >= 0 && g.at < (g.items?.length ?? 0))) bad(`glyphs: at ${g.at} is not one of its items`);
+  }
   if ('eq' in a) {
     const t = a.eq ?? [];
     if (t.length < 2 || t.length > 9) bad('an equation needs 2–9 terms');

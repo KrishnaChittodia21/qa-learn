@@ -56,3 +56,42 @@ for (const { t, i, lesson } of LESSONS) {
     expect(saved.steps?.[`${t.id}:${i}`]?.missed).toBe(0);
   });
 }
+
+test('a section without a hand-written lesson gets generated Steps that play to the end', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true, lessonMode: 'steps' })));
+  await page.goto('/#/topic/mt-fundamentals?tab=learn&s=0');
+  const box = page.locator('#s-0 .sl');
+  await expect(box).toBeVisible();
+  const next = box.locator('.sl-nav .btn-primary');
+  const total = Number((await box.locator('.sl-count').textContent())!.split('/')[1]);
+  for (let k = 0; k < total; k++) {
+    await expect(box.locator('.sl-count')).toHaveText(`${k + 1} / ${total}`);
+    // every word of the drawing stays inside the stage (text is measured and scaled to fit)
+    await page.waitForTimeout(1200);
+    const outside = await box.evaluate((root) => {
+      const svg = root.querySelector('.sl-stage svg');
+      if (!svg || !svg.getBoundingClientRect().width) return [];
+      const R = svg.getBoundingClientRect();
+      return [...svg.querySelectorAll('text')]
+        .filter((t) => t.textContent?.trim())
+        .filter((t) => {
+          const r = t.getBoundingClientRect();
+          return r.left < R.left - 2 || r.right > R.right + 2 || r.top < R.top - 2 || r.bottom > R.bottom + 2;
+        })
+        .map((t) => t.textContent);
+    });
+    expect(outside, `step ${k + 1}: text outside the stage`).toEqual([]);
+    if (await next.isDisabled()) {
+      // a Your turn: try the options until one is right (wrong ones count as a miss)
+      const opts = box.locator('.sl-opt');
+      for (let o = 0; o < (await opts.count()) && (await next.isDisabled()); o++) {
+        if (await opts.nth(o).isEnabled()) await opts.nth(o).click();
+      }
+    }
+    await expect(next).toBeEnabled();
+    await next.click();
+  }
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('qa-learn-progress-v1') ?? '{}'));
+  expect(saved.sections?.['mt-fundamentals']).toContain(0);
+  expect(saved.steps?.['mt-fundamentals:0']).toBeTruthy();
+});

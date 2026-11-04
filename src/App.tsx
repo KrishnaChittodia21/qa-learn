@@ -31,6 +31,7 @@ const router = createHashRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <Home /> },
+      { path: 'today', element: <Home view="today" /> },
       { path: 'contents', element: <ContentsPage /> },
       { path: 'topic/:id', element: <TopicPage /> },
       { path: 'topic/:id/exam', element: <ExamPage /> },
@@ -51,6 +52,7 @@ const router = createHashRouter([
         element: <AchievementsPage />,
       },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'build', element: <ContentsPage view="matrix" /> },
       { path: 'saved', element: <SavedPage /> },
       { path: 'shorts', element: <ShortsPage /> },
       { path: 'short/:id', element: <ShortPage /> },
