@@ -162,8 +162,8 @@ export default function SavedPage() {
               : 'Press ☆ Save on a topic, a Learn section, an interview question, a drill, a company question, a coding problem, a Playwright Lab step or a Short, and it lands here.'}
           </p>
           {!active.length && (
-            <Link className="btn btn-primary btn-sm" to="/contents">
-              Browse the syllabus
+            <Link className="btn btn-primary btn-sm" to="/">
+              See every topic
             </Link>
           )}
         </div>

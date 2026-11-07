@@ -511,10 +511,12 @@ were read as reference only).
   `tests/trace.test.ts` traces every reference solution and checks it returns exactly what the original does.
 - **Coding page:** problem, editor and test runner stacked in one column; the problem bank folds to a rail
   (`uiPrefs.codingBankCollapsed`); a taller editor; the progress strip moved off the problem page.
-- **Pages:** Home split into Dashboard and Today; Today lost the self-ratings chart and Topics by status; Roadmap is
-  "Plan your journey" (`StudyPlanner.tsx`, `lib/pace.ts`); Syllabus is one collapsed list, with the build matrix and
-  summary on a new Build report page; Settings in tabs; a Guide me walk on every page; 24 Shorts with thumbnails and
-  Day labels.
+- **Pages:** Home split into Dashboard (what to do next, plus the build matrix of every topic) and **Track**
+  (`#/track`, progress charts only: coverage prism, journey pipeline, skill radar, Playwright Lab bugs caught, exam score
+  trend, study activity, JS coding by category); Roadmap is "Plan your journey" (`StudyPlanner.tsx`, `lib/pace.ts`);
+  the Syllabus is a plain page again (`#/syllabus`, `pages/Syllabus.tsx`: every topic by stage with its status and a
+  filter; the old pop-out drawer is gone); Settings in tabs; a
+  Guide me walk on every page; Shorts with thumbnails and Day labels.
 - **Look:** the scanline and grain texture now sits behind the content, so panels and the step stage are solid.
 - **More hand-written step lessons:** 13 more, 18 in all: defect life cycle, STLC, cost of defects, the test pyramid,
   regression vs retest, decision tables, state transitions, risk-based testing, request/response anatomy, status codes,

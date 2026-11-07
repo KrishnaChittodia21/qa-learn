@@ -12,7 +12,7 @@ export interface LocationLookup {
 }
 
 export const PAGE_LABELS: Record<string, string> = {
-  '/contents': 'Contents',
+  '/syllabus': 'Syllabus',
   '/weak-areas': 'Weak areas',
   '/practice': 'Mistakes drill',
   '/coding': 'JS coding',

@@ -1,12 +1,12 @@
-// Today (/): the Spectral Lab instrument board (qa-learn-designs/Main.html; phones: Mobile.html screens 01–02).
+// Dashboard (#/) and Track (#/track): the Spectral Lab instrument board (qa-learn-designs/Main.html; phones: Mobile.html
+// screens 01–02). Dashboard is what to do next; Track is the progress charts.
 // Every readout is derived from real progress (src/lib/progress.ts) and content; nothing is invented.
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Check, MessageSquare, RotateCcw, Target } from 'lucide-react';
+import { ArrowRight, Check, MessageSquare, RotateCcw } from 'lucide-react';
 import { CODING_PROBLEMS, COMPANY_BY_TOPIC, COMPANY_QUESTIONS, PHASES, TOPICS, TOPIC_BY_ID } from '../content';
 import { PW_LAB_STEPS } from '../content/pwlab';
-import { longestStreak } from '../content/achievements';
 import { localDay, useProgress, type Progress } from '../lib/progress';
 import { shortOfTheDay } from '../lib/shorts';
 import { ShortCard } from '../components/ShortCard';
@@ -16,41 +16,23 @@ import { openGuide } from '../lib/appEvents';
 import { TAB_META, tabLabel, type TabId } from '../lib/studyLoop';
 import { describeLocation, sameStudyTarget, type LocationLookup } from '../lib/studyLocation';
 import { studyStreak } from '../lib/streak';
-import { topicCompletion, topicStatus } from '../lib/stats';
+import { topicCompletion } from '../lib/stats';
+import { activityWeeks, codingByCategory, examTimeline, flagged, kpis } from '../lib/dashMetrics';
 import {
-  activeInLast,
-  activityWeeks,
-  codingByCategory,
-  difficultyAccuracy,
-  examScores,
-  examTimeline,
-  flagged,
-  kpis,
-  ratingCounts,
-  weakForChart,
-} from '../lib/dashMetrics';
-import { weakTopics } from '../lib/weak';
-import {
-  activitySignal,
-  examEvents,
-  judgeLines,
   pipelineStages,
-  relTime,
   skillAxes,
   splitTitle,
   trackCoverage,
   weakestSpot,
   type JudgeSummary,
-  type RunLine,
   type Track,
 } from '../lib/todayData';
 import type { Topic } from '../types';
-import { CoveragePrism, MiniPrism, SkillRadar, Wave30 } from '../components/today/TodayViz';
-import { ProgressPanel } from '../components/ProgressPanel';
+import { CoveragePrism, MiniPrism, SkillRadar } from '../components/today/TodayViz';
+import { BuildMatrix } from '../components/BuildMatrix';
 import { AchievementsSummary } from '../components/achievements/AchievementsSummary';
 import { ChartCard } from '../components/charts/ChartCard';
 import { BarList } from '../components/charts/BarList';
-import { ColumnChart } from '../components/charts/ColumnChart';
 import { LineChart } from '../components/charts/LineChart';
 import { Heatmap } from '../components/charts/Heatmap';
 import { C, plural } from '../components/charts/core';
@@ -67,7 +49,6 @@ const LOOKUP: LocationLookup = {
 
 const LEVEL_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', expert: 'Expert' } as const;
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-const axisDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const v = (o: Record<string, string | number>) => o as CSSProperties;
 
@@ -117,7 +98,7 @@ function useConsoleSlot() {
  * `dashboard` (#/): what to do next — the next mission, the weak spot, today's Short, the next coding problem and badges.
  * `today` (#/today): tracking — readouts, coverage, pipeline, study signal, run log, skills, the lab and the study record.
  */
-export default function Home({ view = 'dashboard' }: { view?: 'dashboard' | 'today' }) {
+export default function Home({ view = 'dashboard' }: { view?: 'dashboard' | 'track' }) {
   const p = useProgress();
   const judge = useJudge();
   const light = useLightTone(p.settings.theme);
@@ -156,20 +137,18 @@ export default function Home({ view = 'dashboard' }: { view?: 'dashboard' | 'tod
             <Coding p={p} />
             <AchievementsSummary p={p} />
           </div>
+          <BuildMatrix />
         </>
       ) : (
         <>
-          <h1 className="sr-only">Today</h1>
+          <h1 className="sr-only">Track</h1>
           <div className="bento">
-            <Readouts p={p} passed={passedN} />
             <PrismPanel tracks={tracks} passed={passedN} examAvg={k.avgBest} codeSolved={codeSolved} bugs={judge ? judgeCaught : null} bugsTotal={bugsTotal} />
             <Pipeline p={p} current={step.topic} runNo={runNo} passed={passedN} />
-            <Signal p={p} />
-            <Runner p={p} step={step} judge={judge} />
             <Radar p={p} />
             <LabGrid judge={judge} />
           </div>
-          <StudyRecord p={p} step={step} />
+          <StudyRecord p={p} />
         </>
       )}
     </div>
@@ -269,9 +248,6 @@ function Hero({ p, step }: { p: Progress; step: NextStepResult }) {
           <span className="arr">
             <ArrowRight size={16} aria-hidden="true" />
           </span>
-        </Link>
-        <Link className="btn btn-line hide-m" to="/contents">
-          Open syllabus
         </Link>
         <span className="mlabel eta hide-m">≈ {minLeft} min left</span>
       </div>
@@ -492,82 +468,6 @@ function PrismPanel({
 
 // ---------- readout channels ----------
 
-function Readouts({ p, passed }: { p: Progress; passed: number }) {
-  const mark = p.settings.passMark;
-  const inProg = TOPICS.filter((t) => topicStatus(p, t) === 'in-progress').length;
-  const scores = examScores(p, TOPICS);
-  const avg = scores.length ? Math.round(scores.reduce((a, s) => a + s.best, 0) / scores.length) : null;
-  const below = scores.filter((s) => !s.passed).length;
-  const company = flagged(
-    p.company,
-    COMPANY_QUESTIONS.map((q) => q.id),
-  );
-  const ratings = ratingCounts(p, TOPICS);
-  const week = activeInLast(p.activityDays, 7);
-  const streak = studyStreak(p.activityDays);
-  const best = longestStreak(p.activityDays);
-  return (
-    <section className="panel flat b-read rise" style={v({ '--i': 3 })} aria-label="Readouts">
-      <div className="ch readout">
-        <span className="mlabel">
-          Topics <span>CH1</span>
-        </span>
-        <div className="num">
-          {passed}
-          <small>/{TOPICS.length}</small>
-        </div>
-        <div className="seg" style={v({ '--n': TOPICS.length, '--v': passed })} aria-hidden="true" />
-        <div className="foot">
-          <b>{inProg}</b> in progress
-        </div>
-      </div>
-      <div className="ch readout">
-        <span className="mlabel">
-          Exam avg <span>CH2</span>
-        </span>
-        <div className="num">
-          {avg ?? '—'}
-          <small>{avg === null ? 'no exams' : '%'}</small>
-        </div>
-        <div className="scale" style={v({ '--v': avg ?? 0, '--m': mark })} aria-hidden="true">
-          <span className="tr" />
-          <span className="fl" />
-          <span className="ticks" />
-          <span className="mk" data-l={`PASS ${mark}`} />
-        </div>
-        <div className="foot">
-          <b>{scores.length}</b> {scores.length === 1 ? 'exam' : 'exams'} · <b>{below}</b> below
-        </div>
-      </div>
-      <div className="ch readout">
-        <span className="mlabel">
-          Company Qs <span>CH3</span>
-        </span>
-        <div className="num">
-          {company.done}
-          <small>/{company.total}</small>
-        </div>
-        <div className="seg" style={v({ '--n': 34, '--v': (company.done / Math.max(1, company.total)) * 34, '--g': 'linear-gradient(90deg,var(--cyan),var(--iris))' })} aria-hidden="true" />
-        <div className="foot">
-          <b>{ratings.nailed}</b> rated “nailed it”
-        </div>
-      </div>
-      <div className="ch readout">
-        <span className="mlabel">
-          Study days <span>CH4</span>
-        </span>
-        <div className="num">
-          {week}
-          <small>/7 days</small>
-        </div>
-        <div className="seg" style={v({ '--n': 7, '--v': week, '--g': 'linear-gradient(90deg,var(--lime),var(--mint))', '--gap': '3px' })} aria-hidden="true" />
-        <div className="foot">
-          streak <b>{streak}</b> · best <b>{best}</b>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ---------- journey pipeline ----------
 
@@ -602,7 +502,7 @@ function Pipeline({ p, current, runNo, passed }: { p: Progress; current?: Topic;
               <span className="hide-m">STAGE </span>
               {pad2(s.phase.number)}
             </div>
-            <Link className="tt" to={`/contents#phase-${s.phase.id}`}>
+            <Link className="tt" to={`/topic/${TOPICS.find((t) => t.phase === s.phase.id)?.id}`}>
               {s.phase.title}
             </Link>
             <div className="seg thin" style={v({ '--n': s.total, '--v': s.passed, ...(s.passed ? { '--g': STATE_FILL[s.state] } : {}) })} aria-hidden="true" />
@@ -624,210 +524,6 @@ function Pipeline({ p, current, runNo, passed }: { p: Progress; current?: Topic;
     </section>
   );
 }
-
-// ---------- 30-day signal ----------
-
-function Signal({ p }: { p: Progress }) {
-  const days = activitySignal(p, 30);
-  const active = days.filter((d) => d.h > 0).length;
-  const streak = studyStreak(p.activityDays);
-  const best = longestStreak(p.activityDays);
-  const now = new Date();
-  const mid = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 15);
-  const first = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
-  return (
-    <section className="panel b-sig rise" style={v({ '--i': 5 })} aria-labelledby="sig-t">
-      <>
-        <div className="p-head">
-          <span className="mlabel" id="sig-t">
-            Signal · 30d
-          </span>
-          <span className={`chip ${streak ? 'pass' : 'skip'}`}>{streak}-day streak</span>
-        </div>
-        <div className="sig-num">
-          <b>{active}</b>
-          <span className="ink2">
-            study days
-            <br />
-            <span className="ink3">best run {best}</span>
-          </span>
-        </div>
-        <Wave30 days={days} />
-        <div className="sig-axis" aria-hidden="true">
-          <span className="coord">{axisDate(first)}</span>
-          <span className="coord">{axisDate(mid)}</span>
-          <span className="coord">TODAY</span>
-        </div>
-      </>
-    </section>
-  );
-}
-
-// ---------- runner: real recent checks ----------
-
-const MARK = { pass: '✓', fail: '✗', flaky: '~', skip: '–', run: '▸' } as const;
-
-function Runner({ p, step, judge }: { p: Progress; step: NextStepResult; judge: JudgeSummary | null }) {
-  const mark = p.settings.passMark;
-  const events = examEvents(p, TOPICS);
-  const [now] = useState(() => Date.now());
-  const timed: RunLine[] = [
-    ...events.map((e, i) => ({
-      key: `ex-${e.topic.id}-${e.at}-${i}`,
-      kind: e.kind,
-      spec: e.topic.id,
-      what: 'exam',
-      extra: e.kind === 'fail' ? `${e.score}% (pass ${mark}%)` : e.kind === 'flaky' ? `${e.score}% · passed on retry #${e.retry}` : `${e.score}%`,
-      d: relTime(e.at, now),
-      at: e.at,
-    })),
-    ...judgeLines(judge).map((l) => ({ ...l, d: l.d })),
-  ]
-    .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))
-    .slice(0, 8);
-
-  const code = flagged(
-    p.code,
-    CODING_PROBLEMS.map((q) => q.id),
-  );
-  const ratings = ratingCounts(p, TOPICS);
-  const totals: RunLine[] = [];
-  if (code.done) totals.push({ key: 'code', kind: 'pass', spec: 'coding', what: `${code.done}/${code.total} problems solved`, d: 'total' });
-  if (ratings.partial + ratings.missed)
-    totals.push({ key: 'iq', kind: 'flaky', spec: 'interview', what: `${ratings.partial + ratings.missed} answers rated partly / missed`, d: 'total' });
-  const t = step.topic;
-  const queued = t ? TOPICS.slice(TOPICS.indexOf(t) + 1).find((x) => topicStatus(p, x) === 'new') : undefined;
-  if (queued) totals.push({ key: 'skip', kind: 'skip', spec: queued.id, what: '', extra: 'not started', d: 'skip' });
-  const lines = [...timed.reverse(), ...totals];
-
-  const fails = events.filter((e) => e.kind === 'fail').length;
-  const passes = events.filter((e) => e.kind === 'pass').length;
-  const flaky = events.filter((e) => e.kind === 'flaky').length;
-  const total = passes + fails + flaky;
-  const specs = new Set(lines.map((l) => l.spec)).size;
-  const oldest = timed[0]?.at;
-
-  // failure trace: the most recent failing exam that is still not passed
-  const lastFail = events.find((e) => e.kind === 'fail' && !p.tests[e.topic.id]?.passedAt);
-  const w = lastFail ? weakTopics(p, TOPICS).find((x) => x.topic.id === lastFail.topic.id) : undefined;
-  const sec = w?.sections[0];
-
-  return (
-    <section className="panel b-run rise" data-theme="dark" style={v({ '--i': 6 })} aria-labelledby="run-t">
-      <div className="run-head">
-        <span className="dots" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-        <span className="ttl" id="run-t">
-          runner — <span className="hide-m">recent </span>checks
-        </span>
-        <span className="chip run">live</span>
-      </div>
-      <div className="run-body runner">
-        <div className="cmd hide-m">
-          <span>$</span> qa-learn run{oldest ? ` --since=${new Date(oldest).toISOString().slice(0, 10)}` : ''} --reporter=line
-        </div>
-        <div className="run-info hide-m">
-          {lines.length > 1 || timed.length
-            ? `Running ${plural(lines.length + (t ? 1 : 0), 'check')} from ${plural(specs, 'spec')}`
-            : 'No checks recorded yet: every pass, fail and retry you make lands here.'}
-        </div>
-        <ul className="rl-list" aria-label="Recent checks">
-          {lines.map((l, i) => (
-            <li key={l.key} className={`rl ${l.kind}`} style={v({ '--i': i })}>
-              <span className={`m ${l.kind === 'fail' && i === lastFailIndex(lines) ? 'glitch' : ''}`} data-text={MARK[l.kind]} aria-hidden="true">
-                {MARK[l.kind]}
-              </span>
-              <span className="tx">
-                <span className="sr-only">{l.kind === 'skip' ? 'skipped' : l.kind === 'flaky' ? 'flaky' : l.kind === 'fail' ? 'failed' : 'passed'}: </span>
-                {l.spec}
-                {l.what && (
-                  <>
-                    {' '}
-                    › <b>{l.what}</b>
-                  </>
-                )}
-                {l.extra && (l.kind === 'flaky' ? <em> {l.extra}</em> : ` · ${l.extra}`)}
-              </span>
-              <span className="d">{l.d}</span>
-            </li>
-          ))}
-          {t && (
-            <li className="rl run" style={v({ '--i': lines.length })}>
-              <span className="m" aria-hidden="true">
-                ▸
-              </span>
-              <span className="tx">
-                <span className="sr-only">running: </span>
-                {t.id} › <b>{step.title}</b>
-                <span className="caret" aria-hidden="true" />
-              </span>
-              <span className="d">running</span>
-            </li>
-          )}
-        </ul>
-        {lastFail && (
-          <div className="trace hide-m">
-            <div className="tr-h">
-              <span className="t-fail">1)</span> {lastFail.topic.id} › exam{sec ? ' › ' : ''}
-              {sec && <b>§{sec.index + 1} {sec.heading}</b>}
-            </div>
-            <div>
-              <span className="ink3">Expected</span> <span className="t-pass">≥ {mark}%</span> <span className="ink3">— the pass mark</span>
-            </div>
-            <div>
-              <span className="ink3">Received</span> <span className="t-fail">{lastFail.score}%</span>
-              {w && w.wrong.length > 0 && <span className="ink3"> — {plural(w.wrong.length, 'question')} still wrong</span>}
-            </div>
-            {sec && (
-              <div className="ink3">
-                {'  '}at <span className="t-cyan">{lastFail.topic.id}.ts</span>:§{sec.index + 1} “{sec.heading}”
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="run-sum">
-        <div className="sum-bar" aria-hidden="true">
-          {total ? (
-            <>
-              <i className="p" style={{ flex: passes }} />
-              <i className="f" style={{ flex: fails }} />
-              <i className="k" style={{ flex: flaky }} />
-            </>
-          ) : (
-            <i className="e" />
-          )}
-        </div>
-        <div className="sum-txt">
-          <b className="t-pass">
-            {passes}
-            <span className="hide-m"> passed</span>
-            <span className="only-m"> ✓</span>
-          </b>
-          <b className="t-fail">
-            {fails}
-            <span className="hide-m"> failed</span>
-            <span className="only-m"> ✗</span>
-          </b>
-          <b className="t-flaky">
-            {flaky}
-            <span className="hide-m"> flaky</span>
-            <span className="only-m"> ~</span>
-          </b>
-          <span className="sum-r">{plural(total, 'exam run')}</span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const lastFailIndex = (lines: RunLine[]) => {
-  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].kind === 'fail') return i;
-  return -1;
-};
 
 // ---------- skill radar ----------
 
@@ -997,9 +693,6 @@ function HowItWorks({ mark }: { mark: number }) {
         <button type="button" className="btn btn-line btn-sm" onClick={() => openGuide()}>
           Take the 1-minute tour
         </button>
-        <Link className="btn btn-ghost btn-sm" to="/contents">
-          Browse the syllabus
-        </Link>
       </div>
     </section>
   );
@@ -1151,11 +844,9 @@ function LabGrid({ judge }: { judge: JudgeSummary | null }) {
 
 // ---------- study record (charts with table views) ----------
 
-function StudyRecord({ p, step }: { p: Progress; step: NextStepResult }) {
+function StudyRecord({ p }: { p: Progress }) {
   const passMark = p.settings.passMark;
-  const scores = examScores(p, TOPICS);
   const timeline = examTimeline(p, TOPICS);
-  const levels = difficultyAccuracy(p, TOPICS);
   const weeks = activityWeeks(p.activityDays);
   const studyDays = (p.activityDays ?? []).length;
   const streak = studyStreak(p.activityDays);
@@ -1164,18 +855,6 @@ function StudyRecord({ p, step }: { p: Progress; step: NextStepResult }) {
   const company = flagged(
     p.company,
     COMPANY_QUESTIONS.map((q) => q.id),
-  );
-  const weak = weakForChart(p, TOPICS);
-  const totalWrong = weakTopics(p, TOPICS).reduce((n, w) => n + w.wrong.length, 0);
-  const onDesk = TOPICS.filter((t) => topicStatus(p, t) === 'in-progress')
-    .map((t) => ({ t, pct: topicCompletion(p, t) }))
-    .sort((a, b) => b.pct - a.pct)
-    .slice(0, 5);
-  const SCORE_ROWS = 10;
-  const firstStep: ReactNode = (
-    <Link to={step.href} className="btn btn-sm">
-      {step.title} <ArrowRight size={14} aria-hidden="true" />
-    </Link>
   );
 
   return (
@@ -1190,174 +869,6 @@ function StudyRecord({ p, step }: { p: Progress; step: NextStepResult }) {
         </Link>
       </div>
       <div className="rec-grid">
-        <ChartCard
-          className="r-scores rise"
-          title="Exam scores"
-          subtitle={`Best full-exam score per topic, against the ${passMark}% pass mark.`}
-          empty={
-            !scores.length && (
-              <>
-                <p>
-                  <strong>Your scores will live here.</strong> Take your first exam to see them.
-                </p>
-                {firstStep}
-              </>
-            )
-          }
-          table={{
-            columns: ['Topic', 'Best', 'Last', 'Attempts', 'Passed'],
-            rows: scores.map((s) => [s.topic.title, `${s.best}%`, `${s.last}%`, s.attempts, s.passed ? 'Yes' : 'No']),
-          }}
-        >
-          <BarList
-            color={C.series}
-            max={100}
-            reference={{ value: passMark, label: `Pass ${passMark}%` }}
-            rows={scores.slice(-SCORE_ROWS).map((s) => ({
-              id: s.topic.id,
-              label: s.topic.title,
-              sub: `${s.passed ? '✓ Passed' : '✗ Not passed yet'} · ${plural(s.attempts, 'attempt')}`,
-              value: s.best,
-              display: `${s.best}%`,
-              color: s.passed ? undefined : C.weak,
-              href: `/topic/${s.topic.id}?tab=exam`,
-              ariaLabel: `${s.topic.title}: best ${s.best}%, last ${s.last}%, ${plural(s.attempts, 'attempt')}, ${s.passed ? 'passed' : 'not passed'}`,
-              tip: { value: `Best ${s.best}%`, label: s.topic.title, detail: `Last ${s.last}% · ${plural(s.attempts, 'attempt')}` },
-            }))}
-          />
-          {scores.length > SCORE_ROWS && (
-            <p className="chart-note">
-              Showing the last {SCORE_ROWS} topics in course order; the table lists all {scores.length}.
-            </p>
-          )}
-        </ChartCard>
-
-        <ProgressPanel p={p} />
-
-        <ChartCard
-          className="r-weak rise"
-          title="Weakest topics"
-          subtitle="Exam questions you currently have wrong, per topic (most first)."
-          empty={
-            !weak.length && (
-              <>
-                <p>
-                  <strong>No tricky spots yet.</strong> Take an exam and the questions you miss are traced back to their section.
-                </p>
-                {firstStep}
-              </>
-            )
-          }
-          table={{
-            columns: ['Topic', 'Wrong now', 'Weakest section', 'Last exam', 'Shaky interview answers'],
-            rows: weak.map((w) => [w.topic.title, w.wrong.length, w.sections[0]?.heading ?? '—', w.attempts ? `${w.last}%` : 'no exam yet', w.shakyInterview]),
-          }}
-        >
-          <BarList
-            color={C.weak}
-            max={Math.max(1, ...weak.map((w) => w.wrong.length))}
-            labelWidth="minmax(160px, 34%)"
-            rows={weak.map((w) => {
-              const why = [w.attempts ? `last exam ${w.last}%${w.passed ? '' : ' (not passed)'}` : null, w.shakyInterview ? plural(w.shakyInterview, 'shaky interview answer') : null]
-                .filter(Boolean)
-                .join(' · ');
-              return {
-                id: w.topic.id,
-                label: w.topic.title,
-                sub: why,
-                value: w.wrong.length,
-                display: `${w.wrong.length} wrong`,
-                ariaLabel: `${w.topic.title}: ${plural(w.wrong.length, 'question')} currently wrong. ${why}${w.sections[0] ? `. Weakest section: ${w.sections[0].heading}` : ''}`,
-                tip: { value: `${plural(w.wrong.length, 'question')} wrong`, label: w.topic.title, detail: w.sections[0] ? `Weakest: ${w.sections[0].heading}` : why },
-                actions: (
-                  <>
-                    {w.wrong.length > 0 && (
-                      <Link to={`/practice?topic=${w.topic.id}`} className="btn btn-xs">
-                        <RotateCcw size={12} aria-hidden="true" /> Practise {plural(w.wrong.length, 'mistake')}
-                      </Link>
-                    )}
-                    {w.sections[0] && (
-                      <Link to={`/topic/${w.topic.id}?tab=learn&s=${w.sections[0].index}`} className="btn btn-xs">
-                        <BookOpen size={12} aria-hidden="true" /> Revise “{w.sections[0].heading}”
-                      </Link>
-                    )}
-                    {w.shakyInterview > 0 && (
-                      <Link to={`/topic/${w.topic.id}?tab=interview`} className="btn btn-xs">
-                        <MessageSquare size={12} aria-hidden="true" /> Re-practise interview Qs
-                      </Link>
-                    )}
-                    <Link to={`/topic/${w.topic.id}/exam`} className="btn-ghost btn-xs">
-                      Retake exam
-                    </Link>
-                  </>
-                ),
-              };
-            })}
-          />
-        </ChartCard>
-
-        <section className="panel r-howto rise" aria-labelledby="howto-t">
-          <div className="p-head">
-            <span className="mlabel" id="howto-t">
-              <Target size={12} aria-hidden="true" /> How to clear a weak area
-            </span>
-          </div>
-          <ol className="howto-steps">
-            <li>
-              <strong>Practise your mistakes.</strong> The mistakes drill asks only the questions whose latest answer was wrong. A question leaves
-              the list as soon as you answer it correctly, in the drill or in any exam. Skipped questions count as wrong.
-            </li>
-            <li>
-              <strong>Revise the weakest section first.</strong> Each missed question is matched to the Learn section it most likely tests, so
-              start with the section named on the row.
-            </li>
-            <li>
-              <strong>Retake the full exam.</strong> A topic stays on the list until you pass its full-length exam ({passMark}%+). A shorter custom
-              exam updates your answers but doesn&apos;t count as a pass.
-            </li>
-            <li>
-              <strong>Re-rate shaky interview answers.</strong> Answers you rated <em>partly</em> or <em>missed</em> keep the topic listed until you
-              practise them again and rate them <em>nailed it</em>.
-            </li>
-          </ol>
-          <div className="act">
-            {totalWrong > 0 && (
-              <Link to="/practice" className="btn btn-line btn-sm">
-                <RotateCcw size={14} aria-hidden="true" /> Practise all {plural(totalWrong, 'mistake')}
-              </Link>
-            )}
-            <Link to="/weak-areas" className="btn btn-ghost btn-sm">
-              Weak areas page
-            </Link>
-          </div>
-        </section>
-
-        <section className="panel r-desk rise" aria-labelledby="desk-t">
-          <div className="p-head">
-            <span className="mlabel" id="desk-t">
-              Open specs · in progress
-            </span>
-            <span className="mlabel">
-              <b>{onDesk.length}</b> shown
-            </span>
-          </div>
-          {onDesk.length ? (
-            <ul className="desk-list">
-              {onDesk.map(({ t, pct }) => (
-                <li key={t.id}>
-                  <Link to={`/topic/${t.id}`}>{t.title}</Link>
-                  <span className="mono desk-pct">
-                    {pct}%<span className="sr-only"> complete</span>
-                  </span>
-                  <span className="seg thin" style={v({ '--n': 20, '--v': pct / 5 })} aria-hidden="true" />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="ink2 small">No topic is half-done. Start one from the hero above; it shows up here, closest to done first.</p>
-          )}
-        </section>
-
         <ChartCard
           className="r-trend rise"
           title="Exam score trend"
@@ -1381,32 +892,6 @@ function StudyRecord({ p, step }: { p: Progress; step: NextStepResult }) {
               value: a.score,
               ariaLabel: `${shortDate(a.at)}, ${a.topic.title}: ${a.score}%`,
               tip: { value: `${a.score}%`, label: a.topic.title, detail: shortDate(a.at) },
-            }))}
-          />
-        </ChartCard>
-
-        <ChartCard
-          className="r-levels rise"
-          title="Accuracy by difficulty"
-          subtitle="Share of exam questions whose latest answer is correct."
-          empty={
-            !levels.length && (
-              <p>
-                <strong>Nothing to chart yet.</strong> Answer a few exam questions to see where the difficulty bites.
-              </p>
-            )
-          }
-          table={{ columns: ['Difficulty', 'Accuracy', 'Correct', 'Answered'], rows: levels.map((l) => [LEVEL_LABEL[l.level], `${l.pct}%`, l.correct, l.seen]) }}
-        >
-          <ColumnChart
-            color={C.series}
-            columns={levels.map((l) => ({
-              id: l.level,
-              label: LEVEL_LABEL[l.level],
-              value: l.pct,
-              display: `${l.pct}%`,
-              ariaLabel: `${LEVEL_LABEL[l.level]}: ${l.pct}% correct, ${l.correct} of ${l.seen}`,
-              tip: { value: `${l.pct}% correct`, label: `${LEVEL_LABEL[l.level]} questions`, detail: `${l.correct} of ${l.seen} answered` },
             }))}
           />
         </ChartCard>

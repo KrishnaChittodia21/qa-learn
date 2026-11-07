@@ -17,8 +17,8 @@ const rail = (to: string) => `.rail-a[href="#${to}"]`;
 /** The menu: the rail on a desktop, the top bar on a phone. Also the walk after the first-visit tour. */
 export const MENU_WALK: WalkStep[] = [
   { target: rail('/'), title: 'Dashboard', text: 'Your next step, the spot to fix and today’s Short. The app also reopens where you left off.' },
-  { target: rail('/today'), title: 'Today', text: 'Tracking: progress, study days, skills and every chart.' },
-  { target: rail('/contents'), title: 'Syllabus', text: 'Every phase and topic, in study order. Open a topic to learn it, practise it and take its exam.' },
+  { target: rail('/syllabus'), title: 'Syllabus', text: 'Every topic by stage, with its status. Pick one to study it.' },
+  { target: rail('/track'), title: 'Track', text: 'Your progress charts: coverage, the journey, skills, bugs caught, exam trend, study days and coding.' },
   { target: rail('/coding'), title: 'Coding', text: 'JavaScript problems for the live-coding round, judged by tests as you type.' },
   { target: rail('/pw-lab'), title: 'Playwright Lab', text: 'Write real Playwright tests against a shop app with hidden bugs, then let the judge count what you caught.' },
   { target: rail('/roadmap'), title: 'Roadmap', text: 'Plan your journey: your pace decides when you finish each phase.' },
@@ -39,58 +39,49 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
         ['Next mission', 'The one thing to do next, in study order: read, practise, then pass the exam.'],
         ['Weak spot', 'The section your wrong answers point at, to reread before anything new.'],
         ['Short of the day', 'A 90-second story; a new one each day you watch.'],
+        ['Build matrix', 'Every topic as a cell, by track and stage. Click a cell to open its topic, or a stage to open its first topic.'],
         ['Tracking', 'Your numbers, charts and streak are on Today.'],
       ],
       walk: [
         { target: '.hero-cta', title: 'Your next step', text: 'Always one button: the next section to read, the next lab, or the exam.' },
         { target: '.b-short', title: 'Short of the day', text: 'A quick story that ends with one question.' },
+        { target: '.b-matrix', title: 'Build matrix', text: 'Each cell is a topic: its colour is its status, its bar the sections read.' },
         ...MENU_WALK,
       ],
     },
   },
   {
-    match: (p) => p === '/today',
-    guide: {
-      title: 'Today',
-      intro: 'How you are doing: progress, study days, skills, the lab and every chart.',
-      items: [
-        ['Readouts and coverage', 'Topics passed, exam average, company questions and study days at a glance.'],
-        ['Signal', 'Your study days over the last month and your streak.'],
-        ['Study record', 'Exam scores, weakest topics, accuracy, ratings and coding by category.'],
-      ],
-      walk: [
-        { target: '[aria-label="Readouts"]', title: 'Readouts', text: 'Topics, exam average, company questions and study days.' },
-        { target: '[aria-label^="Coverage prism"]', title: 'Coverage', text: 'How much of each track you have passed.' },
-        { target: '.b-sig', title: 'Signal', text: 'Study days in the last 30 days and your streak.' },
-      ],
-    },
-  },
-  {
-    match: (p) => p === '/contents',
+    match: (p) => p === '/syllabus',
     guide: {
       title: 'Syllabus',
-      intro: 'The whole course, phase by phase. Topics are meant to be done in this order.',
+      intro: 'Every topic in the course, by stage and in study order.',
       items: [
-        ['Phases', 'Manual testing, API and SQL, JavaScript, Playwright, AI testing and interview prep.'],
-        ['Collapsed by default', 'Open a stage to see its topics, or use Expand all.'],
-        ['Topic status', 'Not started, in progress or passed, from what you have read and the exams you passed.'],
+        ['Stages', 'Click a stage to fold it open or shut; your choice is remembered.'],
+        ['Status marks', 'Passed, started or not run yet, from what you have read and the exams you passed.'],
+        ['Filter', 'Type a word to find a topic by its title or tags.'],
       ],
       walk: [
-        { target: '.syl-filters .fbar', title: 'Search and filters', text: 'Find a topic by word, track or status.' },
-        { target: '.reports', title: 'Stages', text: 'Every stage in course order. Open one to see its topics.' },
+        { target: '.syllabus-page .search', title: 'Filter', text: 'Find a topic by word or tag.' },
+        { target: '.syllabus-page .side-phase-title', title: 'Stages', text: 'Each stage with how many of its topics you passed. Click to open or close it.' },
       ],
     },
   },
   {
-    match: (p) => p === '/build',
+    match: (p) => p === '/track',
     guide: {
-      title: 'Build report',
-      intro: 'Your progress through the whole course at a glance.',
+      title: 'Track',
+      intro: 'How you are doing, in charts: nothing to act on here, just where you stand.',
       items: [
-        ['Summary', 'Topics passed, sections read and time left.'],
-        ['Build matrix', 'Every topic as a cell, by track and stage. Click a stage or a cell to open it in the Syllabus.'],
+        ['Coverage prism', 'How much of each track you have passed.'],
+        ['Journey pipeline', 'Every stage of the course and where you are in it.'],
+        ['Skill radar and bugs caught', 'Exam accuracy by skill, and the hidden bugs your Playwright Lab tests caught.'],
+        ['Study record', 'Your exam score trend, study days and JS coding by category.'],
       ],
-      walk: [{ target: '.b-matrix', title: 'Build matrix', text: 'Each cell is a topic: its colour is its status, its bar the sections read.' }],
+      walk: [
+        { target: '[aria-label^="Coverage prism"]', title: 'Coverage', text: 'How much of each track you have passed.' },
+        { target: '.b-pipe', title: 'Journey pipeline', text: 'Every stage in order; the lit one is where you are.' },
+        { target: '.b-radar', title: 'Skill radar', text: 'Share of exam questions you currently answer right, by skill.' },
+      ],
     },
   },
   {

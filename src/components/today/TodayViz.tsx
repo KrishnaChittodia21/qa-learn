@@ -1,9 +1,9 @@
-// Today instruments drawn in SVG: the coverage prism (big + phone-size), the skill radar and the
-// 30-day signal waveform. Shapes follow qa-learn-designs/Main.html (build.py prism()/radar()/wave30());
+// Track instruments drawn in SVG: the coverage prism (big + phone-size) and the skill radar. Shapes follow
+// qa-learn-designs/Main.html (build.py prism()/radar());
 // every value comes from real progress (src/lib/todayData.ts). Colours are spectrum tokens set
 // through CSS custom properties so both themes resolve them; styling lives in today.css.
 import type { CSSProperties } from 'react';
-import type { SignalDay, SkillAxis, Track } from '../../lib/todayData';
+import type { SkillAxis, Track } from '../../lib/todayData';
 
 type Pt = [number, number];
 const pts = (ps: Pt[]) => ps.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
@@ -255,14 +255,3 @@ export function SkillRadar({ axes, target }: { axes: SkillAxis[]; target: number
   );
 }
 
-/** 30 bars, one per day: off days are coral stubs, today pulses. */
-export function Wave30({ days }: { days: SignalDay[] }) {
-  const active = days.filter((d) => d.h > 0).length;
-  return (
-    <div className="wave30" role="img" aria-label={`Study activity over the last ${days.length} days: ${active} active days`}>
-      {days.map((d, i) => (
-        <i key={d.day} className={d.h === 0 ? 'off' : i === days.length - 1 ? 'now' : undefined} style={{ '--h': Math.max(d.h, 6) } as CSSProperties} />
-      ))}
-    </div>
-  );
-}

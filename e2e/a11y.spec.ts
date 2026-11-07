@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const PAGES = [
-  '/', '/today', '/contents', '/build', '/topic/mt-fundamentals?tab=learn', '/topic/sql-joins-validation?tab=learn', '/topic/mt-defects?tab=learn', '/topic/mt-fundamentals/exam',
+  '/', '/syllabus', '/track', '/topic/mt-fundamentals?tab=learn', '/topic/sql-joins-validation?tab=learn', '/topic/mt-defects?tab=learn', '/topic/mt-fundamentals/exam',
   '/coding', '/coding/sum-array', '/roadmap', '/pw-lab', '/pw-lab/step1', '/playground', '/companies', '/weak-areas',
   '/achievements', '/settings', '/saved', '/shorts', '/short/test-pyramid',
 ];

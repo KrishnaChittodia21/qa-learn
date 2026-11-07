@@ -23,7 +23,7 @@ import { useFocusTrap } from '../lib/useFocusTrap';
 
 const LOOP: TabId[] = ['learn', 'code', 'interview', 'envelope', 'exam', 'company'];
 const STEP_TITLES = ['What this is', 'The study loop', 'Finding your way', 'Your progress', 'Start here'];
-const RAIL = ['Today', 'Syllabus', 'Coding', 'Playwright Lab', 'Roadmap', 'Weak areas', 'Achievements'];
+const RAIL = ['Dashboard', 'Syllabus', 'Track', 'Coding', 'Playwright Lab', 'Roadmap', 'Weak areas', 'Achievements'];
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 /** Welcome tour: shown once on first visit, re-opened from "Guide me" in the rail / More sheet or the "?" key. */
@@ -167,15 +167,14 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
                       <Command size={18} aria-hidden="true" />
                       <span>
                         <strong>Search</strong>: press <kbd className="kbd">⌘</kbd> <kbd className="kbd">K</kbd> (or <kbd className="kbd">Ctrl</kbd>{' '}
-                        <kbd className="kbd">K</kbd>) anywhere to jump to a page, topic, section or question. On the Syllabus,{' '}
-                        <kbd className="kbd">/</kbd> jumps straight to its filter.
+                        <kbd className="kbd">K</kbd>) anywhere to jump to a page, topic, section or question.
                       </span>
                     </li>
                     <li>
                       <ListTree size={18} aria-hidden="true" />
                       <span>
-                        <strong>Console strip</strong>: the mono bar at the top of every page shows where you are. Its{' '}
-                        <strong>syllabus index</strong> button (right end) opens every topic by stage, with its status.
+                        <strong>Syllabus</strong> (second in the menu) lists every topic by stage, with its status. The mono bar at the
+                        top of every page shows where you are.
                       </span>
                     </li>
                     <li>
@@ -187,8 +186,8 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
                     <li>
                       <Smartphone size={18} aria-hidden="true" />
                       <span>
-                        <strong>On a phone</strong>, a bottom dock holds Today, Syllabus, Coding and Lab; <LayoutGrid size={13} aria-hidden="true" className="inl" />{' '}
-                        <strong>More</strong> opens a sheet with everything else, the syllabus index and the theme switch.
+                        <strong>On a phone</strong>, a bottom dock holds Home, Syllabus, Track and Coding; <LayoutGrid size={13} aria-hidden="true" className="inl" />{' '}
+                        <strong>More</strong> opens a sheet with everything else and the theme switch.
                       </span>
                     </li>
                   </ul>
@@ -242,9 +241,6 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
                       <span className="arr">
                         <ArrowRight size={16} aria-hidden="true" />
                       </span>
-                    </button>
-                    <button type="button" className="btn btn-line" onClick={() => finish('/contents')}>
-                      <ListTree size={16} aria-hidden="true" /> Open the Syllabus
                     </button>
                   </div>
                 </>
