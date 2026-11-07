@@ -72,25 +72,7 @@ export function pipelineStages(p: Progress, topics: Topic[], phases: Phase[], cu
     .filter((s) => s.total > 0);
 }
 
-// ---------- runner log ----------
-export type RunKind = 'pass' | 'fail' | 'flaky' | 'skip' | 'run';
-
-export interface RunLine {
-  key: string;
-  kind: RunKind;
-  /** spec id, e.g. "sql-joins-validation" or "pwlab @step3" */
-  spec: string;
-  /** the bold part after › */
-  what: string;
-  /** trailing plain text */
-  extra?: string;
-  /** right column: relative time, duration or a status word */
-  d: string;
-  /** ms since epoch, for ordering (lines without one go after the timed ones) */
-  at?: number;
-}
-
-/** subset of public/judge-results.json the Today screen reads (written by `npm run judge`) */
+/** subset of public/judge-results.json the Track screen reads (written by `npm run judge`) */
 export interface JudgeStep {
   id: string;
   title: string;
@@ -103,69 +85,6 @@ export interface JudgeSummary {
   generatedAt: string;
   overall: { mutantsCaught: number; mutantsTotal: number };
   steps: Record<string, JudgeStep>;
-}
-
-export function relTime(ms: number, now = Date.now()): string {
-  const s = Math.max(0, Math.round((now - ms) / 1000));
-  if (s < 60) return 'now';
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.round(h / 24);
-  return d < 60 ? `${d}d ago` : `${Math.round(d / 30)}mo ago`;
-}
-
-export interface ExamEvent {
-  topic: Topic;
-  at: number;
-  score: number;
-  kind: 'pass' | 'fail' | 'flaky';
-  /** failed attempts before this pass (flaky = passed on retry) */
-  retry: number;
-}
-
-/** every saved full-exam attempt as a check: pass, fail, or flaky (first pass after failed attempts) */
-export function examEvents(p: Progress, topics: Topic[]): ExamEvent[] {
-  const mark = p.settings.passMark;
-  const out: ExamEvent[] = [];
-  for (const t of topics) {
-    let fails = 0;
-    let passedBefore = false;
-    for (const h of p.tests[t.id]?.history ?? []) {
-      const ok = h.score >= mark;
-      const at = Date.parse(h.at) || 0;
-      if (!ok) {
-        fails++;
-        out.push({ topic: t, at, score: h.score, kind: 'fail', retry: 0 });
-      } else {
-        out.push({ topic: t, at, score: h.score, kind: !passedBefore && fails > 0 ? 'flaky' : 'pass', retry: fails });
-        passedBefore = true;
-      }
-    }
-  }
-  return out.sort((a, b) => b.at - a.at);
-}
-
-export function judgeLines(judge: JudgeSummary | null): RunLine[] {
-  if (!judge) return [];
-  const at = Date.parse(judge.generatedAt) || 0;
-  return Object.values(judge.steps)
-    .filter((s) => s && s.status !== 'no-tests')
-    .map((s) => {
-      const caught = `${s.mutantsCaught}/${s.mutantsTotal} bugs caught`;
-      const kind: RunKind =
-        s.status === 'flaky' ? 'flaky' : s.status !== 'scored' ? 'fail' : s.mutantsCaught > 0 ? 'pass' : 'fail';
-      const extra =
-        s.status === 'flaky'
-          ? 'flaky tests'
-          : s.status === 'fails-on-correct'
-            ? 'tests fail on the correct app'
-            : s.status === 'error'
-              ? 'test run error'
-              : caught;
-      return { key: `pw-${s.id}`, kind, spec: `pwlab @${s.id}`, what: s.title, extra, d: `${(s.durationMs / 1000).toFixed(1)}s`, at };
-    });
 }
 
 // ---------- skill radar: 6 axes, share of exam questions currently answered correctly ----------

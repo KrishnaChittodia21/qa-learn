@@ -52,10 +52,7 @@
 .today .bento > * { min-width: 0; }
 .today .b-hero { grid-column: 1 / 8; grid-row: 1; }
 .today .b-prism { grid-column: 8 / 13; grid-row: 1 / 3; }
-.today .b-read { grid-column: 1 / 8; grid-row: 2; }
 .today .b-pipe { grid-column: 1 / 10; grid-row: 3; }
-.today .b-sig { grid-column: 10 / 13; grid-row: 3; }
-.today .b-run { grid-column: 1 / 6; grid-row: 4 / 6; }
 .today .b-weak { grid-column: 6 / 10; grid-row: 4; }
 .today .b-code { grid-column: 10 / 13; grid-row: 4; }
 .today .b-radar { grid-column: 6 / 10; grid-row: 5; }
@@ -65,7 +62,7 @@
 .today .b-shelf:not(:has(+ .b-anext)) { grid-column: 1 / -1; }
 .today .b-short { grid-column: 1 / -1; grid-row: 7; padding: 22px 24px 20px; }
 
-/* Dashboard (#/) and Today (#/today) each show part of the bento; desktop places their cards here.
+/* Dashboard (#/) and Track (#/track) each show part of the bento; desktop places their cards here.
    Tablet and phone already flow the cards automatically (the media queries below). */
 @media (min-width: 1201px) {
   .today.view-dashboard .b-hero { grid-column: 1 / 8; grid-row: 1; }
@@ -76,13 +73,11 @@
   .today.view-dashboard .b-anext { grid-column: 8 / 13; grid-row: 3; }
   .today.view-dashboard .b-shelf:not(:has(+ .b-anext)) { grid-column: 1 / -1; }
 
-  .today.view-today .b-read { grid-column: 1 / 8; grid-row: 1; }
-  .today.view-today .b-prism { grid-column: 8 / 13; grid-row: 1 / 3; }
-  .today.view-today .b-pipe { grid-column: 1 / 8; grid-row: 2; }
-  .today.view-today .b-run { grid-column: 1 / 6; grid-row: 3 / 5; }
-  .today.view-today .b-sig { grid-column: 6 / 13; grid-row: 3; }
-  .today.view-today .b-radar { grid-column: 6 / 10; grid-row: 4; }
-  .today.view-today .b-lab { grid-column: 10 / 13; grid-row: 4; }
+  /* the pipeline gets the full width so its eight stage names never collide */
+  .today.view-track .b-pipe { grid-column: 1 / -1; grid-row: 1; }
+  .today.view-track .b-radar { grid-column: 1 / 5; grid-row: 2; }
+  .today.view-track .b-lab { grid-column: 5 / 8; grid-row: 2; }
+  .today.view-track .b-prism { grid-column: 8 / 13; grid-row: 2; }
 }
 
 /* ---------- hero: next mission ---------- */
@@ -229,7 +224,7 @@
 .today .mc-read .num small { font-size: 11.5px; margin-left: 3px; }
 
 /* ---------- readout channels: one instrument, four channels ---------- */
-.today .b-read { padding: 20px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
 .today .ch { padding: 4px 24px 2px; position: relative; min-width: 0; }
 .today .ch + .ch { border-left: 1px solid var(--line-2); }
 .today .ch .mlabel { display: flex; justify-content: space-between; white-space: nowrap; gap: 8px; }
@@ -269,49 +264,12 @@
 .today .pipe-now { margin: 12px 0 0; font: 500 12.5px/1.3 var(--sans); color: var(--ink-2); }
 
 /* ---------- 30-day signal ---------- */
-.today .b-sig { padding: 22px 22px 18px; display: flex; flex-direction: column; }
-.today .b-sig .p-head .chip { margin-left: auto; }
-.today .sig-num { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; white-space: nowrap; font-size: 13px; line-height: 1.3; }
-.today .sig-num b { font: 500 40px/1 var(--mono); letter-spacing: -.06em; }
-.today .wave30 { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 2px; align-items: center; height: 84px; margin-top: auto; padding-top: 14px; position: relative; }
-.today .wave30::before { content: ''; position: absolute; left: 0; right: 0; top: calc(50% + 7px); height: 1px; background: var(--line-2); }
-.today .wave30 i { position: relative; height: calc(var(--h) * 1%); min-height: 3px; background: linear-gradient(180deg, var(--lime), var(--mint) 35%, var(--cyan) 65%, var(--iris)); opacity: .9; border-radius: 1px; }
-.today .wave30 i.off { background: var(--fail); opacity: .55; height: 3px; }
-.today .wave30 i.now { box-shadow: 0 0 12px var(--mint); animation: nowpulse 2.4s ease-in-out infinite; }
-.today .sig-axis { display: flex; justify-content: space-between; margin-top: 8px; }
 
 /* ---------- runner (always a dark island) ---------- */
-.today .b-run { padding: 0; display: flex; flex-direction: column; --fr: #1B2F2A; }
-.today .b-run::before { background: #040A09; }
-.today .run-head { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-bottom: 1px solid #14231F; }
-.today .run-head .dots { display: flex; gap: 6px; }
-.today .run-head .dots i { width: 8px; height: 8px; transform: rotate(45deg); background: #1F3530; }
-.today .run-head .dots i:first-child { background: var(--fail); }
-.today .run-head .dots i:nth-child(2) { background: var(--flaky); }
-.today .run-head .dots i:nth-child(3) { background: var(--pass); }
-.today .run-head .ttl { font: 500 12px var(--mono); color: var(--ink-2); margin-left: 6px; }
-.today .run-head .chip { margin-left: auto; }
-.today .run-body { padding: 16px 20px 6px; flex: 1; background: none; min-width: 0; }
-.today .run-body .cmd { color: var(--ink); margin-bottom: 4px; overflow-wrap: anywhere; }
-.today .run-body .cmd span { color: var(--mint-t); }
-.today .run-body .run-info { color: var(--ink-3); margin-bottom: 8px; }
-.today .rl-list { list-style: none; margin: 0; padding: 0; }
-.today .run-body .rl { grid-template-columns: 18px minmax(0, 1fr) auto; animation: typeIn .4s ease-out both; animation-delay: calc(.4s + var(--i) * 140ms); border-radius: 2px; }
-.today .run-body .rl .tx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.today .run-body .rl .d { white-space: nowrap; }
+
 .today .trace { margin: 14px 0 10px; padding: 12px 14px; border-left: 2px solid var(--fail); background: rgba(255, 77, 109, .06); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; animation: typeIn .4s ease-out both; animation-delay: 2s; }
 .today .trace .tr-h { color: var(--ink); margin-bottom: 4px; }
 .today .trace b { color: var(--ink); font-weight: 500; }
-.today .run-sum { padding: 16px 20px 20px; border-top: 1px solid #14231F; }
-.today .sum-bar { display: flex; height: 8px; gap: 2px; }
-.today .sum-bar i { display: block; min-width: 0; }
-.today .sum-bar .p { background: var(--pass); box-shadow: 0 0 10px color-mix(in oklab, var(--pass) 50%, transparent); }
-.today .sum-bar .f { background: var(--fail); }
-.today .sum-bar .k { background: var(--flaky); }
-.today .sum-bar .e { flex: 1; background: var(--track); }
-.today .sum-txt { display: flex; gap: 16px; margin-top: 12px; font: 500 13px var(--mono); color: var(--ink-3); flex-wrap: wrap; }
-.today .sum-txt b { font-weight: 600; }
-.today .sum-txt .sum-r { margin-left: auto; }
 
 /* ---------- skill radar ---------- */
 .today .b-radar { padding: 20px 14px 18px; display: flex; flex-direction: column; }
@@ -443,41 +401,9 @@
 .today .rec-head .p-link { margin-left: auto; }
 .today .rec-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
 .today .rec-grid > * { min-width: 0; margin: 0; }
-.today .r-scores { grid-column: 1 / 8; grid-row: span 2; }
-.today .r-ledger { grid-column: 8 / 13; }
-.today .r-weak { grid-column: 1 / 8; grid-row: span 2; }
-.today .r-howto { grid-column: 8 / 13; }
 .today .r-trend { grid-column: 1 / 7; }
-.today .r-levels { grid-column: 7 / 13; }
-.today .r-desk { grid-column: 8 / 13; }
-.today .r-heat { grid-column: 1 / 6; }
-.today .r-coding { grid-column: 6 / 13; }
-.today .r-ledger, .today .r-howto, .today .r-desk { padding: 20px 22px; display: flex; flex-direction: column; }
-.today .ledger-top { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line-2); padding-bottom: 14px; }
-.today .ledger-top .readout { min-width: 0; padding-left: 14px; }
-.today .ledger-top .readout:first-child { padding-left: 0; }
-.today .ledger-top .readout + .readout { border-left: 1px solid var(--line); }
-.today .ledger-top .num { font-size: 30px; margin-top: 8px; white-space: nowrap; }
-.today .ledger-top .num small { font-size: 11px; }
-.today .ledger-rows { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 11px; }
-.today .ledger-rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: baseline; }
-.today .ledger-rows .lr-l { font-size: 13px; color: var(--ink-2); }
-.today .ledger-rows .lr-l a { color: var(--ink-2); font-weight: 500; }
-.today .ledger-rows .lr-l a:hover { color: var(--accent); }
-.today .ledger-rows .lr-v { font-size: 13px; color: var(--ink); }
-.today .ledger-rows .lr-v small { color: var(--ink-3); font-size: 11px; }
-.today .ledger-rows .seg { grid-column: 1 / -1; }
-.today .r-howto .mlabel svg { vertical-align: -1px; margin-right: 4px; }
-.today .howto-steps { margin: 4px 0 16px; padding-left: 20px; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); display: grid; gap: 10px; }
-.today .howto-steps li::marker { font: 500 11px var(--mono); color: var(--ink-3); }
-.today .howto-steps strong { color: var(--ink); font-weight: 600; }
-.today .r-howto .act { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
-.today .desk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.today .desk-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: baseline; }
-.today .desk-list a { color: var(--ink); font: 500 13.5px/1.3 var(--sans); text-decoration: none; }
-.today .desk-list a:hover { color: var(--accent); }
-.today .desk-pct { font-size: 12px; color: var(--ink-2); }
-.today .desk-list .seg { grid-column: 1 / -1; }
+.today .r-heat { grid-column: 7 / 13; }
+.today .r-coding { grid-column: 1 / -1; }
 
 /* ---------- ≤1200: icon rail, 6-column bento ---------- */
 @media (max-width: 1200px) {
@@ -485,15 +411,8 @@
   .today .bento > * { grid-row: auto; }
   .today .b-hero { grid-column: 1 / 7; min-height: 0; }
   .today .b-prism { grid-column: 1 / 4; }
-  .today .b-read { grid-column: 4 / 7; grid-template-columns: 1fr 1fr; padding: 4px 0; }
-  .today .b-read .ch { padding: 18px 20px; }
-  .today .b-read .ch:nth-child(3) { border-left: 0; }
-  .today .b-read .ch:nth-child(n + 3) { border-top: 1px solid var(--line-2); }
-  .today .b-read .ch .num { margin: 10px 0 14px; font-size: 34px; }
   .today .b-pipe { grid-column: 1 / 7; }
-  .today .b-sig { grid-column: 1 / 3; }
   .today .b-weak { grid-column: 3 / 7; }
-  .today .b-run { grid-column: 1 / 4; }
   .today .b-radar { grid-column: 4 / 7; }
   .today .b-code { grid-column: 1 / 4; }
   .today .b-lab { grid-column: 4 / 7; }
@@ -503,7 +422,7 @@
   .today .stage { min-height: 300px; }
   .today .rec-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .today .rec-grid > * { grid-column: span 3; grid-row: auto; }
-  .today .rec-grid > .r-scores, .today .rec-grid > .r-weak, .today .rec-grid > .r-coding { grid-column: 1 / -1; }
+   .today .rec-grid > .r-coding { grid-column: 1 / -1; }
 }
 @media (max-width: 1060px) {
   .today .pipe { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 28px; }
@@ -522,12 +441,9 @@
   .today .bento > * { grid-column: 1 / -1; }
   .today .bento > .b-hero { order: 1; }
   .today .bento > .b-prism { order: 2; }
-  .today .bento > .b-run { order: 3; }
   .today .bento > .b-weak { order: 4; }
   .today .bento > .b-shelf { order: 5; }
   .today .bento > .b-pipe { order: 6; }
-  .today .bento > .b-read { order: 7; }
-  .today .bento > .b-sig { order: 8; }
   .today .bento > .b-code { order: 9; }
   .today .bento > .b-lab { order: 10; }
   .today .bento > .b-radar { order: 11; }
@@ -565,16 +481,6 @@
   .today .b-prism { padding: 16px 16px 14px; }
   .today .b-prism .p-head { margin-bottom: 10px; }
 
-  .today .b-run .run-head { padding: 12px 14px; }
-  .today .b-run .run-body { padding: 10px 12px 6px; font-size: 12px; line-height: 1.95; }
-  .today .b-run .rl { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; }
-  .today .b-run .rl .d { font-size: 11px; }
-  .today .rl-list > li:nth-last-child(n + 7) { display: none; }
-  .today .run-body .rl { animation-delay: .25s; }
-  .today .b-run .run-sum { padding: 10px 14px 14px; }
-  .today .b-run .sum-bar { height: 6px; }
-  .today .b-run .sum-txt { gap: 14px; margin-top: 10px; font-size: 12px; }
-
   .today .b-weak { padding: 16px; }
   .today .b-weak .h3 { margin: 12px 0 24px; font-size: 19px; }
   .today .b-weak .act { padding-top: 14px; }
@@ -606,26 +512,16 @@
   .today .st .no { margin: 8px 0 0; font-size: 9.5px; letter-spacing: 0; padding-left: 1px; }
   .today .st .tt, .today .st .seg, .today .st .mt { display: none; }
   .today .st.now::before { display: none; }
-
-  .today .b-read { grid-template-columns: 1fr 1fr; padding: 4px 0; }
-  .today .b-read .ch { padding: 14px 16px; }
-  .today .b-read .ch .num { font-size: 30px; margin: 8px 0 12px; }
-  .today .b-read .ch:nth-child(3) { border-left: 0; }
-  .today .b-read .ch:nth-child(n + 3) { border-top: 1px solid var(--line-2); }
-  .today .b-sig, .today .b-code, .today .b-lab, .today .b-radar { padding: 16px; }
+   .today .b-code, .today .b-lab, .today .b-radar { padding: 16px; }
   .today .matrix { gap: 4px; }
   .today .mx .cells i { width: 12px; }
 
   .today .record { margin-top: 32px; }
   .today .rec-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .today .rec-grid > * { grid-column: 1 / -1 !important; }
-  .today .r-ledger, .today .r-howto, .today .r-desk { padding: 16px; }
 }
 @media (max-width: 400px) {
-  .today .b-read .ch { padding: 12px; }
-  .today .b-read .ch .num { font-size: 26px; }
   .today .ch .mlabel span { display: none; }
-  .today .ledger-top .num { font-size: 24px; }
 }
 
 /* ---------- reduced motion: base.css stops the shared helpers; stop the screen's own loops too ---------- */
@@ -634,8 +530,6 @@
   .today .prism-svg .pr-rays,
   .today .miniprism .mp-l,
   .today .stage .scan,
-  .today .wave30 i.now,
-  .today .run-body .rl,
   .today .trace,
   .stagger > * {
     animation: none !important;

@@ -163,7 +163,7 @@ test('every page has its own Guide me, and "Show me" finds something on the page
   test.setTimeout(120_000);
   await page.addInitScript(() => localStorage.getItem('qa-learn-ui-v1') || localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
   const pages: [string, string][] = [
-    ['/', 'Dashboard'], ['/today', 'Today'], ['/contents', 'Syllabus'], ['/build', 'Build report'], ['/topic/mt-fundamentals?tab=learn', 'Topic'],
+    ['/', 'Dashboard'], ['/syllabus', 'Syllabus'], ['/track', 'Track'], ['/topic/mt-fundamentals?tab=learn', 'Topic'],
     ['/coding', 'Coding'], ['/roadmap', 'Roadmap'], ['/pw-lab', 'Playwright Lab'], ['/playground', 'Playground'], ['/companies', 'Company questions'],
     ['/weak-areas', 'Weak areas'], ['/practice', 'Mistakes drill'], ['/achievements', 'Achievements'], ['/settings', 'Settings'], ['/saved', 'Saved'],
     ['/shorts', 'Shorts'], ['/short/test-pyramid', 'Short'],
@@ -200,18 +200,4 @@ test('Settings shows one section at a time in tabs; the tab is kept on reload an
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { name: 'Study lock' })).toBeFocused();
   await expect(page.getByRole('tab', { name: 'Study lock' })).toHaveAttribute('aria-selected', 'true');
-});
-
-test('clicking a Syllabus stage card opens it, and again closes it; clicks inside its topics do not close it', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true })));
-  await page.goto('/#/contents');
-  const card = page.locator('#phase-manual-basics');
-  const toggle = card.locator('.rep-tg');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await card.locator('.rep-blurb').click();
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await card.locator('.trows').first().click({ position: { x: 4, y: 4 } });
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await card.locator('.rep-stats').click({ position: { x: 4, y: 4 } });
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 });

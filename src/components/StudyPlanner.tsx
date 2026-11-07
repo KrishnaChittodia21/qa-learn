@@ -495,7 +495,7 @@ export function StudyPlanner() {
         <p className="pl-note">
           Covered counts each topic&rsquo;s study time by how complete it is (sections read, practice and the exam). The pacer is what your plan expected by today.
           A new pace applies from today and keeps any gap; &ldquo;Move my finish date&rdquo; restarts the pacer from where you are, so earlier misses stop
-          counting. <Link to="/contents">See every topic</Link>
+          counting. <Link to="/">See every topic on the Dashboard</Link>
         </p>
       </section>
     </div>

@@ -463,41 +463,21 @@
 .console-slot:empty {
   display: none;
 }
-.console-btn {
-  flex: none;
-  min-height: 34px;
-  min-width: 34px;
-  padding: 0;
-}
-.console-btn.is-topic {
-  color: var(--mint-t);
-  border-color: color-mix(in oklab, var(--mint) 45%, var(--frame-n));
-}
 .shell-ruler {
   margin: -6px 0 22px;
 }
 
-/* ---------- syllabus index: drawer beside the rail ---------- */
-.sidebar {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: var(--rail-w);
-  z-index: 45;
-  width: min(88vw, var(--sidebar));
-  overflow-y: auto;
-  padding: var(--s-5) var(--s-4) var(--s-6);
-  border-right: 1px solid var(--frame-n);
-  background: linear-gradient(180deg, var(--panel-top), var(--panel-bot));
-  box-shadow: var(--shadow-lg);
-  scrollbar-width: thin;
-  transform: translateX(calc(-100% - var(--rail-w)));
-  visibility: hidden;
-  transition: transform 0.32s var(--ease-out), visibility 0.32s;
+/* ---------- syllabus page (src/pages/Syllabus.tsx): every topic by stage ---------- */
+.syllabus-page .syllabus-panel {
+  max-width: 860px;
+  padding: var(--s-5) var(--s-5) var(--s-6);
 }
-.sidebar.open {
-  transform: none;
-  visibility: visible;
+.syllabus-page .syllabus-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+.syllabus-page .syllabus-head .mlabel {
+  margin-left: auto;
 }
 .syllabus-head {
   display: flex;
@@ -902,11 +882,6 @@
   }
   .shell-ruler {
     display: none;
-  }
-  .sidebar {
-    left: 0;
-    transform: translateX(-100%);
-    z-index: 47;
   }
   .scrim {
     z-index: 46;

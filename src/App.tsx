@@ -2,6 +2,7 @@ import { RouterProvider, createHashRouter, isRouteErrorResponse, useRouteError }
 import { MotionConfig } from 'motion/react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
+import SyllabusPage from './pages/Syllabus';
 import TopicPage from './pages/Topic';
 import ExamPage from './pages/Exam';
 import { CodingListPage, CodingProblemPage } from './pages/Coding';
@@ -11,7 +12,6 @@ import PlaygroundPage from './pages/Playground';
 import CompaniesPage from './pages/Companies';
 import SettingsPage from './pages/Settings';
 import AchievementsPage from './pages/Achievements';
-import ContentsPage from './pages/Contents';
 import { PracticePage, WeakAreasPage } from './pages/WeakAreas';
 import SavedPage from './pages/Saved';
 import ShortsPage from './pages/Shorts';
@@ -31,8 +31,8 @@ const router = createHashRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <Home /> },
-      { path: 'today', element: <Home view="today" /> },
-      { path: 'contents', element: <ContentsPage /> },
+      { path: 'syllabus', element: <SyllabusPage /> },
+      { path: 'track', element: <Home view="track" /> },
       { path: 'topic/:id', element: <TopicPage /> },
       { path: 'topic/:id/exam', element: <ExamPage /> },
       { path: 'coding', element: <CodingListPage /> },
@@ -52,7 +52,6 @@ const router = createHashRouter([
         element: <AchievementsPage />,
       },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'build', element: <ContentsPage view="matrix" /> },
       { path: 'saved', element: <SavedPage /> },
       { path: 'shorts', element: <ShortsPage /> },
       { path: 'short/:id', element: <ShortPage /> },

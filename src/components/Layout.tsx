@@ -1,16 +1,14 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Award,
   Building2,
-  ChevronDown,
   CircleHelp,
   Code2,
   Crosshair,
   FlaskConical,
   LayoutGrid,
-  Layers,
   ListTree,
 
   Moon,
@@ -19,7 +17,6 @@ import {
   SlidersHorizontal,
   Star,
   LayoutDashboard,
-  Grid3x3,
   Clapperboard,
   Sun,
   Terminal,
@@ -60,7 +57,6 @@ function typingInField(e: KeyboardEvent) {
   return !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
 }
 
-const STATUS_LABEL = { new: 'not started', 'in-progress': 'in progress', passed: 'passed' } as const;
 
 type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean | 'true'; strokeWidth?: number }>;
 interface NavItem {
@@ -69,19 +65,18 @@ interface NavItem {
   /** short label for the mobile dock */
   dock?: string;
   icon: Icon;
-  /** extra paths that count as "this section" (e.g. a topic page belongs to the Syllabus) */
+  /** extra paths that count as "this section" (e.g. a coding problem belongs to Coding) */
   match: (path: string) => boolean;
 }
 
 /** primary instruments, in the mockup's order (numbered 01–07 in the rail) */
 const PRIMARY: NavItem[] = [
   { to: '/', label: 'Dashboard', dock: 'Home', icon: LayoutDashboard, match: (p) => p === '/' },
-  { to: '/today', label: 'Today', icon: Crosshair, match: (p) => p === '/today' },
-  { to: '/contents', label: 'Syllabus', icon: Layers, match: (p) => p.startsWith('/contents') || p.startsWith('/topic/') },
+  { to: '/syllabus', label: 'Syllabus', icon: ListTree, match: (p) => p === '/syllabus' || p.startsWith('/topic/') },
+  { to: '/track', label: 'Track', icon: Crosshair, match: (p) => p === '/track' },
   { to: '/coding', label: 'Coding', icon: Code2, match: (p) => p.startsWith('/coding') },
   { to: '/pw-lab', label: 'Playwright Lab', dock: 'Lab', icon: FlaskConical, match: (p) => p.startsWith('/pw-lab') },
   { to: '/roadmap', label: 'Roadmap', icon: Route, match: (p) => p.startsWith('/roadmap') },
-  { to: '/build', label: 'Build report', dock: 'Report', icon: Grid3x3, match: (p) => p.startsWith('/build') },
   { to: '/weak-areas', label: 'Weak areas', icon: TriangleAlert, match: (p) => p.startsWith('/weak-areas') || p.startsWith('/practice') },
   { to: '/achievements', label: 'Achievements', icon: Award, match: (p) => p.startsWith('/achievements') },
 ];
@@ -114,7 +109,7 @@ function crumbsFor(path: string): string[] {
   if (lab) return ['Playwright Lab', `@${lab[1]}`];
   if (path.startsWith('/practice')) return ['Weak areas', 'Practice'];
   const item = [...PRIMARY, ...TOOLS].find((n) => n.match(path));
-  return [item?.label ?? 'Today'];
+  return [item?.label ?? 'Dashboard'];
 }
 
 /** study signal for the last `n` days (oldest first): 0 = no activity, else a 1–100 bar height */
@@ -142,17 +137,13 @@ const fmtDate = (d: Date) =>
 
 export default function Layout() {
   const p = useProgress();
-  const [query, setQuery] = useState('');
-  const [navOpen, setNavOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => getUiPrefs().collapsedPhases);
   const location = useLocation();
   const path = location.pathname;
   const loc = path + location.search;
   const locRef = useRef(loc);
   locRef.current = loc;
   const firstRoute = useRef(true);
-  const sidebarRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => applyThemeAttrs(p.settings), [p.settings]);
@@ -167,7 +158,6 @@ export default function Layout() {
   }, []);
   const isDark = p.settings.theme === 'dark' || (p.settings.theme === 'system' && systemDark);
 
-  useEffect(() => saveUiPrefs({ collapsedPhases: collapsed }), [collapsed]);
   useEffect(() => {
     saveUiPrefs(STUDY_PAGE.test(loc) ? { lastLocation: loc, lastStudyLocation: loc } : { lastLocation: loc });
   }, [loc]);
@@ -229,7 +219,6 @@ export default function Layout() {
 
   // New page → top of page, except on app start, where we restore the saved scroll position.
   useEffect(() => {
-    setNavOpen(false);
     setMoreOpen(false);
     if (firstRoute.current) {
       firstRoute.current = false;
@@ -256,32 +245,11 @@ export default function Layout() {
     };
   }, []);
 
-  // Syllabus drawer + More sheet: trap focus while open, Escape closes, focus returns to the opener.
-  const closeNav = useCallback(() => setNavOpen(false), []);
+  // More sheet: trap focus while open, Escape closes, focus returns to the opener.
   const closeMore = useCallback(() => setMoreOpen(false), []);
-  useFocusTrap(sidebarRef, navOpen, closeNav);
   useFocusTrap(moreRef, moreOpen, closeMore);
 
-  // Keep the active topic visible inside the syllabus list when the drawer opens.
-  useEffect(() => {
-    if (!navOpen) return;
-    const aside = sidebarRef.current;
-    const active = aside?.querySelector<HTMLElement>('.side-topic.active');
-    if (aside && active && (active.offsetTop < aside.scrollTop || active.offsetTop > aside.scrollTop + aside.clientHeight - 40)) {
-      aside.scrollTop = active.offsetTop - aside.clientHeight / 3;
-    }
-  }, [navOpen, path]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return TOPICS;
-    return TOPICS.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.subtitle.toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q)),
-    );
-  }, [query]);
 
   const weakCount = Object.values(p.mcq).filter((r) => !r.lastCorrect).length;
   const passedCount = TOPICS.filter((t) => topicStatus(p, t) === 'passed').length;
@@ -291,8 +259,6 @@ export default function Layout() {
   const crumbs = crumbsFor(path);
   const today = useMemo(() => fmtDate(new Date()), []);
 
-  // topic pages (not a running exam) are where the syllabus index matters most
-  const syllabusPage = path.startsWith('/topic/') && !path.endsWith('/exam');
   const moreActive = MORE.some((n) => n.match(path));
 
   const savedCount = activeSaved(p.saved).length;
@@ -333,7 +299,7 @@ export default function Layout() {
   );
 
   return (
-    <div className={`shell ${syllabusPage ? 'has-syllabus' : ''}`}>
+    <div className="shell">
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -371,13 +337,7 @@ export default function Layout() {
         <div className="rail-label">Navigate</div>
         <nav className="rail-nav" aria-label="Main">
           {PRIMARY.map((n, i) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              className="rail-a"
-              aria-current={n.match(path) ? 'page' : undefined}
-              title={titleFor(n.to, n.label)}
-            >
+            <Link key={n.to} to={n.to} className="rail-a" aria-current={n.match(path) ? 'page' : undefined} title={titleFor(n.to, n.label)}>
               <n.icon size={18} aria-hidden="true" strokeWidth={1.6} />
               <span className="lbl">{n.label}</span>
               {countFor(n.to)}
@@ -453,81 +413,6 @@ export default function Layout() {
         </button>
       </header>
 
-      {/* ---- syllabus index: a drawer over the page (topic list by phase) ---- */}
-      <aside
-        ref={sidebarRef}
-        className={`sidebar ${navOpen ? 'open' : ''}`}
-        aria-label="Syllabus"
-        inert={!navOpen}
-        role={navOpen ? 'dialog' : undefined}
-        aria-modal={navOpen ? true : undefined}
-      >
-        <div className="syllabus-head">
-          <span className="syllabus-title">Syllabus</span>
-          <button type="button" className="icon-btn" onClick={closeNav} aria-label="Close the syllabus">
-            <X size={16} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="syllabus-legend" aria-hidden="true">
-          <span className="mark mark-passed" /> passed <span className="mark mark-in-progress" /> started <span className="mark mark-new" /> not run
-        </div>
-        <input
-          className="search"
-          placeholder="Filter topics, tags…"
-          aria-label="Filter topics"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          data-autofocus
-        />
-        <nav aria-label="Topics by phase">
-          {PHASES.map((ph) => {
-            const topics = filtered.filter((t) => t.phase === ph.id);
-            if (!topics.length) return null;
-            const isCollapsed = collapsed[ph.id] && !query;
-            const phPassed = topics.filter((t) => topicStatus(p, t) === 'passed').length;
-            return (
-              <div key={ph.id} className="side-phase">
-                <button
-                  className="side-phase-title"
-                  onClick={() => setCollapsed((c) => ({ ...c, [ph.id]: !c[ph.id] }))}
-                  type="button"
-                  aria-expanded={!isCollapsed}
-                >
-                  <span className="side-phase-num">{String(ph.number).padStart(2, '0')}</span>
-                  <span className="side-phase-name">{ph.title}</span>
-                  <span className="side-phase-count">
-                    {phPassed}/{topics.length}
-                  </span>
-                  <ChevronDown size={14} aria-hidden="true" className={`chev-icon ${isCollapsed ? 'closed' : ''}`} />
-                </button>
-                <AnimatePresence initial={false}>
-                  {!isCollapsed && (
-                    <motion.div
-                      className="side-phase-list"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.18, ease: 'easeOut' }}
-                    >
-                      {topics.map((t) => {
-                        const st = topicStatus(p, t);
-                        return (
-                          <NavLink key={t.id} to={`/topic/${t.id}`} className="side-link side-topic">
-                            <span className={`mark mark-${st}`} aria-hidden="true" />
-                            <span className="side-topic-title">{t.title}</span>
-                            <span className="sr-only">, {STATUS_LABEL[st]}</span>
-                          </NavLink>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
-      {navOpen && <div className="scrim" onClick={closeNav} />}
 
       <main className="main" id="main" tabIndex={-1}>
         {/* console strip: mono breadcrumb + readouts (not a nav). Pages may portal a status into #console-slot. */}
@@ -549,16 +434,6 @@ export default function Layout() {
           <span className="live" title="Topics whose full exam you have passed">
             {passedCount}/{TOPICS.length} PASSED
           </span>
-          <button
-            type="button"
-            className={`icon-btn console-btn ${syllabusPage ? 'is-topic' : ''}`}
-            onClick={() => setNavOpen((o) => !o)}
-            aria-label="Open the syllabus index"
-            aria-expanded={navOpen}
-            title="Syllabus index"
-          >
-            <ListTree size={16} aria-hidden="true" />
-          </button>
         </div>
         <div className="ruler shell-ruler" aria-hidden="true" />
         {/* keyed by path, so each page mounts fresh and rises in. No AnimatePresence: with no exit animation it only
@@ -630,17 +505,6 @@ export default function Layout() {
                     {countFor(n.to)}
                   </Link>
                 ))}
-                <button
-                  type="button"
-                  className="sheet-a"
-                  onClick={() => {
-                    setMoreOpen(false);
-                    setNavOpen(true);
-                  }}
-                >
-                  <ListTree size={18} aria-hidden="true" strokeWidth={1.6} />
-                  <span>Syllabus index</span>
-                </button>
                 <button
                   type="button"
                   className="sheet-a"

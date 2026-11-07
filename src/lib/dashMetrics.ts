@@ -2,7 +2,7 @@
 import type { CodingProblem, Difficulty, Topic } from '../types';
 import { localDay, type Progress } from './progress';
 import { topicCompletion } from './stats';
-import { accuracyBreakdown, currentlyWrong, weakTopics, type TopicWeakness } from './weak';
+import { accuracyBreakdown, currentlyWrong } from './weak';
 
 export interface ExamScore {
   topic: Topic;
@@ -76,36 +76,11 @@ export interface DifficultyAccuracy {
   pct: number;
 }
 
-/** accuracy per difficulty level, only levels with at least one answered question */
-export function difficultyAccuracy(p: Progress, topics: Topic[]): DifficultyAccuracy[] {
-  const { byDifficulty } = accuracyBreakdown(p, topics);
-  return (['easy', 'medium', 'hard', 'expert'] as Difficulty[])
-    .map((level) => ({
-      level,
-      ...byDifficulty[level],
-      pct: byDifficulty[level].seen ? Math.round((byDifficulty[level].correct / byDifficulty[level].seen) * 100) : 0,
-    }))
-    .filter((x) => x.seen > 0);
-}
-
 export interface RatingCounts {
   nailed: number;
   partial: number;
   missed: number;
   total: number;
-}
-
-/** self-ratings of interview answers for questions that still exist in the course */
-export function ratingCounts(p: Progress, topics: Topic[]): RatingCounts {
-  const c = { nailed: 0, partial: 0, missed: 0, total: 0 };
-  for (const t of topics)
-    for (const q of t.interviewQuestions) {
-      const r = p.iq[q.id];
-      if (!r) continue;
-      c[r]++;
-      c.total++;
-    }
-  return c;
 }
 
 export interface DayCell {
@@ -129,14 +104,6 @@ export function activityWeeks(days: string[] = [], now = new Date(), weeks = 12)
       return { day, active: set.has(day), today: day === today, future: day > today };
     }),
   );
-}
-
-/** number of distinct study days within the last `n` days, today included */
-export function activeInLast(days: string[] = [], n: number, now = new Date()): number {
-  const set = new Set(days);
-  let c = 0;
-  for (let i = 0; i < n; i++) if (set.has(localDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)))) c++;
-  return c;
 }
 
 export const CODING_CATEGORY_LABEL: Record<CodingProblem['category'], string> = {
@@ -170,15 +137,6 @@ export function flagged(bucket: Record<string, true>, ids: string[]): Ratio {
   return { done: ids.filter((id) => bucket[id]).length, total: ids.length };
 }
 
-/** weak topics for the dashboard chart: most questions currently wrong first, ties in weak.ts order */
-export function weakForChart(p: Progress, topics: Topic[], limit = 6): TopicWeakness[] {
-  return weakTopics(p, topics)
-    .map((w, i) => ({ w, i }))
-    .sort((a, b) => b.w.wrong.length - a.w.wrong.length || a.i - b.i)
-    .slice(0, limit)
-    .map((x) => x.w);
-}
-
 export interface PracticeFigures {
   /** Learn sections ticked “Read” (only indices that still exist) */
   sections: Ratio;
@@ -188,31 +146,6 @@ export interface PracticeFigures {
   coding: Ratio;
   /** Practice Drills worked through */
   drills: Ratio;
-}
-
-/** practice totals across the course, from real progress */
-export function practiceFigures(p: Progress, topics: Topic[], problems: CodingProblem[]): PracticeFigures {
-  let read = 0;
-  let sections = 0;
-  for (const t of topics) {
-    sections += t.sections.length;
-    read += new Set((p.sections[t.id] ?? []).filter((i) => i >= 0 && i < t.sections.length)).size;
-  }
-  return {
-    sections: { done: read, total: sections },
-    labs: flagged(
-      p.cc,
-      topics.flatMap((t) => t.codeChallenges.map((c) => c.id)),
-    ),
-    coding: flagged(
-      p.code,
-      problems.map((q) => q.id),
-    ),
-    drills: flagged(
-      p.boe,
-      topics.flatMap((t) => t.envelopeQuestions.map((q) => q.id)),
-    ),
-  };
 }
 
 /** exam questions whose latest answer is wrong, across the course (what the mistakes drill asks) */

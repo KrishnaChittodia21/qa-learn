@@ -7,7 +7,7 @@ const G = await load<typeof import('../src/lib/pageGuides')>('/src/lib/pageGuide
 
 // one example path per route in src/App.tsx
 const PAGES = [
-  '/', '/today', '/contents', '/build', '/topic/mt-fundamentals', '/topic/mt-fundamentals/exam', '/coding', '/coding/sum-array', '/roadmap',
+  '/', '/syllabus', '/track', '/topic/mt-fundamentals', '/topic/mt-fundamentals/exam', '/coding', '/coding/sum-array', '/roadmap',
   '/pw-lab', '/pw-lab/step1', '/playground', '/companies', '/weak-areas', '/practice', '/achievements', '/settings',
   '/saved', '/shorts', '/short/test-pyramid',
 ];
