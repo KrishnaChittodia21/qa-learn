@@ -117,7 +117,7 @@ export default function TopicPage() {
     <div className="page topic-page">
       <ConsoleReadout>
         SPEC {spec}
-        {tab === 'learn' && cur >= 0 ? ` · §${cur + 1}` : ` · ${tabLabel(topic, tab)}`}
+        {tab === 'learn' && cur >= 0 ? ` · Section ${cur + 1}` : ` · ${tabLabel(topic, tab)}`}
       </ConsoleReadout>
       <TopicCompleteWatcher topic={topic} />
       <div className="tp-bento">
@@ -227,7 +227,6 @@ function ChapterPlate({ topic }: { topic: Topic }) {
           <span className="mlabel">Sections</span>
           <div className="v">
             {topic.sections.length}
-            <small>§</small>
           </div>
         </div>
         <div>
@@ -303,7 +302,7 @@ function SpecPanel({ topic, prev, next, onSelect }: { topic: Topic; prev?: Topic
           <dd>
             {cur >= 0 ? (
               <>
-                <span className="t-cyan mono">§{cur + 1}</span> {topic.sections[cur].heading}
+                <span className="t-cyan mono">Section {cur + 1}</span> {topic.sections[cur].heading}
               </>
             ) : (
               <>
@@ -441,7 +440,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
               {readCount}
               <small>/{total} read</small>
             </b>
-            {cur >= 0 && <span className="mlabel t-cyan">§{cur + 1} ▸</span>}
+            {cur >= 0 && <span className="mlabel t-cyan">Section {cur + 1} ▸</span>}
           </div>
           <div className="seg" style={segStyle(total, readCount)} aria-hidden="true" />
         </div>
@@ -455,7 +454,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                     <span className="m" aria-hidden="true">
                       {st === 'pass' ? '✓' : st === 'run' ? '▶' : '○'}
                     </span>
-                    <span className="n">§{pad2(i + 1)}</span>
+                    <span className="n">{pad2(i + 1)}</span>
                     <span className="tx">
                       {s.heading}
                       <span className="sr-only">{st === 'pass' ? ' (read)' : st === 'run' ? ' (current)' : ''}</span>
@@ -531,7 +530,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
               <section id={`s-${i}`} className={`panel tp-sec ${isRead ? 'is-read' : ''}`} aria-labelledby={`s-${i}-t`}>
                 <div className="sec-no">
                   <span className="big">
-                    § {pad2(i + 1)} / {pad2(total)}
+                    {pad2(i + 1)} / {pad2(total)}
                   </span>
                   {isRead ? (
                     <span className="chip pass">
@@ -638,7 +637,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                   </label>
                   {i < total - 1 && (
                     <button type="button" className="btn-ghost btn-sm" onClick={() => go(i + 1)}>
-                      §{pad2(i + 2)} next <ArrowRight size={14} aria-hidden="true" />
+                      Next: section {i + 2} <ArrowRight size={14} aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -648,7 +647,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
                 <section className="panel tp-work" aria-label={`Worked example for section ${i + 1}`}>
                   <div className="p-head">
                     <span className="mlabel">
-                      Worked example · <b>§{i + 1}</b>
+                      Worked example · <b>section {i + 1}</b>
                     </span>
                     <span className="mlabel">
                       {s.code.length} snippet{s.code.length === 1 ? '' : 's'} · {Array.from(new Set(s.code.map((c) => c.language))).join(' · ')}
@@ -662,7 +661,7 @@ function LearnTab({ topic, onSelect, locks }: { topic: Topic; onSelect: (t: TabI
               {s.keyPoints && s.keyPoints.length > 0 && (
                 <aside className="panel tp-keys" aria-label={`Key points, section ${i + 1}`}>
                   <div className="p-head">
-                    <span className="mlabel">Key points · §{i + 1}</span>
+                    <span className="mlabel">Key points · section {i + 1}</span>
                     <span className="mlabel">
                       <b>{s.keyPoints.length}</b>
                     </span>
@@ -1131,14 +1130,14 @@ function ExamIntro({ topic }: { topic: Topic }) {
               <span className="st">FAIL</span>
               <div>
                 <b>
-                  §{ws.index + 1} {ws.heading}
+                  Section {ws.index + 1} · {ws.heading}
                 </b>
                 <p>
                   {ws.missed.length} missed exam question{ws.missed.length === 1 ? '' : 's'} map to this section.
                 </p>
                 <div className="fix">
                   <span className="fx">FIX</span>
-                  <Link to={`/topic/${topic.id}?tab=learn&s=${ws.index}`}>Revise §{ws.index + 1} →</Link>
+                  <Link to={`/topic/${topic.id}?tab=learn&s=${ws.index}`}>Revise section {ws.index + 1} →</Link>
                 </div>
               </div>
             </div>
@@ -1186,7 +1185,7 @@ export function StudyLock({ topic, what }: { topic: Topic; what: string }) {
               <span className="m" aria-hidden="true">
                 {k === 0 ? '▶' : '○'}
               </span>
-              <span className="n">§{pad2(i + 1)}</span>
+              <span className="n">{pad2(i + 1)}</span>
               <span className="tx">{s.heading}</span>
             </button>
           </li>
@@ -1240,7 +1239,7 @@ function SectionViz({ topic, sectionIndex }: { topic: Topic; sectionIndex: numbe
               className="viz-backlink"
               onClick={() => document.getElementById(`s-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
             >
-              <PlayCircle size={15} aria-hidden="true" /> Interactive: {meta.title} (in §{first + 1} above), revisit it with this section in mind
+              <PlayCircle size={15} aria-hidden="true" /> Interactive: {meta.title} (in section {first + 1} above), revisit it with this section in mind
             </button>
           );
         }

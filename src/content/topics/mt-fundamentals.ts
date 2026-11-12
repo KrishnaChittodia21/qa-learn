@@ -14,7 +14,7 @@ const topic: Topic = {
     'Barry Boehm — Software Engineering Economics (1981), cost-of-change curve',
     'Guru99 — Software Testing Life Cycle (STLC) phases, entry/exit criteria',
     'Software Testing Help — SDLC models and STLC tutorials',
-    'ISO/IEC 20246 — Work product reviews (as summarised in CTFL v4.0 §3.2)',
+    'ISO/IEC 20246 — Work product reviews (as summarised in CTFL v4.0 section 3.2)',
     'Glassdoor & Testleaf 2025 manual testing interview question lists (STLC, V&V, QA vs QC recur constantly)',
   ],
   tags: ['istqb', 'principles', 'sdlc', 'stlc', 'v-model', 'verification', 'validation', 'qa-vs-qc', 'static-testing', 'shift-left'],

@@ -129,7 +129,7 @@ for (const file of files) {
       if (!st.error && !st.failed.length) errs.push(`${c.id}: buggy starter passes every test, so the tests don't catch the bug`);
     }
     for (const sec of t.sections ?? []) errs.push(...sectionProblems(sec));
-    for (const [i, sec] of (t.sections ?? []).entries()) if (sec.steps) errs.push(...checkSteps(sec.steps, `§${i + 1} steps`));
+    for (const [i, sec] of (t.sections ?? []).entries()) if (sec.steps) errs.push(...checkSteps(sec.steps, `section ${i + 1} steps`));
     if (missing.length) errs.push(`${missing.length} item(s) without enough follow-ups (MCQ/BoE/lab ≥1, interview ≥2): ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ', …' : ''}`);
   }
   if (errs.length) {

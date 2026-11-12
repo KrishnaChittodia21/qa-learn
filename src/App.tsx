@@ -1,6 +1,7 @@
 import { RouterProvider, createHashRouter, isRouteErrorResponse, useRouteError } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 import Layout from './components/Layout';
+import { BugBuddy } from './components/Doodles';
 import Home from './pages/Home';
 import SyllabusPage from './pages/Syllabus';
 import TopicPage from './pages/Topic';
@@ -76,6 +77,7 @@ function RouteError() {
   const staleChunk = /dynamically imported module|Failed to fetch|Importing a module script failed/i.test(message);
   return (
     <div className="page narrow" style={{ padding: 40 }}>
+      <BugBuddy size={96} mood="thinking" />
       <div className="eyebrow">Oops</div>
       <h1>Whoops, this page tripped over</h1>
       <p className="lead">Don&apos;t worry: your progress is safe and sound in this browser.</p>
@@ -86,7 +88,7 @@ function RouteError() {
           Try again
         </button>
         <a className="btn" href="#/">
-          Back to today
+          Back to the dashboard
         </a>
       </div>
     </div>

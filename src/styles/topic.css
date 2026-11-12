@@ -3,7 +3,7 @@
    Scope: topic page (/topic/:id + tabs), study path tab strip, coach tips + next up, interview
    mode (exam option verdicts), study-first lock & prerequisites, capstones.
    Spectral Lab: chamfered chapter plate + spec-coordinates panel, sticky tab strip, contents rail as
-   a test tree (✓ read / ▶ current / ○ queued), § sections, worked examples, key points, PASS/FAIL
+   a test tree (✓ read / ▶ current / ○ queued), sections, worked examples, key points, PASS/FAIL
    rows, the one foil "lab" card, pager. Topic-only rules are scoped under .topic-page; the shared
    legacy classes other screens still use (.reveal, .answer-box, .next-up, .coach-tip, .pager,
    .hint, .info, .section-head …) stay global.

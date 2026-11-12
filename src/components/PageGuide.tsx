@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { closePageGuide, startWalk } from '../lib/guide';
 import { guideFor } from '../lib/pageGuides';
+import { BugBuddy } from './Doodles';
 
 export default function PageGuide({ onFullTour }: { onFullTour: () => void }) {
   const { pathname } = useLocation();
@@ -37,9 +38,12 @@ export default function PageGuide({ onFullTour }: { onFullTour: () => void }) {
           </button>
         </div>
         <div className="tour-body">
-          <h2 id="pg-title" className="h2">
-            {guide.title}
-          </h2>
+          <div className="bugsy-hello">
+            <BugBuddy size={56} mood="happy" />
+            <h2 id="pg-title" className="h2">
+              {guide.title}
+            </h2>
+          </div>
           <p className="tour-lede">{guide.intro}</p>
           <dl className="pg-items">
             {guide.items.map(([term, what]) => (

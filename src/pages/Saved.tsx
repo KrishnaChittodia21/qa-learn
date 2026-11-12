@@ -6,6 +6,7 @@ import { CODING_PROBLEMS, COMPANY_QUESTIONS, TOPICS, TOPIC_BY_ID } from '../cont
 import { PW_LAB_STEPS } from '../content/pwlab';
 import { removeSaved, saveItem, setSavedDone, useProgress, type SavedItem } from '../lib/progress';
 import { SHORT_BY_ID } from '../lib/shorts';
+import { BugBuddy } from '../components/Doodles';
 
 type Group = 'lessons' | 'questions' | 'coding' | 'shorts';
 interface Resolved {
@@ -154,7 +155,7 @@ export default function SavedPage() {
         </ul>
       ) : (
         <div className="saved-empty panel flat">
-          <Star size={34} aria-hidden="true" />
+          <BugBuddy size={88} mood={active.length ? 'thinking' : 'sleepy'} />
           <h2 className="h3">{active.length ? `Nothing in ${FILTERS.find((f) => f.id === filter)?.label}` : 'Nothing saved yet'}</h2>
           <p className="muted">
             {active.length
