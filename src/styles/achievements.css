@@ -239,6 +239,7 @@
 .ach-modal .cel-hero .burst { position: absolute; left: 50%; top: 50%; width: 560px; height: 420px; transform: translate(-50%, -42%); pointer-events: none; }
 .ach-modal .cel-hero .b-rays { animation: ach-rayflick 5.5s ease-in-out infinite; }
 .ach-modal .cel-hero .medal { position: relative; z-index: 1; margin-top: 26px; }
+.ach-modal .cel-hero .cel-bugsy { position: absolute; left: 22px; bottom: 14px; z-index: 1; color: #eaeefa; }
 .ach-modal .cel-hero .medal.pop { animation: ach-pop .9s cubic-bezier(.2, 1.4, .3, 1) both .15s; }
 .ach-modal .cel-hero .cel-eyebrow {
   position: absolute; left: 0; right: 0; top: 18px; z-index: 2; display: flex; justify-content: center; align-items: center; gap: 8px; margin: 0;

@@ -13,6 +13,7 @@ import { celebrate } from '../lib/celebrate';
 import { RunnerConsole } from '../components/TestRunner';
 import { runSummary, useTestRun } from '../lib/testRun';
 import { CodeBlock, CodeEditor, FollowUps, Markdown } from '../components/ui';
+import { BugBuddy } from '../components/Doodles';
 
 type Cat = CodingProblem['category'];
 const CATEGORIES: { id: Cat; label: string; short: string; c: string }[] = [
@@ -479,7 +480,11 @@ function ProblemBank({ p, current }: { p: Progress; current: CodingProblem }) {
             </div>
           );
         })}
-        {list.length === 0 && <p className="cx-bank-none">No matches.</p>}
+        {list.length === 0 && (
+          <p className="cx-bank-none bugsy-line">
+            <BugBuddy size={40} mood="thinking" /> No matches. Try a shorter word.
+          </p>
+        )}
       </div>
       <div className="cx-bank-foot">
         <Link to="/coding" className="mlabel">

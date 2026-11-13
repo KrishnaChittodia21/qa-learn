@@ -19,15 +19,15 @@ test('every Learn section has a step lesson, and every generated one passes the 
   for (const t of C.TOPICS) {
     t.sections.forEach((s, i) => {
       const lesson = A.lessonFor(t, i);
-      assert.ok(lesson, `${t.id} §${i + 1} has no steps`);
+      assert.ok(lesson, `${t.id} section ${i + 1} has no steps`);
       if (s.steps) {
         assert.equal(lesson, s.steps, 'a hand-written lesson wins');
         return;
       }
       generated++;
       if (lesson.steps.some((st) => st.kind === 'turn')) withQuestion++;
-      assert.equal(lesson.steps[0].kind, 'watch', `${t.id} §${i + 1} opens with a Watch step`);
-      problems.push(...V.checkSteps(lesson, `${t.id} §${i + 1}`).filter((p) => !ALLOWED.some((r) => r.test(p))));
+      assert.equal(lesson.steps[0].kind, 'watch', `${t.id} section ${i + 1} opens with a Watch step`);
+      problems.push(...V.checkSteps(lesson, `${t.id} section ${i + 1}`).filter((p) => !ALLOWED.some((r) => r.test(p))));
     });
   }
   assert.deepEqual(problems.slice(0, 10), []);

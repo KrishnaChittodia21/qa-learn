@@ -38,7 +38,7 @@ async function solve(box: Locator, step: Extract<Step, { kind: 'turn' }>, labels
 }
 
 for (const { t, i, lesson } of LESSONS) {
-  test(`steps: ${t.id} §${i + 1} plays to the end`, async ({ page }) => {
+  test(`steps: ${t.id} section ${i + 1} plays to the end`, async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('qa-learn-ui-v1', JSON.stringify({ tourSeen: true, lessonMode: 'steps' })));
     await page.goto(`/#/topic/${t.id}?tab=learn&s=${i}`);
     const box = page.locator(`#s-${i} .sl`);

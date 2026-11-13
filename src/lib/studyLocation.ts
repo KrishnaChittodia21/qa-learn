@@ -22,7 +22,7 @@ export const PAGE_LABELS: Record<string, string> = {
   '/roadmap': '12-week plan',
 };
 
-/** Human label, e.g. "Playwright Locators · Learn · §3 Role locators" or "JS coding · Two sum". */
+/** Human label, e.g. "Playwright Locators · Learn · Section 3 · Role locators" or "JS coding · Two sum". */
 export function describeLocation(loc: string, look: LocationLookup): string | null {
   if (!loc) return null;
   const [path, search = ''] = loc.split('?');
@@ -36,7 +36,7 @@ export function describeLocation(loc: string, look: LocationLookup): string | nu
     const s = Number(params.get('s'));
     const sec =
       tab === 'learn' && params.has('s') && Number.isInteger(s) && t.sections[s]
-        ? ` · §${s + 1} ${t.sections[s].heading.split(' — ')[0]}`
+        ? ` · Section ${s + 1} · ${t.sections[s].heading.split(' — ')[0]}`
         : '';
     return `${t.title} · ${tabName}${sec}`;
   }

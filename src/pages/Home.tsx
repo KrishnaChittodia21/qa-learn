@@ -29,6 +29,7 @@ import {
 } from '../lib/todayData';
 import type { Topic } from '../types';
 import { CoveragePrism, MiniPrism, SkillRadar } from '../components/today/TodayViz';
+import { BugsyTip } from '../components/Doodles';
 import { BuildMatrix } from '../components/BuildMatrix';
 import { AchievementsSummary } from '../components/achievements/AchievementsSummary';
 import { ChartCard } from '../components/charts/ChartCard';
@@ -187,7 +188,7 @@ function Hero({ p, step }: { p: Progress; step: NextStepResult }) {
     step.kind === 'start'
       ? 'Start lesson one'
       : step.kind === 'read'
-        ? `${readN ? 'Resume' : 'Start'} §${nextSec + 1}`
+        ? `${readN ? 'Resume' : 'Start'} section ${nextSec + 1}`
         : step.kind === 'labs'
           ? 'Open the labs'
           : step.kind === 'interview'
@@ -201,7 +202,7 @@ function Hero({ p, step }: { p: Progress; step: NextStepResult }) {
   const lede =
     (step.kind === 'read' || step.kind === 'start') && nextSec >= 0 ? (
       <>
-        {readN ? 'Next section' : 'First section'}: <b>§{nextSec + 1} {t.sections[nextSec].heading}</b>. You&apos;ve read {readN} of {S} sections;{' '}
+        {readN ? 'Next section' : 'First section'}: <b>{nextSec + 1}. {t.sections[nextSec].heading}</b>. You&apos;ve read {readN} of {S} sections;{' '}
         {L ? `${plural(L, t.id === 'qa-behavioral' ? 'Answer Lab' : 'Improve This lab')}, ` : ''}a {Q}-question exam
         {company.length ? ` and ${plural(company.length, 'company-reported question')}` : ''} follow.
       </>
@@ -210,7 +211,9 @@ function Hero({ p, step }: { p: Progress; step: NextStepResult }) {
         Next: <b>{step.title}</b>. {detail}
       </>
     );
-  const secLabel = (step.kind === 'read' || step.kind === 'start') && nextSec >= 0 ? `§${nextSec + 1} ${t.sections[nextSec].heading}` : step.title;
+  // Bugsy's tip: the first key point of the section you are about to read, as plain text
+  const tip = nextSec >= 0 ? t.sections[nextSec].keyPoints?.[0]?.replace(/\*\*|`/g, '') : undefined;
+  const secLabel = (step.kind === 'read' || step.kind === 'start') && nextSec >= 0 ? `Section ${nextSec + 1} · ${t.sections[nextSec].heading}` : step.title;
 
   const mission: MissionCell[] = [
     { k: 'Learn', kd: '01 Learn', v: `${readN}/${S}`, small: 'sections', n: S, val: readN },
@@ -256,6 +259,7 @@ function Hero({ p, step }: { p: Progress; step: NextStepResult }) {
       </div>
       {resume && <ResumeLine {...resume} />}
       <Mission cells={mission} cur={cur} />
+      {tip && <BugsyTip>{tip}</BugsyTip>}
     </section>
   );
 }
@@ -631,7 +635,7 @@ function WeakSpot({ p }: { p: Progress }) {
           {secs.map((s) => (
             <li key={s.index}>
               <Link to={`/topic/${w.topic.id}?tab=learn&s=${s.index}`}>
-                §{s.index + 1} {s.heading}
+                Section {s.index + 1} · {s.heading}
               </Link>
               <span className="mono">{s.missed.length} missed</span>
               <span className="seg thin" style={v({ '--n': maxMiss, '--v': s.missed.length })} aria-hidden="true" />

@@ -20,6 +20,7 @@ import { useProgress } from '../lib/progress';
 import { nextStep } from '../lib/nextStep';
 import { TAB_META, type TabId } from '../lib/studyLoop';
 import { useFocusTrap } from '../lib/useFocusTrap';
+import { BugBuddy } from './Doodles';
 
 const LOOP: TabId[] = ['learn', 'code', 'interview', 'envelope', 'exam', 'company'];
 const STEP_TITLES = ['What this is', 'The study loop', 'Finding your way', 'Your progress', 'Start here'];
@@ -97,9 +98,12 @@ export default function WelcomeTour({ onClose }: { onClose: () => void }) {
             >
               {step === 0 && (
                 <>
-                  <h2 id="tour-title" className="h2">
-                    Welcome to the <span className="holo-text">lab.</span>
-                  </h2>
+                  <div className="bugsy-hello">
+                    <BugBuddy size={64} mood="happy" />
+                    <h2 id="tour-title" className="h2">
+                      Welcome to the <span className="holo-text">lab.</span>
+                    </h2>
+                  </div>
                   <p className="tour-lede">
                     A guided path from zero to a job-ready QA engineer: {TOPICS.length} topics in {PHASES.length} stages, each with lessons,
                     hands-on labs, interview practice and a timed exam. Every topic is a job in the build; pass its exam and it turns green.

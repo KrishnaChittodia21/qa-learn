@@ -6,6 +6,7 @@ import type { Difficulty } from '../types';
 import { useProgress } from '../lib/progress';
 import { accuracyBreakdown, currentlyWrong, pct, weakTopics, type Accuracy, type TopicWeakness } from '../lib/weak';
 import { Exam } from './Exam';
+import { BugBuddy } from '../components/Doodles';
 
 const LEVEL_FILL: Record<Difficulty, string> = { easy: 'var(--mint)', medium: 'var(--cyan)', hard: 'var(--iris)', expert: 'var(--lilac)' };
 const two = (n: number) => String(n).padStart(2, '0');
@@ -74,6 +75,7 @@ export function WeakAreasPage() {
         </header>
         <section className="panel cut-lg wk-empty rise" style={vars({ '--i': 1 })} aria-labelledby="wk-empty-t">
           <div className="wk-empty-copy">
+            <BugBuddy size={80} mood="sleepy" />
             <span className="chip skip">No data</span>
             <h2 className="h3" id="wk-empty-t">
               Nothing to analyse… yet!
@@ -204,6 +206,7 @@ export function WeakAreasPage() {
       {!weak.length && (
         <section className="panel wk-clear rise" aria-label="All clear">
           <div className="wk-empty-copy">
+            <BugBuddy size={80} mood="party" />
             <span className="chip pass">✓ Clean sheet</span>
             <h3 className="h3">No weak topics right now.</h3>
             <p>Every question you&apos;ve attempted is currently correct. Go you.</p>
@@ -301,7 +304,7 @@ function WeakTopicCard({ w, i, passMark, foil }: { w: TopicWeakness; i: number; 
           <span className="mlabel">Sections behind the misses</span>
           {w.sections.slice(0, 5).map((ws) => (
             <div key={ws.index} className="wk-row">
-              <span className="no">§{ws.index + 1}</span>
+              <span className="no">{ws.index + 1}</span>
               <span className="nm">{ws.heading}</span>
               <Link to={`/topic/${w.topic.id}?tab=learn&s=${ws.index}`} className="btn btn-line btn-xs">
                 Revise
@@ -325,7 +328,7 @@ function WeakTopicCard({ w, i, passMark, foil }: { w: TopicWeakness; i: number; 
         <p key={st.index} className="wk-shaky">
           <span className="chip flaky">Steps</span>
           <span>
-            §{st.index + 1} {st.heading}: {st.missed} <em>Your turn</em> step{st.missed === 1 ? '' : 's'} missed.{' '}
+            Section {st.index + 1} · {st.heading}: {st.missed} <em>Your turn</em> step{st.missed === 1 ? '' : 's'} missed.{' '}
             <Link to={`/topic/${w.topic.id}?tab=learn&s=${st.index}`}>Redo the steps →</Link>
           </span>
         </p>

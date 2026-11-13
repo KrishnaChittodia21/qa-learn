@@ -1,5 +1,5 @@
 // Pure simulation of JavaScript's comparison and + / - coercion rules.
-// == follows the spec's IsLooselyEqual algorithm (ECMA-262 §7.2.14), simplified to the rules
+// == follows the spec's IsLooselyEqual algorithm (ECMA-262 section 7.2.14), simplified to the rules
 // that matter without BigInt/Symbol: same type → strict compare; null/undefined pair → true;
 // number vs string → ToNumber(string); boolean → ToNumber(boolean); object vs primitive →
 // ToPrimitive(object) (valueOf, then toString); anything else → false.

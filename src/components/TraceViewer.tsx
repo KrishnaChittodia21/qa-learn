@@ -8,6 +8,7 @@ import type { CodingTest } from '../types';
 import type { RunRecord } from '../lib/testRun';
 import { runTrace } from '../lib/runCode';
 import { whereItWentWrong, type Trace, type TraceStep } from '../lib/trace';
+import { BugsyTip } from './Doodles';
 
 const SPEEDS: [number, string][] = [
   [1400, '0.5×'],
@@ -203,6 +204,20 @@ function Verdict({ trace, test, fnName, go }: { trace: Trace; test: CodingTest; 
             ))}
             {why.parts.length > 4 && <li>…and {why.parts.length - 4} more cells.</li>}
           </ul>
+          <BugsyTip>
+            {why.parts[0]?.never ? (
+              <>
+                no line ever wrote {why.parts[0].index === undefined ? <code>{why.name}</code> : <>cell {why.parts[0].index}</>}. Step through the loop and ask which line
+                should have.
+              </>
+            ) : why.parts[0] ? (
+              <>
+                replay it and watch line {why.parts[0].line}: that is where <code>{why.name}</code> last got a wrong value.
+              </>
+            ) : (
+              <>compare the length you build with the length the test expects.</>
+            )}
+          </BugsyTip>
         </div>
       )}
     </div>

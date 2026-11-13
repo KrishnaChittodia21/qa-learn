@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Sparkles, X } from 'lucide-react';
 import Badge from './Badge';
+import { BugBuddy } from '../Doodles';
 import { tierName } from './achState';
 import { achievementById, TIER_LABEL, type EarnedTier } from '../../content/achievements';
 import { useAchievementEvaluations } from '../../lib/achievements';
@@ -113,6 +114,7 @@ export default function AchievementCelebration({ items, onClose, onViewAll }: { 
                 <Sparkles size={14} aria-hidden="true" /> Achievement unlocked
               </div>
               <Badge art={first.a.art} tier={first.tier} size="xl" className={reduce ? '' : 'pop'} />
+              <BugBuddy size={72} mood="party" className="cel-bugsy" />
             </div>
             <button type="button" className="icon-btn ach-close" data-theme="dark" aria-label="Close" onClick={onClose}>
               <X size={16} aria-hidden="true" />

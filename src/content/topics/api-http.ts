@@ -271,7 +271,7 @@ Authorization: Basic YWRtaW46cGFzc3dvcmQxMjM=
         'Idempotency is about server state, not the response body/status.',
         'Retries of POST need an Idempotency-Key (or equivalent) to be safe.',
       ],
-      source: 'RFC 9110 §9.2 Common Method Properties; MDN — HTTP request methods',
+      source: 'RFC 9110 section 9.2 Common Method Properties; MDN — HTTP request methods',
     },
     {
       heading: 'Status codes: the five families and the ones that matter',
@@ -312,7 +312,7 @@ Authorization: Basic YWRtaW46cGFzc3dvcmQxMjM=
         'Empty search results = 200 with [], not 404.',
         'A 200 with an error message in the body breaks clients and monitoring.',
       ],
-      source: 'RFC 9110 §15 Status Codes; RFC 6585 §4 (429); MDN — HTTP response status codes',
+      source: 'RFC 9110 section 15 Status Codes; RFC 6585 section 4 (429); MDN — HTTP response status codes',
       steps: {
         actors: [
           { id: 'client', label: 'Client', sub: 'your test', x: 150, y: 150 },
@@ -624,7 +624,7 @@ Cookie: token=abc123
         'Basic and JWT payloads are encoded, not encrypted.',
         'Test tokens that are missing, malformed, expired, tampered, and belong to another user.',
       ],
-      source: 'RFC 9110 §15.5.2 (401) & §15.5.4 (403); RFC 7519 JWT; Restful Booker API docs (CreateToken, UpdateBooking)',
+      source: 'RFC 9110 sections 15.5.2 (401) and 15.5.4 (403); RFC 7519 JWT; Restful Booker API docs (CreateToken, UpdateBooking)',
     },
     {
       heading: 'Cookies, sessions and tokens',

@@ -11,7 +11,7 @@ const topic: Topic = {
   sources: [
     'ISTQB CTFL Syllabus v4.0.1 (2024) — 2.2 Test Levels and Test Types, 2.2.3 Confirmation and Regression Testing, 5.1.6 Test Pyramid',
     'ISTQB Glossary — smoke test (synonyms: confidence test, sanity test, intake test)',
-    'ISO/IEC 25010 product quality model (as summarised in CTFL v4.0 §2.2.2)',
+    'ISO/IEC 25010 product quality model (as summarised in CTFL v4.0 section 2.2.2)',
     'Mike Cohn — Succeeding with Agile (2009), the original test pyramid',
     'Software Testing Help — Smoke testing vs sanity testing',
     'Guru99 — Integration testing (big bang, top-down, bottom-up, stubs and drivers)',

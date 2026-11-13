@@ -31,6 +31,7 @@ import { getProgress, setSettings } from '../lib/progress';
 import { getUiPrefs, saveUiPrefs } from '../lib/uiPrefs';
 import { nextStep } from '../lib/nextStep';
 import { openGuide } from '../lib/appEvents';
+import { BugBuddy } from './Doodles';
 
 interface Item {
   id: string;
@@ -189,7 +190,9 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
         <Command.Input value={search} onValueChange={setSearch} placeholder="Where to? Pages, topics, sections, questions…" className="cmd-input" />
       </div>
       <Command.List className="cmd-list">
-        <Command.Empty className="cmd-empty">Hmm, nothing by that name. Try a shorter word?</Command.Empty>
+        <Command.Empty className="cmd-empty bugsy-line">
+          <BugBuddy size={44} mood="thinking" /> Hmm, nothing by that name. Try a shorter word?
+        </Command.Empty>
         {!typing && recent.length > 0 && (
           <Command.Group heading="Recent">
             {recent.map((it) => {

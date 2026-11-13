@@ -617,7 +617,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
               {multi && <span className="chip flaky">Select all that apply</span>}
               {m.section >= 0 && (
                 <span className="coord">
-                  §{m.section + 1} {m.heading}
+                  Section {m.section + 1} · {m.heading}
                   {isLocked ? ' · LOCKED' : ''}
                 </span>
               )}
@@ -778,7 +778,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                       <span className="tx">{plain(it.q.question)}</span>
                       <span className="tm">{t >= 1 ? mss(t) : '—'}</span>
                       <span className="sub">
-                        {mi.section >= 0 ? `§${mi.section + 1} ${mi.heading} · ` : ''}
+                        {mi.section >= 0 ? `Section ${mi.section + 1} · ${mi.heading} · ` : ''}
                         {it.q.difficulty}
                       </span>
                     </button>
@@ -810,7 +810,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
               {isLocked && m.topic && m.section >= 0 && (
                 <div className="fu-act">
                   <Link className="btn btn-line btn-sm" to={`/topic/${m.topic.id}?tab=learn&s=${m.section}`}>
-                    Revise §{m.section + 1}
+                    Revise section {m.section + 1}
                   </Link>
                   <span className="mlabel">revealed on lock-in</span>
                 </div>
@@ -1069,7 +1069,7 @@ export function Exam({ title, questions, recordTopicId, backHref }: ExamProps) {
                 <span className={`chip lvl lvl-${it.q.difficulty}`}>{it.q.difficulty}</span>
                 {mi.section >= 0 && (
                   <span className="coord">
-                    §{mi.section + 1} {mi.heading}
+                    Section {mi.section + 1} · {mi.heading}
                   </span>
                 )}
               </div>
@@ -1146,7 +1146,7 @@ function AttemptAnalysis({ items, missed }: { items: MCQ[]; missed: MCQ[] }) {
                 const inSection = inTopic.filter((q) => sectionForQuestion(topic, q) === ws.index).length || ws.missed.length;
                 return (
                   <div key={ws.index} className="lr">
-                    <span className="no">§{ws.index + 1}</span>
+                    <span className="no">{ws.index + 1}</span>
                     <span className="nm">{ws.heading}</span>
                     <Link to={`/topic/${topic.id}?tab=learn&s=${ws.index}`} className="btn btn-line btn-sm">
                       Revise

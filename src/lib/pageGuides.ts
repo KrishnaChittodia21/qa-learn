@@ -40,7 +40,7 @@ const GUIDES: { match: (path: string) => boolean; guide: Guide }[] = [
         ['Weak spot', 'The section your wrong answers point at, to reread before anything new.'],
         ['Short of the day', 'A 90-second story; a new one each day you watch.'],
         ['Build matrix', 'Every topic as a cell, by track and stage. Click a cell to open its topic, or a stage to open its first topic.'],
-        ['Tracking', 'Your numbers, charts and streak are on Today.'],
+        ['Tracking', 'Your numbers, charts and streak are on Track.'],
       ],
       walk: [
         { target: '.hero-cta', title: 'Your next step', text: 'Always one button: the next section to read, the next lab, or the exam.' },
